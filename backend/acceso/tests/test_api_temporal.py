@@ -38,7 +38,7 @@ class AccesoTemporalTests(BaseAcceso):
         self.assertEqual(self.canjear(grant_id=entrega["grant_id"], token=entrega["token"], dispositivo=self.TABLETA).status_code, 401)
 
     def test_opcion_a_otra_tableta_no_sirve_y_al_tercer_fallo_se_revoca(self):
-        self.api.post("/api/acceso/dispositivos/", {"identificador": "otra-hw", "nombre": "tableta-01"}, format="json")
+        self.api.post("/api/dispositivos/", {"identificador": "otra-hw", "nombre": "tableta-01"}, format="json")
         entrega = self.otorgar().json()["entrega"]
         for _ in range(3):
             self.assertEqual(self.canjear(grant_id=entrega["grant_id"], token=entrega["token"], dispositivo="otra-hw").status_code, 401)
@@ -89,5 +89,5 @@ class AccesoTemporalTests(BaseAcceso):
         r = self.otorgar(tipo="CODIGO", dispositivo_id="")
         self.assertEqual((r.status_code, r.json()["codigo"]), (400, "datos_invalidos"))
         est = self.sesion(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN)
-        self.assertEqual(est.get("/api/acceso/dispositivos/").status_code, 403)
-        self.assertEqual([d["nombre"] for d in self.docente.get("/api/acceso/dispositivos/").json()], ["tableta-07"])
+        self.assertEqual(est.get("/api/dispositivos/").status_code, 403)
+        self.assertEqual([d["nombre"] for d in self.docente.get("/api/dispositivos/").json()], ["tableta-07"])

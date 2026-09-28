@@ -115,7 +115,7 @@ class LoginTests(BaseAcceso):
 class SesionUnicaTests(BaseAcceso):
     def test_abrir_en_otro_dispositivo_cierra_la_anterior_y_lo_avisa(self):
         # TST-027 · PAN-103 · MSG-020
-        self.api.post("/api/acceso/dispositivos/", {"identificador": "otra-hw", "nombre": "tableta-03"}, format="json")
+        self.api.post("/api/dispositivos/", {"identificador": "otra-hw", "nombre": "tableta-03"}, format="json")
         primera = self.login(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN, self.TABLETA).json()
         segunda = self.login(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN, "otra-hw").json()
         self.assertEqual(segunda["sesion_anterior"]["sesion_id"], primera["sesion_id"])

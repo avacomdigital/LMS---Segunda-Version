@@ -13,7 +13,7 @@ from expediente import servicios as expediente_servicios
 
 from .. import models as m
 from ..dominio import sesion as dom
-from ..dominio.errores import SinPermiso
+from ..dominio.errores import DatosInvalidos, DispositivoBloqueado, DispositivoInactivo, NoEncontrado, SinPermiso
 from ..aplicacion.puertos import Actor
 
 # --------------------------------------------------------------------- filas → dicts
@@ -25,16 +25,17 @@ CAMPOS_SESION = (
     "finalizada_en", "origen_cierre", "archivada_en", "creado_en", "creado_por",
 )
 CAMPOS_PARTICIPANTE = (
-    "id", "sesion_id", "persona_id", "persona_rotulo", "dispositivo", "sesion_usuario_id", "estado", "admision_nominal",
-    "ingreso", "salida", "ultimo_latido_en", "admitido_por", "motivo", "creado_en", "creado_por",
+    "id", "sesion_id", "persona_id", "persona_rotulo", "dispositivo", "dispositivo_id", "dim_sesion_alumno_id", "sesion_usuario_id",
+    "estado", "admision_nominal", "ingreso", "salida", "ultimo_latido_en", "admitido_por", "motivo", "creado_en", "creado_por",
 )
-CAMPOS_FOCO = ("id", "sesion_id", "curso_ref", "curso_version", "leccion_ref", "objeto_ref", "objeto_tipo", "unidad_ref",
-               "unidad_indice", "media_ref", "rotulo", "vigente", "declarado_en", "declarado_por", "sustituido_en")
+CAMPOS_SELECTOR = ("id", "sesion_id", "curso_ref", "curso_version", "leccion_ref", "objeto_ref", "objeto_tipo", "unidad_ref",
+                   "unidad_indice", "media_ref", "rotulo", "vigente", "declarado_en", "declarado_por", "sustituido_en")
 CAMPOS_CONTROL = ("id", "sesion_id", "tipo", "desde", "hasta", "motivo", "creado_por", "cerrado_por")
 CAMPOS_DISTRIBUCION = ("id", "sesion_id", "clase", "curso_ref", "leccion_ref", "objeto_ref", "objeto_tipo", "media_ref",
-                       "rotulo", "alcance", "disponible_estudio", "asignacion_ref", "abierta_en", "cerrada_en", "creado_por")
+                       "rotulo", "alcance", "destinatarios", "excluidos_bloqueados", "intentos_permitidos", "tiempo_limite_seg",
+                       "disponible_estudio", "asignacion_ref", "abierta_en", "cerrada_en", "creado_por")
 CAMPOS_AVISO = ("id", "sesion_id", "participante_id", "texto", "enviado_en", "creado_por")
-CAMPOS_RESUMEN = ("participantes", "conectados_maximo", "admitidos_nominal", "focos", "distribuciones", "actividades",
+CAMPOS_RESUMEN = ("participantes", "conectados_maximo", "admitidos_nominal", "selectores", "distribuciones", "actividades",
                   "avisos", "pendientes", "duracion_ms", "origen_cierre", "consolidado_en")
 
 
@@ -120,20 +121,20 @@ class SesionesDjango:
             maximo = max(maximo, actuales)
         return maximo
 
-    # ------------------------------------------------------------------ foco
-    def foco_vigente(self, sesion_id: str) -> dict | None:
-        fila = m.Foco.objects.filter(sesion_id=sesion_id, vigente=True).first()
-        return _d(fila, CAMPOS_FOCO) if fila else None
+    # -------------------------------------------------------------- selector
+    def selector_vigente(self, sesion_id: str) -> dict | None:
+        fila = m.Selector.objects.filter(sesion_id=sesion_id, vigente=True).first()
+        return _d(fila, CAMPOS_SELECTOR) if fila else None
 
-    def declarar_foco(self, sesion_id: str, datos: dict, momento: int) -> dict:
-        m.Foco.objects.filter(sesion_id=sesion_id, vigente=True).update(vigente=False, sustituido_en=momento)
+    def declarar_selector(self, sesion_id: str, datos: dict, momento: int) -> dict:
+        m.Selector.objects.filter(sesion_id=sesion_id, vigente=True).update(vigente=False, sustituido_en=momento)
         import uuid
-        fila = m.Foco.objects.create(id=str(uuid.uuid4()), sesion_id=sesion_id, vigente=True, declarado_en=momento,
-                                     **{k: v for k, v in datos.items() if k in CAMPOS_FOCO and k not in ("id", "sesion_id", "vigente", "declarado_en", "sustituido_en")})
-        return _d(fila, CAMPOS_FOCO)
+        fila = m.Selector.objects.create(id=str(uuid.uuid4()), sesion_id=sesion_id, vigente=True, declarado_en=momento,
+                                         **{k: v for k, v in datos.items() if k in CAMPOS_SELECTOR and k not in ("id", "sesion_id", "vigente", "declarado_en", "sustituido_en")})
+        return _d(fila, CAMPOS_SELECTOR)
 
-    def total_focos(self, sesion_id: str) -> int:
-        return m.Foco.objects.filter(sesion_id=sesion_id).count()
+    def total_selectores(self, sesion_id: str) -> int:
+        return m.Selector.objects.filter(sesion_id=sesion_id).count()
 
     # -------------------------------------------------------------- controles
     def controles_abiertos(self, sesion_id: str) -> list[dict]:
@@ -285,6 +286,51 @@ class IdentidadAcceso:
             return MiembroGrupo.objects.filter(grupo_id=grupo_id, usuario_id=persona_id, papel="DOCENTE", hasta__isnull=True).exists()
         except Exception:
             return None
+
+
+class DispositivosDeviceManager:
+    """MOD-009 visto desde el aula: por su interfaz (`device_manager.servicios`), dentro de la transacción del
+    caso de uso (BR-004: el aula no escribe m09_*, pide). Sus errores se traducen a los del aula."""
+
+    @staticmethod
+    def _traducir(fn, *args, **kwargs):
+        from device_manager.dominio import errores as e9
+        try:
+            return fn(*args, **kwargs)
+        except e9.DispositivoBloqueado as error:
+            raise DispositivoBloqueado(error.detalle, **error.extra) from error
+        except e9.DispositivoInactivo as error:
+            raise DispositivoInactivo(error.detalle, **error.extra) from error
+        except e9.NoEncontrado as error:
+            raise NoEncontrado(error.detalle, **error.extra) from error
+        except e9.ErrorDispositivos as error:
+            raise DatosInvalidos(error.detalle, **error.extra) from error
+
+    def resolver(self, identificador: str, nombre: str = "", plataforma: str = "", version_app: str = "",
+                 momento: int | None = None) -> dict | None:
+        from device_manager import servicios
+        return self._traducir(servicios.resolver, identificador, nombre=nombre, plataforma=plataforma,
+                              version_app=version_app, momento=momento)
+
+    def por_id(self, dispositivo_id: str) -> dict | None:
+        from device_manager import servicios
+        return servicios.por_id(dispositivo_id)
+
+    def latido(self, dispositivo_id: str, momento: int) -> None:
+        from device_manager import servicios
+        servicios.latido(dispositivo_id, momento)
+
+    def bloqueados_entre(self, dispositivo_ids: list[str]) -> set[str]:
+        from device_manager import servicios
+        return servicios.bloqueados_entre(dispositivo_ids)
+
+    def abrir_sesion_alumno(self, alumno_id: str, dispositivo_id: str, momento: int, actor: str = "") -> dict:
+        from device_manager import servicios
+        return self._traducir(servicios.abrir_sesion_alumno, alumno_id, dispositivo_id, momento, actor)
+
+    def cerrar_sesion_alumno(self, sesion_id: str, momento: int, motivo: str) -> None:
+        from device_manager import servicios
+        servicios.cerrar_sesion_alumno(sesion_id, momento, motivo)
 
 
 class EvaluacionExpediente:

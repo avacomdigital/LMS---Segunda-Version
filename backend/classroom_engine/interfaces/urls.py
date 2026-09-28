@@ -20,7 +20,7 @@ urlpatterns = [
     path("sesiones/unirse/", views.UnirseView.as_view(), name="aula-unirse"),
     path("sesiones/<str:sesion_id>/", views.SesionView.as_view(), name="aula-sesion"),
     path("sesiones/<str:sesion_id>/estado/", views.EstadoTabletaView.as_view(), name="aula-sesion-estado"),
-    path("sesiones/<str:sesion_id>/foco/", views.FocoView.as_view(), name="aula-sesion-foco"),
+    path("sesiones/<str:sesion_id>/selector/", views.SelectorView.as_view(), name="aula-sesion-selector"),
     path("sesiones/<str:sesion_id>/controles/", views.ControlesView.as_view(), name="aula-sesion-controles"),
     path("sesiones/<str:sesion_id>/distribuciones/", views.DistribucionesView.as_view(), name="aula-sesion-distribuciones"),
     path("sesiones/<str:sesion_id>/distribuciones/<str:distribucion_id>/<str:accion>/", views.DistribucionAccionView.as_view(),

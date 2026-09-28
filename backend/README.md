@@ -96,13 +96,15 @@ set AVACOM_CONTENIDO_ENLACE_V2=%TEMP%\link-pruebas.json
 | `/api/aula/pruebas/curso/`, `/api/aula/pruebas/cursos/` | GET | **Endpoint de prueba**: el curso «Ciencias naturales» de `spec-driven/02-classroom-engine/example.json`, leído del disco en cada petición |
 | `/api/aula/sesiones/` | GET · POST | Listar sesiones de clase · **iniciar** una por cualquiera de las cuatro vías (`arbol`, `leccion`, `recurso`, `libre`) |
 | `/api/aula/sesiones/unirse/` | POST | La tableta entra con el **código de unión** (o se readmite con su `participante_id`) |
-| `/api/aula/sesiones/{id}/` · `estado/` | GET | Detalle para el profesor · estado para la tableta (foco, seguimiento, bloqueo, pendientes, avisos; sondeo cada 2 s) |
-| `/api/aula/sesiones/{id}/foco/`, `controles/`, `distribuciones/…`, `avisos/`, `codigo/rotar/` | POST | Proyectar, bloquear/seguir, lanzar recurso o actividad (+ `confirmar/`, `cerrar/`, `resultados/`), avisar, rotar el código |
+| `/api/aula/sesiones/{id}/` · `estado/` | GET | Detalle para el profesor · estado para la tableta (selector, seguimiento, bloqueo, pendientes, avisos; sondeo cada 2 s, que cuenta como latido de la tableta) |
+| `/api/aula/sesiones/{id}/selector/`, `controles/`, `distribuciones/…`, `avisos/`, `codigo/rotar/` | POST | Declarar el **selector** (lo que se proyecta), bloquear/seguir, **lanzar** recurso o actividad con `alcance`, `participantes`, `intentos_permitidos` y `tiempo_limite_seg` (+ `confirmar/`, `cerrar/`, `resultados/`; las tabletas bloqueadas quedan en `excluidos_bloqueados`), avisar, rotar el código |
 | `/api/aula/sesiones/{id}/participantes/{pid}/presencia/` · `admitir/` · `rechazar/` · `expulsar/` | POST | Presencia técnica declarada por la tableta · decisiones del profesor |
 | `/api/aula/sesiones/{id}/suspender/` · `reanudar/` · `cerrar/` | POST | Caída del nodo · reanudar con el mismo código · cerrar y consolidar el **resumen** |
 | `/api/acceso/configuracion/` | GET | Qué identificador y qué secreto usa cada perfil (para pintar el login). Sin sesión |
 | `/api/acceso/instalacion/` | POST | Primer arranque: organización, políticas y primer administrador. Sólo una vez |
-| `/api/acceso/dispositivos/` | POST · GET | Registro idempotente de la tableta · listado (con sesión) |
+| `/api/dispositivos/` | POST · GET | **MOD-009 · Device Manager** (app `device_manager`, tablas `m09_*`): registro idempotente de la tableta por su huella (`identificador_hw`, `nombre`, `plataforma`, `version_app`) · inventario con estado en vivo (`en_linea`, `bloqueado`, `sesion_abierta`; `?todos=1` incluye las retiradas) |
+| `/api/dispositivos/latido/` | POST | La tableta dice que sigue viva (registra si es nueva) y recibe si está bloqueada o retirada |
+| `/api/dispositivos/{id}/` · `bloquear/` · `desbloquear/` | GET, PATCH · POST | Ficha y alta/baja (`nombre`, `tipo`, `activo`; dar de baja cierra sus sesiones) · bloqueo reversible: una tableta bloqueada no entra a clase ni recibe lanzamientos |
 | `/api/acceso/sesiones/` | POST · GET | Iniciar sesión (JWT de 4 h, **una sola por persona**, rol efectivo elegible) · listar sesiones |
 | `/api/acceso/sesiones/actual/`, `/api/acceso/sesiones/{id}/`, `/api/acceso/usuarios/{id}/sesiones/` | DELETE | Cerrar la propia · revocar ajena · revocar todas las de un usuario |
 | `/api/acceso/yo/`, `/api/acceso/yo/credencial/` | GET · PUT | Identidad, rol efectivo, roles disponibles, permisos y menú · cambiar la propia clave |
@@ -110,8 +112,11 @@ set AVACOM_CONTENIDO_ENLACE_V2=%TEMP%\link-pruebas.json
 | `/api/acceso/autorizaciones-temporales/…` | POST, GET, DELETE · `canjear/` | Acceso temporal a examen (tableta autorizada o código de un solo uso) |
 | `/api/acceso/roles/`, `permisos/`, `politicas/{perfil}/[?nivel=]`, `grupos/…` | GET, POST, PUT, PATCH | Catálogos y configuración del colegio, políticas por nivel educativo |
 
-La app `classroom_engine/` implementa **MOD-007 · Classroom Engine** (sesión de clase, participantes, foco, controles,
-distribuciones, avisos, resumen y cola de salida `aula.*.v1`) con la misma arquitectura hexagonal. Está especificado en
+La app `classroom_engine/` implementa **MOD-007 · Classroom Engine** (sesión de clase, participantes, selector, controles,
+distribuciones —el lanzamiento—, avisos, resumen y cola de salida `aula.*.v1`) con la misma arquitectura hexagonal. La app
+`device_manager/` implementa **MOD-009 · Device Manager** (inventario `m09_dispositivo`, sesión de alumno en la tableta
+`m09_dim_sesion_alumno` con INV-011, cola `dispositivo.*.v1`); el aula y el login la consultan por `device_manager/servicios.py`,
+nunca por su ORM. Está especificado en
 [`spec-driven/02-classroom-engine/01-modelo-de-datos.md`](../spec-driven/02-classroom-engine/01-modelo-de-datos.md) (modelo `m07_*`
 y contrato de `/api/aula/`) y [`02-sugerencias-frontend.md`](../spec-driven/02-classroom-engine/02-sugerencias-frontend.md) (componente MAUI).
 No guarda ningún curso: lo lee en vivo de la biblioteca o del manifiesto de ejemplo y sólo escribe referencias.

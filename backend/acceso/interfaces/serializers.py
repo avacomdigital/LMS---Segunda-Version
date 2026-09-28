@@ -38,17 +38,6 @@ class InstalacionEntrada(serializers.Serializer):
     administrador = AdministradorEntrada()
 
 
-class DispositivoEntrada(serializers.Serializer):
-    identificador = serializers.CharField(max_length=128)
-    nombre = serializers.CharField(max_length=64)
-    tipo = serializers.ChoiceField(choices=["TABLETA", "MASTER"], required=False, default="TABLETA")
-
-
-class DispositivoCambios(serializers.Serializer):
-    nombre = serializers.CharField(max_length=64, required=False)
-    activo = serializers.BooleanField(required=False)
-
-
 class LoginEntrada(serializers.Serializer):
     identificador = serializers.CharField(max_length=128)
     secreto = serializers.CharField(max_length=128, trim_whitespace=False)

@@ -25,6 +25,7 @@ from ..dominio.errores import (
     CodigoInvalido,
     CursoNoEncontrado,
     DatosInvalidos,
+    DispositivoBloqueado,
     GrupoConSesionActiva,
     NoEncontrado,
     ParticipanteExpulsado,
@@ -238,15 +239,23 @@ class _CasoDeSesion(_CasoDeUso):
     def _admitidos(self, uow: UnidadDeTrabajo, sesion_id: str) -> list[dict]:
         return [p for p in uow.sesiones.participantes(sesion_id) if p["estado"] in dom.ADMITIDOS]
 
+    def _con_bloqueo(self, uow: UnidadDeTrabajo, participantes: list[dict]) -> list[dict]:
+        """Marca a cada participante si su tableta está bloqueada o retirada (MOD-009): el profesor lo ve en la
+        lista y el lanzamiento la deja fuera."""
+        bloqueados = uow.dispositivos.bloqueados_entre([p["dispositivo_id"] for p in participantes if p.get("dispositivo_id")])
+        for p in participantes:
+            p["dispositivo_bloqueado"] = bool(p.get("dispositivo_id")) and p["dispositivo_id"] in bloqueados
+        return participantes
+
     def _detalle(self, uow: UnidadDeTrabajo, sesion: dict) -> dict:
         """Lo que ve el profesor (PAN-001 / PAN-022)."""
-        participantes = uow.sesiones.participantes(sesion["id"])
+        participantes = self._con_bloqueo(uow, uow.sesiones.participantes(sesion["id"]))
         controles = uow.sesiones.controles_abiertos(sesion["id"])
         distribuciones = uow.sesiones.distribuciones(sesion["id"])
         return {
             **sesion,
             "activa": sesion["estado"] in dom.ACTIVAS,
-            "foco": uow.sesiones.foco_vigente(sesion["id"]),
+            "selector": uow.sesiones.selector_vigente(sesion["id"]),
             "seguimiento": any(c["tipo"] == dom.SEGUIMIENTO for c in controles),
             "pantallas_bloqueadas": any(c["tipo"] == dom.BLOQUEO for c in controles),
             "controles": controles,
@@ -265,23 +274,39 @@ class _CasoDeSesion(_CasoDeUso):
         }
 
     def _estado_tableta(self, uow: UnidadDeTrabajo, sesion: dict, participante: dict | None, desde: int | None = None) -> dict:
-        """Lo que sigue una tableta (PAN-102): foco vigente, controles, lo que le toca hacer y avisos.
+        """Lo que sigue una tableta (PAN-102): selector vigente, controles, lo que le toca hacer y avisos.
         Sin código de unión ni lista de participantes: eso es de la superficie del aula."""
         controles = uow.sesiones.controles_abiertos(sesion["id"])
         pid = participante["id"] if participante else None
+        if participante:
+            participante = self._con_bloqueo(uow, [participante])[0]
         return {
             "sesion": {k: sesion[k] for k in ("id", "estado", "fuente_curso", "curso_ref", "curso_version", "curso_rotulo",
                                                "leccion_ref", "leccion_rotulo", "grupo_rotulo", "profesor_rotulo")},
             "activa": sesion["estado"] in dom.ACTIVAS,
             "participante": participante,
-            "foco": uow.sesiones.foco_vigente(sesion["id"]),
+            "selector": uow.sesiones.selector_vigente(sesion["id"]),
             "seguimiento": any(c["tipo"] == dom.SEGUIMIENTO for c in controles),
             "pantallas_bloqueadas": any(c["tipo"] == dom.BLOQUEO for c in controles),
             "pendientes": uow.sesiones.entregas_pendientes_de(sesion["id"], pid) if pid else [],
             "avisos": uow.sesiones.avisos(sesion["id"], participante_id=pid, desde=desde),
             "servidor_en": self.s.reloj.ahora_ms(),
-            "intervalo_sondeo_ms": 2000,   # BR-049: el cambio de foco llega en 3 s como máximo
+            "intervalo_sondeo_ms": 2000,   # BR-049: el cambio de selector llega en 3 s como máximo
         }
+
+    def _equipo(self, uow: UnidadDeTrabajo, datos: dict, dispositivo: str, persona_id: str, ahora: int) -> dict:
+        """MOD-009: reconoce la tableta por su huella (la registra la primera vez) y abre, o reutiliza, la sesión
+        de alumno en ella (Dim Sesión Alumno). Una tableta bloqueada o retirada no entra. Sin huella no hay
+        equipo: la participación sigue siendo válida (Q-04, prototipo)."""
+        if not dispositivo:
+            return {}
+        equipo = uow.dispositivos.resolver(
+            dispositivo, nombre=str(datos.get("dispositivo_nombre") or dispositivo)[:120],
+            plataforma=str(datos.get("plataforma") or "").lower(), version_app=str(datos.get("version_app") or ""), momento=ahora)
+        if not equipo:
+            return {}
+        sesion_alumno = uow.dispositivos.abrir_sesion_alumno(persona_id, equipo["id"], ahora, actor=persona_id)
+        return {"dispositivo_id": equipo["id"], "dim_sesion_alumno_id": sesion_alumno["id"]}
 
     def _publicar(self, uow: UnidadDeTrabajo, sesion_id: str, evento: str, carga: dict) -> None:
         uow.outbox.publicar("SesionDeClase", sesion_id, evento, {"sesion_id": sesion_id, **carga})
@@ -315,7 +340,7 @@ class IniciarSesion(_CasoDeSesion):
             fuente_nombre = None
             curso = {"curso_ref": via.curso_ref, "curso_version": "", "curso_rotulo": "", "leccion_ref": via.leccion_ref,
                      "leccion_rotulo": "", "objeto_ref": via.objeto_ref, "objeto_rotulo": ""}
-            foco_inicial: dict | None = None
+            selector_inicial: dict | None = None
             if via.necesita_curso:
                 vista, fuente_nombre = self._vista(datos.get("fuente"), via.curso_ref, "docente")
                 curso["curso_version"] = vista.get("version", "")
@@ -333,7 +358,7 @@ class IniciarSesion(_CasoDeSesion):
                 else:
                     inicial = cur.primer_objeto(vista, via.leccion_ref)
                 if inicial and inicial.get("objeto"):
-                    foco_inicial = _foco_de(inicial, vista)
+                    selector_inicial = _selector_de(inicial, vista)
 
             sesion = uow.sesiones.crear_sesion({
                 "id": _id(),
@@ -355,8 +380,8 @@ class IniciarSesion(_CasoDeSesion):
             })
             # Por defecto los alumnos siguen al profesor (BR-050); liberar el seguimiento es una orden explícita.
             uow.sesiones.abrir_control(sesion["id"], dom.SEGUIMIENTO, ahora, actor.id, "inicio de la sesión")
-            if foco_inicial:
-                uow.sesiones.declarar_foco(sesion["id"], {**foco_inicial, "declarado_por": actor.id}, ahora)
+            if selector_inicial:
+                uow.sesiones.declarar_selector(sesion["id"], {**selector_inicial, "declarado_por": actor.id}, ahora)
 
             self._publicar(uow, sesion["id"], dom.EV_SESION_INICIADA, {
                 "grupo_id": grupo_id, "plan_id": sesion["plan_id"], "profesor_id": actor.id, "via_origen": via.via,
@@ -364,14 +389,14 @@ class IniciarSesion(_CasoDeSesion):
                 "instante": ahora,
             })
             self._publicar(uow, sesion["id"], dom.EV_CODIGO_GENERADO, {"codigo_union": sesion["codigo_union"], "instante": ahora})
-            if foco_inicial:
-                self._publicar(uow, sesion["id"], dom.EV_RECURSO_PROYECTADO, {**foco_inicial, "instante": ahora, "inicial": True})
+            if selector_inicial:
+                self._publicar(uow, sesion["id"], dom.EV_RECURSO_PROYECTADO, {**selector_inicial, "instante": ahora, "inicial": True})
             uow.auditoria.registrar(actor.id, "aula.sesion.iniciada", "m07_sesion", sesion["id"],
                                     nuevo={"via": via.via, "curso_ref": curso["curso_ref"], "grupo_id": grupo_id})
             return self._detalle(uow, sesion)
 
 
-def _foco_de(hallado: dict, vista: dict, unidad_ref: str = "") -> dict:
+def _selector_de(hallado: dict, vista: dict, unidad_ref: str = "") -> dict:
     objeto = hallado["objeto"]
     leccion = hallado.get("leccion") or {}
     unidad = hallado.get("unidad")
@@ -423,7 +448,9 @@ class ArchivarSesiones(_CasoDeSesion):
 
 
 class UnirseASesion(_CasoDeSesion):
-    """JRN-007 · FUN-067 · FUN-077 · BR-047. La tableta presenta el código; si ya participó, se readmite sin duplicar."""
+    """JRN-007 · FUN-067 · FUN-077 · BR-047. La tableta presenta el código; si ya participó, se readmite sin duplicar.
+    Antes de entrar, MOD-009 reconoce la tableta y abre en ella la sesión de alumno: una tableta bloqueada o
+    retirada no entra (403 dispositivo_bloqueado / dispositivo_inactivo), regla del equipo y no de la persona."""
 
     def ejecutar(self, datos: dict) -> dict:
         codigo = str(datos.get("codigo_union") or datos.get("codigo") or "").strip()
@@ -443,19 +470,22 @@ class UnirseASesion(_CasoDeSesion):
                     existente = None
             existente = existente or uow.sesiones.participante_de(sesion["id"], persona_id)
 
+            if existente and existente["estado"] in (dom.EXPULSADO, dom.RECHAZADO):
+                raise ParticipanteExpulsado(
+                    f"El participante fue {existente['estado']}; el profesor puede readmitirlo desde su panel.",
+                    participante_id=existente["id"], estado=existente["estado"])
+            equipo = self._equipo(uow, datos, dispositivo, persona_id, ahora)
+
             if existente:
-                if existente["estado"] in (dom.EXPULSADO, dom.RECHAZADO):
-                    raise ParticipanteExpulsado(
-                        f"El participante fue {existente['estado']}; el profesor puede readmitirlo desde su panel.",
-                        participante_id=existente["id"], estado=existente["estado"])
                 if existente["estado"] == dom.ESPERANDO:
-                    participante = uow.sesiones.actualizar_participante(existente["id"], ultimo_latido_en=ahora, dispositivo=dispositivo or existente["dispositivo"])
+                    participante = uow.sesiones.actualizar_participante(existente["id"], ultimo_latido_en=ahora,
+                                                                        dispositivo=dispositivo or existente["dispositivo"], **equipo)
                     return {**self._estado_tableta(uow, sesion, participante), "nuevo": False, "en_espera": True}
                 nuevo_estado = dom.CONECTADO if sesion["estado"] == dom.ABIERTA else dom.RECONECTANDO
                 participante = uow.sesiones.actualizar_participante(
                     existente["id"], estado=nuevo_estado, salida=None, ultimo_latido_en=ahora,
                     dispositivo=dispositivo or existente["dispositivo"],
-                    sesion_usuario_id=str(datos.get("sesion_usuario_id") or existente["sesion_usuario_id"]))
+                    sesion_usuario_id=str(datos.get("sesion_usuario_id") or existente["sesion_usuario_id"]), **equipo)
                 uow.sesiones.registrar_presencia(participante["id"], nuevo_estado, ahora, dispositivo, "readmisión")
                 self._publicar(uow, sesion["id"], dom.EV_DISPOSITIVO_READMITIDO, {
                     "participante_id": participante["id"], "persona_id": persona_id, "dispositivo": dispositivo, "instante": ahora})
@@ -471,7 +501,7 @@ class UnirseASesion(_CasoDeSesion):
                 "persona_rotulo": str(datos.get("persona_rotulo") or "") or uow.identidad.rotulo_persona(persona_id),
                 "dispositivo": dispositivo, "sesion_usuario_id": str(datos.get("sesion_usuario_id") or ""),
                 "estado": estado, "admision_nominal": False, "ingreso": ahora,
-                "ultimo_latido_en": ahora, "creado_en": ahora, "creado_por": persona_id,
+                "ultimo_latido_en": ahora, "creado_en": ahora, "creado_por": persona_id, **equipo,
             })
             uow.sesiones.registrar_presencia(participante["id"], estado, ahora, dispositivo, "ingreso")
             if estado != dom.ESPERANDO:
@@ -497,6 +527,9 @@ class AdmitirParticipante(_CasoDeSesion):
             participante = self._participante(uow, sesion, participante_id)
             if participante["estado"] in dom.ADMITIDOS:
                 return participante
+            if participante.get("dispositivo_id") and participante["dispositivo_id"] in uow.dispositivos.bloqueados_entre([participante["dispositivo_id"]]):
+                raise DispositivoBloqueado(f"La tableta «{participante['dispositivo']}» está bloqueada; desbloquéala antes de admitir.",
+                                           participante_id=participante_id, dispositivo_id=participante["dispositivo_id"])
             inscrito = uow.identidad.esta_inscrito(sesion["grupo_id"], participante["persona_id"]) if sesion["grupo_id"] else None
             readmision = participante["estado"] in (dom.EXPULSADO, dom.RECHAZADO, dom.SALIO)
             participante = uow.sesiones.actualizar_participante(
@@ -563,6 +596,8 @@ class RegistrarPresencia(_CasoDeSesion):
             campos: dict = {"ultimo_latido_en": ahora}
             if dispositivo:
                 campos["dispositivo"] = dispositivo
+            if participante.get("dispositivo_id"):
+                uow.dispositivos.latido(participante["dispositivo_id"], ahora)
             if estado and participante["estado"] != dom.ESPERANDO:
                 if estado not in dom.PRESENCIA_DECLARABLE:
                     raise DatosInvalidos(f"Una tableta sólo declara {', '.join(dom.PRESENCIA_DECLARABLE)}.", estado=estado)
@@ -574,30 +609,41 @@ class RegistrarPresencia(_CasoDeSesion):
                     uow.sesiones.registrar_presencia(participante_id, estado, ahora, dispositivo or participante["dispositivo"])
                     self._publicar(uow, sesion_id, dom.EV_PRESENCIA_REGISTRADA, {
                         "participante_id": participante_id, "estado": estado, "instante": ahora})
+                    # La sesión de alumno en la tableta (MOD-009) sigue a la presencia: salir la cierra; volver la reabre.
+                    if estado == dom.SALIO and participante.get("dim_sesion_alumno_id"):
+                        uow.dispositivos.cerrar_sesion_alumno(participante["dim_sesion_alumno_id"], ahora, "usuario")
+                    elif estado in dom.ADMITIDOS and participante["estado"] == dom.SALIO and participante.get("dispositivo_id"):
+                        reabierta = uow.dispositivos.abrir_sesion_alumno(participante["persona_id"], participante["dispositivo_id"],
+                                                                         ahora, actor=participante["persona_id"])
+                        campos["dim_sesion_alumno_id"] = reabierta["id"]
             participante = uow.sesiones.actualizar_participante(participante_id, **campos)
             return self._estado_tableta(uow, sesion, participante, desde)
 
 
 class EstadoParaTableta(_CasoDeSesion):
-    """Sólo lectura: lo mismo que devuelve la presencia, sin declarar nada."""
+    """Sólo lectura de la clase: lo mismo que devuelve la presencia, sin declarar nada. El sondeo cuenta como
+    latido de la tableta (MOD-009) para saber qué equipos están vivos."""
 
     def ejecutar(self, sesion_id: str, participante_id: str | None = None, desde: int | None = None) -> dict:
         with self.s.uow() as uow:
             sesion = self._sesion(uow, sesion_id)
             participante = self._participante(uow, sesion, participante_id) if participante_id else None
+            if participante and participante.get("dispositivo_id"):
+                uow.dispositivos.latido(participante["dispositivo_id"], self.s.reloj.ahora_ms())
             return self._estado_tableta(uow, sesion, participante, desde)
 
 
-class DeclararFoco(_CasoDeSesion):
-    """FUN-069 · BR-049: el foco es lo que el profesor declara; se valida contra el curso vigente."""
+class DeclararSelector(_CasoDeSesion):
+    """FUN-069 · BR-049: el selector es lo que el profesor declara que proyecta; se valida contra el curso
+    vigente. No es un lanzamiento: no espera confirmación ni genera intentos."""
 
     def ejecutar(self, actor: Actor, sesion_id: str, datos: dict) -> dict:
         self.s.autorizacion.exigir(actor, dom.P_PRESENT)
         ahora = self.s.reloj.ahora_ms()
         with self.s.uow() as uow:
             sesion = self._sesion(uow, sesion_id)
-            dom.exigir_abierta(sesion["estado"], "cambios de foco")
-            foco = dom.Foco(
+            dom.exigir_abierta(sesion["estado"], "cambios de selector")
+            selector = dom.Selector(
                 curso_ref=str(datos.get("curso_ref") or sesion["curso_ref"] or ""),
                 leccion_ref=str(datos.get("leccion_ref") or ""),
                 objeto_ref=str(datos.get("objeto_ref") or ""),
@@ -605,24 +651,24 @@ class DeclararFoco(_CasoDeSesion):
                 media_ref=str(datos.get("media_ref") or ""),
                 rotulo=str(datos.get("rotulo") or "")[:250],
             )
-            if not foco.objeto_ref and not foco.media_ref:
-                raise DatosInvalidos("El foco exige objeto_ref (y opcionalmente unidad_ref) o media_ref.")
-            foco.validar()
+            if not selector.objeto_ref and not selector.media_ref:
+                raise DatosInvalidos("El selector exige objeto_ref (y opcionalmente unidad_ref) o media_ref.")
+            selector.validar()
             registro: dict
-            if foco.objeto_ref:
-                vista, _ = self._vista(datos.get("fuente") or sesion["fuente_curso"] or None, foco.curso_ref, "docente")
-                hallado = cur.localizar(vista, leccion_ref=foco.leccion_ref, objeto_ref=foco.objeto_ref, unidad_ref=foco.unidad_ref)
+            if selector.objeto_ref:
+                vista, _ = self._vista(datos.get("fuente") or sesion["fuente_curso"] or None, selector.curso_ref, "docente")
+                hallado = cur.localizar(vista, leccion_ref=selector.leccion_ref, objeto_ref=selector.objeto_ref, unidad_ref=selector.unidad_ref)
                 if hallado["objeto"]["fuera_de_alcance"]:
-                    raise DatosInvalidos(f"El objeto «{foco.objeto_ref}» es de {hallado['objeto']['modulo']} y no se proyecta desde el aula.")
-                registro = _foco_de(hallado, vista, foco.unidad_ref)
+                    raise DatosInvalidos(f"El objeto «{selector.objeto_ref}» es de {hallado['objeto']['modulo']} y no se proyecta desde el aula.")
+                registro = _selector_de(hallado, vista, selector.unidad_ref)
             else:
-                registro = {"curso_ref": foco.curso_ref, "curso_version": sesion["curso_version"], "leccion_ref": foco.leccion_ref,
+                registro = {"curso_ref": selector.curso_ref, "curso_version": sesion["curso_version"], "leccion_ref": selector.leccion_ref,
                             "objeto_ref": "", "objeto_tipo": "medio", "unidad_ref": "", "unidad_indice": None,
-                            "media_ref": foco.media_ref, "rotulo": foco.rotulo}
+                            "media_ref": selector.media_ref, "rotulo": selector.rotulo}
             registro["declarado_por"] = actor.id
-            vigente = uow.sesiones.declarar_foco(sesion_id, registro, ahora)
+            vigente = uow.sesiones.declarar_selector(sesion_id, registro, ahora)
             self._publicar(uow, sesion_id, dom.EV_RECURSO_PROYECTADO, {**registro, "instante": ahora})
-            uow.auditoria.registrar(actor.id, "aula.foco.declarado", "m07_foco", vigente["id"],
+            uow.auditoria.registrar(actor.id, "aula.selector.declarado", "m07_selector", vigente["id"],
                                     nuevo={"objeto_ref": registro["objeto_ref"], "unidad_ref": registro["unidad_ref"], "media_ref": registro["media_ref"]})
             return vigente
 
@@ -657,7 +703,9 @@ class CambiarControl(_CasoDeSesion):
 
 
 class Distribuir(_CasoDeSesion):
-    """CAP-040 · FUN-070 · JRN-008: un recurso o una actividad a todos o a algunos, con avance de entrega."""
+    """CAP-040 · FUN-070 · JRN-008: el lanzamiento. Un recurso o una actividad a todos los admitidos o a una
+    selección, con avance de entrega. Las tabletas bloqueadas o retiradas (MOD-009) quedan fuera aunque estén
+    en la selección, y constan en `excluidos_bloqueados`."""
 
     def ejecutar(self, actor: Actor, sesion_id: str, datos: dict) -> dict:
         clase = str(datos.get("clase") or dom.RECURSO)
@@ -671,23 +719,29 @@ class Distribuir(_CasoDeSesion):
         media_ref = str(datos.get("media_ref") or "")
         if not objeto_ref and not media_ref:
             raise DatosInvalidos("Una distribución exige objeto_ref o media_ref.")
+        intentos_permitidos = dom.validar_regla_entera(datos.get("intentos_permitidos"), "intentos_permitidos")
+        tiempo_limite_seg = dom.validar_regla_entera(datos.get("tiempo_limite_seg"), "tiempo_limite_seg")
         ahora = self.s.reloj.ahora_ms()
         with self.s.uow() as uow:
             sesion = self._sesion(uow, sesion_id)
             dom.exigir_abierta(sesion["estado"], "distribuciones")
-            admitidos = self._admitidos(uow, sesion_id)
+            admitidos = self._con_bloqueo(uow, self._admitidos(uow, sesion_id))
             if alcance == dom.SELECCION:
                 elegidos = {str(p) for p in (datos.get("participantes") or [])}
-                destinatarios = [p for p in admitidos if p["id"] in elegidos]
+                candidatos = [p for p in admitidos if p["id"] in elegidos or p["persona_id"] in elegidos]
             else:
-                destinatarios = admitidos
+                candidatos = admitidos
+            destinatarios = [p for p in candidatos if not p["dispositivo_bloqueado"]]
+            excluidos = [p["persona_id"] for p in candidatos if p["dispositivo_bloqueado"]]
             if clase == dom.ACTIVIDAD and not destinatarios:
-                raise SinParticipantesAdmitidos()
+                raise SinParticipantesAdmitidos(excluidos_bloqueados=excluidos)
 
             curso_ref = str(datos.get("curso_ref") or sesion["curso_ref"] or "")
             registro = {"id": _id(), "sesion_id": sesion_id, "clase": clase, "curso_ref": curso_ref, "leccion_ref": "",
                         "objeto_ref": objeto_ref, "objeto_tipo": "", "media_ref": media_ref,
                         "rotulo": str(datos.get("rotulo") or "")[:250], "alcance": alcance,
+                        "destinatarios": [p["persona_id"] for p in destinatarios], "excluidos_bloqueados": excluidos,
+                        "intentos_permitidos": intentos_permitidos, "tiempo_limite_seg": tiempo_limite_seg,
                         "disponible_estudio": bool(datos.get("disponible_estudio")), "asignacion_ref": "",
                         "abierta_en": ahora, "creado_por": actor.id}
             if objeto_ref:
@@ -707,9 +761,12 @@ class Distribuir(_CasoDeSesion):
             if clase == dom.ACTIVIDAD:
                 self._publicar(uow, sesion_id, dom.EV_ACTIVIDAD_LANZADA, {
                     "distribucion_id": distribucion["id"], "curso_ref": registro["curso_ref"], "objeto_ref": objeto_ref,
-                    "asignacion_ref": registro["asignacion_ref"], "destinatarios": len(destinatarios), "instante": ahora})
+                    "asignacion_ref": registro["asignacion_ref"], "alcance": alcance, "destinatarios": len(destinatarios),
+                    "excluidos_bloqueados": len(excluidos), "intentos_permitidos": intentos_permitidos,
+                    "tiempo_limite_seg": tiempo_limite_seg, "instante": ahora})
             uow.auditoria.registrar(actor.id, f"aula.distribucion.{clase}", "m07_distribucion", distribucion["id"],
-                                    nuevo={"objeto_ref": objeto_ref, "media_ref": media_ref, "destinatarios": len(destinatarios)})
+                                    nuevo={"objeto_ref": objeto_ref, "media_ref": media_ref, "alcance": alcance,
+                                           "destinatarios": len(destinatarios), "excluidos_bloqueados": excluidos})
             return distribucion
 
 
@@ -870,13 +927,15 @@ class CerrarSesion(_CasoDeSesion):
                 if p["estado"] in dom.ADMITIDOS:
                     uow.sesiones.actualizar_participante(p["id"], estado=dom.SALIO, salida=ahora)
                     uow.sesiones.registrar_presencia(p["id"], dom.SALIO, ahora, p["dispositivo"], "cierre de la sesión")
+                    if p.get("dim_sesion_alumno_id"):
+                        uow.dispositivos.cerrar_sesion_alumno(p["dim_sesion_alumno_id"], ahora, "sistema")
             distribuciones = uow.sesiones.distribuciones(sesion_id)
             personas = [p["persona_id"] for p in participantes]
             resumen = dom.ResumenSesion(
                 participantes=len(participantes),
                 conectados_maximo=uow.sesiones.conectados_maximo(sesion_id),
                 admitidos_nominal=sum(1 for p in participantes if p["admision_nominal"]),
-                focos=uow.sesiones.total_focos(sesion_id),
+                selectores=uow.sesiones.total_selectores(sesion_id),
                 distribuciones=len(distribuciones),
                 actividades=sum(1 for d in distribuciones if d["clase"] == dom.ACTIVIDAD),
                 avisos=len(uow.sesiones.avisos(sesion_id, limite=10_000)),

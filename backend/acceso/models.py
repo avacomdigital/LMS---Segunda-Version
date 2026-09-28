@@ -280,25 +280,14 @@ class MiembroGrupo(models.Model):
         indexes = [models.Index(fields=["usuario", "papel"])]
 
 
-class Dispositivo(models.Model):
-    id = models.CharField(max_length=36, primary_key=True)
-    organizacion = models.ForeignKey(Organizacion, on_delete=models.CASCADE, related_name="dispositivos")
-    identificador = models.CharField(max_length=128)
-    nombre = models.CharField(max_length=64)
-    tipo = models.CharField(max_length=16, default="TABLETA")
-    activo = models.BooleanField(default=True)
-    registrado_en = models.BigIntegerField(default=ahora_ms)
-    ultimo_visto_en = models.BigIntegerField(default=ahora_ms)
-
-    class Meta:
-        db_table = "m01_dispositivo"
-        constraints = [models.UniqueConstraint(fields=["organizacion", "identificador"], name="uq_m01_dispositivo_identificador")]
+# `Dispositivo` vive en MOD-009 (`device_manager`, m09_dispositivo) desde el 2026-09-28. Este módulo lo
+# referencia por FK y lo consulta en el login por su puerto `RepositorioDispositivos`, nunca por su ORM.
 
 
 class Sesion(models.Model):
     id = models.CharField(max_length=36, primary_key=True)  # jti del JWT
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="sesiones")
-    dispositivo = models.ForeignKey(Dispositivo, on_delete=models.SET_NULL, null=True, blank=True, related_name="sesiones")
+    dispositivo = models.ForeignKey("device_manager.Dispositivo", on_delete=models.SET_NULL, null=True, blank=True, related_name="sesiones")
     clase = models.CharField(max_length=16, default="NORMAL")
     emitida_en = models.BigIntegerField(default=ahora_ms)
     expira_en = models.BigIntegerField()
@@ -323,7 +312,7 @@ class AutorizacionTemporal(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="autorizaciones_temporales")
     otorgada_por = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name="+")
     tipo = models.CharField(max_length=16)  # DISPOSITIVO / CODIGO
-    dispositivo = models.ForeignKey(Dispositivo, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    dispositivo = models.ForeignKey("device_manager.Dispositivo", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     secreto_hash = models.CharField(max_length=255)
     evaluacion_ref = models.CharField(max_length=200, null=True, blank=True)
     creada_en = models.BigIntegerField(default=ahora_ms)
@@ -345,7 +334,7 @@ class AutorizacionTemporal(models.Model):
 class IntentoAcceso(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, null=True, blank=True, related_name="intentos_acceso")
     identificador_hmac = models.CharField(max_length=64, blank=True, default="")
-    dispositivo = models.ForeignKey(Dispositivo, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    dispositivo = models.ForeignKey("device_manager.Dispositivo", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     resultado = models.CharField(max_length=24)
     motivo = models.CharField(max_length=64, blank=True, default="")
     autorizacion = models.ForeignKey(AutorizacionTemporal, on_delete=models.SET_NULL, null=True, blank=True, related_name="intentos")

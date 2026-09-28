@@ -1,6 +1,6 @@
 """
 El ciclo de vida de la sesión de clase con el curso de ejemplo: iniciar, unirse,
-presencia, foco, controles, distribuciones, avisos, código, suspender, reanudar y
+presencia, selector, controles, distribuciones, avisos, código, suspender, reanudar y
 cerrar. Sin biblioteca real y sin instalar el módulo de acceso (Q-34 abierta).
 """
 from __future__ import annotations
@@ -39,7 +39,7 @@ class ConSesionDeClase(TestCase):
 
 
 class IniciarTests(ConSesionDeClase):
-    def test_iniciar_desde_una_leccion_deja_codigo_foco_y_rotulos(self):
+    def test_iniciar_desde_una_leccion_deja_codigo_selector_y_rotulos(self):
         s = self.iniciar()
         self.assertEqual(s["estado"], "abierta")
         self.assertTrue(s["activa"])
@@ -48,9 +48,9 @@ class IniciarTests(ConSesionDeClase):
         self.assertEqual(s["curso_rotulo"], "Estados de la materia y sus cambios")
         self.assertEqual((s["curso_version"], s["leccion_rotulo"]), ("1.0.0", "Los tres estados de la materia"))
         self.assertEqual(s["profesor_rotulo"], "Prof. Gómez")
-        self.assertEqual((s["foco"]["objeto_ref"], s["foco"]["objeto_tipo"], s["foco"]["rotulo"]),
+        self.assertEqual((s["selector"]["objeto_ref"], s["selector"]["objeto_tipo"], s["selector"]["rotulo"]),
                          ("l1-lecture", "lecture", "Todo lo que nos rodea es materia"))
-        self.assertTrue(s["foco"]["vigente"])
+        self.assertTrue(s["selector"]["vigente"])
         self.assertTrue(s["seguimiento"])
         self.assertFalse(s["pantallas_bloqueadas"])
         self.assertEqual(s["conteo"]["total"], 0)
@@ -70,9 +70,9 @@ class IniciarTests(ConSesionDeClase):
 
     def test_las_cuatro_vias_producen_el_mismo_tipo_de_sesion(self):
         libre = self.iniciar(profesor="p-libre", via="libre", curso_ref="", leccion_ref="")
-        self.assertEqual((libre["via_origen"], libre["curso_ref"], libre["foco"]), ("libre", "", None))
+        self.assertEqual((libre["via_origen"], libre["curso_ref"], libre["selector"]), ("libre", "", None))
         recurso = self.iniciar(profesor="p-recurso", via="recurso", leccion_ref="", objeto_ref="l2-lab-heating")
-        self.assertEqual((recurso["foco"]["objeto_ref"], recurso["leccion_ref"], recurso["objeto_rotulo"]),
+        self.assertEqual((recurso["selector"]["objeto_ref"], recurso["leccion_ref"], recurso["objeto_rotulo"]),
                          ("l2-lab-heating", "l2-changes-of-state", "Laboratorio: curva de calentamiento"))
         arbol = self.iniciar(profesor="p-arbol", via="arbol", curso_ref="", leccion_ref="", nodo_ref="CN-6-EJEMPLO")
         self.assertEqual((arbol["via_origen"], arbol["nodo_ref"]), ("arbol", "CN-6-EJEMPLO"))
@@ -103,7 +103,7 @@ class ParticipantesTests(ConSesionDeClase):
         self.assertFalse(u["en_espera"])
         self.assertEqual(u["participante"]["estado"], "conectado")
         self.assertEqual(u["participante"]["persona_rotulo"], "Ana")
-        self.assertEqual(u["foco"]["objeto_ref"], "l1-lecture")
+        self.assertEqual(u["selector"]["objeto_ref"], "l1-lecture")
         self.assertTrue(u["seguimiento"])
         self.assertEqual(u["intervalo_sondeo_ms"], 2000)
         self.assertNotIn("codigo_union", u["sesion"])           # la tableta no ve el código ni la lista
@@ -141,7 +141,7 @@ class ParticipantesTests(ConSesionDeClase):
         self.assertEqual(m.Presencia.objects.filter(participante_id=pid).count(), 3)   # ingreso, salio, conectado
         estado = self.api.get(f"/api/aula/sesiones/{s['id']}/estado/?participante={pid}").json()
         self.assertEqual(estado["participante"]["id"], pid)
-        self.assertEqual(estado["foco"]["objeto_ref"], "l1-lecture")
+        self.assertEqual(estado["selector"]["objeto_ref"], "l1-lecture")
         self.assertIn("servidor_en", estado)
 
     def test_expulsar_y_readmitir_desde_el_panel(self):
@@ -160,23 +160,23 @@ class ParticipantesTests(ConSesionDeClase):
 
 
 class ClaseEnVivoTests(ConSesionDeClase):
-    def test_declarar_el_foco_lo_ve_la_tableta(self):
+    def test_declarar_el_selector_lo_ve_la_tableta(self):
         s = self.iniciar()
         pid = self.unirse(s)["participante"]["id"]
-        r = self.api.post(f"/api/aula/sesiones/{s['id']}/foco/", {"objeto_ref": "l1-lecture", "unidad_ref": "l1-lecture-s2",
+        r = self.api.post(f"/api/aula/sesiones/{s['id']}/selector/", {"objeto_ref": "l1-lecture", "unidad_ref": "l1-lecture-s2",
                                                                     "profesor_id": "prof-1"}, format="json")
         self.assertEqual(r.status_code, 201, r.content)
-        foco = r.json()
-        self.assertEqual((foco["unidad_ref"], foco["unidad_indice"], foco["rotulo"]), ("l1-lecture-s2", 2, "Tres estados, tres formas de ordenarse"))
+        selector = r.json()
+        self.assertEqual((selector["unidad_ref"], selector["unidad_indice"], selector["rotulo"]), ("l1-lecture-s2", 2, "Tres estados, tres formas de ordenarse"))
         estado = self.api.get(f"/api/aula/sesiones/{s['id']}/estado/?participante={pid}").json()
-        self.assertEqual(estado["foco"]["unidad_ref"], "l1-lecture-s2")
-        self.assertEqual(m.Foco.objects.filter(sesion_id=s["id"]).count(), 2)
-        self.assertEqual(m.Foco.objects.filter(sesion_id=s["id"], vigente=True).count(), 1)
-        r = self.api.post(f"/api/aula/sesiones/{s['id']}/foco/", {"objeto_ref": "no-existe"}, format="json")
+        self.assertEqual(estado["selector"]["unidad_ref"], "l1-lecture-s2")
+        self.assertEqual(m.Selector.objects.filter(sesion_id=s["id"]).count(), 2)
+        self.assertEqual(m.Selector.objects.filter(sesion_id=s["id"], vigente=True).count(), 1)
+        r = self.api.post(f"/api/aula/sesiones/{s['id']}/selector/", {"objeto_ref": "no-existe"}, format="json")
         self.assertEqual(r.status_code, 404)
-        r = self.api.post(f"/api/aula/sesiones/{s['id']}/foco/", {"objeto_ref": "l3-exam"}, format="json")
+        r = self.api.post(f"/api/aula/sesiones/{s['id']}/selector/", {"objeto_ref": "l3-exam"}, format="json")
         self.assertEqual(r.status_code, 400)
-        r = self.api.post(f"/api/aula/sesiones/{s['id']}/foco/", {"media_ref": "img-particles", "rotulo": "Modelo de partículas"}, format="json")
+        r = self.api.post(f"/api/aula/sesiones/{s['id']}/selector/", {"media_ref": "img-particles", "rotulo": "Modelo de partículas"}, format="json")
         self.assertEqual((r.status_code, r.json()["objeto_tipo"], r.json()["media_ref"]), (201, "medio", "img-particles"))
 
     def test_bloquear_pantallas_y_liberar_el_seguimiento(self):
@@ -265,20 +265,20 @@ class ClaseEnVivoTests(ConSesionDeClase):
 
 
 class ContinuidadTests(ConSesionDeClase):
-    def test_suspender_y_reanudar_conserva_codigo_foco_y_participantes(self):
+    def test_suspender_y_reanudar_conserva_codigo_selector_y_participantes(self):
         s = self.iniciar()
         pid = self.unirse(s)["participante"]["id"]
         r = self.api.post(f"/api/aula/sesiones/{s['id']}/suspender/", {"causa": "caida_nodo"}, format="json")
         self.assertEqual((r.status_code, r.json()["estado"]), (200, "suspendida"))
         self.assertEqual(r.json()["participantes"][0]["estado"], "reconectando")
-        r = self.api.post(f"/api/aula/sesiones/{s['id']}/foco/", {"objeto_ref": "l1-lecture"}, format="json")
+        r = self.api.post(f"/api/aula/sesiones/{s['id']}/selector/", {"objeto_ref": "l1-lecture"}, format="json")
         self.assertEqual((r.status_code, r.json()["codigo"]), (409, "transicion_invalida"))
         # La tableta puede volver a presentarse con el mismo código mientras está suspendida.
         u = self.unirse(s, participante_id=pid)
         self.assertEqual(u["participante"]["estado"], "reconectando")
         r = self.api.post(f"/api/aula/sesiones/{s['id']}/reanudar/", {}, format="json")
         self.assertEqual((r.status_code, r.json()["estado"], r.json()["codigo_union"]), (200, "abierta", s["codigo_union"]))
-        self.assertEqual(r.json()["foco"]["objeto_ref"], "l1-lecture")
+        self.assertEqual(r.json()["selector"]["objeto_ref"], "l1-lecture")
         self.assertEqual(len(r.json()["participantes"]), 1)
         self.assertIn(dom.EV_SESION_REANUDADA, self.eventos(s["id"]))
         carga = m.EventoSalida.objects.get(agregado_id=s["id"], tipo_evento=dom.EV_SESION_REANUDADA).carga
@@ -290,7 +290,7 @@ class ContinuidadTests(ConSesionDeClase):
         s = self.iniciar()
         pid = self.unirse(s)["participante"]["id"]
         self.unirse(s, persona="luis", rotulo="Luis", dispositivo="tab-2")
-        self.api.post(f"/api/aula/sesiones/{s['id']}/foco/", {"objeto_ref": "l1-explanation"}, format="json")
+        self.api.post(f"/api/aula/sesiones/{s['id']}/selector/", {"objeto_ref": "l1-explanation"}, format="json")
         self.api.post(f"/api/aula/sesiones/{s['id']}/avisos/", {"texto": "Vamos a cerrar"}, format="json")
         self.api.post(f"/api/aula/sesiones/{s['id']}/distribuciones/", {"clase": "actividad", "objeto_ref": "l1-activity"}, format="json")
         r = self.api.post(f"/api/aula/sesiones/{s['id']}/cerrar/", {}, format="json")
@@ -302,15 +302,15 @@ class ContinuidadTests(ConSesionDeClase):
         self.assertIsNotNone(s2["finalizada_en"])
         self.assertEqual(s2["resumen"]["participantes"], 2)
         self.assertEqual(s2["resumen"]["conectados_maximo"], 2)
-        self.assertEqual((s2["resumen"]["focos"], s2["resumen"]["distribuciones"], s2["resumen"]["actividades"], s2["resumen"]["avisos"]), (2, 1, 1, 1))
+        self.assertEqual((s2["resumen"]["selectores"], s2["resumen"]["distribuciones"], s2["resumen"]["actividades"], s2["resumen"]["avisos"]), (2, 1, 1, 1))
         self.assertEqual(s2["resumen"]["pendientes"], 0)
         self.assertGreaterEqual(s2["resumen"]["duracion_ms"], 0)
         self.assertTrue(all(p["estado"] == "salio" for p in s2["participantes"]))
         self.assertFalse(s2["seguimiento"])
-        # BR-052: cerrada no admite participantes nuevos ni cambios de foco.
+        # BR-052: cerrada no admite participantes nuevos ni cambios de selector.
         r = self.api.post("/api/aula/sesiones/unirse/", {"codigo_union": s["codigo_union"], "persona_id": "nuevo"}, format="json")
         self.assertEqual(r.status_code, 404)
-        r = self.api.post(f"/api/aula/sesiones/{s['id']}/foco/", {"objeto_ref": "l1-lecture"}, format="json")
+        r = self.api.post(f"/api/aula/sesiones/{s['id']}/selector/", {"objeto_ref": "l1-lecture"}, format="json")
         self.assertEqual((r.status_code, r.json()["codigo"]), (409, "sesion_cerrada"))
         r = self.api.post(f"/api/aula/sesiones/{s['id']}/reanudar/", {}, format="json")
         self.assertEqual(r.status_code, 409)
@@ -357,5 +357,5 @@ class ConPadronTests(BaseAcceso):
         self.assertEqual((r.status_code, r.json()["estado"]), (200, "rechazado"))
         # Con sesión de estudiante (JWT) las funciones del profesor se niegan (403), sin necesidad de sembrar classroom.*.
         alumno = self.sesion(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN, self.TABLETA)
-        r = alumno.post(f"/api/aula/sesiones/{s['id']}/foco/", {"media_ref": "x", "rotulo": "x"}, format="json")
+        r = alumno.post(f"/api/aula/sesiones/{s['id']}/selector/", {"media_ref": "x", "rotulo": "x"}, format="json")
         self.assertEqual((r.status_code, r.json()["codigo"]), (403, "sin_permiso"))

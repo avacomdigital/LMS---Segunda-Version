@@ -17,6 +17,7 @@ class UnidadDeTrabajoAula:
         self.outbox = r.OutboxDjango()
         self.auditoria = r.AuditoriaExpediente()
         self.identidad = r.IdentidadAcceso()
+        self.dispositivos = r.DispositivosDeviceManager()
         self.evaluacion = r.EvaluacionExpediente()
         return self
 

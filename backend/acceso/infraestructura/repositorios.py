@@ -360,29 +360,36 @@ class GruposDjango:
 
 
 class DispositivosDjango:
+    """El inventario es de MOD-009: se lee y se escribe por su interfaz (`device_manager.servicios`), dentro
+    de la transacción del login. Aquí sólo se traduce al vocabulario de este módulo (identificador,
+    ultimo_visto_en)."""
+
     def por_id(self, dispositivo_id: str) -> e.Dispositivo | None:
-        f = m.Dispositivo.objects.filter(id=dispositivo_id).first()
-        return self._a_entidad(f) if f else None
+        from device_manager import servicios as dispositivos
+        fila = dispositivos.por_id(dispositivo_id)
+        return self._a_entidad(fila) if fila else None
 
     def por_identificador(self, organizacion_id: str, identificador: str) -> e.Dispositivo | None:
-        f = m.Dispositivo.objects.filter(organizacion_id=organizacion_id, identificador=identificador).first()
-        return self._a_entidad(f) if f else None
+        from device_manager import servicios as dispositivos
+        fila = dispositivos.por_identificador(organizacion_id, identificador)
+        return self._a_entidad(fila) if fila else None
 
     def listar(self, organizacion_id: str, solo_activos: bool = True) -> list[e.Dispositivo]:
-        consulta = m.Dispositivo.objects.filter(organizacion_id=organizacion_id)
-        if solo_activos:
-            consulta = consulta.filter(activo=True)
-        return [self._a_entidad(f) for f in consulta.order_by("nombre")]
+        from device_manager import servicios as dispositivos
+        return [self._a_entidad(f) for f in dispositivos.listar(organizacion_id, solo_activos)]
 
     def guardar(self, d: e.Dispositivo) -> None:
-        m.Dispositivo.objects.update_or_create(id=d.id, defaults=dict(
-            organizacion_id=d.organizacion_id, identificador=d.identificador, nombre=d.nombre, tipo=d.tipo.value,
-            activo=d.activo, registrado_en=d.registrado_en, ultimo_visto_en=d.ultimo_visto_en))
+        """Lo único que el login cambia de un dispositivo: su último latido y, si cambió, su nombre."""
+        from device_manager import servicios as dispositivos
+        dispositivos.latido(d.id, d.ultimo_visto_en)
+        actual = dispositivos.por_id(d.id)
+        if actual and d.nombre and actual["nombre"] != d.nombre:
+            dispositivos.renombrar(d.id, d.nombre)
 
     @staticmethod
-    def _a_entidad(f: m.Dispositivo) -> e.Dispositivo:
-        return e.Dispositivo(f.id, f.organizacion_id, f.identificador, f.nombre, TipoDispositivo(f.tipo), f.activo,
-                             f.registrado_en, f.ultimo_visto_en)
+    def _a_entidad(f: dict) -> e.Dispositivo:
+        return e.Dispositivo(f["id"], f["organizacion_id"], f["identificador_hw"], f["nombre"], TipoDispositivo(f["tipo"]),
+                             f["activo"], f["registrado_en"], f["ultimo_latido_en"], bloqueado=bool(f.get("bloqueado")))
 
 
 # ----------------------------------------------------------------- sesiones

@@ -123,6 +123,7 @@ class TipoAutorizacion(str, Enum):
 class TipoDispositivo(str, Enum):
     TABLETA = "TABLETA"
     MASTER = "MASTER"
+    OTRO = "OTRO"
 
 
 class ResultadoIntento(str, Enum):

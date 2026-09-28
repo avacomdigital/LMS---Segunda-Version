@@ -6,8 +6,7 @@ urlpatterns = [
     # sin sesión
     path("configuracion/", views.ConfiguracionView.as_view(), name="acceso-configuracion"),
     path("instalacion/", views.InstalacionView.as_view(), name="acceso-instalacion"),
-    path("dispositivos/", views.DispositivosView.as_view(), name="acceso-dispositivos"),
-    path("dispositivos/<str:pk>/", views.DispositivoView.as_view(), name="acceso-dispositivo"),
+    # los dispositivos viven en MOD-009: /api/dispositivos/ (app device_manager)
     path("sesiones/", views.SesionesView.as_view(), name="acceso-sesiones"),
     path("autorizaciones-temporales/canjear/", views.CanjeView.as_view(), name="acceso-canjear"),
     # identidad propia

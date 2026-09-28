@@ -82,26 +82,6 @@ class InstalacionView(VistaPublica):
         return Response(cu.InstalarNodo(self.s).ejecutar(datos["organizacion"], datos["administrador"]), status=201)
 
 
-class DispositivosView(VistaPublica):
-    """POST público (registro idempotente de la tableta); GET con sesión."""
-
-    def post(self, request):
-        datos = _validar(s.DispositivoEntrada, request.data)
-        dto, creado = cu.RegistrarDispositivo(self.s).ejecutar(datos["identificador"], datos["nombre"], datos["tipo"])
-        return Response(dto, status=201 if creado else 200)
-
-    def get(self, request):
-        principal = _exigir_principal(request)
-        solo_activos = not _bandera(request.query_params.get("todos"))
-        return Response(cu.ListarDispositivos(self.s).ejecutar(principal, solo_activos))
-
-
-class DispositivoView(VistaAcceso):
-    def patch(self, request, pk: str):
-        cambios = _validar(s.DispositivoCambios, request.data, parcial=True)
-        return Response(cu.ActualizarDispositivo(self.s).ejecutar(request.user, pk, cambios))
-
-
 class SesionesView(VistaPublica):
     """POST = iniciar sesión (FUN-004 / FUN-005, público). GET = listar sesiones (con sesión y permiso)."""
 

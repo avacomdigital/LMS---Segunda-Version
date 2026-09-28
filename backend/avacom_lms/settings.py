@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "acceso",
+    "device_manager",
     "biblioteca",
     "expediente",
     "classroom_engine",

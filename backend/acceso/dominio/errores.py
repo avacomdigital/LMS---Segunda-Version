@@ -90,6 +90,11 @@ class SesionTemporalLimitada(SinPermiso):
     codigo = "sesion_temporal_limitada"
 
 
+class DispositivoBloqueado(SinPermiso):
+    """La tableta está bloqueada por el profesor o el administrador (MOD-009): no abre sesión."""
+    codigo = "dispositivo_bloqueado"
+
+
 class NoEncontrado(ErrorAcceso):
     """No existe o está fuera de su alcance."""
     codigo = "no_encontrado"

@@ -155,7 +155,7 @@ class ResumenSesion:
     participantes: int = 0
     conectados_maximo: int = 0
     admitidos_nominal: int = 0
-    focos: int = 0
+    selectores: int = 0
     distribuciones: int = 0
     actividades: int = 0
     avisos: int = 0
@@ -169,8 +169,9 @@ class ResumenSesion:
 
 
 @dataclass
-class Foco:
-    """El contenido que el profesor declara como foco (BR-049). Se valida contra el curso vigente."""
+class Selector:
+    """Lo que el profesor tiene seleccionado para proyectar (BR-049). Se valida contra el curso vigente.
+    No es un lanzamiento: no espera confirmación ni genera intentos."""
 
     curso_ref: str = ""
     curso_version: str = ""
@@ -185,6 +186,21 @@ class Foco:
 
     def validar(self) -> None:
         if not (self.curso_ref or self.media_ref):
-            raise DatosInvalidos("El foco exige curso_ref (y objeto_ref) o media_ref.")
+            raise DatosInvalidos("El selector exige curso_ref (y objeto_ref) o media_ref.")
         if self.unidad_ref and not self.objeto_ref:
             raise DatosInvalidos("Una unidad (lámina, página o pregunta) exige su objeto_ref.")
+
+
+# ------------------------------------------------------------------ lanzamiento
+
+def validar_regla_entera(valor, nombre: str, minimo: int = 1) -> int | None:
+    """`intentos_permitidos` y `tiempo_limite_seg` del lanzamiento: enteros ≥ 1 o ausentes (manda el objeto)."""
+    if valor in (None, ""):
+        return None
+    try:
+        entero = int(valor)
+    except (TypeError, ValueError):
+        raise DatosInvalidos(f"{nombre} debe ser un entero.", **{nombre: valor})
+    if entero < minimo:
+        raise DatosInvalidos(f"{nombre} debe ser al menos {minimo}.", **{nombre: valor})
+    return entero

@@ -229,7 +229,7 @@ class PresenciaView(VistaAula):
 
 
 class EstadoTabletaView(VistaAula):
-    """Sondeo de sólo lectura (BR-049: el cambio de foco llega en 3 s; el cliente sondea cada 2 s hasta que haya WebSocket)."""
+    """Sondeo de sólo lectura (BR-049: el cambio de selector llega en 3 s; el cliente sondea cada 2 s hasta que haya WebSocket)."""
 
     def get(self, request, sesion_id: str):
         q = request.query_params
@@ -237,10 +237,12 @@ class EstadoTabletaView(VistaAula):
         return Response(cu.EstadoParaTableta(servicios()).ejecutar(sesion_id, q.get("participante") or None, int(desde) if desde else None))
 
 
-class FocoView(VistaAula):
+class SelectorView(VistaAula):
+    """FUN-069 · BR-049: el profesor declara qué proyecta (lámina, página, objeto o medio). No es un lanzamiento."""
+
     def post(self, request, sesion_id: str):
         datos = request.data or {}
-        return Response(cu.DeclararFoco(servicios()).ejecutar(self._actor(request, datos), sesion_id, datos), status=201)
+        return Response(cu.DeclararSelector(servicios()).ejecutar(self._actor(request, datos), sesion_id, datos), status=201)
 
 
 class ControlesView(VistaAula):

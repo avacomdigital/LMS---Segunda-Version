@@ -92,6 +92,20 @@ class CodigoInvalido(NoEncontrado):
     codigo = "codigo_invalido"
 
 
+# ------------------------------------------------------------- dispositivos (MOD-009)
+
+class DispositivoBloqueado(ErrorAula):
+    """La tableta está bloqueada por el profesor o el administrador: no entra a la clase ni recibe lanzamientos."""
+    codigo = "dispositivo_bloqueado"
+    http = 403
+
+
+class DispositivoInactivo(ErrorAula):
+    """La tableta fue retirada del inventario del aula."""
+    codigo = "dispositivo_inactivo"
+    http = 403
+
+
 # ----------------------------------------------------- fuente de cursos (puerto)
 
 class FuenteNoDisponible(ErrorAula):

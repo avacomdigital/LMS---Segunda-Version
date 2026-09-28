@@ -60,7 +60,7 @@ class BaseAcceso(TestCase):
         assert r.status_code == 201, r.content
         self.estudiante_id = r.json()["id"]
 
-        r = self.api.post("/api/acceso/dispositivos/", {"identificador": self.TABLETA, "nombre": "tableta-07"}, format="json")
+        r = self.api.post("/api/dispositivos/", {"identificador": self.TABLETA, "nombre": "tableta-07"}, format="json")
         assert r.status_code == 201, r.content
         self.tableta = r.json()
 

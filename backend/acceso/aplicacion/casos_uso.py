@@ -71,7 +71,6 @@ from ..dominio.valores import (
     PermissionCode,
     ResultadoIntento,
     TipoAutorizacion,
-    TipoDispositivo,
     TipoIdentificador,
     TipoSecreto,
     UserId,
@@ -336,11 +335,6 @@ class Base:
                 "activo": g.activo, "politica_credencial_id": g.politica_credencial_id, "creado_en": g.creado_en}
 
     @staticmethod
-    def dto_dispositivo(d: Dispositivo) -> dict:
-        return {"id": d.id, "identificador": d.identificador, "nombre": d.nombre, "tipo": d.tipo.value,
-                "activo": d.activo, "registrado_en": d.registrado_en, "ultimo_visto_en": d.ultimo_visto_en}
-
-    @staticmethod
     def dto_autorizacion(a: AutorizacionTemporal, alias: str = "", dispositivo: str | None = None) -> dict:
         return {"id": a.id, "usuario_id": a.usuario_id, "alias": alias, "otorgada_por": a.otorgada_por,
                 "tipo": a.tipo.value, "dispositivo_id": a.dispositivo_id, "dispositivo": dispositivo,
@@ -431,10 +425,14 @@ class Base:
         }
 
     def dispositivo_por_identificador(self, uow: UnidadDeTrabajo, organizacion_id: str, identificador: str | None) -> Dispositivo | None:
+        """El equipo desde el que se entra, si está en el inventario de MOD-009. Retirado = como si no
+        lo hubiera dicho; bloqueado = no abre sesión (regla del dispositivo, no de la persona)."""
         if not identificador:
             return None
         dispositivo = uow.dispositivos.por_identificador(organizacion_id, str(identificador).strip())
         if dispositivo and dispositivo.activo:
+            if dispositivo.bloqueado:
+                raise errores.DispositivoBloqueado(dispositivo=dispositivo.nombre)
             dispositivo.ultimo_visto_en = self.ahora()
             uow.dispositivos.guardar(dispositivo)
             return dispositivo
@@ -564,26 +562,8 @@ class ConsultarConfiguracion(Base):
                     "claves_derivadas": self.s.cifrador.claves_derivadas()}
 
 
-class RegistrarDispositivo(Base):
-    def ejecutar(self, identificador: str, nombre: str, tipo: str = "TABLETA") -> tuple[dict, bool]:
-        with self.s.uow() as uow:
-            org = self.organizacion(uow)
-            identificador = _texto(identificador, "el identificador del dispositivo", 128)
-            nombre = _texto(nombre, "el nombre del dispositivo", 64)
-            ahora = self.ahora()
-            existente = uow.dispositivos.por_identificador(org.id, identificador)
-            if existente:
-                existente.ultimo_visto_en = ahora
-                if nombre and existente.nombre != nombre:
-                    existente.nombre = nombre
-                uow.dispositivos.guardar(existente)
-                return self.dto_dispositivo(existente), False
-            dispositivo = Dispositivo(id=_nuevo_id(), organizacion_id=org.id, identificador=identificador, nombre=nombre,
-                                      tipo=_enum(TipoDispositivo, tipo, "Tipo de dispositivo"), activo=True,
-                                      registrado_en=ahora, ultimo_visto_en=ahora)
-            uow.dispositivos.guardar(dispositivo)
-            self.evento(uow, "dispositivo", dispositivo.id, "dispositivo_registrado", {"nombre": nombre})
-            return self.dto_dispositivo(dispositivo), True
+# El registro, el inventario y el bloqueo de dispositivos son de MOD-009 (`device_manager`) desde el
+# 2026-09-28: `POST/GET /api/dispositivos/`. Este módulo sólo los lee al abrir sesión.
 
 
 # ============================================================ autenticación
@@ -1796,39 +1776,3 @@ class RetirarMiembro(Base):
             return hubo
 
 
-# ============================================================ dispositivos
-
-
-class ListarDispositivos(Base):
-    def ejecutar(self, principal: Principal, solo_activos: bool = True) -> list[dict]:
-        with self.s.uow() as uow:
-            ctx = self.contexto(uow, principal)
-            previa = self.politica.transversal(ctx, "identity.device.manage")
-            if previa is not None:
-                previa.exigir()
-            if self.politica.alcance_concedido(ctx, "identity.exam_access.grant") is None \
-                    and self.politica.alcance_concedido(ctx, "identity.device.manage") is None:
-                raise errores.SinPermiso(permiso="identity.device.manage")
-            return [self.dto_dispositivo(d) for d in uow.dispositivos.listar(principal.organizacion_id, solo_activos)]
-
-
-class ActualizarDispositivo(Base):
-    def ejecutar(self, principal: Principal, dispositivo_id: str, cambios: dict) -> dict:
-        with self.s.uow() as uow:
-            ctx = self.contexto(uow, principal)
-            self.exigir(ctx, "identity.device.manage", ObjetivoOrganizacion(principal.organizacion_id))
-            dispositivo = uow.dispositivos.por_id(dispositivo_id)
-            if dispositivo is None or dispositivo.organizacion_id != principal.organizacion_id:
-                raise errores.NoEncontrado("No existe ese dispositivo.")
-            if "nombre" in cambios:
-                dispositivo.nombre = _texto(cambios.get("nombre"), "el nombre del dispositivo", 64)
-            if "activo" in cambios:
-                dispositivo.activo = bool(cambios["activo"])
-                if not dispositivo.activo:
-                    for s in uow.sesiones.abiertas_en_dispositivo(dispositivo.id, self.ahora()):
-                        self.cerrar_sesion(uow, s, MotivoCierre.DISPOSITIVO_BAJA, actor_id=principal.usuario_id)
-            uow.dispositivos.guardar(dispositivo)
-            self.auditar(uow, principal.usuario_id, "identidad.dispositivo.actualizado", "m01_dispositivo", dispositivo.id,
-                         {"campos": sorted(cambios.keys())})
-            self.evento(uow, "dispositivo", dispositivo.id, "dispositivo_actualizado", {"campos": sorted(cambios.keys())})
-            return self.dto_dispositivo(dispositivo)

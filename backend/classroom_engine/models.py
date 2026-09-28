@@ -2,9 +2,9 @@
 MOD-007 · Classroom Engine · tablas `m07_*`.
 
 Lo que el aula POSEE: la sesión de clase, sus participantes y su presencia técnica,
-el foco que se proyecta, los controles sobre las pantallas, las distribuciones con
-su avance de entrega, los avisos y el resumen de cierre. Ningún otro módulo escribe
-aquí (escritor único, sección K del Maestro).
+el selector (lo que el profesor tiene seleccionado para proyectar), los controles sobre
+las pantallas, las distribuciones (lanzamientos) con su avance de entrega, los avisos y
+el resumen de cierre. Ningún otro módulo escribe aquí (escritor único, sección K del Maestro).
 
 Lo que NO hay, y no es un olvido (regla de oro, artículo 14): ninguna tabla de
 curso, asignatura, lección, objeto, lámina, bloque, medio, pregunta ni opción. El
@@ -15,8 +15,11 @@ Convenciones del documento de Arquitectura que se aplican: prefijo por módulo
 (CV-01), identificadores de texto (CV-02), tiempo en milisegundos (CV-03), nada se
 borra (CV-05), estados acotados por el motor (CV-06) e invariantes como índices
 parciales (CV-07). Las referencias a MOD-001/MOD-002 (`grupo_id`, `profesor_id`,
-`persona_id`, `dispositivo`) son lógicas, como en el expediente, y las valida el
-puerto `Identidad`; pasarán a FK físicas cuando MOD-002 y MOD-009 tengan dueño.
+`persona_id`) son lógicas, como en el expediente, y las valida el puerto `Identidad`.
+Desde el 2026-09-28 MOD-009 tiene dueño (`device_manager`): `dispositivo_id` y
+`dim_sesion_alumno_id` del participante son referencias lógicas a m09_* que resuelve el
+puerto `Dispositivos` (una tableta bloqueada no entra ni recibe lanzamientos); pasarán a
+FK físicas cuando los módulos compartan un motor definitivo.
 """
 from __future__ import annotations
 
@@ -102,7 +105,9 @@ class Participante(models.Model):
     sesion = models.ForeignKey(SesionDeClase, on_delete=models.CASCADE, related_name="participantes")
     persona_id = models.CharField(max_length=64)
     persona_rotulo = models.CharField(max_length=120, blank=True, default="")
-    dispositivo = models.CharField(max_length=64, blank=True, default="")           # contexto, nunca identidad
+    dispositivo = models.CharField(max_length=64, blank=True, default="")           # huella que declara la tableta; contexto, nunca identidad
+    dispositivo_id = models.CharField(max_length=36, blank=True, default="")        # m09_dispositivo (MOD-009), lógica
+    dim_sesion_alumno_id = models.CharField(max_length=36, blank=True, default="")  # m09_dim_sesion_alumno (MOD-009), lógica
     sesion_usuario_id = models.CharField(max_length=36, blank=True, default="")     # m01_sesion (MOD-001), lógica
     estado = models.CharField(max_length=16, choices=[(e, e) for e in dom.ESTADOS_PARTICIPANTE], default=dom.CONECTADO)
     admision_nominal = models.BooleanField(default=False)   # BR-047: invitado admitido por el profesor
@@ -139,11 +144,13 @@ class Presencia(models.Model):
         indexes = [models.Index(fields=["participante", "momento"], name="ix_m07_presencia")]
 
 
-class Foco(models.Model):
-    """Lo que el profesor declara como foco (BR-049). Bitácora con un solo foco vigente por sesión."""
+class Selector(models.Model):
+    """Lo que el profesor tiene seleccionado para proyectar (FUN-069, BR-049): una lámina, una página,
+    un objeto o un medio suelto. Bitácora con un solo selector vigente por sesión. No es un
+    lanzamiento: cambia varias veces por minuto, no espera confirmación ni genera intentos."""
 
     id = models.CharField(max_length=36, primary_key=True)
-    sesion = models.ForeignKey(SesionDeClase, on_delete=models.CASCADE, related_name="focos")
+    sesion = models.ForeignKey(SesionDeClase, on_delete=models.CASCADE, related_name="selectores")
     curso_ref = models.CharField(max_length=200, blank=True, default="")
     curso_version = models.CharField(max_length=32, blank=True, default="")
     leccion_ref = models.CharField(max_length=120, blank=True, default="")
@@ -159,13 +166,13 @@ class Foco(models.Model):
     sustituido_en = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
-        db_table = "m07_foco"
+        db_table = "m07_selector"
         constraints = [
-            models.UniqueConstraint(fields=["sesion"], condition=Q(vigente=True), name="ux_m07_foco_vigente"),
-            models.CheckConstraint(condition=Q(vigente=True) | Q(sustituido_en__isnull=False), name="ck_m07_foco_sustitucion"),
-            models.CheckConstraint(condition=~Q(curso_ref="") | ~Q(media_ref=""), name="ck_m07_foco_referencia"),
+            models.UniqueConstraint(fields=["sesion"], condition=Q(vigente=True), name="ux_m07_selector_vigente"),
+            models.CheckConstraint(condition=Q(vigente=True) | Q(sustituido_en__isnull=False), name="ck_m07_selector_sustitucion"),
+            models.CheckConstraint(condition=~Q(curso_ref="") | ~Q(media_ref=""), name="ck_m07_selector_referencia"),
         ]
-        indexes = [models.Index(fields=["sesion", "declarado_en"], name="ix_m07_foco")]
+        indexes = [models.Index(fields=["sesion", "declarado_en"], name="ix_m07_selector")]
 
 
 class Control(models.Model):
@@ -190,7 +197,10 @@ class Control(models.Model):
 
 
 class Distribucion(models.Model):
-    """Envío de un recurso o lanzamiento de una actividad a todos o a algunos (CAP-040, FUN-070, FUN-071)."""
+    """El lanzamiento: envío de un recurso o de una actividad a todos o a algunos, con avance de entrega
+    (CAP-040, FUN-070, FUN-071). Es la tabla `lanzamiento` de la segunda versión del modelo de datos:
+    `alcance` y `destinatarios` dicen a quién; `intentos_permitidos` y `tiempo_limite_seg` son las reglas
+    con las que se lanzó; una tableta bloqueada (MOD-009) queda fuera y consta en `excluidos_bloqueados`."""
 
     id = models.CharField(max_length=36, primary_key=True)
     sesion = models.ForeignKey(SesionDeClase, on_delete=models.CASCADE, related_name="distribuciones")
@@ -202,6 +212,10 @@ class Distribucion(models.Model):
     media_ref = models.CharField(max_length=120, blank=True, default="")
     rotulo = models.CharField(max_length=250, blank=True, default="")
     alcance = models.CharField(max_length=16, choices=[(a, a) for a in dom.ALCANCES], default=dom.GRUPO)
+    destinatarios = models.JSONField(default=list)             # persona_id de quienes lo recibieron al lanzar
+    excluidos_bloqueados = models.JSONField(default=list)      # persona_id dejados fuera por tableta bloqueada o retirada
+    intentos_permitidos = models.PositiveSmallIntegerField(null=True, blank=True)   # NULL: manda el objeto
+    tiempo_limite_seg = models.PositiveIntegerField(null=True, blank=True)
     disponible_estudio = models.BooleanField(default=False)   # MOD-008 decide si lo descarga
     asignacion_ref = models.CharField(max_length=64, blank=True, default="")   # MOD-010, devuelto por el puerto Evaluacion
     abierta_en = models.BigIntegerField(default=ahora_ms)
@@ -214,6 +228,10 @@ class Distribucion(models.Model):
             models.CheckConstraint(condition=~Q(objeto_ref="") | ~Q(media_ref=""), name="ck_m07_dist_referencia"),
             models.CheckConstraint(condition=Q(cerrada_en__isnull=True) | Q(cerrada_en__gte=F("abierta_en")),
                                    name="ck_m07_dist_cierre_posterior"),
+            models.CheckConstraint(condition=Q(intentos_permitidos__isnull=True) | Q(intentos_permitidos__gte=1),
+                                   name="ck_m07_dist_intentos"),
+            models.CheckConstraint(condition=Q(tiempo_limite_seg__isnull=True) | Q(tiempo_limite_seg__gte=1),
+                                   name="ck_m07_dist_tiempo"),
         ]
         indexes = [models.Index(fields=["sesion", "cerrada_en"], name="ix_m07_dist_abiertas")]
 
@@ -258,7 +276,7 @@ class Resumen(models.Model):
     participantes = models.IntegerField(default=0)
     conectados_maximo = models.IntegerField(default=0)
     admitidos_nominal = models.IntegerField(default=0)
-    focos = models.IntegerField(default=0)
+    selectores = models.IntegerField(default=0)
     distribuciones = models.IntegerField(default=0)
     actividades = models.IntegerField(default=0)
     avisos = models.IntegerField(default=0)

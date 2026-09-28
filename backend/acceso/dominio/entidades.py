@@ -285,6 +285,9 @@ class MiembroGrupo:
 
 @dataclass
 class Dispositivo:
+    """Lo que el login necesita saber de un equipo. El dueño es MOD-009 (`device_manager`); aquí es una
+    lectura por el puerto `RepositorioDispositivos`, con los nombres que usa este módulo."""
+
     id: str
     organizacion_id: str
     identificador: str
@@ -293,6 +296,7 @@ class Dispositivo:
     activo: bool
     registrado_en: int
     ultimo_visto_en: int
+    bloqueado: bool = False
 
 
 @dataclass
