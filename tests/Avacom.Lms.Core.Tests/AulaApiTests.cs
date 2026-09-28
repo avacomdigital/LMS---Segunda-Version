@@ -29,9 +29,11 @@ public sealed class AulaApiTests
               {"objeto_ref":"l1-lab","tipo":"simulation_lab","componente":"laboratorio_web","titulo":"Lab","modos":["class"],"fuera_de_alcance":false,"modulo":"MOD-007",
                "url_lanzamiento":"/api/aula/cursos/x/medios/sim-heating-curve/index.html?fuente=ejemplo&startTemp=-10","parametros_lanzamiento":{"startTemp":-10,"altitudeMeters":0},"pasos":["a","b"],"preguntas_guia":["q"]},
               {"objeto_ref":"l1-act","tipo":"activity","componente":"actividad","titulo":"Practica","modos":["class"],"fuera_de_alcance":false,"modulo":"MOD-007",
-               "ajustes":{"retroalimentacion":"immediate","intentos_permitidos":2,"barajar_preguntas":false,"barajar_opciones":true},"puntos_totales":3,
-               "preguntas":[{"pregunta_ref":"q1","tipo":"multiple_choice","componente":"opcion_multiple","enunciado":"¿Cuál?","puntos":1,"credito_parcial":false,"permite_varias":false,
-                             "opciones":[{"opcion_ref":"a","texto":"El aire"},{"opcion_ref":"b","texto":"La leche"}]},
+               "ajustes":{"retroalimentacion":"immediate","intentos_permitidos":2,"barajar_preguntas":false,"barajar_opciones":true,"tiempo_limite_seg":300},"puntos_totales":3.5,
+               "preguntas":[{"pregunta_ref":"q1","tipo":"multiple_choice","componente":"opcion_multiple","enunciado":"¿Cuál *pesa* más? $2 \\times 3$","puntos":1.5,"credito_parcial":false,"permite_varias":false,
+                             "enunciado_tramos":[{"texto":"¿Cuál ","negrita":false,"cursiva":false,"matematica":false},{"texto":"pesa","negrita":false,"cursiva":true,"matematica":false},{"texto":" más? ","negrita":false,"cursiva":false,"matematica":false},{"texto":"2 × 3","negrita":false,"cursiva":false,"matematica":true}],
+                             "medios":[{"media_ref":"img-vaso","clase":"image","componente":"imagen","url":"/api/aula/cursos/x/medios/img-vaso/?fuente=ejemplo","texto_alternativo":"Un vaso","ausente":false}],
+                             "opciones":[{"opcion_ref":"a","texto":"El aire","media_ref":null,"url":null},{"opcion_ref":"b","texto":null,"media_ref":"img-leche","url":"/api/aula/cursos/x/medios/img-leche/?fuente=ejemplo","texto_alternativo":"Leche"}]},
                             {"pregunta_ref":"q3","tipo":"fill_blanks","componente":"completar","enunciado":"Completa.","puntos":2,"credito_parcial":true,"plantilla":"Un líquido tiene volumen {{b1}}",
                              "espacios":[{"espacio_ref":"b1","modo_entrada":"select","opciones":["propio","variable"]}]}]},
               {"objeto_ref":"l3-exam","tipo":"exam","componente":"examen","titulo":"Examen","modos":["exam"],"fuera_de_alcance":true,"modulo":"MOD-010","preguntas":[],"total_preguntas_banco":12}]}],
@@ -82,6 +84,19 @@ public sealed class AulaApiTests
         var actividad = leccion.Objetos[2];
         Assert.Equal("Opción múltiple", actividad.Preguntas![0].TipoLegible);
         Assert.Equal(["propio", "variable"], actividad.Preguntas![1].Espacios![0].Opciones!.ToArray());
+        // Esquema 1.0: `points` es decimal, las preguntas traen medios, las opciones pueden ser imagen y
+        // los tramos llevan cursiva y matemática (opcionales: un tramo sólo con `negrita` sigue valiendo).
+        Assert.Equal(3.5, actividad.PuntosTotales);
+        Assert.Equal(300, actividad.Ajustes!.TiempoLimiteSeg);
+        var pregunta = actividad.Preguntas[0];
+        Assert.Equal(1.5, pregunta.Puntos);
+        Assert.Equal("img-vaso", pregunta.Medios![0].MediaRef);
+        Assert.True(pregunta.EnunciadoTramos![1].Cursiva);
+        Assert.True(pregunta.EnunciadoTramos![3].Matematica);
+        Assert.Equal("2 × 3", pregunta.EnunciadoTramos![3].Texto);
+        Assert.Null(pregunta.Opciones![0].Url);
+        Assert.Equal("img-leche", pregunta.Opciones![1].MediaRef);
+        Assert.False(lamina.Bloques[1].Tramos![0].Cursiva);
         Assert.True(vista.Objeto("l3-exam")!.FueraDeAlcance);
         Assert.Contains("Curso de cuatro sesiones.", vista.NotasDocente!.Lineas());
     }

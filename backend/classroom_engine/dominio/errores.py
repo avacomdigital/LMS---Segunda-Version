@@ -128,3 +128,10 @@ class FuenteError(ErrorAula):
     """La fuente contestó, pero con error."""
     codigo = "fuente_error"
     http = 502
+
+
+class PaqueteInvalido(FuenteError):
+    """El paquete instalado no pasa la verificación de la biblioteca (`package_invalid`, E-PKG-*):
+    el curso está en la lista pero la biblioteca se niega a servirlo hasta que se reinstale."""
+    codigo = "paquete_invalido"
+    http = 502

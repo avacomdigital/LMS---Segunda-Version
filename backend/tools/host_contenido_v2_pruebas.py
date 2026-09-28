@@ -6,10 +6,18 @@ en loopback, con la forma comprobada en vivo el 2026-09-21 contra `GET /v2/opena
   GET  /v2/health                                     → {contract: 2, schema, index: ready|rebuilding, installedCourses: n}
   GET  /v2/courses?page&pageSize                      → {items:[CourseSummary], page, pageSize, total}
   GET  /v2/courses/{id}?mode&profile                  → el ESQUEMA: metadatos, lecciones con resúmenes de objeto y medios
-  GET  /v2/courses/{id}/lessons/{lid}?mode&profile&seed → la lección completa recortada (+ courseId, version)
-  GET  /v2/courses/{id}/objects/{oid}?profile&seed    → un objeto completo (+ courseId, version, lessonId)
+  GET  /v2/courses/{id}/lessons/{lid}?mode&profile&seed&includeActivityKeys
+                                                      → la lección completa recortada (+ courseId, version)
+  GET  /v2/courses/{id}/objects/{oid}?profile&seed&includeActivityKeys
+                                                      → un objeto completo (+ courseId, version, lessonId)
   GET  /v2/courses/{id}/questions/{qid}/grading-guide?version
   POST /v2/evaluate · /v2/evaluate/batch (≤ 200)      → veredicto con las claves del manifiesto completo · {results[]}
+
+El recorte (`objeto_visible`) y la corrección (`calificar`) están calcados de `visible_object` y
+`evaluate_response` de `validate_course.py`, el validador de referencia que publica la biblioteca
+junto a `course.schema.json` (copias en spec-driven/02-classroom-engine/). `includeActivityKeys`
+conserva las claves de una actividad con `feedback: immediate`; con un examen es 403
+`answer_keys_forbidden`. El aula nunca lo pide.
   POST /v2/media-sessions · DELETE /v2/media-sessions/{id}
   Servidor de medios aparte (mediaPort): /s/{cap}/{mediaId}[/@captions|/@transcript|/@files|/{ruta}] con Range, sin token
 
@@ -33,15 +41,24 @@ import secrets
 import sys
 import threading
 import time
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
-# Lo que la API recorta antes de entregar una pregunta (§1 del mapeo).
-CLAVES_RECORTADAS = frozenset({
-    "answer", "acceptedAnswers", "wrongAnswers", "numericTolerance", "pairs", "wrongPairs", "correctOrder", "wrongOrders",
-    "modelAnswer", "rubric", "incorrectExamples", "feedback", "isCorrect",
-})
+# Lo que la API recorta antes de entregar una pregunta: ANSWER_KEY_FIELDS, ANSWER_KEY_OPTION_FIELDS y
+# ANSWER_KEY_BLANK_FIELDS de `validate_course.py` (spec-driven/02-classroom-engine), el validador de
+# referencia de la biblioteca cuyo `visible_object` define lo que un dispositivo de alumno puede recibir.
+CLAVES_PREGUNTA = {
+    "multiple_choice": ("feedback",),
+    "true_false": ("answer", "feedback"),
+    "fill_blanks": ("feedback",),
+    "matching": ("pairs", "wrongPairs", "feedback"),
+    "ordering": ("correctOrder", "wrongOrders", "feedback"),
+    "open": ("modelAnswer", "rubric", "incorrectExamples", "keywords", "feedback"),
+}
+CLAVES_OPCION = ("isCorrect", "feedback")
+CLAVES_HUECO = ("acceptedAnswers", "wrongAnswers", "numericTolerance")
 # Lo que el esquema del curso resume de cada objeto (CourseOutline).
 CLAVES_RESUMEN_OBJETO = ("id", "type", "title", "modes", "topicRef", "estimatedDurationSec", "mediaId")
 MODOS = ("simple", "class", "exam", "review", "free_learning")
@@ -53,18 +70,45 @@ PNG_1x1 = bytes.fromhex(
 )
 
 
-def recortar(valor, *, perfil: str):
-    """Quita claves de corrección y, con perfil student, las notas del docente. Recursivo."""
-    if isinstance(valor, dict):
-        salida = {}
-        for k, v in valor.items():
-            if k in CLAVES_RECORTADAS or (perfil == "student" and k == "teacherNotes"):
-                continue
-            salida[k] = recortar(v, perfil=perfil)
-        return salida
-    if isinstance(valor, list):
-        return [recortar(v, perfil=perfil) for v in valor]
-    return valor
+def objeto_visible(objeto: dict, *, perfil: str, claves_actividad: bool = False) -> dict:
+    """Lo que la API devuelve de un objeto: `visible_object` de validate_course.py, paso por paso.
+    Las claves de un examen se quitan SIEMPRE; las de una actividad sólo se conservan si se pidió
+    `includeActivityKeys` y la actividad tiene `feedback: immediate`. `profile=student` quita las
+    notas del docente del objeto, de sus láminas o páginas y de sus preguntas."""
+    salida = copy.deepcopy(objeto)
+    if perfil == "student":
+        salida.pop("teacherNotes", None)
+        for clave in ("slides", "pages"):
+            for pagina in salida.get(clave) or []:
+                pagina.pop("teacherNotes", None)
+    conservar = (claves_actividad and salida.get("type") == "activity"
+                 and (salida.get("settings") or {}).get("feedback") == "immediate")
+    for pregunta in salida.get("questions") or []:
+        if perfil == "student":
+            pregunta.pop("teacherNotes", None)
+        if conservar:
+            continue
+        for campo in CLAVES_PREGUNTA.get(pregunta.get("type"), ()):
+            pregunta.pop(campo, None)
+        for opcion in pregunta.get("options") or []:
+            for campo in CLAVES_OPCION:
+                opcion.pop(campo, None)
+        for hueco in pregunta.get("blanks") or []:
+            for campo in CLAVES_HUECO:
+                hueco.pop(campo, None)
+    return salida
+
+
+def leccion_visible(leccion: dict, *, perfil: str, modo: str | None, claves_actividad: bool = False) -> dict:
+    """La lección filtrada por modo y recortada por perfil, con cada objeto como lo entrega la API."""
+    salida = {k: v for k, v in leccion.items() if k != "objects" and not (perfil == "student" and k == "teacherNotes")}
+    salida["objects"] = [objeto_visible(o, perfil=perfil, claves_actividad=claves_actividad)
+                         for o in filtrar_modo(leccion.get("objects") or [], modo)]
+    return salida
+
+
+def _verdadero(valor) -> bool:
+    return str(valor or "").strip().lower() in ("1", "true", "yes")
 
 
 def _rotacion(semilla: str | None, n: int) -> int:
@@ -122,89 +166,140 @@ def ficha(m: dict) -> dict:
 
 # ------------------------------------------------------------------ calificar
 
-def _decimal(x) -> float:
-    return round(float(x), 4)
+def _normalizar(texto, sensible_mayusculas: bool, ignorar_acentos: bool) -> str:
+    """`_normalize` de validate_course.py: espacios colapsados, minúsculas y sin acentos según el hueco."""
+    t = " ".join(str(texto).split())
+    if not sensible_mayusculas:
+        t = t.lower()
+    if ignorar_acentos:
+        t = "".join(c for c in unicodedata.normalize("NFD", t) if unicodedata.category(c) != "Mn")
+    return t
 
 
 def calificar(pregunta: dict, respuesta: dict) -> dict:
-    """El veredicto con las claves del manifiesto completo. Devuelve la forma del contrato (EvaluationResult)."""
+    """El veredicto con las claves del manifiesto completo, calcado de `evaluate_response` de
+    validate_course.py (la definición ejecutable de la corrección, que la biblioteca replica en C#):
+
+      - `correct` es SIEMPRE booleano en las preguntas automáticas: `ratio == 1.0`. Un crédito
+        parcial es `correct: false` con `score` mayor que cero.
+      - `feedback[0]` es la retroalimentación general (`feedback.correct` o `.incorrect`); después
+        vienen las específicas de la opción, el hueco, la pareja o el orden elegidos.
+      - Opción múltiple: el crédito parcial exige `allowMultiple`; ratio = (aciertos − fallos) / correctas.
+      - Completar: `numeric` admite coma decimal y `numericTolerance`; `text`/`select` comparan con
+        `caseSensitive` (falso por defecto) e `ignoreAccents` (verdadero por defecto).
+      - Relacionar: ratio = parejas correctas / esperadas; ordenar: posiciones acertadas / total.
+      - Abierta: sin nota, `requiresManualGrading` y sin retroalimentación.
+
+    Una respuesta con otra forma es ValueError → 422 `invalid_response`."""
     tipo = pregunta.get("type")
-    puntos = float(pregunta.get("points") or 1)
+    puntos = float(pregunta.get("points") or 0)
     parcial = bool(pregunta.get("partialCredit"))
     retro_general = pregunta.get("feedback") or {}
-    base = {"questionId": pregunta["id"], "maxScore": puntos, "requiresManualGrading": False, "feedback": []}
+    salida: dict = {"questionId": pregunta["id"], "maxScore": puntos, "requiresManualGrading": False, "feedback": []}
 
-    def cerrar(fraccion: float, extra: list[str] | None = None) -> dict:
-        fraccion = max(0.0, min(1.0, fraccion))
-        if not parcial and fraccion < 1.0:
-            fraccion = 0.0
-        acierto = fraccion >= 1.0
-        retro = list(extra or [])
-        if acierto and retro_general.get("correct"):
-            retro.append(retro_general["correct"])
-        if not acierto and retro_general.get("incorrect"):
-            retro.append(retro_general["incorrect"])
-        return {**base, "score": _decimal(puntos * fraccion), "correct": True if acierto else (None if 0 < fraccion < 1 else False),
-                "feedback": retro}
+    if tipo == "open":
+        if not isinstance(respuesta, dict) or not any(respuesta.get(k) for k in ("text", "drawingRef", "audioRef")):
+            raise ValueError("Response must contain text, drawingRef or audioRef.")
+        salida.update(score=None, correct=None, requiresManualGrading=True)
+        return salida
 
-    if tipo == "multiple_choice":
-        elegidas = respuesta.get("selectedOptionIds")
-        if not isinstance(elegidas, list):
-            raise ValueError("Response must contain an array 'selectedOptionIds'.")
-        opciones = {o["id"]: o for o in pregunta.get("options") or []}
-        if any(e not in opciones for e in elegidas):
-            raise ValueError("Unknown option id.")
-        correctas = {k for k, o in opciones.items() if o.get("isCorrect")}
-        aciertos = len(correctas & set(elegidas))
-        fallos = len(set(elegidas) - correctas)
-        extra = [opciones[e]["feedback"] for e in elegidas if e not in correctas and opciones[e].get("feedback")]
-        return cerrar((aciertos - fallos) / max(1, len(correctas)), extra)
     if tipo == "true_false":
         valor = respuesta.get("value")
         if not isinstance(valor, bool):
             raise ValueError("Response must contain a boolean 'value'.")
-        return cerrar(1.0 if valor == pregunta.get("answer") else 0.0)
-    if tipo == "fill_blanks":
-        huecos = respuesta.get("blanks")
-        if not isinstance(huecos, dict):
+        ratio = 1.0 if valor is pregunta["answer"] else 0.0
+
+    elif tipo == "multiple_choice":
+        elegidas = respuesta.get("selectedOptionIds")
+        if not isinstance(elegidas, list):
+            raise ValueError("Response must contain an array 'selectedOptionIds'.")
+        opciones = pregunta.get("options") or []
+        if any(e not in {o["id"] for o in opciones} for e in elegidas):
+            raise ValueError("Unknown option id.")
+        elegidas = set(elegidas)
+        correctas = {o["id"] for o in opciones if o.get("isCorrect")}
+        for o in opciones:
+            if o["id"] in elegidas and not o.get("isCorrect") and o.get("feedback"):
+                salida["feedback"].append(o["feedback"])
+        if pregunta.get("allowMultiple") and parcial:
+            aciertos, fallos = len(elegidas & correctas), len(elegidas - correctas)
+            ratio = max(0.0, (aciertos - fallos) / len(correctas))
+        else:
+            ratio = 1.0 if elegidas == correctas else 0.0
+
+    elif tipo == "fill_blanks":
+        dados = respuesta.get("blanks")
+        if not isinstance(dados, dict):
             raise ValueError("Response must contain an object 'blanks'.")
-        blancos = pregunta.get("blanks") or []
-        aciertos, extra = 0, []
-        for b in blancos:
-            dado = str(huecos.get(b["id"], "")).strip().lower()
-            if dado in {str(a).strip().lower() for a in (b.get("acceptedAnswers") or [])}:
+        huecos = pregunta.get("blanks") or []
+        aciertos = 0
+        for b in huecos:
+            valor = dados.get(b["id"], "")
+            if b.get("inputMode") == "numeric":
+                try:
+                    numero = float(str(valor).replace(",", "."))
+                    ok = any(abs(numero - float(a)) <= b.get("numericTolerance", 0) for a in b["acceptedAnswers"])
+                except ValueError:
+                    ok = False
+            else:
+                def norma(x, b=b):
+                    return _normalizar(x, b.get("caseSensitive", False), b.get("ignoreAccents", True))
+                ok = norma(valor) in {norma(a) for a in b["acceptedAnswers"]}
+            if ok:
                 aciertos += 1
             else:
-                extra.extend(w["feedback"] for w in (b.get("wrongAnswers") or []) if str(w.get("value", "")).lower() == dado and w.get("feedback"))
-        return cerrar(aciertos / max(1, len(blancos)), extra)
-    if tipo == "matching":
+                for w in b.get("wrongAnswers") or []:
+                    if w.get("feedback") and _normalizar(w["value"], False, True) == _normalizar(valor, False, True):
+                        salida["feedback"].append(w["feedback"])
+        ratio = aciertos / len(huecos) if parcial else (1.0 if aciertos == len(huecos) else 0.0)
+
+    elif tipo == "matching":
         parejas = respuesta.get("pairs")
         if not isinstance(parejas, list):
             raise ValueError("Response must contain an array 'pairs'.")
-        esperadas = {(p["leftId"], p["rightId"]) for p in pregunta.get("pairs") or []}
         dadas = {(p.get("leftId"), p.get("rightId")) for p in parejas if isinstance(p, dict)}
-        return cerrar(len(esperadas & dadas) / max(1, len(esperadas)))
-    if tipo == "ordering":
+        correctas = {(p["leftId"], p["rightId"]) for p in pregunta.get("pairs") or []}
+        for w in pregunta.get("wrongPairs") or []:
+            if (w["leftId"], w["rightId"]) in dadas:
+                salida["feedback"].append(w["feedback"])
+        aciertos = len(dadas & correctas)
+        ratio = aciertos / len(correctas) if parcial else (1.0 if dadas == correctas else 0.0)
+
+    elif tipo == "ordering":
         orden = respuesta.get("order")
         if not isinstance(orden, list):
             raise ValueError("Response must contain an array 'order'.")
-        extra = [w["feedback"] for w in (pregunta.get("wrongOrders") or []) if w.get("order") == orden and w.get("feedback")]
-        return cerrar(1.0 if orden == pregunta.get("correctOrder") else 0.0, extra)
-    if tipo == "open":
-        if not any(respuesta.get(k) for k in ("text", "drawingRef", "audioRef")):
-            raise ValueError("Response must contain text, drawingRef or audioRef.")
-        return {**base, "score": None, "correct": None, "requiresManualGrading": True, "feedback": []}
-    raise LookupError("question_not_found")
+        correcto = pregunta.get("correctOrder") or []
+        for w in pregunta.get("wrongOrders") or []:
+            if w.get("order") == orden:
+                salida["feedback"].append(w["feedback"])
+        if parcial:
+            ratio = sum(1 for a, b in zip(orden, correcto) if a == b) / len(correcto)
+        else:
+            ratio = 1.0 if orden == correcto else 0.0
+    else:
+        raise ValueError(f"unknown question type {tipo}")
+
+    salida["score"] = round(puntos * ratio, 4)
+    salida["correct"] = ratio == 1.0
+    general = retro_general.get("correct") if ratio == 1.0 else retro_general.get("incorrect")
+    if general:
+        salida["feedback"].insert(0, general)
+    return salida
 
 
 class HostContenidoV2Pruebas:
     def __init__(self, ruta_enlace: str, manifiestos: dict[str, dict], archivados: dict[tuple[str, str], dict] | None = None,
-                 medios: dict[str, tuple[str, bytes]] | None = None, desactivados: set[str] | None = None):
+                 medios: dict[str, tuple[str, bytes]] | None = None, desactivados: set[str] | None = None,
+                 invalidos: set[str] | None = None):
         self.ruta_enlace = ruta_enlace
         self.manifiestos = dict(manifiestos)                    # courseId → manifiesto COMPLETO (con claves) de la versión instalada
         self.archivados = dict(archivados or {})                # (courseId, version) → manifiesto archivado (sólo evaluate y grading-guide)
         self.medios = dict(medios or {})                        # mediaId, "mediaId/@captions", "mediaId/@transcript" o "mediaId/ruta" → (tipo, bytes)
         self.desactivados = set(desactivados or ())
+        # Paquetes que no pasan la verificación (visto en vivo con AVACOM Contenido 2.1.7): la API los LISTA en
+        # /v2/courses pero responde 500 `package_invalid` a todo lo demás (curso, lección, objeto, evaluar, medios).
+        self.invalidos = set(invalidos or ())
         self.token = secrets.token_urlsafe(32)
         self.reconstruyendo = False
         self.rechazar_proximas = 0
@@ -390,7 +485,7 @@ class HostContenidoV2Pruebas:
                     return
                 if camino == "/v2/health":
                     return self._json(200, {"contract": 2, "schema": "1.0", "index": "rebuilding" if host.reconstruyendo else "ready",
-                                            "installedCourses": len(host.manifiestos)})
+                                            "installedCourses": len(host.manifiestos), "appVersion": "2.1.7"})
                 if host.reconstruyendo:
                     return self._error(503, "index_rebuilding", "Index is rebuilding")
 
@@ -403,6 +498,8 @@ class HostContenidoV2Pruebas:
                 if len(partes) >= 3 and partes[0] == "v2" and partes[1] == "courses":
                     ref = partes[2]
                     curso = host.manifiestos.get(ref)
+                    if ref in host.invalidos:
+                        return self._error(500, "package_invalid", "Installed package failed verification: E-PKG-COURSE")
                     if len(partes) == 3:
                         pm = self._perfil_modo(consulta)
                         if pm is None:
@@ -416,6 +513,7 @@ class HostContenidoV2Pruebas:
                         return self._error(404, "course_not_found", "Course not installed")
                     if ref in host.desactivados:
                         return self._error(403, "policy_disabled", "Disabled by school policy")
+                    claves_actividad = _verdadero(consulta.get("includeActivityKeys"))
                     if len(partes) == 5 and partes[3] == "lessons":
                         pm = self._perfil_modo(consulta)
                         if pm is None:
@@ -423,8 +521,9 @@ class HostContenidoV2Pruebas:
                         leccion = host._leccion(curso, partes[4])
                         if leccion is None:
                             return self._error(404, "lesson_not_found", "Lesson not found")
-                        salida = recortar(copy.deepcopy(leccion), perfil=pm[0])
-                        salida["objects"] = filtrar_modo(salida.get("objects") or [], pm[1])
+                        if claves_actividad and any(o.get("type") == "exam" for o in filtrar_modo(leccion.get("objects") or [], pm[1])):
+                            return self._error(403, "answer_keys_forbidden", "Answer keys are never sent for exams")
+                        salida = leccion_visible(leccion, perfil=pm[0], modo=pm[1], claves_actividad=claves_actividad)
                         for o in salida["objects"]:
                             barajar_preguntas(o.get("questions") or [], consulta.get("seed"))
                         return self._json(200, {**salida, "courseId": ref, "version": curso.get("version")})
@@ -435,7 +534,9 @@ class HostContenidoV2Pruebas:
                         hallado = host._objeto(curso, partes[4])
                         if hallado is None:
                             return self._error(404, "object_not_found", "Object not found")
-                        salida = recortar(copy.deepcopy(hallado[1]), perfil=pm[0])
+                        if claves_actividad and hallado[1].get("type") == "exam":
+                            return self._error(403, "answer_keys_forbidden", "Answer keys are never sent for exams")
+                        salida = objeto_visible(hallado[1], perfil=pm[0], claves_actividad=claves_actividad)
                         barajar_preguntas(salida.get("questions") or [], consulta.get("seed"))
                         return self._json(200, {**salida, "courseId": ref, "version": curso.get("version"), "lessonId": hallado[0].get("id")})
                     if len(partes) == 6 and partes[3] == "questions" and partes[5] == "grading-guide":
@@ -472,6 +573,8 @@ class HostContenidoV2Pruebas:
                         return self._error(404, str(e), str(e).replace("_", " "))
                     except ValueError as e:
                         return self._error(422, "invalid_response", str(e))
+                    except RuntimeError:
+                        return self._error(500, "package_invalid", "Installed package failed verification: E-PKG-COURSE")
                 if camino == "/v2/evaluate/batch":
                     items = cuerpo.get("items")
                     if not isinstance(items, list) or len(items) > LOTE_MAXIMO:
@@ -482,9 +585,13 @@ class HostContenidoV2Pruebas:
                         return self._error(404, str(e), str(e).replace("_", " "))
                     except ValueError as e:
                         return self._error(422, "invalid_response", str(e))
+                    except RuntimeError:
+                        return self._error(500, "package_invalid", "Installed package failed verification: E-PKG-COURSE")
                 if camino == "/v2/media-sessions":
                     ref = str(cuerpo.get("courseId") or "")
                     curso = host.manifiestos.get(ref)
+                    if ref in host.invalidos:
+                        return self._error(500, "package_invalid", "Installed package failed verification: E-PKG-COURSE")
                     if curso is None:
                         return self._error(404, "course_not_found", "Course not installed")
                     ttl = int(cuerpo.get("ttlSec") or 14400)
@@ -513,6 +620,8 @@ class HostContenidoV2Pruebas:
             def _evaluar(self, cuerpo: dict) -> dict:
                 ref = str(cuerpo.get("courseId") or "")
                 version = cuerpo.get("version")
+                if ref in host.invalidos:
+                    raise RuntimeError("package_invalid")
                 if ref not in host.manifiestos:
                     raise LookupError("course_not_found")
                 curso = host._curso(ref, version)

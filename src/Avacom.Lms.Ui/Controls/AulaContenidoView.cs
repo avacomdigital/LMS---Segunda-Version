@@ -478,6 +478,50 @@ public sealed class AulaContenidoView : ContentView
 
     private View Pregunta(PreguntaAula p)
     {
+        var cuerpo = Cuerpo(p);
+        if (p.Medios is not { Count: > 0 }) return cuerpo;
+        // `mediaIds` del esquema 1.0: imagen, video, audio o pdf que acompañan al enunciado. La imagen se ve;
+        // el resto se anuncia (el alumno lo abre desde su tableta, donde sí hay reproductor).
+        var pila = new VerticalStackLayout { Spacing = 10 };
+        foreach (var m in p.Medios)
+        {
+            if (m.Componente == "imagen" && !string.IsNullOrWhiteSpace(m.Url)) pila.Add(ImagenDeMedio(m.Url!, m.TextoAlternativo, m.Ancho, m.Alto));
+            else pila.Add(Ds.Pildora($"{MedioLegible(m)} · {m.Titulo ?? m.MediaRef}", Ds.InfoSuave, Ds.Tinta, 14 * Escala));
+        }
+        pila.Add(cuerpo);
+        return pila;
+    }
+
+    private static string MedioLegible(MedioAula m) => m.Componente switch
+    {
+        "video" => "Video", "audio" => "Audio", "pdf" => "Documento", "imagen" => "Imagen", _ => "Medio",
+    };
+
+    /// <summary>Una imagen suelta (medio de una pregunta, opción o ítem) con su proporción real.</summary>
+    private View ImagenDeMedio(string url, string? alternativo, int? ancho, int? alto, double altoMaximo = 0)
+    {
+        if (Absoluta is null)
+            return new Border { StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, HeightRequest = 160 * Escala };
+        var imagen = new Image { Aspect = Aspect.AspectFit, Source = new UriImageSource { Uri = Absoluta(url), CachingEnabled = false } };
+        if (!string.IsNullOrWhiteSpace(alternativo)) SemanticProperties.SetDescription(imagen, alternativo);
+        var marco = new Border { StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = imagen };
+        if (altoMaximo > 0) { marco.HeightRequest = altoMaximo; marco.HorizontalOptions = LayoutOptions.Start; return marco; }
+        return ConProporcion(marco, ancho, alto);
+    }
+
+    /// <summary>Texto (tramos) o imagen de una opción o un ítem; con las dos, la imagen va encima.</summary>
+    private View TextoOImagen(IReadOnlyList<Tramo>? tramos, string? texto, string? url, string? alternativo, string respaldo, double tamano)
+    {
+        var etiqueta = string.IsNullOrWhiteSpace(texto) && string.IsNullOrWhiteSpace(url) ? Ds.Cuerpo(respaldo, tamano) : Ds.ConTramos(tramos, texto, tamano);
+        if (string.IsNullOrWhiteSpace(url)) return etiqueta;
+        var pila = new VerticalStackLayout { Spacing = 6 };
+        pila.Add(ImagenDeMedio(url!, alternativo, null, null, 140 * Escala));
+        if (!string.IsNullOrWhiteSpace(texto)) pila.Add(etiqueta);
+        return pila;
+    }
+
+    private View Cuerpo(PreguntaAula p)
+    {
         switch (p.Componente)
         {
             case "opcion_multiple":
@@ -489,7 +533,7 @@ public sealed class AulaContenidoView : ContentView
                     var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(28), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 10, Padding = new Thickness(6, 4) };
                     fila.Add(new BoxView { WidthRequest = 22, HeightRequest = 22, CornerRadius = p.PermiteVarias == true ? 6 : 11, Color = Colors.Transparent, }, 0, 0);
                     ((BoxView)fila.Children[0]).Color = Ds.Lienzo;
-                    fila.Add(Ds.ConTramos(op.Tramos, op.Texto, 17 * Escala), 1, 0);
+                    fila.Add(TextoOImagen(op.Tramos, op.Texto, op.Url, op.TextoAlternativo, op.OpcionRef, 17 * Escala), 1, 0);
                     pila.Add(fila);
                 }
                 return pila;
@@ -505,15 +549,15 @@ public sealed class AulaContenidoView : ContentView
             {
                 var g = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 16 };
                 var izq = new VerticalStackLayout { Spacing = 6 }; var der = new VerticalStackLayout { Spacing = 6 };
-                foreach (var e in p.Izquierda ?? []) izq.Add(Ds.Pildora(e.Texto ?? e.Ref, Ds.Lienzo, Ds.Tinta, 15 * Escala));
-                foreach (var e in p.Derecha ?? []) der.Add(Ds.Pildora(e.Texto ?? e.Ref, Ds.InfoSuave, Ds.Tinta, 15 * Escala));
+                foreach (var e in p.Izquierda ?? []) izq.Add(Item(e, Ds.Lienzo));
+                foreach (var e in p.Derecha ?? []) der.Add(Item(e, Ds.InfoSuave));
                 g.Add(izq, 0, 0); g.Add(der, 1, 0);
                 return g;
             }
             case "ordenar":
             {
                 var pila = new VerticalStackLayout { Spacing = 6 };
-                foreach (var e in p.Elementos ?? []) pila.Add(Ds.Pildora($"↕  {e.Texto ?? e.Ref}", Ds.Lienzo, Ds.Tinta, 15 * Escala));
+                foreach (var e in p.Elementos ?? []) pila.Add(Item(e, Ds.Lienzo, "↕  "));
                 return pila;
             }
             case "abierta":
@@ -525,6 +569,17 @@ public sealed class AulaContenidoView : ContentView
             default:
                 return Ds.Secundario($"Tipo de pregunta «{p.Tipo}» sin visor.", 14 * Escala);
         }
+    }
+
+    /// <summary>Un ítem de relacionar u ordenar: píldora con el texto o, si es una imagen (`ChoiceItem.mediaId`), la imagen.</summary>
+    private View Item(ElementoAula e, Color fondo, string prefijo = "")
+    {
+        if (string.IsNullOrWhiteSpace(e.Url)) return Ds.Pildora(prefijo + (e.Texto ?? e.Ref), fondo, Ds.Tinta, 15 * Escala);
+        var pila = new VerticalStackLayout { Spacing = 4 };
+        if (!string.IsNullOrWhiteSpace(prefijo)) pila.Add(Ds.Secundario(prefijo.Trim(), 15 * Escala));
+        pila.Add(ImagenDeMedio(e.Url!, e.TextoAlternativo, null, null, 120 * Escala));
+        if (!string.IsNullOrWhiteSpace(e.Texto)) pila.Add(Ds.Pildora(e.Texto!, fondo, Ds.Tinta, 15 * Escala));
+        return pila;
     }
 
     private View FueraDeAlcance(ObjetoAula o)

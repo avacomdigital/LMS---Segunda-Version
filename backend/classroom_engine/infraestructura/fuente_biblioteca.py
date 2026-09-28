@@ -34,12 +34,15 @@ from ..dominio.errores import (
     DesactivadoPorPolitica,
     FuenteError,
     FuenteNoDisponible,
+    PaqueteInvalido,
     ReferenciaNoEncontrada,
 )
 
 MODO_AULA = "class"                                   # el aula siempre pide el curso en modo clase
 PERFIL_POR_ROL = {"docente": "teacher", "estudiante": "student"}
 SUGERENCIA_INDICE = "La biblioteca está reconstruyendo su índice; vuelve a intentarlo en unos segundos."
+SUGERENCIA_PAQUETE = ("El paquete instalado no pasa la verificación de AVACOM Contenido (E-PKG-*): "
+                      "reinstálalo o pide a la biblioteca una versión publicada con el esquema vigente.")
 
 CODIGOS_CURSO = ("course_not_found", "version_not_available")
 CODIGOS_REFERENCIA = ("not_found", "lesson_not_found", "object_not_found", "question_not_found", "media_session_not_found")
@@ -57,6 +60,12 @@ def _traducir(error: Exception, *, curso_ref: str = "", media_ref: str = "", pre
         return FuenteNoDisponible(detalle or "La biblioteca está reconstruyendo su índice.", sugerencia=SUGERENCIA_INDICE, **extra)
     if codigo in CODIGOS_POLITICA:
         return DesactivadoPorPolitica(detalle, curso_ref=curso_ref, **extra)
+    if codigo == "package_invalid":
+        # Visto en vivo con AVACOM Contenido 2.1.7 (500): el paquete está instalado pero no pasa la
+        # verificación (E-PKG-COURSE…). No está en el openapi entregado; se trata como código propio.
+        return PaqueteInvalido(detalle or "El paquete instalado no pasa la verificación de la biblioteca.",
+                               sugerencia=SUGERENCIA_PAQUETE, estado_biblioteca=estado,
+                               **({"curso_ref": curso_ref} if curso_ref else {}), **extra)
     if codigo in CODIGOS_CURSO:
         return CursoNoEncontrado(detalle, curso_ref=curso_ref, **extra)
     if codigo in CODIGOS_REFERENCIA or estado == 404:
@@ -94,6 +103,13 @@ class FuenteBiblioteca:
                 salida.append(v2.esquema_curso(ref, modo=MODO_AULA, perfil="student"))
             except (BibliotecaNoDisponible, BibliotecaError) as error:
                 traducido = _traducir(error, curso_ref=ref)
+                if isinstance(traducido, PaqueteInvalido):
+                    # La biblioteca lo lista pero no lo sirve: la ficha se queda en el panel, marcada, para
+                    # que el docente sepa que existe y por qué no se abre. Sin lecciones ni portada.
+                    salida.append({**ficha, "id": ref, "lessons": [], "media": [],
+                                   "no_disponible": {"codigo": traducido.codigo, "detalle": traducido.detalle,
+                                                     "codigo_biblioteca": "package_invalid", "sugerencia": SUGERENCIA_PAQUETE}})
+                    continue
                 if isinstance(traducido, (CursoNoEncontrado, DesactivadoPorPolitica, ReferenciaNoEncontrada)):
                     continue
                 raise traducido from error

@@ -320,7 +320,11 @@ public static class Ds
         Text = texto, FontSize = tamano, FontFamily = FuenteSecundaria(tamano), TextColor = TintaSuave, LineBreakMode = LineBreakMode.WordWrap,
     };
 
-    /// <summary>Los tramos (`**negrita**`) del manifiesto → FormattedString. Sin Markdown en la tableta.</summary>
+    /// <summary>
+    /// Los tramos del manifiesto → FormattedString. Sin Markdown en la tableta: `**negrita**` es el peso 600,
+    /// `*cursiva*` y la matemática en línea (`$…$`, ya legible) van en itálica; no hay Inter Italic empaquetada,
+    /// así que es la única itálica sintética del kit (la misma del bloque `formula`).
+    /// </summary>
     public static FormattedString Formateado(IReadOnlyList<Tramo>? tramos, string? plano)
     {
         var fs = new FormattedString();
@@ -330,7 +334,12 @@ public static class Ds
             return fs;
         }
         foreach (var t in tramos)
-            fs.Spans.Add(new Span { Text = t.Texto, FontFamily = t.Negrita ? FuenteSemi : FuenteRegular });
+            fs.Spans.Add(new Span
+            {
+                Text = t.Texto,
+                FontFamily = t.Negrita ? FuenteSemi : FuenteRegular,
+                FontAttributes = t.Cursiva || t.Matematica ? FontAttributes.Italic : FontAttributes.None,
+            });
         return fs;
     }
 

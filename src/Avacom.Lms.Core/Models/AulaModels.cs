@@ -8,7 +8,16 @@ namespace Avacom.Lms.Core.Models;
 // MAUI que los pinta en `componente`. Ningún tipo de aquí contiene una clave de
 // corrección: el backend las elimina para todos los roles.
 
-public sealed record Tramo([property: JsonPropertyName("texto")] string Texto, [property: JsonPropertyName("negrita")] bool Negrita);
+/// <summary>
+/// Un tramo del «AVACOM Markdown» de RichText (course.schema.json): <c>**negrita**</c>, <c>*cursiva*</c> y
+/// matemática en línea <c>$…$</c>, que el backend entrega ya legible («1/3 × 2») y marcada con <see cref="Matematica"/>.
+/// Los dos últimos son opcionales en el JSON: un backend anterior sólo manda <c>negrita</c>.
+/// </summary>
+public sealed record Tramo(
+    [property: JsonPropertyName("texto")] string Texto,
+    [property: JsonPropertyName("negrita")] bool Negrita,
+    [property: JsonPropertyName("cursiva")] bool Cursiva = false,
+    [property: JsonPropertyName("matematica")] bool Matematica = false);
 
 public sealed record NodoClasificacion(
     [property: JsonPropertyName("codigo")] string? Codigo,
@@ -41,15 +50,25 @@ public sealed record FichaCurso(
     [property: JsonPropertyName("portada_url")] string? PortadaUrl,
     [property: JsonPropertyName("lecciones")] int Lecciones,
     [property: JsonPropertyName("objetos")] int Objetos,
-    [property: JsonPropertyName("medios")] int? Medios)
+    [property: JsonPropertyName("medios")] int? Medios,
+    [property: JsonPropertyName("no_disponible")] NoDisponibleAula? NoDisponible = null)
 {
-    public string Detalle => string.Join(" · ", new[]
-    {
-        Clasificacion?.Resumen,
-        $"{Lecciones} lección(es)",
-        DuracionEstimadaMin is > 0 ? $"{DuracionEstimadaMin} min" : null,
-    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    public string Detalle => NoDisponible is not null
+        ? "No disponible · el paquete no pasa la verificación de AVACOM Contenido"
+        : string.Join(" · ", new[]
+        {
+            Clasificacion?.Resumen,
+            $"{Lecciones} lección(es)",
+            DuracionEstimadaMin is > 0 ? $"{DuracionEstimadaMin} min" : null,
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
 }
+
+/// <summary>La biblioteca lista el curso pero no lo sirve (paquete que no pasa su verificación, E-PKG-*).</summary>
+public sealed record NoDisponibleAula(
+    [property: JsonPropertyName("codigo")] string? Codigo,
+    [property: JsonPropertyName("detalle")] string? Detalle,
+    [property: JsonPropertyName("codigo_biblioteca")] string? CodigoBiblioteca,
+    [property: JsonPropertyName("sugerencia")] string? Sugerencia);
 
 public sealed record AsignaturaAula(
     [property: JsonPropertyName("codigo")] string Codigo,
@@ -158,12 +177,23 @@ public sealed record UnidadAula(
     [property: JsonPropertyName("bloques")] IReadOnlyList<BloqueAula> Bloques,
     [property: JsonPropertyName("notas_docente")] NotasDocente? NotasDocente);
 
+/// <summary>Una opción de selección múltiple: texto (RichText) o imagen (<c>mediaId</c> del esquema 1.0), o ambos.</summary>
 public sealed record OpcionAula(
     [property: JsonPropertyName("opcion_ref")] string OpcionRef,
     [property: JsonPropertyName("texto")] string? Texto,
-    [property: JsonPropertyName("tramos")] IReadOnlyList<Tramo>? Tramos);
+    [property: JsonPropertyName("tramos")] IReadOnlyList<Tramo>? Tramos,
+    [property: JsonPropertyName("media_ref")] string? MediaRef = null,
+    [property: JsonPropertyName("url")] string? Url = null,
+    [property: JsonPropertyName("texto_alternativo")] string? TextoAlternativo = null);
 
-public sealed record ElementoAula([property: JsonPropertyName("ref")] string Ref, [property: JsonPropertyName("texto")] string? Texto);
+/// <summary>Un ítem de relacionar u ordenar (<c>ChoiceItem</c> del esquema 1.0): texto o imagen.</summary>
+public sealed record ElementoAula(
+    [property: JsonPropertyName("ref")] string Ref,
+    [property: JsonPropertyName("texto")] string? Texto,
+    [property: JsonPropertyName("tramos")] IReadOnlyList<Tramo>? Tramos = null,
+    [property: JsonPropertyName("media_ref")] string? MediaRef = null,
+    [property: JsonPropertyName("url")] string? Url = null,
+    [property: JsonPropertyName("texto_alternativo")] string? TextoAlternativo = null);
 
 public sealed record EspacioAula(
     [property: JsonPropertyName("espacio_ref")] string EspacioRef,
@@ -176,7 +206,8 @@ public sealed record PreguntaAula(
     [property: JsonPropertyName("componente")] string Componente,
     [property: JsonPropertyName("enunciado")] string? Enunciado,
     [property: JsonPropertyName("enunciado_tramos")] IReadOnlyList<Tramo>? EnunciadoTramos,
-    [property: JsonPropertyName("puntos")] int? Puntos,
+    [property: JsonPropertyName("medios")] IReadOnlyList<MedioAula>? Medios,
+    [property: JsonPropertyName("puntos")] double? Puntos,
     [property: JsonPropertyName("dificultad")] int? Dificultad,
     [property: JsonPropertyName("duracion_estimada_seg")] int? DuracionEstimadaSeg,
     [property: JsonPropertyName("credito_parcial")] bool CreditoParcial,
@@ -206,7 +237,8 @@ public sealed record AjustesActividad(
     [property: JsonPropertyName("retroalimentacion")] string? Retroalimentacion,
     [property: JsonPropertyName("intentos_permitidos")] int? IntentosPermitidos,
     [property: JsonPropertyName("barajar_preguntas")] bool BarajarPreguntas,
-    [property: JsonPropertyName("barajar_opciones")] bool BarajarOpciones);
+    [property: JsonPropertyName("barajar_opciones")] bool BarajarOpciones,
+    [property: JsonPropertyName("tiempo_limite_seg")] int? TiempoLimiteSeg = null);
 
 public sealed record ObjetoAula(
     [property: JsonPropertyName("objeto_ref")] string ObjetoRef,
@@ -232,7 +264,7 @@ public sealed record ObjetoAula(
     [property: JsonPropertyName("preguntas_guia")] IReadOnlyList<string>? PreguntasGuia,
     [property: JsonPropertyName("ajustes")] AjustesActividad? Ajustes,
     [property: JsonPropertyName("preguntas")] IReadOnlyList<PreguntaAula>? Preguntas,
-    [property: JsonPropertyName("puntos_totales")] int? PuntosTotales,
+    [property: JsonPropertyName("puntos_totales")] double? PuntosTotales,
     [property: JsonPropertyName("total_preguntas_banco")] int? TotalPreguntasBanco)
 {
     public IReadOnlyList<UnidadAula> Unidades => Laminas ?? Paginas ?? [];

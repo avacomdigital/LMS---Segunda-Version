@@ -23,30 +23,49 @@ from .errores import ReferenciaNoEncontrada
 UrlMedio = Callable[[str, str | None], str]
 """(media_ref, ruta_interna | None) → ruta HTTP del medio en el backend del LMS."""
 
-_NEGRITA = re.compile(r"\*\*(.+?)\*\*")
+# El subconjunto «AVACOM Markdown» de RichText (course.schema.json §$defs/RichText): **negrita**,
+# *cursiva*, listas, saltos de línea y matemática en línea entre $...$. Sin HTML (el esquema lo
+# prohíbe). Las listas y los saltos de línea viajan tal cual en `texto`: la etiqueta los respeta.
+_MARCADO = re.compile(
+    r"\*\*(.+?)\*\*"                                    # 1 · negrita
+    r"|(?<![*\w])\*(?!\s)(.+?)(?<!\s)\*(?![*\w])"       # 2 · cursiva (un asterisco que no es de negrita ni un producto «2*3»)
+    r"|\$(?!\s)([^$\n]+?)(?<!\s)\$"                     # 3 · matemática en línea
+)
 
 
 # ------------------------------------------------------------------ texto
 
+def _tramo(texto: str, *, negrita: bool = False, cursiva: bool = False, matematica: bool = False) -> dict:
+    return {"texto": texto, "negrita": negrita, "cursiva": cursiva, "matematica": matematica}
+
+
 def tramos(texto: str | None) -> list[dict]:
-    """Descompone el marcado mínimo del manifiesto (**negrita**) en tramos para un
-    FormattedString de MAUI. Sin librería de Markdown en la tableta."""
+    """Descompone el marcado del manifiesto (**negrita**, *cursiva*, $matemática$) en tramos
+    para un FormattedString de MAUI. Sin librería de Markdown ni motor LaTeX en la tableta: la
+    matemática en línea se entrega ya legible (`texto_formula`) y marcada con `matematica`."""
     if not texto:
         return []
     salida: list[dict] = []
     posicion = 0
-    for coincidencia in _NEGRITA.finditer(texto):
+    for coincidencia in _MARCADO.finditer(texto):
         if coincidencia.start() > posicion:
-            salida.append({"texto": texto[posicion:coincidencia.start()], "negrita": False})
-        salida.append({"texto": coincidencia.group(1), "negrita": True})
+            salida.append(_tramo(texto[posicion:coincidencia.start()]))
+        negrita, cursiva, formula = coincidencia.groups()
+        if negrita is not None:
+            salida.append(_tramo(negrita, negrita=True))
+        elif cursiva is not None:
+            salida.append(_tramo(cursiva, cursiva=True))
+        else:
+            salida.append(_tramo(texto_formula(formula), matematica=True))
         posicion = coincidencia.end()
     if posicion < len(texto):
-        salida.append({"texto": texto[posicion:], "negrita": False})
+        salida.append(_tramo(texto[posicion:]))
     return salida
 
 
 def texto_plano(texto: str | None) -> str:
-    return _NEGRITA.sub(r"\1", texto or "")
+    """El texto sin marcado; la matemática en línea queda en su lectura («1/3 × 2»)."""
+    return _MARCADO.sub(lambda m: m.group(1) or m.group(2) or texto_formula(m.group(3)), texto or "")
 
 
 _FRACCION = re.compile(r"\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}")
@@ -118,6 +137,15 @@ def _con_notas(destino: dict, rol: str, origen: dict) -> dict:
     return destino
 
 
+def _referencias(origen: dict) -> list[dict]:
+    """`curriculumRefs` (DBA, EBC, SEP…) pueden venir en el curso, la lección, el objeto o la pregunta."""
+    return [
+        # `relation` (teaches | assesses) sólo existe en el esquema que trae AVACOM Contenido 2.1.7; en el entregado no.
+        {"marco": r.get("framework"), "codigo": r.get("code"), "descripcion": r.get("description"), "relacion": r.get("relation")}
+        for r in (origen.get("curriculumRefs") or []) if isinstance(r, dict)
+    ]
+
+
 # --------------------------------------------------------------- clasificación
 
 def _nodo(valor) -> dict | None:
@@ -133,6 +161,8 @@ def clasificacion_de(manifiesto: dict) -> dict:
     return {
         "pais": str(c.get("country", "")).upper(),
         "idioma": str(manifiesto.get("language", "")),
+        # `track` (school | complementary) llega con AVACOM Contenido 2.1.7; ausente significa school.
+        "pista": c.get("track") or "school",
         "nivel": _nodo(c.get("level")),
         "grado": _nodo(c.get("grade")),
         "asignatura": {"codigo": str(asignatura.get("code", "")), "nombre": str(asignatura.get("name", ""))},
@@ -148,6 +178,7 @@ def clasificacion_contrato1(curso: dict) -> dict:
     return {
         "pais": str(curso.get("pais", "") or "").upper(),
         "idioma": str(curso.get("idioma", "") or ""),
+        "pista": "school",
         "nivel": {"codigo": slug(nivel), "nombre": nivel.capitalize(), "orden": None} if nivel else None,
         "grado": {"codigo": grado, "nombre": grado, "orden": None} if grado else None,
         "asignatura": {"codigo": slug(asignatura), "nombre": asignatura},
@@ -173,6 +204,7 @@ def _medio(m: dict, url_medio: UrlMedio) -> dict:
         "duracion_seg": m.get("durationSec"),
         "paginas": m.get("pageCount"),
         "texto_alternativo": m.get("altText"),
+        "tiene_voz": m.get("hasSpeech") if isinstance(m.get("hasSpeech"), bool) else None,   # 2.1.7: audio/video con habla exigen subtítulos y transcripción
         # El manifiesto de origen trae las rutas (`captionsPath`); la API v2 sólo dice si existen (`hasCaptions`).
         "subtitulos_url": url_medio(media_ref, "subtitulos") if (m.get("captionsPath") or m.get("hasCaptions")) else None,
         "transcripcion_url": url_medio(media_ref, "transcripcion") if (m.get("transcriptPath") or m.get("hasTranscript")) else None,
@@ -198,6 +230,16 @@ def _licencia(lic) -> dict | None:
     if not isinstance(lic, dict):
         return None
     return {"tipo": lic.get("type"), "atribucion": lic.get("attribution"), "fuente_url": lic.get("sourceUrl")}
+
+
+def _decimal(valor) -> float:
+    """`points`, `score` y `durationSec` son `number` en el esquema: nunca se redondean a entero."""
+    if valor is None or isinstance(valor, bool):
+        return 0.0
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _medio_ausente(media_ref: str, url_medio: UrlMedio) -> dict:
@@ -254,7 +296,23 @@ def _bloques(lista, medios, url_medio) -> list[dict]:
 
 # ---------------------------------------------------------------- preguntas
 
-def _pregunta(p: dict) -> dict:
+def _con_imagen(destino: dict, origen: dict, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
+    """Una opción o un ítem (`ChoiceItem`) puede llevar `mediaId` (imagen) en vez de, o además de, `text`."""
+    media_ref = origen.get("mediaId")
+    if media_ref:
+        medio = medios.get(str(media_ref)) or _medio_ausente(str(media_ref), url_medio)
+        destino.update(media_ref=str(media_ref), url=medio.get("url"), texto_alternativo=medio.get("texto_alternativo"))
+    else:
+        destino.update(media_ref=None, url=None, texto_alternativo=None)
+    return destino
+
+
+def _item(i: dict, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
+    """`ChoiceItem` de relacionar y ordenar: texto (RichText) o imagen."""
+    return _con_imagen({"ref": str(i.get("id", "")), "texto": i.get("text", ""), "tramos": tramos(i.get("text"))}, i, medios, url_medio)
+
+
+def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
     """Sólo lo que hace falta para PREGUNTAR. Nunca lo que hace falta para corregir."""
     tipo = str(p.get("type", ""))
     salida: dict[str, Any] = {
@@ -263,30 +321,35 @@ def _pregunta(p: dict) -> dict:
         "componente": cat.TIPOS_PREGUNTA.get(tipo, "no_soportado"),
         "enunciado": p.get("prompt", ""),
         "enunciado_tramos": tramos(p.get("prompt")),
+        # `mediaIds`: imagen, video, audio o pdf que acompañan al enunciado (nunca simulaciones).
+        "medios": [medios.get(str(m)) or _medio_ausente(str(m), url_medio) for m in (p.get("mediaIds") or []) if m],
         "tema_ref": p.get("topicRef"),
         "dificultad": p.get("difficulty"),
         "duracion_estimada_seg": p.get("estimatedSec"),
-        "puntos": p.get("points"),
+        "puntos": p.get("points"),                       # `number`: puede ser decimal
         "nivel_cognitivo": p.get("cognitiveLevel"),
         "credito_parcial": bool(p.get("partialCredit")),
+        "referencias_curriculares": _referencias(p),
     }
     if tipo == "multiple_choice":
         salida["permite_varias"] = bool(p.get("allowMultiple"))
-        salida["opciones"] = [{"opcion_ref": str(o.get("id", "")), "texto": o.get("text", ""), "tramos": tramos(o.get("text"))}
-                              for o in (p.get("options") or []) if isinstance(o, dict)]
+        salida["opciones"] = [
+            _con_imagen({"opcion_ref": str(o.get("id", "")), "texto": o.get("text", ""), "tramos": tramos(o.get("text"))}, o, medios, url_medio)
+            for o in (p.get("options") or []) if isinstance(o, dict)
+        ]
     elif tipo == "true_false":
-        salida["opciones"] = [{"opcion_ref": "true", "texto": "Verdadero", "tramos": tramos("Verdadero")},
-                              {"opcion_ref": "false", "texto": "Falso", "tramos": tramos("Falso")}]
+        salida["opciones"] = [{"opcion_ref": "true", "texto": "Verdadero", "tramos": tramos("Verdadero"), "media_ref": None, "url": None, "texto_alternativo": None},
+                              {"opcion_ref": "false", "texto": "Falso", "tramos": tramos("Falso"), "media_ref": None, "url": None, "texto_alternativo": None}]
     elif tipo == "fill_blanks":
         salida["plantilla"] = p.get("template", "")
         salida["espacios"] = [{"espacio_ref": str(e.get("id", "")), "modo_entrada": e.get("inputMode", "text"),
                                "opciones": list(e.get("choices") or [])}
                               for e in (p.get("blanks") or []) if isinstance(e, dict)]
     elif tipo == "matching":
-        salida["izquierda"] = [{"ref": str(i.get("id", "")), "texto": i.get("text", "")} for i in (p.get("left") or [])]
-        salida["derecha"] = [{"ref": str(i.get("id", "")), "texto": i.get("text", "")} for i in (p.get("right") or [])]
+        salida["izquierda"] = [_item(i, medios, url_medio) for i in (p.get("left") or []) if isinstance(i, dict)]
+        salida["derecha"] = [_item(i, medios, url_medio) for i in (p.get("right") or []) if isinstance(i, dict)]
     elif tipo == "ordering":
-        salida["elementos"] = [{"ref": str(i.get("id", "")), "texto": i.get("text", "")} for i in (p.get("items") or [])]
+        salida["elementos"] = [_item(i, medios, url_medio) for i in (p.get("items") or []) if isinstance(i, dict)]
     elif tipo == "open":
         salida["formato_respuesta"] = p.get("responseFormat", "text")
         salida["longitud_maxima"] = p.get("maxLength")
@@ -305,6 +368,7 @@ def _objeto(o: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> 
         "modos": list(o.get("modes") or []),
         "tema_ref": o.get("topicRef"),
         "duracion_estimada_seg": o.get("estimatedDurationSec"),
+        "referencias_curriculares": _referencias(o),
         "fuera_de_alcance": tipo in cat.OBJETOS_FUERA_DE_ALCANCE,
         "modulo": cat.OBJETOS_FUERA_DE_ALCANCE.get(tipo, "MOD-007"),
     }
@@ -322,7 +386,7 @@ def _objeto(o: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> 
         paginas = []
         for indice, pg in enumerate(o.get("pages") or [], start=1):
             pagina = {"unidad_ref": str(pg.get("id", "")), "indice": indice, "titulo": pg.get("title", ""),
-                      "bloques": _bloques(pg.get("blocks"), medios, url_medio)}
+                      "duracion_seg": pg.get("estimatedSec"), "bloques": _bloques(pg.get("blocks"), medios, url_medio)}
             paginas.append(_con_notas(pagina, rol, pg))
         salida["paginas"] = paginas
         salida["total_unidades"] = len(paginas)
@@ -346,32 +410,39 @@ def _objeto(o: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> 
         )
     elif tipo == "activity":
         ajustes = o.get("settings") or {}
-        preguntas = [_pregunta(p) for p in (o.get("questions") or []) if isinstance(p, dict)]
+        preguntas = [_pregunta(p, medios, url_medio) for p in (o.get("questions") or []) if isinstance(p, dict)]
         salida.update(
             instrucciones=o.get("instructions"),
+            instrucciones_tramos=tramos(o.get("instructions")),
             ajustes={
                 "retroalimentacion": ajustes.get("feedback", "immediate"),
                 "intentos_permitidos": ajustes.get("attemptsAllowed"),
                 "barajar_preguntas": bool(ajustes.get("shuffleQuestions")),
                 "barajar_opciones": bool(ajustes.get("shuffleOptions")),
+                "tiempo_limite_seg": ajustes.get("timeLimitSec"),
             },
             preguntas=preguntas,
             total_unidades=len(preguntas),
-            puntos_totales=sum(int(p.get("puntos") or 0) for p in preguntas),
+            # `points` es `number` en el esquema: la suma se conserva decimal (1.5 + 2 = 3.5), nunca se trunca.
+            puntos_totales=round(sum(_decimal(p.get("puntos")) for p in preguntas), 4),
         )
     elif tipo == "exam":
         # El examen no lo ejecuta el aula (MOD-010): se muestra que existe y cómo está configurado, sin preguntas.
         ajustes = o.get("settings") or {}
         seleccion = ajustes.get("selection") or {}
         tiempo = ajustes.get("timeLimit") or {}
+        # El esquema entregado dice `difficultyTolerancePct`, `timeLimit.policy` y `extraPct`; el que trae
+        # AVACOM Contenido 2.1.7 dice `…Percent`, sin `policy` (fixedSec o extraPercent, uno solo). Se aceptan ambos.
+        extra_pct = tiempo.get("extraPercent", tiempo.get("extraPct"))
+        politica = tiempo.get("policy") or ("fixed" if tiempo.get("fixedSec") is not None else "sum_of_estimates" if extra_pct is not None else "none")
         salida.update(
             instrucciones=o.get("instructions"),
             ajustes={
                 "seleccion": {"estrategia": seleccion.get("strategy"), "cantidad_preguntas": seleccion.get("questionCount"),
-                              "tolerancia_dificultad_pct": seleccion.get("difficultyTolerancePct"),
-                              "tolerancia_tiempo_pct": seleccion.get("timeTolerancePct"),
+                              "tolerancia_dificultad_pct": seleccion.get("difficultyTolerancePercent", seleccion.get("difficultyTolerancePct")),
+                              "tolerancia_tiempo_pct": seleccion.get("timeTolerancePercent", seleccion.get("timeTolerancePct")),
                               "cubrir_todos_los_temas": bool(seleccion.get("coverAllTopics"))},
-                "tiempo": {"politica": tiempo.get("policy"), "extra_pct": tiempo.get("extraPct")},
+                "tiempo": {"politica": politica, "fijo_seg": tiempo.get("fixedSec"), "extra_pct": extra_pct},
                 "aprobacion_pct": ajustes.get("passingScorePct"),
                 "mostrar_resultados": ajustes.get("showResults"),
                 "navegacion_atras": bool(ajustes.get("allowBackNavigation")),
@@ -393,6 +464,7 @@ def _leccion(l: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) ->
         "objetivos": list(l.get("objectives") or []),
         "duracion_estimada_min": l.get("estimatedDurationMin"),
         "modos": list(l.get("modes") or []),
+        "referencias_curriculares": _referencias(l),
         "temas": [
             {"tema_ref": str(t.get("id", "")), "titulo": t.get("title", ""),
              "subtemas": [{"tema_ref": str(s.get("id", "")), "titulo": s.get("title", "")} for s in (t.get("subtopics") or [])]}
@@ -427,6 +499,8 @@ def resumen_de(manifiesto: dict, fuente: str, url_medio: UrlMedio) -> dict:
         "lecciones": len(lecciones),
         "objetos": sum(len(l.get("objects") or []) for l in lecciones if isinstance(l, dict)),
         "medios": len(medios),
+        # La biblioteca lo lista pero no lo sirve (paquete que no pasa su verificación): {codigo, detalle, sugerencia}.
+        "no_disponible": manifiesto.get("no_disponible") if isinstance(manifiesto.get("no_disponible"), dict) else None,
     }
 
 
@@ -448,6 +522,7 @@ def resumen_contrato1(curso: dict, fuente: str) -> dict:
         "lecciones": int(curso.get("lecciones") or 0),
         "objetos": int(curso.get("elementos") or 0),
         "medios": None,
+        "no_disponible": None,
     }
 
 
@@ -491,10 +566,7 @@ def _normalizar_manifiesto(m: dict, rol: str, fuente: str, url_medio: UrlMedio) 
         **resumen_de(m, fuente, url_medio),
         "rol": rol,
         "portada": medios.get(str(m.get("coverMediaId", ""))),
-        "referencias_curriculares": [
-            {"marco": r.get("framework"), "codigo": r.get("code"), "descripcion": r.get("description")}
-            for r in (m.get("curriculumRefs") or []) if isinstance(r, dict)
-        ],
+        "referencias_curriculares": _referencias(m),
         "palabras_clave": list(m.get("keywords") or []),
         "creditos": {"editor": creditos.get("publisher"), "autores": list(creditos.get("authors") or []),
                      "revisores": list(creditos.get("reviewers") or [])},

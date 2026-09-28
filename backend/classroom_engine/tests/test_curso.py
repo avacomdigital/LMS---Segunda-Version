@@ -66,14 +66,14 @@ class CursoDeEjemploTests(TestCase):
         self.assertEqual([b["componente"] for b in s1["bloques"]], ["titulo", "texto"])
         texto = s1["bloques"][1]
         self.assertEqual(texto["estilo"], "definition")
-        self.assertEqual(texto["tramos"][0], {"texto": "Materia", "negrita": True})
+        self.assertEqual(texto["tramos"][0], {"texto": "Materia", "negrita": True, "cursiva": False, "matematica": False})
         self.assertFalse(texto["tramos"][1]["negrita"])
         imagen, lista = s2["bloques"]
         self.assertEqual(imagen["componente"], "imagen")
         self.assertEqual(imagen["url"], f"/api/aula/cursos/{CURSO}/medios/img-particles/?fuente=ejemplo")
         self.assertEqual(imagen["texto_alternativo"][:15], "Tres recipiente")
         self.assertEqual((lista["componente"], lista["ordenada"], len(lista["items"])), ("lista", False, 3))
-        self.assertEqual(lista["items_tramos"][0][0], {"texto": "Sólido:", "negrita": True})
+        self.assertEqual((lista["items_tramos"][0][0]["texto"], lista["items_tramos"][0][0]["negrita"]), ("Sólido:", True))
         video = s3["bloques"][0]
         self.assertEqual((video["componente"], video["desde_seg"], video["hasta_seg"], video["autoplay"]), ("video", 0, 60, False))
         self.assertEqual(video["duracion_seg"], 150.0)
@@ -114,12 +114,13 @@ class CursoDeEjemploTests(TestCase):
         actividad = v["lecciones"][0]["objetos"][3]
         self.assertEqual(actividad["componente"], "actividad")
         self.assertEqual(actividad["ajustes"], {"retroalimentacion": "immediate", "intentos_permitidos": 2,
-                                                "barajar_preguntas": False, "barajar_opciones": True})
+                                                "barajar_preguntas": False, "barajar_opciones": True, "tiempo_limite_seg": None})
         self.assertEqual([p["componente"] for p in actividad["preguntas"]],
                          ["opcion_multiple", "verdadero_falso", "completar", "relacionar", "ordenar", "abierta"])
-        self.assertEqual(actividad["puntos_totales"], 13)
+        self.assertEqual(actividad["puntos_totales"], 13.0)
         mc, tf, fb, ma, ord_, ab = actividad["preguntas"]
         self.assertEqual([o["opcion_ref"] for o in mc["opciones"]], ["a", "b", "c"])
+        self.assertEqual((mc["medios"], mc["opciones"][0]["media_ref"], mc["opciones"][0]["url"]), ([], None, None))
         self.assertFalse(mc["permite_varias"])
         self.assertEqual([o["opcion_ref"] for o in tf["opciones"]], ["true", "false"])
         self.assertEqual(fb["espacios"][0], {"espacio_ref": "b1", "modo_entrada": "select", "opciones": ["propio", "variable"]})
@@ -263,10 +264,19 @@ class CursoDeEjemploTests(TestCase):
 
 class NormalizadorTests(TestCase):
     def test_tramos_y_texto_plano(self):
-        self.assertEqual(cur.tramos("**Gas:** sin forma"), [{"texto": "Gas:", "negrita": True}, {"texto": " sin forma", "negrita": False}])
-        self.assertEqual(cur.tramos("sin marcado"), [{"texto": "sin marcado", "negrita": False}])
+        def t(texto, **marcas):
+            return {"texto": texto, "negrita": False, "cursiva": False, "matematica": False, **marcas}
+        self.assertEqual(cur.tramos("**Gas:** sin forma"), [t("Gas:", negrita=True), t(" sin forma")])
+        self.assertEqual(cur.tramos("sin marcado"), [t("sin marcado")])
         self.assertEqual(cur.tramos(""), [])
         self.assertEqual(cur.texto_plano("a **b** c"), "a b c")
+        # El subconjunto AVACOM Markdown del esquema 1.0: *cursiva* y matemática en línea $...$ (legible, sin LaTeX).
+        self.assertEqual(cur.tramos("El *volumen* mide $\\frac{1}{3} \\times 2$ litros"),
+                         [t("El "), t("volumen", cursiva=True), t(" mide "), t("1/3 × 2", matematica=True), t(" litros")])
+        self.assertEqual(cur.tramos("2*3*4 no es cursiva"), [t("2*3*4 no es cursiva")])
+        self.assertEqual(cur.texto_plano("*a* y $x^{2}$"), "a y x^2")
+        # Listas y saltos de línea viajan tal cual en `texto`: la etiqueta los respeta.
+        self.assertEqual(cur.tramos("- uno\n- **dos**"), [t("- uno\n- "), t("dos", negrita=True)])
 
     def test_agrupar_por_asignatura_y_catalogos(self):
         grupos = cur.agrupar_por_asignatura([
@@ -488,16 +498,25 @@ class ConLaApiDeContenidoV2Tests(TestCase):
     def test_evaluar_los_demas_tipos_y_el_credito_parcial_decimal(self):
         r = self._evaluar({"objeto_ref": "l1-activity", "pregunta_ref": "l1-act-q2", "respuesta": {"value": False}})
         self.assertEqual((r.json()["puntaje"], r.json()["correcta"]), (1.0, True))
-        # fill_blanks con crédito parcial: 1 de 2 huecos → 1.0 de 2, `correcta` nulo (ni bien ni mal)
+        # fill_blanks con crédito parcial: 1 de 2 huecos → 1.0 de 2 y `correcta` FALSA (validate_course: correct = ratio == 1.0).
+        # La retroalimentación general va primero y después la del valor equivocado.
         r = self._evaluar({"objeto_ref": "l1-activity", "pregunta_ref": "l1-act-q3", "respuesta": {"blanks": {"b1": "propio", "b2": "masa"}}})
-        self.assertEqual((r.json()["puntaje"], r.json()["puntaje_maximo"], r.json()["correcta"], r.json()["pendiente"]), (1.0, 2.0, None, False))
-        # matching parcial: 2 de 3 parejas → 2.0 de 3 (decimal, no entero)
+        self.assertEqual((r.json()["puntaje"], r.json()["puntaje_maximo"], r.json()["correcta"], r.json()["pendiente"]), (1.0, 2.0, False, False))
+        self.assertEqual(r.json()["retroalimentacion"], ["Piensa en el agua pasando de un vaso a una botella.", "La masa no cambia al cambiar de recipiente."])
+        # matching parcial: 2 de 3 parejas → 2.0 de 3 (decimal, no entero); la pareja gas→none es un `wrongPair` con su propia retroalimentación
         r = self._evaluar({"objeto_ref": "l1-activity", "pregunta_ref": "l1-act-q4",
                            "respuesta": {"pairs": [{"leftId": "solid", "rightId": "fixed"}, {"leftId": "liquid", "rightId": "slide"},
                                                    {"leftId": "gas", "rightId": "none"}]}})
-        self.assertEqual((r.json()["puntaje"], r.json()["puntaje_maximo"], r.json()["correcta"]), (2.0, 3.0, None))
+        self.assertEqual((r.json()["puntaje"], r.json()["puntaje_maximo"], r.json()["correcta"]), (2.0, 3.0, False))
+        self.assertEqual(r.json()["retroalimentacion"], ["Recuerda los tres recipientes de la cátedra.", "Los gases sí tienen partículas, solo que muy separadas."])
         r = self._evaluar({"objeto_ref": "l1-activity", "pregunta_ref": "l1-act-q5", "respuesta": {"order": ["o-solid", "o-liquid", "o-gas"]}})
         self.assertEqual((r.json()["puntaje"], r.json()["correcta"]), (2.0, True))
+        # numérico: coma decimal admitida y `numericTolerance` (0 en el ejemplo); el valor equivocado listado trae su retroalimentación
+        r = self._evaluar({"objeto_ref": "l2-activity", "pregunta_ref": "l2-act-q3", "respuesta": {"blanks": {"b1": "0,0"}}})
+        self.assertEqual((r.json()["puntaje"], r.json()["correcta"]), (1.0, True))
+        r = self._evaluar({"objeto_ref": "l2-activity", "pregunta_ref": "l2-act-q3", "respuesta": {"blanks": {"b1": "100"}}})
+        self.assertEqual((r.json()["puntaje"], r.json()["correcta"], r.json()["retroalimentacion"]),
+                         (0.0, False, ["Piensa en el hielo, no en el agua hirviendo.", "100 °C es la ebullición a nivel del mar."]))
         r = self._evaluar({"objeto_ref": "l1-activity", "pregunta_ref": "l1-act-q5", "respuesta": {"order": ["o-solid", "o-gas"]}})
         self.assertEqual(r.status_code, 400)      # el orden debe contener todos los elementos, una vez cada uno
 

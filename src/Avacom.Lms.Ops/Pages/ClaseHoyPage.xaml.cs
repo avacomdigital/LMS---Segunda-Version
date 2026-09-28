@@ -257,6 +257,16 @@ public partial class ClaseHoyPage : ContentPage
         {
             Titulo = curso.Titulo, Subtitulo = curso.Subtitulo, Detalle = curso.Detalle, AccentColor = color, IconGeometry = Sesion.IconoLibro,
         };
+        if (curso.NoDisponible is { } motivo)
+        {
+            // La biblioteca lo lista pero no lo sirve (paquete que no pasa su verificación): se ve atenuado y,
+            // al tocarlo, explica qué hacer en vez de abrir una clase que fallaría.
+            tarjeta.Opacity = 0.55;
+            tarjeta.AccentColor = Ds.Alerta;
+            tarjeta.Abrir += async (_, _) => await DisplayAlert("Curso no disponible",
+                motivo.Sugerencia ?? motivo.Detalle ?? "El paquete instalado no pasa la verificación de AVACOM Contenido.", "Entendido");
+            return tarjeta;
+        }
         tarjeta.Abrir += async (_, _) => await AbrirAsync(curso);
         return tarjeta;
     }

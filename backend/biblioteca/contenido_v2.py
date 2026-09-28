@@ -434,7 +434,7 @@ def abrir_medio(curso_ref: str, media_ref: str, ruta_interna: str | None = None,
 def estado() -> dict:
     """NUNCA lanza. `disponible=False` con motivo y sugerencia cuando no hay contenido."""
     salida = {
-        "api": API, "contrato": None, "disponible": False, "motivo": "", "sugerencia": None, "puerto": None,
+        "api": API, "contrato": None, "esquema": None, "version_app": None, "disponible": False, "motivo": "", "sugerencia": None, "puerto": None,
         "puerto_medios": None, "proceso": None, "huella": "", "cursos_instalados": [], "reconstruyendo_indice": False,
     }
     try:
@@ -459,6 +459,8 @@ def estado() -> dict:
         return salida
     salida.update(
         disponible=True, contrato=datos.get("contract", salida["contrato"]), reconstruyendo_indice=reconstruyendo,
+        esquema=str(datos.get("schema") or "") or None,     # versión del esquema de curso (course.schema.json), hoy «1.0»
+        version_app=str(datos.get("appVersion") or "") or None,  # build de AVACOM Contenido (2.1.7 en vivo); ausente en el contrato entregado
         huella=huella(fichas),
         cursos_instalados=[{"curso_ref": str(c.get("courseId") or c.get("id") or ""), "version": str(c.get("version") or ""),
                             "titulo": c.get("title")} for c in fichas],

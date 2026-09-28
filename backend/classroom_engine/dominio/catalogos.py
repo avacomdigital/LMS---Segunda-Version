@@ -83,9 +83,13 @@ VIAS_ORIGEN = ("arbol", "leccion", "recurso", "libre")   # BR-044, DEC-001
 # defensa (artículo 14.5 y CA-08). Se aplica a TODOS los roles: la corrección y
 # la revisión docente con rúbrica son de MOD-010/MOD-011, no del aula.
 CLAVES_DE_CORRECCION = frozenset({
-    # manifiesto 1.0
-    "isCorrect", "answer", "acceptedAnswers", "wrongAnswers", "pairs", "wrongPairs",
-    "correctOrder", "wrongOrders", "modelAnswer", "rubric", "incorrectExamples", "feedback",
+    # manifiesto 1.0: ANSWER_KEY_FIELDS, ANSWER_KEY_OPTION_FIELDS y ANSWER_KEY_BLANK_FIELDS del
+    # validador de referencia de la biblioteca (spec-driven/02-classroom-engine/validate_course.py).
+    # `keywords` de una pregunta abierta y `numericTolerance` de un hueco también revelan la clave.
+    "isCorrect", "answer", "acceptedAnswers", "wrongAnswers", "numericTolerance", "pairs", "wrongPairs",
+    "correctOrder", "wrongOrders", "modelAnswer", "rubric", "incorrectExamples", "keywords", "feedback",
+    # séptimo tipo `drag_drop` del esquema que trae AVACOM Contenido 2.1.7 (no está en el validador entregado)
+    "placements", "wrongPlacements",
     # contrato 1
     "clave", "clave_respuesta", "respuesta", "respuesta_correcta", "correcta", "es_correcta", "solucion",
 })
