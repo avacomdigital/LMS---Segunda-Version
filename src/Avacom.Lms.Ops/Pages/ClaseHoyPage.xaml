@@ -41,6 +41,11 @@
                     <ui:SourceStatusChip x:Name="FuenteChip" Grid.Column="1" Grid.Row="0" HorizontalOptions="End" Text="Comprobando…" VerticalOptions="Start" />
                     <ui:GlassBookView Grid.Column="1" Grid.Row="1" Margin="0,8,0,0" HeightRequest="230" HorizontalOptions="End" InputTransparent="True" VerticalOptions="Center" WidthRequest="340" />
                 </Grid>
+                <!-- Buscador y filtros del contenido que entrega AVACOM Biblioteca: texto libre (por él se buscan los temas,
+                     demasiados para un picklist) y picklists de País y Nivel; bajo «Más filtros», Grado y Materia. Los
+                     picklists los llena el code-behind con los valores distintos del catálogo y filtran hexágonos y
+                     tarjetas al instante. -->
+                <ui:SearchFilterBar x:Name="Buscador" />
                 <VerticalStackLayout x:Name="AvisoHost" Spacing="12" />
                 <FlexLayout x:Name="HexHost" AlignItems="Center" Direction="Row" JustifyContent="Start" Wrap="Wrap" />
                 <VerticalStackLayout x:Name="ListaHost" Spacing="18" />
