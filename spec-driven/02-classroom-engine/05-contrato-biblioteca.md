@@ -7,6 +7,7 @@
 | Sustituye a | La propuesta de [06 · Contrato exigido a la biblioteca](../06-contrato-biblioteca.md) en lo que toca al aula (`/v1/cursos`, `/v1/curso/{ref}`, `evaluacion`, `comprobar`). El contrato 1 sigue vigente para `/api/biblioteca/*` y el flujo de intentos del expediente |
 | Cierra | Q-44 (cómo publica la biblioteca el curso 1.0), Q-45 (cómo se piden los medios), parte de Q-48 (quién califica las preguntas del manifiesto) de [01 · Modelo de datos](01-modelo-de-datos.md) §12 |
 | Documentos hermanos | [01 · Modelo de datos y API](01-modelo-de-datos.md) · [03 · Journey](03-journey-clase-de-hoy.md) · [04 · Frontend](04-frontend-classroom-engine.md) · [00 · Línea base del contrato 1](../00-linea-base-conexion-biblioteca.md) |
+| Continúa en | [06 · Versión 2 de Contenido](06-Versión-2-Contenido.md) (2026-09-28): el esquema de curso 1.0 (`course.schema.json`) y el validador de referencia (`validate_course.py`) que la biblioteca publica junto al `openapi.v2.json`, lo que cambió en el aula y lo que se encontró en vivo con AVACOM Contenido 2.1.7 |
 
 ---
 

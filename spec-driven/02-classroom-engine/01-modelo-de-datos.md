@@ -184,7 +184,7 @@ Por decisión del prompt, los `exam` no entran al Classroom Engine. La vista los
 | **PDF** | Bloque `pdf` con `desde_pagina`/`hasta_pagina` y `url_pagina_inicial` (`#page=N`) | Mostrar el rango pedido, no el documento completo |
 | **Simulaciones HTML5 (WebView)** | Medio `simulation` → `componente: webview`. `url` es la **entrada** (`states-of-matter-basics_es.html`, `index.html`), `base_url` la carpeta; `simulacion.ajustes` trae los *shims* (`block_network`, `scale_to_fit`), `orientacion` (`landscape`), `destinos` (`screen`, `tablet`), `ancho_diseno`/`alto_diseno` | `url_lanzamiento` del laboratorio ya incluye `launchParams` como query (`?startTemp=-10&altitudeMeters=0`). La WebView sólo debe navegar al host del backend (`block_network` se cumple porque el aula no tiene internet y el cliente cancela cualquier otra navegación) |
 | **Imágenes** | Bloque `imagen` con `texto_alternativo`, `ancho`, `alto` | `Image` con la URL del backend; alto y ancho evitan saltos de maqueta |
-| **Texto con marcado** | `**negrita**` del manifiesto → `tramos[{texto, negrita}]` en `heading`, `text`, `list`, enunciados y opciones | Un `FormattedString`; sin librería de Markdown en la tableta |
+| **Texto con marcado** | El subconjunto «AVACOM Markdown» de `RichText` (`**negrita**`, `*cursiva*`, matemática en línea `$…$`) → `tramos[{texto, negrita, cursiva, matematica}]` en `heading`, `text`, `list`, enunciados, opciones e ítems; la matemática llega ya legible («1/3 × 2»). Ver [06](06-Versión-2-Contenido.md) §4 | Un `FormattedString`; sin librería de Markdown ni motor LaTeX en la tableta |
 
 ### 2.8 · Convivencia con el contrato 1
 
@@ -667,7 +667,7 @@ Una pregunta de completar, tal como la ve el estudiante (sin `acceptedAnswers`, 
 |---|---|
 | `componente` en cada objeto, bloque, medio y pregunta | Un `DataTemplateSelector` elige la vista por un campo, sin conocer el esquema de la biblioteca |
 | Nombres estables en español `snake_case` (`curso_ref`, `laminas`, `unidad_ref`…) y los códigos originales en `tipo` | Los DTO de C# se escriben una vez; los códigos de la biblioteca siguen visibles para trazabilidad |
-| `tramos[]` en todo texto con `**negrita**` | `FormattedString` directo; nada de Markdown en la tableta |
+| `tramos[]` en todo texto con marcado (`**negrita**`, `*cursiva*`, `$matemática$`) | `FormattedString` directo; nada de Markdown en la tableta |
 | `url`, `url_lanzamiento`, `url_pagina_inicial`, `subtitulos_url`, `transcripcion_url` **relativas al backend** | El cliente sólo antepone su `BaseUri`; la tableta nunca conoce la biblioteca (línea base §1) |
 | Medios de **marcador** para el ejemplo (PNG, WAV, PDF de 3 páginas, HTML de simulación, VTT, texto) con `Range` y `HEAD` | Se pueden probar `Image`, `MediaElement`, el visor PDF y la `WebView` sin la biblioteca. El video se responde `404` explicativo: un MP4 no se fabrica |
 | `rol` (`estudiante` por defecto) y barrido de claves para todos | La tableta del alumno recibe exactamente lo que puede ver; el panel del docente recibe además las notas |
