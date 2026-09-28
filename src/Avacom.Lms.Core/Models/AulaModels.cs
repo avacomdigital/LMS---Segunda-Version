@@ -442,6 +442,9 @@ public sealed record SesionDeClase(
     [property: JsonPropertyName("servidor_en")] long ServidorEn)
 {
     public DistribucionAula? ActividadAbierta => Distribuciones?.LastOrDefault(d => d.Clase == "actividad" && d.EstaAbierta);
+
+    /// <summary>El último recurso enviado a las tabletas que sigue abierto (CAP-040: lanzar un recurso, no sólo una actividad).</summary>
+    public DistribucionAula? RecursoAbierto => Distribuciones?.LastOrDefault(d => d.Clase == "recurso" && d.EstaAbierta);
 }
 
 public sealed record SesionTableta(

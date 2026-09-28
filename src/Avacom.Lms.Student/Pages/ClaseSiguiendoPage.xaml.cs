@@ -99,7 +99,9 @@ public partial class ClaseSiguiendoPage : ContentPage
             }
 
             if (estado.PantallasBloqueadas) Bloqueo.Mostrar(); else Bloqueo.Ocultar();
-            Visor.PuedeNavegar = !estado.Seguimiento;
+            // Con seguimiento activo la tableta no navega sola; pero lo que el profesor le envió (un recurso
+            // lanzado) sí se recorre a su ritmo mientras lo tenga abierto.
+            Visor.PuedeNavegar = _mostrandoPendiente || !estado.Seguimiento;
             await PintarSelectorAsync(estado);
             PintarPendientes(estado);
             PintarAvisos(estado);
@@ -144,7 +146,8 @@ public partial class ClaseSiguiendoPage : ContentPage
     private void PintarPendientes(EstadoTableta estado)
     {
         PendientesHost.Clear();
-        var pendientes = (estado.Pendientes ?? []).Where(p => p.Clase == "actividad").ToList();
+        // Lo que el profesor lanzó y sigue abierto: actividades (se responden) y recursos (se abren y se recorren).
+        var pendientes = (estado.Pendientes ?? []).Where(p => p.Clase is "actividad" or "recurso").ToList();
         if (pendientes.Count == 0)
         {
             if (_mostrandoPendiente) { _mostrandoPendiente = false; _selectorPintado = null; }
@@ -152,15 +155,29 @@ public partial class ClaseSiguiendoPage : ContentPage
         }
         foreach (var d in pendientes)
         {
+            var esActividad = d.Clase == "actividad";
             var grid = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
-            grid.Add(Ds.IconoCategoria("actividad", 48), 0, 0);
-            grid.Add(new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Children = { Ds.Cuerpo(d.Rotulo ?? "Actividad", 17), Ds.Secundario(d.Entrega == "entregado" ? "Recibida · puedes seguir respondiendo" : "Tu profesor te la acaba de enviar", 13) } }, 1, 0);
+            grid.Add(Ds.IconoCategoria(esActividad ? "actividad" : CategoriaDe(d.ObjetoTipo), 48), 0, 0);
+            var detalle = esActividad
+                ? (d.Entrega == "entregado" ? "Recibida · puedes seguir respondiendo" : "Tu profesor te la acaba de enviar")
+                : (d.Entrega == "entregado" ? "Recibido · ábrelo cuando quieras" : "Tu profesor te lo acaba de enviar");
+            grid.Add(new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Children = { Ds.Cuerpo(d.Rotulo ?? (esActividad ? "Actividad" : "Recurso"), 17), Ds.Secundario(detalle, 13) } }, 1, 0);
             var abrir = Ds.Boton(_mostrandoPendiente ? "Volver a la clase" : "Abrir", _mostrandoPendiente ? Ds.Rango.Quiet : Ds.Rango.Primary, async (_, _) => await AbrirPendienteAsync(d), 56);
             abrir.FontSize = 16;
             grid.Add(abrir, 2, 0);
-            PendientesHost.Add(Ds.Tarjeta(grid, Ds.RadioInterno, new Thickness(14, 12), Ds.ExitoSuave));
+            PendientesHost.Add(Ds.Tarjeta(grid, Ds.RadioInterno, new Thickness(14, 12), esActividad ? Ds.ExitoSuave : Ds.InfoSuave));
         }
     }
+
+    /// <summary>El tipo de objeto de la biblioteca, en la categoría visual del kit.</summary>
+    private static string CategoriaDe(string? objetoTipo) => objetoTipo switch
+    {
+        "lecture" => "presentacion",
+        "explanation" => "lectura",
+        "simulation_lab" => "laboratorio_web",
+        "activity" => "actividad",
+        _ => "lectura",
+    };
 
     private async Task AbrirPendienteAsync(DistribucionAula d)
     {
@@ -176,10 +193,11 @@ public partial class ClaseSiguiendoPage : ContentPage
         var suelto = await aula.ObjetoAsync(_estado?.Sesion.CursoRef ?? d.CursoRef ?? string.Empty, d.ObjetoRef ?? string.Empty, docente: false);
         if (suelto is null)
         {
-            MostrarBanda("No se pudo abrir la actividad", aula.UltimoMotivo, Ds.PeligroSuave, Color.FromArgb("#8A1C1F"));
+            MostrarBanda(d.Clase == "actividad" ? "No se pudo abrir la actividad" : "No se pudo abrir lo que te enviaron", aula.UltimoMotivo, Ds.PeligroSuave, Color.FromArgb("#8A1C1F"));
             return;
         }
         _mostrandoPendiente = true;
+        Visor.PuedeNavegar = true;
         Visor.Mostrar(suelto.Objeto, null);
         if (_estado is not null) PintarPendientes(_estado);
     }

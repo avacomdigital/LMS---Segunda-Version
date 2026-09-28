@@ -269,10 +269,15 @@ public partial class ClaseSesionPage : ContentPage
         }
         if (_actividadBtn is not null)
         {
+            // Un solo botón para el lanzamiento (CAP-040): lo que está en el selector se envía a las tabletas.
+            // Si es una actividad, se lanza como actividad (entregas, intentos); si es una lámina, lectura o
+            // laboratorio, se envía como recurso para que cada tableta lo abra y lo recorra a su ritmo.
+            // Con una actividad abierta el mismo botón cierra la recepción.
             var abierta = s.ActividadAbierta;
             var selectorEsActividad = s.Selector?.ObjetoTipo == "activity";
-            _actividadBtn.Text = abierta is not null ? "Cerrar recepción" : "Lanzar actividad";
-            var puede = s.Estado == "abierta" && (abierta is not null || selectorEsActividad);
+            var haySelector = !string.IsNullOrWhiteSpace(s.Selector?.ObjetoRef);
+            _actividadBtn.Text = abierta is not null ? "Cerrar recepción" : selectorEsActividad ? "Lanzar actividad" : "Enviar a tabletas";
+            var puede = s.Estado == "abierta" && (abierta is not null || haySelector);
             Ds.Habilitar(_actividadBtn, puede);
         }
     }
@@ -300,25 +305,56 @@ public partial class ClaseSesionPage : ContentPage
             await RefrescarAsync();
             return;
         }
-        if (_sesion.Selector?.ObjetoRef is not { } objetoRef || _sesion.Selector.ObjetoTipo != "activity") return;
+        if (_sesion.Selector?.ObjetoRef is not { } objetoRef || string.IsNullOrWhiteSpace(objetoRef)) return;
+        var esActividad = _sesion.Selector.ObjetoTipo == "activity";
+        // Un recurso nuevo sustituye al anterior en las tabletas: se retira el que siga abierto antes de enviar.
+        if (!esActividad && _sesion.RecursoAbierto is { } anterior)
+            await aula.CerrarDistribucionAsync(_sesion.Id, Sesion.ProfesorId, anterior.Id);
         // El lanzamiento va a todo el grupo admitido; el backend deja fuera las tabletas bloqueadas y lo dice en «excluidos».
-        var distribucion = await aula.DistribuirAsync(_sesion.Id, Sesion.ProfesorId, new DistribuirSolicitud("actividad", objetoRef, null, _sesion.Selector.Rotulo, false));
+        var distribucion = await aula.DistribuirAsync(_sesion.Id, Sesion.ProfesorId,
+            new DistribuirSolicitud(esActividad ? "actividad" : "recurso", objetoRef, null, _sesion.Selector.Rotulo, false));
         if (distribucion is null)
         {
             var error = aula.UltimoError;
             var titulo = error?.Codigo == "sin_participantes_admitidos"
                 ? (error.Texto("excluidos_bloqueados") is null && error.Extra is { } e && e.TryGetProperty("excluidos_bloqueados", out var ex) && ex.GetArrayLength() > 0
                     ? "Todas las tabletas conectadas están bloqueadas" : "Todavía no hay tabletas conectadas")
-                : "No se pudo lanzar la actividad";
+                : esActividad ? "No se pudo lanzar la actividad" : "No se pudo enviar a las tabletas";
             await Aviso(titulo, error?.Detalle);
             return;
         }
         await RefrescarAsync();
     }
 
+    /// <summary>Retirar de las tabletas el recurso enviado: cierra la distribución; las tabletas vuelven a seguir el selector.</summary>
+    private async Task RetirarRecursoAsync(DistribucionAula recurso)
+    {
+        if (_sesion is null) return;
+        if (await Sesion.Aula.CerrarDistribucionAsync(_sesion.Id, Sesion.ProfesorId, recurso.Id) is null)
+            await Aviso("No se pudo retirar el recurso", Sesion.Aula.UltimoMotivo);
+        await RefrescarAsync();
+    }
+
     private void PintarActividad(SesionDeClase s)
     {
         ActividadHost.Clear();
+        // El recurso enviado a las tabletas (si lo hay) y la actividad en curso (si la hay) se ven en el mismo rincón.
+        if (s.RecursoAbierto is { } recurso)
+        {
+            var pilaRecurso = new VerticalStackLayout { Spacing = 8 };
+            pilaRecurso.Add(Ds.Pildora("Enviado a las tabletas", Ds.Info));
+            pilaRecurso.Add(Ds.Cuerpo(recurso.Rotulo ?? recurso.ObjetoRef ?? "Recurso", 16));
+            var totalR = recurso.Entregas?.Total ?? 0;
+            var abiertasR = recurso.Entregas?.Entregadas ?? 0;
+            pilaRecurso.Add(Ds.Secundario(totalR == 0 ? "Sin destinatarios" : $"{abiertasR} de {totalR} tabletas lo abrieron", 14));
+            if (recurso.Excluidos > 0)
+                pilaRecurso.Add(Ds.Pildora(recurso.Excluidos == 1 ? "1 tableta bloqueada no lo recibió" : $"{recurso.Excluidos} tabletas bloqueadas no lo recibieron", Ds.PeligroSuave, TintaPeligro));
+            var retirar = Ds.Boton("Retirar de las tabletas", Ds.Rango.Quiet, async (_, _) => await RetirarRecursoAsync(recurso), 48);
+            retirar.FontSize = 14;
+            retirar.HorizontalOptions = LayoutOptions.Start;
+            pilaRecurso.Add(Ds.Capsula(retirar));
+            ActividadHost.Add(Ds.Tarjeta(pilaRecurso, Ds.RadioInterno, new Thickness(14), Ds.InfoSuave));
+        }
         var abierta = s.ActividadAbierta;
         if (abierta is null) return;
         var pila = new VerticalStackLayout { Spacing = 8 };
