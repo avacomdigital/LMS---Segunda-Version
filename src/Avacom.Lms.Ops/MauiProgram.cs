@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Maui.LifecycleEvents;
 
 namespace Avacom.Lms.Ops;
 
@@ -17,6 +18,18 @@ public static class MauiProgram
 				fonts.AddFont("Inter-Regular.ttf", "InterRegular");
 				fonts.AddFont("Inter-Medium.ttf", "InterMedium");
 				fonts.AddFont("Inter-SemiBold.ttf", "InterSemiBold");
+			})
+			.ConfigureLifecycleEvents(eventos =>
+			{
+#if WINDOWS
+				// El nodo principal del aula se usa siempre a toda pantalla: la ventana arranca maximizada, no en el tamaño por
+				// defecto de WinUI. Se hace al crearse la ventana, antes de mostrarla, para que no se vea el cambio de tamaño.
+				eventos.AddWindows(windows => windows.OnWindowCreated(ventana =>
+				{
+					if (ventana.AppWindow?.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presentador)
+						presentador.Maximize();
+				}));
+#endif
 			});
 
 #if DEBUG

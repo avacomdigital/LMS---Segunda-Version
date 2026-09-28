@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage x:Class="Avacom.Lms.Ops.Pages.LoginPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:controls="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui" xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui" Shell.NavBarIsVisible="False">
     <!-- Composición sobre la cuadrícula de tercios: la tarjeta va centrada en la línea vertical del primer tercio
-         (columna 1: de 1/6 a 1/2 del ancho) y el lápiz 3D en la del segundo (columna 2: de 1/2 a 5/6). En Y ambos
-         ocupan de 1/6 a 5/6 (empiezan y terminan a la mitad de las celdas superior e inferior). -->
-    <Grid ColumnDefinitions="*,2*,2*,*" RowDefinitions="*,4*,*">
+         (columna 1: de 1/6 a 1/2 del ancho, desplazada 50 px a la izquierda por decisión de diseño) y el lápiz 3D centrado
+         en la línea de 5/6 (columna 3: de 2/3 al borde), cabiendo en el tercio central de alto. El saludo vertical ocupa
+         el canal izquierdo (columna 0). En Y, tarjeta y lápiz van de 1/6 a 5/6. -->
+    <Grid ColumnDefinitions="*,2*,*,2*" RowDefinitions="*,4*,*">
         <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FDECEC" Offset="0"/><GradientStop Color="#E6F6FC" Offset="0.42"/><GradientStop Color="#FEF9E6" Offset="0.78"/><GradientStop Color="#F5E8F1" Offset="1"/></LinearGradientBrush></Grid.Background>
         <!-- Fondo decorativo (capa más baja, bajo la tarjeta): retícula de hexágonos grandes con las puntas redondeadas, en un solo
              GraphicsView que se adapta solo al tamaño de la ventana. InputTransparent: es 100 % decorativa y nunca captura toques ni clics.
@@ -14,10 +15,17 @@
                 <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#1A000000" StrokeWidth="1.25"/>
             </GraphicsView.Drawable>
         </GraphicsView>
+        <!-- Saludo vertical del canal izquierdo: seis idiomas en mayúsculas que se turnan con fundido lento (CyclingLabel).
+             Rotado -90° sobre su centro: la caja sin rotar mide 1200 px de ancho desde el borde izquierdo, así que su centro
+             cae en x = 600 y TranslationX lo lleva a x = 80, donde lo sitúa la referencia; centrado en vertical en la pantalla.
+             Inter Light en cursiva sintética: el kit no lleva Inter-LightItalic.ttf; si se añade a Resources/Fonts basta
+             registrar el alias y cambiar FontFamily. CharacterSpacing: en Windows MAUI lo pasa a milésimas de em con un
+             factor fijo (valor × 0,0624 × FontSize), así que 4,3 son ~24 px de aire entre letras a 90 px. -->
+        <controls:CyclingLabel Grid.ColumnSpan="4" Grid.RowSpan="3" WidthRequest="1200" HorizontalOptions="Start" VerticalOptions="Center" HorizontalTextAlignment="Center" Rotation="-90" TranslationX="-520" InputTransparent="True" Words="BIENVENIDO|WELCOME|WILLKOMMEN|BENVINGUT|BENVENUTO|BEM-VINDO" FadeMilliseconds="1400" HoldMilliseconds="2000" FontFamily="InterLight" FontAttributes="Italic" FontSize="90" CharacterSpacing="4.3" LineBreakMode="NoWrap" TextColor="{StaticResource BrandRed}" TextTransform="Uppercase"/>
         <!-- Tarjeta de vidrio (liquid glass): deja ver el fondo desenfocado y teñido de blanco. El canto es un degradado de luz que
              entra por arriba a la izquierda, se apaga en los lados y vuelve a asomar abajo a la derecha, y una sombra amplia y suave
              la despega del fondo. Botones, tipografía y contenido siguen tal cual. -->
-        <controls:GlassBorder Grid.Column="1" Grid.Row="1" Padding="0" HorizontalOptions="Fill" VerticalOptions="Fill" StrokeShape="RoundRectangle 24" StrokeThickness="1.5" TintColor="White" TintOpacity="0.45" BlurRadius="8" Brightness="0.05" Saturation="1.2">
+        <controls:GlassBorder Grid.Column="1" Grid.Row="1" Padding="0" HorizontalOptions="Fill" VerticalOptions="Fill" TranslationX="-50" StrokeShape="RoundRectangle 24" StrokeThickness="1.5" TintColor="White" TintOpacity="0.32" BlurRadius="8" Brightness="0.08" Saturation="1.2">
             <controls:GlassBorder.Stroke><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FFFFFFFF" Offset="0"/><GradientStop Color="#8CFFFFFF" Offset="0.3"/><GradientStop Color="#4DFFFFFF" Offset="0.5"/><GradientStop Color="#80FFFFFF" Offset="0.7"/><GradientStop Color="#D9FFFFFF" Offset="1"/></LinearGradientBrush></controls:GlassBorder.Stroke>
             <controls:GlassBorder.Shadow><Shadow Brush="#000000" Opacity="0.12" Offset="0,20" Radius="48"/></controls:GlassBorder.Shadow>
             <Grid>
@@ -60,8 +68,9 @@
                 </Grid>
             </Grid>
         </controls:GlassBorder>
-        <!-- Lápiz 3D decorativo (Three.js en un HybridWebView transparente): gira despacio sobre su eje vertical, inclinado
-             8°, flotando apenas. Sólo se ve el lápiz; el fondo sigue debajo y la capa no captura toques. -->
-        <controls:Pencil3DView Grid.Column="2" Grid.Row="1" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill" SecondsPerTurn="12" TiltDegrees="8" FloatPixels="3" FillRatio="0.78"/>
+        <!-- Lápiz 3D decorativo (render nativo en un GraphicsView transparente): gira despacio sobre su eje vertical, inclinado
+             8°, flotando apenas. Centrado en la línea de 5/6; con FillRatio 0,53 cabe en el tercio central de alto. Sólo se ve
+             el lápiz; el fondo sigue debajo y la capa no captura toques. -->
+        <controls:Pencil3DView Grid.Column="3" Grid.Row="1" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill" SecondsPerTurn="12" TiltDegrees="8" FloatPixels="3" FillRatio="0.53"/>
     </Grid>
 </ContentPage>

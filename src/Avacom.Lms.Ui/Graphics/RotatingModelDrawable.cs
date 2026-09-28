@@ -32,7 +32,7 @@ public sealed class RotatingModelDrawable : IDrawable
     /// <summary>Velocidad de la flotación, en rad/s (0,7 ≈ una oscilación cada 9 s).</summary>
     public double FloatSpeed { get; set; } = 0.7;
 
-    /// <summary>Fracción del área que ocupa el modelo (0,70–0,85).</summary>
+    /// <summary>Fracción del área que ocupa el modelo (0,5–0,85).</summary>
     public double FillRatio { get; set; } = 0.78;
 
     /// <summary>Campo de visión vertical, en grados: moderado, sin deformar el modelo.</summary>

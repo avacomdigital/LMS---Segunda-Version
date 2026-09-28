@@ -60,7 +60,7 @@ public partial class Pencil3DView : ContentView
     /// <summary>Amplitud de la flotación en píxeles (2–5): se percibe apenas.</summary>
     public double FloatPixels { get => (double)GetValue(FloatPixelsProperty); set => SetValue(FloatPixelsProperty, value); }
 
-    /// <summary>Fracción del área asignada que ocupa el lápiz (0,70–0,85).</summary>
+    /// <summary>Fracción del área asignada que ocupa el lápiz (0,5–0,85; en el ingreso, 0,53).</summary>
     public double FillRatio { get => (double)GetValue(FillRatioProperty); set => SetValue(FillRatioProperty, value); }
 
     /// <summary>Ruta del modelo dentro de Resources/Raw (MauiAsset). Debe ser un .glb pequeño y sin texturas.</summary>
