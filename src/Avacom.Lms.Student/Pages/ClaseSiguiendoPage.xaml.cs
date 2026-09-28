@@ -4,7 +4,7 @@ using Avacom.Lms.Ui.Design;
 namespace Avacom.Lms.Student.Pages;
 
 /// <summary>
-/// S2 · Siguiendo la clase (PAN-102). Sondea el estado cada 2 s (BR-049: el foco llega en ≤ 3 s):
+/// S2 · Siguiendo la clase (PAN-102). Sondea el estado cada 2 s (BR-049: el selector llega en ≤ 3 s):
 /// pinta lo que el profesor proyecta, se bloquea cuando lo pide (CAP-042), muestra las
 /// actividades pendientes y los avisos como bandas no bloqueantes. Con seguimiento activo no
 /// hay navegación propia; al liberarlo aparecen anterior/siguiente.
@@ -16,7 +16,7 @@ public partial class ClaseSiguiendoPage : ContentPage
     private IDispatcherTimer? _temporizador;
     private EstadoTableta? _estado;
     private ObjetoAula? _objeto;
-    private string? _focoPintado;
+    private string? _selectorPintado;
     private long _ultimoAvisoVisto;
     private bool _refrescando;
     private bool _mostrandoPendiente;
@@ -100,7 +100,7 @@ public partial class ClaseSiguiendoPage : ContentPage
 
             if (estado.PantallasBloqueadas) Bloqueo.Mostrar(); else Bloqueo.Ocultar();
             Visor.PuedeNavegar = !estado.Seguimiento;
-            await PintarFocoAsync(estado);
+            await PintarSelectorAsync(estado);
             PintarPendientes(estado);
             PintarAvisos(estado);
         }
@@ -114,29 +114,29 @@ public partial class ClaseSiguiendoPage : ContentPage
         ConexionChip.BackgroundColor = fondo;
     }
 
-    private async Task PintarFocoAsync(EstadoTableta estado)
+    private async Task PintarSelectorAsync(EstadoTableta estado)
     {
         if (_mostrandoPendiente) return;
-        var foco = estado.Foco;
-        if (foco is null || string.IsNullOrWhiteSpace(foco.ObjetoRef))
+        var selector = estado.Selector;
+        if (selector is null || string.IsNullOrWhiteSpace(selector.ObjetoRef))
         {
-            if (_focoPintado is not null) { Visor.MostrarVacio("Esperando a tu profesor", "Cuando proyecte algo, aparecerá aquí."); _focoPintado = null; _objeto = null; }
+            if (_selectorPintado is not null) { Visor.MostrarVacio("Esperando a tu profesor", "Cuando proyecte algo, aparecerá aquí."); _selectorPintado = null; _objeto = null; }
             return;
         }
-        var llave = $"{foco.ObjetoRef}|{foco.UnidadRef}";
-        if (llave == _focoPintado) return;
-        if (_objeto?.ObjetoRef != foco.ObjetoRef)
+        var llave = $"{selector.ObjetoRef}|{selector.UnidadRef}";
+        if (llave == _selectorPintado) return;
+        if (_objeto?.ObjetoRef != selector.ObjetoRef)
         {
-            var suelto = await Sesion.Aula.ObjetoAsync(estado.Sesion.CursoRef ?? foco.CursoRef ?? string.Empty, foco.ObjetoRef!, docente: false);
+            var suelto = await Sesion.Aula.ObjetoAsync(estado.Sesion.CursoRef ?? selector.CursoRef ?? string.Empty, selector.ObjetoRef!, docente: false);
             if (suelto is null)
             {
-                Visor.MostrarVacio("No se pudo abrir lo proyectado", Sesion.Aula.UltimoMotivo ?? foco.Rotulo ?? string.Empty);
+                Visor.MostrarVacio("No se pudo abrir lo proyectado", Sesion.Aula.UltimoMotivo ?? selector.Rotulo ?? string.Empty);
                 return;
             }
             _objeto = suelto.Objeto;
         }
-        Visor.Mostrar(_objeto!, string.IsNullOrWhiteSpace(foco.UnidadRef) ? null : foco.UnidadRef);
-        _focoPintado = llave;
+        Visor.Mostrar(_objeto!, string.IsNullOrWhiteSpace(selector.UnidadRef) ? null : selector.UnidadRef);
+        _selectorPintado = llave;
     }
 
     // -------------------------------------------------------------- pendientes
@@ -147,7 +147,7 @@ public partial class ClaseSiguiendoPage : ContentPage
         var pendientes = (estado.Pendientes ?? []).Where(p => p.Clase == "actividad").ToList();
         if (pendientes.Count == 0)
         {
-            if (_mostrandoPendiente) { _mostrandoPendiente = false; _focoPintado = null; }
+            if (_mostrandoPendiente) { _mostrandoPendiente = false; _selectorPintado = null; }
             return;
         }
         foreach (var d in pendientes)
@@ -167,8 +167,8 @@ public partial class ClaseSiguiendoPage : ContentPage
         if (_mostrandoPendiente)
         {
             _mostrandoPendiente = false;
-            _focoPintado = null;
-            if (_estado is not null) { await PintarFocoAsync(_estado); PintarPendientes(_estado); }
+            _selectorPintado = null;
+            if (_estado is not null) { await PintarSelectorAsync(_estado); PintarPendientes(_estado); }
             return;
         }
         var aula = Sesion.Aula;

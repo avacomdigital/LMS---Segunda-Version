@@ -8,19 +8,26 @@ namespace Avacom.Lms.Ops.Pages;
 /// <summary>
 /// P3 · Clase en curso: PAN-001 y PAN-022 en una sola superficie táctil. El profesor ve lo que
 /// se proyecta y lo controla desde aquí: código de unión, conectados, secuencia de la lección,
-/// proyección, y la barra de controles (bloquear, seguimiento, lanzar actividad, aviso,
-/// terminar). La sesión se refresca cada 3 s (BR-049 pide ≤ 3 s en las tabletas; el canal en
-/// vivo llegará con Q-51). Nada exige teclado: los avisos son frases prehechas.
+/// proyección (el selector), y la barra de controles (bloquear, seguimiento, lanzar actividad,
+/// aviso, terminar). La sesión se refresca cada 3 s (BR-049 pide ≤ 3 s en las tabletas; el canal
+/// en vivo llegará con Q-51). Nada exige teclado: los avisos son frases prehechas.
+///
+/// Dos cosas distintas para el profesor, aunque las dos «envíen algo a las tabletas»: el selector
+/// (lo que se proyecta; cambia muchas veces por clase, no espera confirmación) y el lanzamiento
+/// (una actividad que las tabletas confirman y responden). Desde el 2026-09-28 la lista de
+/// participantes muestra la tableta de cada uno y permite bloquearla o desbloquearla (MOD-009):
+/// una tableta bloqueada no recibe lanzamientos y consta en «excluidos».
 /// </summary>
 [QueryProperty(nameof(SesionId), "sesion")]
 public partial class ClaseSesionPage : ContentPage
 {
     private static readonly string[] Frases = ["Miren al frente", "Dos minutos", "Guarden lo que llevan", "Levanten la mano si terminaron", "Vamos a cerrar"];
+    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
 
     private IDispatcherTimer? _temporizador;
     private SesionDeClase? _sesion;
     private VistaCurso? _vista;
-    private string? _focoPintado;
+    private string? _selectorPintado;
     private bool _refrescando;
     private Button? _bloqueoBtn, _seguimientoBtn, _actividadBtn, _avisoBtn, _terminarBtn;
     private readonly Button _participantesBtn;
@@ -107,10 +114,13 @@ public partial class ClaseSesionPage : ContentPage
             CursoLabel.Text = string.Join(" · ", new[] { sesion.CursoRotulo, sesion.Estado == "suspendida" ? "suspendida · mismo código" : null }.Where(x => !string.IsNullOrWhiteSpace(x)));
             HabilitarControles(sesion.Estado == "abierta");
             PintarEstadoControles(sesion);
-            PintarFoco(sesion.Foco);
+            PintarSelector(sesion.Selector);
             PintarActividad(sesion);
             if (ParticipantesPanel.IsVisible) PintarParticipantes(sesion);
-            _participantesBtn.Text = sesion.Conteo is { Esperando: > 0 } c ? $"Participantes · {c.Esperando} esperando" : "Participantes";
+            var bloqueadas = sesion.Participantes?.Count(p => p.Admitido && p.TabletaBloqueada) ?? 0;
+            _participantesBtn.Text = sesion.Conteo is { Esperando: > 0 } c ? $"Participantes · {c.Esperando} esperando"
+                : bloqueadas > 0 ? $"Participantes · {bloqueadas} tableta{(bloqueadas == 1 ? "" : "s")} bloqueada{(bloqueadas == 1 ? "" : "s")}"
+                : "Participantes";
         }
         finally { _refrescando = false; }
     }
@@ -144,7 +154,7 @@ public partial class ClaseSesionPage : ContentPage
 
     private View FilaObjeto(ObjetoAula objeto)
     {
-        var enFoco = _sesion?.Foco?.ObjetoRef == objeto.ObjetoRef;
+        var seleccionado = _sesion?.Selector?.ObjetoRef == objeto.ObjetoRef;
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(40), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 12 };
         fila.Add(Ds.IconoCategoria(objeto.Componente, 40), 0, 0);
         var textos = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
@@ -153,12 +163,12 @@ public partial class ClaseSesionPage : ContentPage
         fila.Add(textos, 1, 0);
         var pila = new VerticalStackLayout { Spacing = 6 };
         pila.Add(fila);
-        if (enFoco && objeto.Unidades.Count > 0)
+        if (seleccionado && objeto.Unidades.Count > 0)
         {
             var laminas = new FlexLayout { Wrap = FlexWrap.Wrap, Direction = FlexDirection.Row, JustifyContent = FlexJustify.Start, AlignItems = FlexAlignItems.Center };
             foreach (var u in objeto.Unidades)
             {
-                var activa = _sesion?.Foco?.UnidadRef == u.UnidadRef;
+                var activa = _sesion?.Selector?.UnidadRef == u.UnidadRef;
                 // Ficha de lámina en relieve: degradado, bisel y una sombra corta (la tarjeta recorta lo que sobresale).
                 var chip = new Border
                 {
@@ -175,8 +185,8 @@ public partial class ClaseSesionPage : ContentPage
         }
         var tarjeta = new Border
         {
-            BackgroundColor = enFoco ? Ds.VioletaSuave : Colors.Transparent,
-            Stroke = new SolidColorBrush(enFoco ? Ds.CatClaseEnVivo : Colors.Transparent), StrokeThickness = enFoco ? 2 : 0,
+            BackgroundColor = seleccionado ? Ds.VioletaSuave : Colors.Transparent,
+            Stroke = new SolidColorBrush(seleccionado ? Ds.CatClaseEnVivo : Colors.Transparent), StrokeThickness = seleccionado ? 2 : 0,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Padding = new Thickness(10, 8), Content = pila,
             Opacity = objeto.FueraDeAlcance ? 0.6 : 1,
         };
@@ -184,24 +194,24 @@ public partial class ClaseSesionPage : ContentPage
         return tarjeta;
     }
 
-    // ------------------------------------------------------------------ foco
+    // -------------------------------------------------------------- selector
 
-    private void PintarFoco(FocoAula? foco)
+    private void PintarSelector(SelectorAula? selector)
     {
-        if (foco is null || string.IsNullOrWhiteSpace(foco.ObjetoRef))
+        if (selector is null || string.IsNullOrWhiteSpace(selector.ObjetoRef))
         {
-            if (_focoPintado is not null) { Proyeccion.MostrarVacio(); _focoPintado = null; PintarSecuencia(); }
+            if (_selectorPintado is not null) { Proyeccion.MostrarVacio(); _selectorPintado = null; PintarSecuencia(); }
             return;
         }
-        var llave = $"{foco.ObjetoRef}|{foco.UnidadRef}";
-        if (llave == _focoPintado) return;
-        var objeto = _vista?.Objeto(foco.ObjetoRef!);
+        var llave = $"{selector.ObjetoRef}|{selector.UnidadRef}";
+        if (llave == _selectorPintado) return;
+        var objeto = _vista?.Objeto(selector.ObjetoRef!);
         if (objeto is null)
         {
-            Proyeccion.MostrarVacio("Objeto fuera de este curso", foco.Rotulo ?? foco.ObjetoRef!);
+            Proyeccion.MostrarVacio("Objeto fuera de este curso", selector.Rotulo ?? selector.ObjetoRef!);
         }
-        else Proyeccion.Mostrar(objeto, string.IsNullOrWhiteSpace(foco.UnidadRef) ? null : foco.UnidadRef);
-        _focoPintado = llave;
+        else Proyeccion.Mostrar(objeto, string.IsNullOrWhiteSpace(selector.UnidadRef) ? null : selector.UnidadRef);
+        _selectorPintado = llave;
         PintarSecuencia();
         PintarEstadoControles(_sesion);
     }
@@ -209,14 +219,14 @@ public partial class ClaseSesionPage : ContentPage
     private async Task ProyectarAsync(string objetoRef, string? unidadRef)
     {
         if (_sesion is null) return;
-        var foco = await Sesion.Aula.ProyectarAsync(_sesion.Id, Sesion.ProfesorId, objetoRef, unidadRef);
-        if (foco is null)
+        var selector = await Sesion.Aula.ProyectarAsync(_sesion.Id, Sesion.ProfesorId, objetoRef, unidadRef);
+        if (selector is null)
         {
             await Aviso("No se pudo proyectar", Sesion.Aula.UltimoMotivo);
             return;
         }
-        _sesion = _sesion with { Foco = foco };
-        PintarFoco(foco);
+        _sesion = _sesion with { Selector = selector };
+        PintarSelector(selector);
     }
 
     // -------------------------------------------------------------- controles
@@ -260,9 +270,9 @@ public partial class ClaseSesionPage : ContentPage
         if (_actividadBtn is not null)
         {
             var abierta = s.ActividadAbierta;
-            var focoEsActividad = s.Foco?.ObjetoTipo == "activity";
+            var selectorEsActividad = s.Selector?.ObjetoTipo == "activity";
             _actividadBtn.Text = abierta is not null ? "Cerrar recepción" : "Lanzar actividad";
-            var puede = s.Estado == "abierta" && (abierta is not null || focoEsActividad);
+            var puede = s.Estado == "abierta" && (abierta is not null || selectorEsActividad);
             Ds.Habilitar(_actividadBtn, puede);
         }
     }
@@ -290,12 +300,17 @@ public partial class ClaseSesionPage : ContentPage
             await RefrescarAsync();
             return;
         }
-        if (_sesion.Foco?.ObjetoRef is not { } objetoRef || _sesion.Foco.ObjetoTipo != "activity") return;
-        var distribucion = await aula.DistribuirAsync(_sesion.Id, Sesion.ProfesorId, new DistribuirSolicitud("actividad", objetoRef, null, _sesion.Foco.Rotulo, false));
+        if (_sesion.Selector?.ObjetoRef is not { } objetoRef || _sesion.Selector.ObjetoTipo != "activity") return;
+        // El lanzamiento va a todo el grupo admitido; el backend deja fuera las tabletas bloqueadas y lo dice en «excluidos».
+        var distribucion = await aula.DistribuirAsync(_sesion.Id, Sesion.ProfesorId, new DistribuirSolicitud("actividad", objetoRef, null, _sesion.Selector.Rotulo, false));
         if (distribucion is null)
         {
             var error = aula.UltimoError;
-            await Aviso(error?.Codigo == "sin_participantes_admitidos" ? "Todavía no hay tabletas conectadas" : "No se pudo lanzar la actividad", error?.Detalle);
+            var titulo = error?.Codigo == "sin_participantes_admitidos"
+                ? (error.Texto("excluidos_bloqueados") is null && error.Extra is { } e && e.TryGetProperty("excluidos_bloqueados", out var ex) && ex.GetArrayLength() > 0
+                    ? "Todas las tabletas conectadas están bloqueadas" : "Todavía no hay tabletas conectadas")
+                : "No se pudo lanzar la actividad";
+            await Aviso(titulo, error?.Detalle);
             return;
         }
         await RefrescarAsync();
@@ -313,6 +328,9 @@ public partial class ClaseSesionPage : ContentPage
         var entregadas = abierta.Entregas?.Entregadas ?? 0;
         pila.Add(new ProgressBar { Progress = total == 0 ? 0 : (double)entregadas / total, ProgressColor = Ds.CatQuiz });
         pila.Add(Ds.Secundario(total == 0 ? "Sin destinatarios" : $"{entregadas} de {total} tabletas la recibieron", 14));
+        if (abierta.Excluidos > 0)
+            pila.Add(Ds.Pildora(abierta.Excluidos == 1 ? "1 tableta bloqueada no la recibió" : $"{abierta.Excluidos} tabletas bloqueadas no la recibieron", Ds.PeligroSuave, TintaPeligro));
+        if (!string.IsNullOrEmpty(abierta.ReglasTexto)) pila.Add(Ds.Secundario(abierta.ReglasTexto, 13));
         ActividadHost.Add(Ds.Tarjeta(pila, Ds.RadioInterno, new Thickness(14), Ds.ExitoSuave));
     }
 
@@ -365,21 +383,49 @@ public partial class ClaseSesionPage : ContentPage
         }
         foreach (var p in lista.OrderBy(p => p.Estado == "esperando" ? 0 : p.Admitido ? 1 : 2).ThenBy(p => p.Nombre))
         {
-            var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(48), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
-            fila.Add(new Border
+            // Dos renglones en el ancho del panel (420): arriba el nombre con su estado y su tableta, abajo los botones.
+            // Así el texto no compite con dos botones por el mismo ancho y la píldora de bloqueo cabe entera.
+            var fila = new Grid
+            {
+                ColumnDefinitions = [new ColumnDefinition(48), new ColumnDefinition(GridLength.Star)],
+                RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto)],
+                ColumnSpacing = 12, RowSpacing = 8,
+            };
+            var avatar = new Border
             {
                 BackgroundColor = p.Admitido ? Ds.Exito : p.Estado == "esperando" ? Ds.Alerta : Ds.TintaSuave, StrokeThickness = 0, WidthRequest = 48, HeightRequest = 48,
-                StrokeShape = new RoundRectangle { CornerRadius = 999 },
+                StrokeShape = new RoundRectangle { CornerRadius = 999 }, VerticalOptions = LayoutOptions.Start,
                 Content = new Label { Text = p.Iniciales, FontFamily = Ds.FuenteMedia, TextColor = p.Estado == "esperando" ? Ds.Tinta : Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
-            }, 0, 0);
-            fila.Add(new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Children = { Ds.Cuerpo(p.Nombre, 16), Ds.Secundario(p.EstadoLegible + (p.AdmisionNominal ? " · invitado" : string.Empty), 13) } }, 1, 0);
+            };
+            fila.Add(avatar, 0, 0);
+            Grid.SetRowSpan(avatar, 2);
+            // Nombre, estado y la tableta con la que entró (MOD-009); si está bloqueada, se ve de un vistazo.
+            var textos = new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Spacing = 2 };
+            textos.Add(Ds.Cuerpo(p.Nombre, 16));
+            textos.Add(Ds.Secundario(string.Join(" · ", new[] { p.EstadoLegible, p.AdmisionNominal ? "invitado" : null, string.IsNullOrWhiteSpace(p.Dispositivo) ? null : p.Dispositivo }.Where(x => x is not null)), 13));
+            if (p.TabletaBloqueada)
+            {
+                var pildora = Ds.Pildora("Tableta bloqueada · sin lanzamientos", Ds.PeligroSuave, TintaPeligro, 13);
+                pildora.HorizontalOptions = LayoutOptions.Start;
+                pildora.Margin = new Thickness(0, 4, 0, 0);
+                textos.Add(pildora);
+            }
+            fila.Add(textos, 1, 0);
+            var acciones = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.Start };
+            if (p.TieneTableta)
+            {
+                var bloqueo = Ds.Boton(p.TabletaBloqueada ? "Desbloquear" : "Bloquear tableta", Ds.Rango.Quiet, async (_, _) => await BloqueoTabletaAsync(p), 52);
+                bloqueo.FontSize = 15;
+                acciones.Add(Ds.Capsula(bloqueo));
+            }
             Button accion = p.Estado == "esperando"
                 ? Ds.Boton("Admitir", Ds.Rango.Secondary, async (_, _) => await ParticipanteAsync(p.Id, "admitir"), 52)
                 : p.Admitido
                     ? Ds.Boton("Expulsar", Ds.Rango.Quiet, async (_, _) => { if (await DisplayAlertAsync("¿Expulsar de la clase?", $"{p.Nombre} saldrá de la sesión. Sus respuestas se conservan.", "Expulsar", "Cancelar")) await ParticipanteAsync(p.Id, "expulsar"); }, 52)
                     : Ds.Boton("Readmitir", Ds.Rango.Quiet, async (_, _) => await ParticipanteAsync(p.Id, "admitir"), 52);
             accion.FontSize = 15;
-            fila.Add(Ds.Capsula(accion), 2, 0);
+            acciones.Add(Ds.Capsula(accion));
+            fila.Add(acciones, 1, 1);
             ParticipantesHost.Add(fila);
             ParticipantesHost.Add(Ds.Separador());
         }
@@ -389,8 +435,24 @@ public partial class ClaseSesionPage : ContentPage
     {
         if (_sesion is null) return;
         if (await Sesion.Aula.ParticipanteAsync(_sesion.Id, Sesion.ProfesorId, participanteId, accion) is null)
-            await Aviso("No se pudo aplicar", Sesion.Aula.UltimoMotivo);
+        {
+            var error = Sesion.Aula.UltimoError;
+            await Aviso(error?.Codigo == "dispositivo_bloqueado" ? "La tableta está bloqueada" : "No se pudo aplicar", error?.Detalle ?? Sesion.Aula.UltimoMotivo);
+        }
         await RefrescarAsync();
+    }
+
+    /// <summary>Bloquear o desbloquear la tableta del participante (MOD-009). Reversible; el alumno no pierde nada.</summary>
+    private async Task BloqueoTabletaAsync(ParticipanteAula p)
+    {
+        if (_sesion is null || !p.TieneTableta) return;
+        var api = Sesion.Dispositivos;
+        var resultado = p.TabletaBloqueada
+            ? await api.DesbloquearAsync(p.DispositivoId!, Sesion.ProfesorId)
+            : await api.BloquearAsync(p.DispositivoId!, Sesion.ProfesorId, "desde la clase");
+        if (resultado is null) await Aviso(p.TabletaBloqueada ? "No se pudo desbloquear la tableta" : "No se pudo bloquear la tableta", api.UltimoMotivo);
+        await RefrescarAsync();
+        if (ParticipantesPanel.IsVisible && _sesion is not null) PintarParticipantes(_sesion);
     }
 
     private Task Aviso(string titulo, string? detalle) => DisplayAlertAsync(titulo, detalle ?? "Sin detalle.", "Entendido");

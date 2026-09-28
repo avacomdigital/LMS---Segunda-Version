@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.DispositivosPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False">
+    <!-- Dispositivos (MOD-009 · Device Manager). Una sola columna centrada: cabecera con el título, el conteo y las dos
+         acciones (actualizar, menú principal), y debajo la lista de tabletas del aula. Todo por toque: bloquear o
+         desbloquear una tableta es un botón por fila; no hay nada que escribir. -->
+    <Grid RowDefinitions="Auto,*" Padding="44,28,48,24" RowSpacing="18">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280">
+            <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                <Label Text="DISPOSITIVOS DEL AULA" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                <Label Text="Tabletas registradas en este nodo" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" />
+                <Label x:Name="SubtituloLabel" Text="Se registran solas la primera vez que entran a una clase. Bloquear una tableta la deja fuera de las clases y de los lanzamientos; no borra nada." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+            <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+        </Grid>
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout x:Name="ListaHost" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280" Spacing="12" Padding="0,0,0,40" />
+        </ScrollView>
+    </Grid>
+</ContentPage>

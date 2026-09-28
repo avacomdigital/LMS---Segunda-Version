@@ -96,7 +96,8 @@ public partial class ClaseUnirsePage : ContentPage
         try
         {
             var aula = Sesion.Aula;
-            var estado = await aula.UnirseAsync(_codigo, Sesion.PersonaId, Sesion.Nombre, Sesion.Dispositivo, Sesion.ClaseParticipanteId);
+            var estado = await aula.UnirseAsync(_codigo, Sesion.PersonaId, Sesion.Nombre, Sesion.Dispositivo, Sesion.ClaseParticipanteId,
+                                                Sesion.Plataforma, Sesion.VersionApp);
             AvisoHost.Clear();
             if (estado is null)
             {
@@ -105,6 +106,8 @@ public partial class ClaseUnirsePage : ContentPage
                 {
                     "codigo_invalido" => ("Ese código no es", "Pídele a tu profesor que lo muestre en la pantalla."),
                     "participante_expulsado" => ("No puedes entrar por ahora", "Habla con tu profesor para volver a la clase."),
+                    "dispositivo_bloqueado" => ("Esta tableta está bloqueada", "Tu profesor la bloqueó desde el aula. Pídele que la desbloquee o usa otra tableta."),
+                    "dispositivo_inactivo" => ("Esta tableta fue retirada del aula", "Habla con tu profesor para usar otra tableta."),
                     "sin_conexion" => ("No hay conexión con el aula", error?.Sugerencia ?? "Revisa la red."),
                     _ => ("No se pudo entrar", error?.Detalle ?? aula.UltimoMotivo),
                 };

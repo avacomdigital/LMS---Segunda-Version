@@ -1,6 +1,3 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using Avacom.Lms.Core.Models;
 
@@ -10,11 +7,11 @@ namespace Avacom.Lms.Core.Services;
 /// Cliente de <c>/api/aula/</c> (MOD-007 · Classroom Engine) para OPS y Student.
 ///
 /// Mismas reglas que <see cref="BibliotecaDeContenido"/>: habla con el backend del
-/// LMS (nunca con la biblioteca), toda URL nace de <see cref="BaseUri"/>, un 503 no es
-/// una excepción de negocio (devuelve null y deja el motivo en <see cref="UltimoMotivo"/>)
-/// y los cuerpos viajan con Content-Length. Además expone <see cref="UltimoError"/> con el
+/// LMS (nunca con la biblioteca), toda URL nace de <see cref="ClienteJson.BaseUri"/>, un 503 no es
+/// una excepción de negocio (devuelve null y deja el motivo en <see cref="ClienteJson.UltimoMotivo"/>)
+/// y los cuerpos viajan con Content-Length. Además expone <see cref="ClienteJson.UltimoError"/> con el
 /// <c>codigo</c> del backend para que la pantalla decida (por ejemplo
-/// <c>sesion_activa_existente</c> → «Continuar esa clase»).
+/// <c>sesion_activa_existente</c> → «Continuar esa clase», <c>dispositivo_bloqueado</c> → «usa otra tableta»).
 /// </summary>
 public interface IAulaApi
 {
@@ -37,7 +34,8 @@ public interface IAulaApi
 
     Task<SesionDeClase?> IniciarAsync(IniciarSesionSolicitud solicitud, CancellationToken ct = default);
     Task<SesionDeClase?> SesionAsync(string sesionId, CancellationToken ct = default);
-    Task<FocoAula?> ProyectarAsync(string sesionId, string actor, string objetoRef, string? unidadRef, CancellationToken ct = default);
+    /// <summary>Declara el selector (lo que se proyecta): un objeto y, opcionalmente, su lámina o página.</summary>
+    Task<SelectorAula?> ProyectarAsync(string sesionId, string actor, string objetoRef, string? unidadRef, CancellationToken ct = default);
     Task<bool> ControlAsync(string sesionId, string actor, string tipo, bool activo, CancellationToken ct = default);
     Task<DistribucionAula?> DistribuirAsync(string sesionId, string actor, DistribuirSolicitud solicitud, CancellationToken ct = default);
     Task<DistribucionAula?> CerrarDistribucionAsync(string sesionId, string actor, string distribucionId, CancellationToken ct = default);
@@ -45,22 +43,17 @@ public interface IAulaApi
     Task<ParticipanteAula?> ParticipanteAsync(string sesionId, string actor, string participanteId, string accion, CancellationToken ct = default);
     Task<SesionDeClase?> CerrarAsync(string sesionId, string actor, bool forzar, CancellationToken ct = default);
 
-    Task<EstadoTableta?> UnirseAsync(string codigo, string personaId, string personaRotulo, string dispositivo, string? participanteId, CancellationToken ct = default);
+    /// <summary>La tableta entra con el código; declara su huella, su plataforma y su versión para que MOD-009 la reconozca.</summary>
+    Task<EstadoTableta?> UnirseAsync(string codigo, string personaId, string personaRotulo, string dispositivo, string? participanteId,
+                                     string? plataforma = null, string? versionApp = null, CancellationToken ct = default);
     Task<EstadoTableta?> EstadoAsync(string sesionId, string participanteId, CancellationToken ct = default);
     Task<EstadoTableta?> PresenciaAsync(string sesionId, string participanteId, string? estado, string dispositivo, CancellationToken ct = default);
     Task<bool> ConfirmarEntregaAsync(string sesionId, string distribucionId, string participanteId, CancellationToken ct = default);
 }
 
-public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null) : IAulaApi
+public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null) : ClienteJson(http, baseUri), IAulaApi
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-
-    public Uri BaseUri { get; } = baseUri;
     public string? Fuente { get; } = string.IsNullOrWhiteSpace(fuente) ? null : fuente;
-    public string? UltimoMotivo { get; private set; }
-    public ErrorAula? UltimoError { get; private set; }
-
-    public Uri Absoluta(string rutaRelativa) => new(BaseUri, rutaRelativa.TrimStart('/'));
 
     private string ConFuente(string ruta) =>
         Fuente is null ? ruta : ruta.Contains('?') ? $"{ruta}&fuente={Uri.EscapeDataString(Fuente)}" : $"{ruta}?fuente={Uri.EscapeDataString(Fuente)}";
@@ -88,8 +81,8 @@ public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null)
     public Task<SesionDeClase?> SesionAsync(string sesionId, CancellationToken ct = default) =>
         ObtenerAsync<SesionDeClase>($"api/aula/sesiones/{sesionId}/", ct);
 
-    public Task<FocoAula?> ProyectarAsync(string sesionId, string actor, string objetoRef, string? unidadRef, CancellationToken ct = default) =>
-        EnviarAsync<FocoAula>($"api/aula/sesiones/{sesionId}/foco/", new { objeto_ref = objetoRef, unidad_ref = unidadRef, profesor_id = actor }, ct);
+    public Task<SelectorAula?> ProyectarAsync(string sesionId, string actor, string objetoRef, string? unidadRef, CancellationToken ct = default) =>
+        EnviarAsync<SelectorAula>($"api/aula/sesiones/{sesionId}/selector/", new { objeto_ref = objetoRef, unidad_ref = unidadRef, profesor_id = actor }, ct);
 
     public async Task<bool> ControlAsync(string sesionId, string actor, string tipo, bool activo, CancellationToken ct = default) =>
         await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/controles/", new { tipo, activo, profesor_id = actor }, ct) is not null;
@@ -98,7 +91,8 @@ public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null)
         EnviarAsync<DistribucionAula>($"api/aula/sesiones/{sesionId}/distribuciones/", new
         {
             clase = s.Clase, objeto_ref = s.ObjetoRef, media_ref = s.MediaRef, rotulo = s.Rotulo,
-            disponible_estudio = s.DisponibleEstudio, profesor_id = actor,
+            disponible_estudio = s.DisponibleEstudio, alcance = s.Alcance, participantes = s.Participantes,
+            intentos_permitidos = s.IntentosPermitidos, tiempo_limite_seg = s.TiempoLimiteSeg, profesor_id = actor,
         }, ct);
 
     public Task<DistribucionAula?> CerrarDistribucionAsync(string sesionId, string actor, string distribucionId, CancellationToken ct = default) =>
@@ -115,10 +109,12 @@ public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null)
 
     // -------------------------------------------------------------- estudiante
 
-    public Task<EstadoTableta?> UnirseAsync(string codigo, string personaId, string personaRotulo, string dispositivo, string? participanteId, CancellationToken ct = default) =>
+    public Task<EstadoTableta?> UnirseAsync(string codigo, string personaId, string personaRotulo, string dispositivo, string? participanteId,
+                                            string? plataforma = null, string? versionApp = null, CancellationToken ct = default) =>
         EnviarAsync<EstadoTableta>("api/aula/sesiones/unirse/", new
         {
             codigo_union = codigo, persona_id = personaId, persona_rotulo = personaRotulo, dispositivo, participante_id = participanteId,
+            plataforma, version_app = versionApp,
         }, ct);
 
     public Task<EstadoTableta?> EstadoAsync(string sesionId, string participanteId, CancellationToken ct = default) =>
@@ -129,96 +125,4 @@ public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null)
 
     public async Task<bool> ConfirmarEntregaAsync(string sesionId, string distribucionId, string participanteId, CancellationToken ct = default) =>
         await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/distribuciones/{distribucionId}/confirmar/", new { participante_id = participanteId }, ct) is not null;
-
-    // ------------------------------------------------------------------ ayudas
-
-    private async Task<T?> ObtenerAsync<T>(string ruta, CancellationToken ct)
-    {
-        try
-        {
-            using var respuesta = await http.GetAsync(Absoluta(ruta), ct);
-            if (!respuesta.IsSuccessStatusCode)
-            {
-                await RegistrarErrorAsync(respuesta, ct);
-                return default;
-            }
-            Limpiar();
-            return await respuesta.Content.ReadFromJsonAsync<T>(Json, ct);
-        }
-        catch (Exception ex) when (EsDeRed(ex))
-        {
-            SinRed();
-            return default;
-        }
-    }
-
-    private async Task<T?> EnviarAsync<T>(string ruta, object cuerpo, CancellationToken ct)
-    {
-        try
-        {
-            // Serializado a texto para viajar con Content-Length (el servidor de desarrollo
-            // de Django no lee cuerpos troceados; misma decisión que BibliotecaDeContenido).
-            var contenido = new StringContent(JsonSerializer.Serialize(cuerpo, Json), Encoding.UTF8, "application/json");
-            using var respuesta = await http.PostAsync(Absoluta(ruta), contenido, ct);
-            if (!respuesta.IsSuccessStatusCode)
-            {
-                await RegistrarErrorAsync(respuesta, ct);
-                return default;
-            }
-            Limpiar();
-            return await respuesta.Content.ReadFromJsonAsync<T>(Json, ct);
-        }
-        catch (Exception ex) when (EsDeRed(ex))
-        {
-            SinRed();
-            return default;
-        }
-    }
-
-    private void Limpiar()
-    {
-        UltimoMotivo = null;
-        UltimoError = null;
-    }
-
-    private void SinRed()
-    {
-        UltimoMotivo = "No hay conexión con el aula.";
-        UltimoError = new ErrorAula(0, "sin_conexion", UltimoMotivo, "Revisa que el equipo del aula esté encendido y en la misma red.", null);
-    }
-
-    private async Task RegistrarErrorAsync(HttpResponseMessage respuesta, CancellationToken ct)
-    {
-        var estado = (int)respuesta.StatusCode;
-        string? codigo = null, detalle = null, sugerencia = null;
-        JsonElement? extra = null;
-        try
-        {
-            var texto = await respuesta.Content.ReadAsStringAsync(ct);
-            if (!string.IsNullOrWhiteSpace(texto))
-            {
-                using var doc = JsonDocument.Parse(texto);
-                var raiz = doc.RootElement.Clone();
-                extra = raiz;
-                if (raiz.ValueKind == JsonValueKind.Object)
-                {
-                    if (raiz.TryGetProperty("detail", out var d) && d.ValueKind == JsonValueKind.String) detalle = d.GetString();
-                    if (raiz.TryGetProperty("codigo", out var c) && c.ValueKind == JsonValueKind.String) codigo = c.GetString();
-                    if (raiz.TryGetProperty("sugerencia", out var s) && s.ValueKind == JsonValueKind.String) sugerencia = s.GetString();
-                }
-            }
-        }
-        catch (JsonException) { }
-        detalle ??= estado switch
-        {
-            (int)HttpStatusCode.ServiceUnavailable => "El aula no puede leer el curso en este momento.",
-            (int)HttpStatusCode.NotFound => "No se encontró lo que se pedía.",
-            _ => $"El backend respondió {estado}.",
-        };
-        UltimoMotivo = detalle;
-        UltimoError = new ErrorAula(estado, codigo, detalle, sugerencia, extra);
-    }
-
-    private static bool EsDeRed(Exception ex) =>
-        ex is HttpRequestException or TaskCanceledException or JsonException or IOException;
 }

@@ -28,6 +28,9 @@ public partial class DashboardPage : ContentPage
             case "Reportes":
                 await Shell.Current.GoToAsync("activity-monitor");
                 break;
+            case "Dispositivos":
+                await Shell.Current.GoToAsync("dispositivos");
+                break;
             default:
                 await DisplayAlertAsync(tile.Text, $"El módulo {tile.Text} está representado en este prototipo y listo para conectar su flujo.", "Entendido");
                 break;

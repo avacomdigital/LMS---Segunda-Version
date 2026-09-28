@@ -42,18 +42,25 @@ public sealed class AulaApiTests
     private const string EstadoTabletaJson = """
         {"sesion":{"id":"s1","estado":"abierta","fuente_curso":"ejemplo","curso_ref":"c","curso_rotulo":"Estados","leccion_ref":"l1","leccion_rotulo":"Los tres estados","grupo_rotulo":"","profesor_rotulo":"Prof. Gómez"},
          "activa":true,
-         "participante":{"id":"p1","persona_id":"ana","persona_rotulo":"Ana Pérez","dispositivo":"tab","estado":"conectado","admision_nominal":false,"ingreso":1,"ultimo_latido_en":2},
-         "foco":{"id":"f","curso_ref":"c","leccion_ref":"l1","objeto_ref":"l1-lecture","objeto_tipo":"lecture","unidad_ref":"s2","unidad_indice":2,"media_ref":"","rotulo":"Tres estados","declarado_en":3},
+         "participante":{"id":"p1","persona_id":"ana","persona_rotulo":"Ana Pérez","dispositivo":"tab","dispositivo_id":"d-1","dispositivo_bloqueado":true,"estado":"conectado","admision_nominal":false,"ingreso":1,"ultimo_latido_en":2},
+         "selector":{"id":"f","curso_ref":"c","leccion_ref":"l1","objeto_ref":"l1-lecture","objeto_tipo":"lecture","unidad_ref":"s2","unidad_indice":2,"media_ref":"","rotulo":"Tres estados","declarado_en":3},
          "seguimiento":true,"pantallas_bloqueadas":true,
-         "pendientes":[{"id":"d1","clase":"actividad","objeto_ref":"l1-act","objeto_tipo":"activity","rotulo":"Practica","alcance":"grupo","disponible_estudio":false,"abierta_en":4,"cerrada_en":null,"entrega":"pendiente"}],
+         "pendientes":[{"id":"d1","clase":"actividad","objeto_ref":"l1-act","objeto_tipo":"activity","rotulo":"Practica","alcance":"seleccion","destinatarios":["ana"],"excluidos_bloqueados":["luis"],"intentos_permitidos":2,"tiempo_limite_seg":600,"disponible_estudio":false,"abierta_en":4,"cerrada_en":null,"entrega":"pendiente"}],
          "avisos":[{"id":"a1","participante_id":null,"texto":"Miren al frente","enviado_en":5}],
          "servidor_en":6,"intervalo_sondeo_ms":2000,"nuevo":true,"en_espera":false}
         """;
 
     private const string SesionJson = """
         {"id":"s1","estado":"abierta","activa":true,"codigo_union":"613385","via_origen":"leccion","fuente_curso":"ejemplo","curso_ref":"c","curso_rotulo":"Estados","leccion_ref":"l1","leccion_rotulo":"Los tres estados",
-         "foco":{"id":"f","objeto_ref":"l1-lecture","objeto_tipo":"lecture","unidad_ref":"","rotulo":"Todo","declarado_en":1},"seguimiento":true,"pantallas_bloqueadas":false,
+         "selector":{"id":"f","objeto_ref":"l1-lecture","objeto_tipo":"lecture","unidad_ref":"","rotulo":"Todo","declarado_en":1},"seguimiento":true,"pantallas_bloqueadas":false,
          "participantes":[],"conteo":{"total":0,"conectados":0,"reconectando":0,"esperando":0,"salieron":0},"distribuciones":[],"avisos":[],"resumen":null,"servidor_en":2}
+        """;
+
+    private const string DispositivosJson = """
+        [{"id":"d-1","organizacion_id":"o","identificador_hw":"student-TAB07","identificador":"student-TAB07","nombre":"Tableta 07","tipo":"TABLETA","plataforma":"android","version_app":"0.4.2",
+          "activo":true,"bloqueado":true,"registrado_en":1,"ultimo_latido_en":2,"en_linea":false,"sesion_abierta":{"id":"s","alumno_id":"ana","iniciada_en":3}},
+         {"id":"d-2","organizacion_id":"o","identificador_hw":"hw-2","identificador":"hw-2","nombre":"","tipo":"TABLETA","plataforma":"","version_app":"",
+          "activo":true,"bloqueado":false,"registrado_en":1,"ultimo_latido_en":2,"en_linea":true,"sesion_abierta":null}]
         """;
 
     [Fact]
@@ -80,17 +87,47 @@ public sealed class AulaApiTests
     }
 
     [Fact]
-    public void EstadoTableta_SeDeserializaConFocoPendientesYAvisos()
+    public void EstadoTableta_SeDeserializaConSelectorPendientesYAvisos()
     {
         var estado = JsonSerializer.Deserialize<EstadoTableta>(EstadoTabletaJson, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         Assert.True(estado.Activa);
         Assert.True(estado.PantallasBloqueadas);
-        Assert.Equal("s2", estado.Foco!.UnidadRef);
+        Assert.Equal("s2", estado.Selector!.UnidadRef);
         Assert.Equal("AP", estado.Participante!.Iniciales);
         Assert.True(estado.Participante.Admitido);
-        Assert.Equal("pendiente", estado.Pendientes![0].Entrega);
-        Assert.True(estado.Pendientes[0].EstaAbierta);
+        Assert.True(estado.Participante.TieneTableta);
+        Assert.True(estado.Participante.TabletaBloqueada);
+        var pendiente = estado.Pendientes![0];
+        Assert.Equal("pendiente", pendiente.Entrega);
+        Assert.True(pendiente.EstaAbierta);
+        Assert.Equal(["ana"], pendiente.Destinatarios!.ToArray());
+        Assert.Equal(1, pendiente.Excluidos);
+        Assert.Equal("2 intentos · 10 min", pendiente.ReglasTexto);
         Assert.Equal(2000, estado.IntervaloSondeoMs);
+    }
+
+    [Fact]
+    public async Task DispositivosApi_ListaElInventarioYBloqueaPorLaRutaDeMod009()
+    {
+        var urls = new List<string>();
+        string? cuerpo = null;
+        var manejador = new ManejadorFalso(async (req, _) =>
+        {
+            urls.Add(req.RequestUri!.AbsoluteUri);
+            if (req.Method == HttpMethod.Post) cuerpo = await req.Content!.ReadAsStringAsync();
+            return Respuesta(HttpStatusCode.OK, req.Method == HttpMethod.Post ? """{"id":"d-1","identificador_hw":"x","nombre":"Tableta 07","tipo":"TABLETA","activo":true,"bloqueado":true,"en_linea":true,"registrado_en":1,"ultimo_latido_en":1,"sesion_abierta":null}""" : DispositivosJson);
+        });
+        var api = new DispositivosApi(new HttpClient(manejador), new Uri("http://192.168.0.55:8000/"));
+        var lista = await api.ListarAsync();
+        Assert.Equal("http://192.168.0.55:8000/api/dispositivos/", urls[0]);
+        Assert.Equal(2, lista!.Count);
+        Assert.Equal(("Tableta 07", "Bloqueada", "Android · app 0.4.2 · en uso por ana"), (lista[0].NombreVisible, lista[0].EstadoLegible, lista[0].Detalle));
+        Assert.Equal(("hw-2", "En línea", "Plataforma sin declarar · libre"), (lista[1].NombreVisible, lista[1].EstadoLegible, lista[1].Detalle));
+        var bloqueada = await api.BloquearAsync("d-1", "prof-1", "mal uso");
+        Assert.True(bloqueada!.Bloqueado);
+        Assert.Equal("http://192.168.0.55:8000/api/dispositivos/d-1/bloquear/", urls[1]);
+        Assert.Contains("\"motivo\":\"mal uso\"", cuerpo);
+        Assert.Null(api.UltimoError);
     }
 
     [Fact]
@@ -134,7 +171,7 @@ public sealed class AulaApiTests
         var sesion = await api.IniciarAsync(new IniciarSesionSolicitud("leccion", "c", "l1", null, "ejemplo", "prof-1", "Prof. Gómez", "pantalla"));
         Assert.NotNull(sesion);
         Assert.Equal("613385", sesion!.CodigoUnion);
-        Assert.Equal("l1-lecture", sesion.Foco!.ObjetoRef);
+        Assert.Equal("l1-lecture", sesion.Selector!.ObjetoRef);
         Assert.Equal("http://127.0.0.1:8000/api/aula/sesiones/", capturada!.RequestUri!.AbsoluteUri);
         Assert.NotNull(capturada.Content!.Headers.ContentLength);
         Assert.Contains("\"leccion_ref\":\"l1\"", cuerpo);

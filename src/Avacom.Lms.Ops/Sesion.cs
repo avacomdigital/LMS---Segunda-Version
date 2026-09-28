@@ -12,8 +12,10 @@ public static class Sesion
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
     private static IBibliotecaDeContenido? _biblioteca;
     private static IAulaApi? _aula;
+    private static IDispositivosApi? _dispositivos;
     private static Uri? _baseActual;
     private static Uri? _baseAula;
+    private static Uri? _baseDispositivos;
     private static string? _fuenteAula;
 
     public const string DireccionPorDefecto = "http://127.0.0.1:8000";
@@ -72,6 +74,21 @@ public static class Sesion
                 _fuenteAula = fuente;
             }
             return _aula;
+        }
+    }
+
+    /// <summary>El cliente de <c>/api/dispositivos/</c> (MOD-009): inventario y bloqueo de tabletas, una instancia por dirección.</summary>
+    public static IDispositivosApi Dispositivos
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_dispositivos is null || _baseDispositivos != actual)
+            {
+                _dispositivos = new DispositivosApi(Http, actual);
+                _baseDispositivos = actual;
+            }
+            return _dispositivos;
         }
     }
 

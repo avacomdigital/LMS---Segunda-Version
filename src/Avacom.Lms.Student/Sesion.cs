@@ -62,7 +62,14 @@ public static class Sesion
         }
     }
 
+    /// <summary>La huella con la que MOD-009 reconoce esta tableta en el inventario del aula.</summary>
     public static string Dispositivo => $"student-{DeviceInfo.Current.Name}";
+
+    /// <summary>Plataforma y versión declaradas al entrar a clase, para que el inventario sepa qué app corre cada tableta.</summary>
+    public static string Plataforma =>
+        DeviceInfo.Current.Platform == DevicePlatform.Android ? "android" : DeviceInfo.Current.Platform == DevicePlatform.WinUI ? "windows" : string.Empty;
+
+    public static string VersionApp => AppInfo.Current.VersionString;
 
     /// <summary>La participación en curso: se conserva para readmitirse sin escribir el código (FUN-077, RF-A10).</summary>
     public static string? ClaseSesionId

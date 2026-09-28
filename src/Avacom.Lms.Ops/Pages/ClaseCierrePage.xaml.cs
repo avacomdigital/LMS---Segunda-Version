@@ -43,7 +43,7 @@ public partial class ClaseCierrePage : ContentPage
             else
             {
                 Tarjeta("Participantes", r.Participantes.ToString(), $"máximo {r.ConectadosMaximo} a la vez", Ds.CatClaseEnVivo);
-                Tarjeta("Proyecciones", r.Focos.ToString(), "cambios de foco", Ds.Info);
+                Tarjeta("Proyecciones", r.Selectores.ToString(), "cambios de selector", Ds.Info);
                 Tarjeta("Actividades", r.Actividades.ToString(), r.Distribuciones == r.Actividades ? "lanzadas al grupo" : $"{r.Distribuciones} distribuciones en total", Ds.CatQuiz);
                 Tarjeta("Avisos", r.Avisos.ToString(), "enviados al grupo", Ds.CatLectura);
                 Tarjeta("Duración", r.DuracionTexto, r.OrigenCierre == "profesor" ? "cerrada por el profesor" : $"cierre: {r.OrigenCierre}", Ds.TintaSuave);

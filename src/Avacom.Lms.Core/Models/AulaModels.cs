@@ -299,7 +299,8 @@ public sealed record ObjetoSuelto(
 
 // ------------------------------------------------------------------ sesión
 
-public sealed record FocoAula(
+/// <summary>Lo que el profesor tiene seleccionado para proyectar: un objeto y, si aplica, su lámina o página. No es un lanzamiento.</summary>
+public sealed record SelectorAula(
     [property: JsonPropertyName("id")] string? Id,
     [property: JsonPropertyName("curso_ref")] string? CursoRef,
     [property: JsonPropertyName("leccion_ref")] string? LeccionRef,
@@ -319,9 +320,14 @@ public sealed record ParticipanteAula(
     [property: JsonPropertyName("estado")] string Estado,
     [property: JsonPropertyName("admision_nominal")] bool AdmisionNominal,
     [property: JsonPropertyName("ingreso")] long Ingreso,
-    [property: JsonPropertyName("ultimo_latido_en")] long? UltimoLatidoEn)
+    [property: JsonPropertyName("ultimo_latido_en")] long? UltimoLatidoEn,
+    // MOD-009: la tableta reconocida por el inventario y si está bloqueada (no recibe lanzamientos).
+    [property: JsonPropertyName("dispositivo_id")] string? DispositivoId = null,
+    [property: JsonPropertyName("dispositivo_bloqueado")] bool? DispositivoBloqueado = null)
 {
     public string Nombre => string.IsNullOrWhiteSpace(PersonaRotulo) ? PersonaId : PersonaRotulo!;
+    public bool TieneTableta => !string.IsNullOrWhiteSpace(DispositivoId);
+    public bool TabletaBloqueada => DispositivoBloqueado == true;
     public string Iniciales => Identidad.InicialesDe(Nombre);
     public string EstadoLegible => Estado switch
     {
@@ -371,10 +377,21 @@ public sealed record DistribucionAula(
     [property: JsonPropertyName("abierta")] bool? Abierta,
     [property: JsonPropertyName("entregas")] EntregasAula? Entregas,
     // Sólo en el estado de la tableta: la entrega de este participante.
-    [property: JsonPropertyName("entrega")] string? Entrega)
+    [property: JsonPropertyName("entrega")] string? Entrega,
+    // El lanzamiento (segunda versión del modelo): a quién llegó, a quién dejó fuera por tableta bloqueada y con qué reglas.
+    [property: JsonPropertyName("destinatarios")] IReadOnlyList<string>? Destinatarios = null,
+    [property: JsonPropertyName("excluidos_bloqueados")] IReadOnlyList<string>? ExcluidosBloqueados = null,
+    [property: JsonPropertyName("intentos_permitidos")] int? IntentosPermitidos = null,
+    [property: JsonPropertyName("tiempo_limite_seg")] int? TiempoLimiteSeg = null)
 {
     public bool EstaAbierta => Abierta ?? CerradaEn is null;
     public string EntregasTexto => Entregas is null ? string.Empty : $"{Entregas.Entregadas} de {Entregas.Total} entregadas";
+    public int Excluidos => ExcluidosBloqueados?.Count ?? 0;
+    public string ReglasTexto => string.Join(" · ", new[]
+    {
+        IntentosPermitidos is { } i ? (i == 1 ? "1 intento" : $"{i} intentos") : null,
+        TiempoLimiteSeg is { } t ? (t % 60 == 0 ? $"{t / 60} min" : $"{t} s") : null,
+    }.Where(x => x is not null));
 }
 
 public sealed record AvisoAula(
@@ -387,7 +404,7 @@ public sealed record ResumenSesion(
     [property: JsonPropertyName("participantes")] int Participantes,
     [property: JsonPropertyName("conectados_maximo")] int ConectadosMaximo,
     [property: JsonPropertyName("admitidos_nominal")] int AdmitidosNominal,
-    [property: JsonPropertyName("focos")] int Focos,
+    [property: JsonPropertyName("selectores")] int Selectores,
     [property: JsonPropertyName("distribuciones")] int Distribuciones,
     [property: JsonPropertyName("actividades")] int Actividades,
     [property: JsonPropertyName("avisos")] int Avisos,
@@ -414,7 +431,7 @@ public sealed record SesionDeClase(
     [property: JsonPropertyName("profesor_rotulo")] string? ProfesorRotulo,
     [property: JsonPropertyName("iniciada_en")] long? IniciadaEn,
     [property: JsonPropertyName("finalizada_en")] long? FinalizadaEn,
-    [property: JsonPropertyName("foco")] FocoAula? Foco,
+    [property: JsonPropertyName("selector")] SelectorAula? Selector,
     [property: JsonPropertyName("seguimiento")] bool Seguimiento,
     [property: JsonPropertyName("pantallas_bloqueadas")] bool PantallasBloqueadas,
     [property: JsonPropertyName("participantes")] IReadOnlyList<ParticipanteAula>? Participantes,
@@ -442,7 +459,7 @@ public sealed record EstadoTableta(
     [property: JsonPropertyName("sesion")] SesionTableta Sesion,
     [property: JsonPropertyName("activa")] bool Activa,
     [property: JsonPropertyName("participante")] ParticipanteAula? Participante,
-    [property: JsonPropertyName("foco")] FocoAula? Foco,
+    [property: JsonPropertyName("selector")] SelectorAula? Selector,
     [property: JsonPropertyName("seguimiento")] bool Seguimiento,
     [property: JsonPropertyName("pantallas_bloqueadas")] bool PantallasBloqueadas,
     [property: JsonPropertyName("pendientes")] IReadOnlyList<DistribucionAula>? Pendientes,
@@ -458,7 +475,48 @@ public sealed record IniciarSesionSolicitud(
     string Via, string? CursoRef, string? LeccionRef, string? ObjetoRef, string Fuente,
     string ProfesorId, string? ProfesorRotulo, string Superficie);
 
-public sealed record DistribuirSolicitud(string Clase, string? ObjetoRef, string? MediaRef, string? Rotulo, bool DisponibleEstudio);
+/// <summary>El lanzamiento: a todo el grupo (<c>Alcance</c> nulo o «grupo») o a una selección de participantes, con sus reglas opcionales.</summary>
+public sealed record DistribuirSolicitud(string Clase, string? ObjetoRef, string? MediaRef, string? Rotulo, bool DisponibleEstudio,
+                                         string? Alcance = null, IReadOnlyList<string>? Participantes = null,
+                                         int? IntentosPermitidos = null, int? TiempoLimiteSeg = null);
+
+// ------------------------------------------------------- dispositivos (MOD-009)
+
+public sealed record SesionAbiertaDispositivo(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("alumno_id")] string AlumnoId,
+    [property: JsonPropertyName("iniciada_en")] long IniciadaEn);
+
+/// <summary>Una tableta del inventario del aula con su estado en vivo (<c>/api/dispositivos/</c>).</summary>
+public sealed record DispositivoAula(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("identificador_hw")] string? IdentificadorHw,
+    [property: JsonPropertyName("nombre")] string? Nombre,
+    [property: JsonPropertyName("tipo")] string? Tipo,
+    [property: JsonPropertyName("plataforma")] string? Plataforma,
+    [property: JsonPropertyName("version_app")] string? VersionApp,
+    [property: JsonPropertyName("activo")] bool Activo,
+    [property: JsonPropertyName("bloqueado")] bool Bloqueado,
+    [property: JsonPropertyName("en_linea")] bool EnLinea,
+    [property: JsonPropertyName("registrado_en")] long RegistradoEn,
+    [property: JsonPropertyName("ultimo_latido_en")] long? UltimoLatidoEn,
+    [property: JsonPropertyName("sesion_abierta")] SesionAbiertaDispositivo? SesionAbierta)
+{
+    public string NombreVisible => string.IsNullOrWhiteSpace(Nombre) ? IdentificadorHw ?? Id : Nombre!;
+    public string PlataformaLegible => Plataforma switch
+    {
+        "android" => "Android",
+        "windows" => "Windows",
+        _ => "Plataforma sin declarar",
+    };
+    public string EstadoLegible => !Activo ? "Retirada" : Bloqueado ? "Bloqueada" : EnLinea ? "En línea" : "Sin señal";
+    public string Detalle => string.Join(" · ", new[]
+    {
+        PlataformaLegible,
+        string.IsNullOrWhiteSpace(VersionApp) ? null : $"app {VersionApp}",
+        SesionAbierta is { } s ? $"en uso por {s.AlumnoId}" : "libre",
+    }.Where(x => x is not null));
+}
 
 /// <summary>Un error del backend de aula con su código de negocio (`sesion_activa_existente`, `actividades_abiertas`…).</summary>
 public sealed record ErrorAula(int Estado, string? Codigo, string Detalle, string? Sugerencia, JsonElement? Extra)
