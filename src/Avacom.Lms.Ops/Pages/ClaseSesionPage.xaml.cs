@@ -23,6 +23,7 @@ public partial class ClaseSesionPage : ContentPage
     private string? _focoPintado;
     private bool _refrescando;
     private Button? _bloqueoBtn, _seguimientoBtn, _actividadBtn, _avisoBtn, _terminarBtn;
+    private readonly Button _participantesBtn;
 
     public string SesionId { get; set; } = string.Empty;
 
@@ -33,12 +34,16 @@ public partial class ClaseSesionPage : ContentPage
         Proyeccion.Escala = 1.15;
         Proyeccion.Absoluta = ruta => Sesion.Aula.Absoluta(ruta);
         Proyeccion.UnidadPedida += async (_, unidad) => { if (Proyeccion.Objeto is { } o) await ProyectarAsync(o.ObjetoRef, unidad); };
+        // El botón de participantes se fabrica con el kit para compartir relieve, bisel y hundimiento con la barra de controles.
+        _participantesBtn = Ds.Boton("Participantes", Ds.Rango.Secondary, OnParticipantes, 56);
+        _participantesBtn.FontSize = 16;
+        ParticipantesSlot.Content = Ds.Capsula(_participantesBtn);
         PintarControles();
         foreach (var frase in Frases)
         {
             var b = Ds.Boton(frase, Ds.Rango.Secondary, async (_, _) => await AvisarAsync(frase), 64);
             b.Margin = new Thickness(0, 0, 10, 10);
-            FrasesHost.Add(b);
+            FrasesHost.Add(Ds.Capsula(b));
         }
         var cerrarAviso = Ds.Boton("Cerrar", Ds.Rango.Quiet, (_, _) => AvisoPanel.IsVisible = false, 64);
         FrasesHost.Add(cerrarAviso);
@@ -105,15 +110,17 @@ public partial class ClaseSesionPage : ContentPage
             PintarFoco(sesion.Foco);
             PintarActividad(sesion);
             if (ParticipantesPanel.IsVisible) PintarParticipantes(sesion);
-            ParticipantesBtn.Text = sesion.Conteo is { Esperando: > 0 } c ? $"Participantes · {c.Esperando} esperando" : "Participantes";
+            _participantesBtn.Text = sesion.Conteo is { Esperando: > 0 } c ? $"Participantes · {c.Esperando} esperando" : "Participantes";
         }
         finally { _refrescando = false; }
     }
 
+    /// <summary>El chip va sobre glass chrome: el punto lleva el color semántico y el fondo su versión suave; el texto queda en tinta.</summary>
     private void Conexion(string texto, Color color)
     {
-        ConexionLabel.Text = $"●  {texto}";
-        ConexionLabel.TextColor = color;
+        ConexionLabel.Text = texto;
+        ConexionPunto.Fill = new SolidColorBrush(color);
+        ConexionChip.BackgroundColor = color == Ds.Exito ? Ds.ExitoSuave : color == Ds.Peligro ? Ds.PeligroSuave : Ds.AlertaSuave;
     }
 
     // ------------------------------------------------------------- secuencia
@@ -138,10 +145,10 @@ public partial class ClaseSesionPage : ContentPage
     private View FilaObjeto(ObjetoAula objeto)
     {
         var enFoco = _sesion?.Foco?.ObjetoRef == objeto.ObjetoRef;
-        var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(44), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 12 };
-        fila.Add(Ds.IconoCategoria(objeto.Componente, 44), 0, 0);
+        var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(40), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 12 };
+        fila.Add(Ds.IconoCategoria(objeto.Componente, 40), 0, 0);
         var textos = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
-        textos.Add(Ds.Cuerpo(objeto.Titulo, 16));
+        textos.Add(Ds.Cuerpo(objeto.Titulo, 15));
         textos.Add(Ds.Secundario(string.Join(" · ", new[] { objeto.ComponenteLegible, objeto.DuracionTexto, objeto.FueraDeAlcance ? "lo aplica MOD-010" : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 13));
         fila.Add(textos, 1, 0);
         var pila = new VerticalStackLayout { Spacing = 6 };
@@ -152,11 +159,14 @@ public partial class ClaseSesionPage : ContentPage
             foreach (var u in objeto.Unidades)
             {
                 var activa = _sesion?.Foco?.UnidadRef == u.UnidadRef;
+                // Ficha de lámina en relieve: degradado, bisel y una sombra corta (la tarjeta recorta lo que sobresale).
                 var chip = new Border
                 {
-                    BackgroundColor = activa ? Ds.Rojo : Ds.Lienzo, StrokeThickness = 0, WidthRequest = 52, HeightRequest = 52, Margin = new Thickness(0, 0, 8, 8),
+                    Background = Ds.Degradado(activa ? Ds.Rojo : Colors.White), Stroke = Ds.Bisel(), StrokeThickness = 1,
+                    WidthRequest = 46, HeightRequest = 46, Margin = new Thickness(0, 0, 8, 8),
                     StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioControl },
-                    Content = new Label { Text = u.Indice.ToString(), FontSize = 18, FontAttributes = FontAttributes.Bold, TextColor = activa ? Colors.White : Ds.Tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+                    Shadow = new Shadow { Brush = new SolidColorBrush(activa ? Ds.Rojo : Ds.Tinta), Offset = new Point(0, 4), Radius = 10, Opacity = activa ? 0.35f : 0.12f },
+                    Content = new Label { Text = u.Indice.ToString(), FontSize = 17, FontFamily = Ds.FuenteMedia, TextColor = activa ? Colors.White : Ds.Tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
                 };
                 Ds.Tocable(chip, () => ProyectarAsync(objeto.ObjetoRef, u.UnidadRef));
                 laminas.Add(chip);
@@ -219,19 +229,19 @@ public partial class ClaseSesionPage : ContentPage
         _actividadBtn = Ds.Boton("Lanzar actividad", Ds.Rango.Secondary, async (_, _) => await LanzarOCerrarAsync(), 64);
         _avisoBtn = Ds.Boton("Aviso", Ds.Rango.Secondary, (_, _) => AvisoPanel.IsVisible = !AvisoPanel.IsVisible, 64);
         _terminarBtn = Ds.Boton("Terminar clase", Ds.Rango.Destructive, async (_, _) => await TerminarAsync(), 64);
-        ControlesHost.Add(_bloqueoBtn);
-        ControlesHost.Add(_seguimientoBtn);
-        ControlesHost.Add(_actividadBtn);
-        ControlesHost.Add(_avisoBtn);
+        ControlesHost.Add(Ds.Capsula(_bloqueoBtn));
+        ControlesHost.Add(Ds.Capsula(_seguimientoBtn));
+        ControlesHost.Add(Ds.Capsula(_actividadBtn));
+        ControlesHost.Add(Ds.Capsula(_avisoBtn));
         ControlesHost.Add(new BoxView { WidthRequest = 24, Color = Colors.Transparent });
-        ControlesHost.Add(_terminarBtn);
+        ControlesHost.Add(Ds.Capsula(_terminarBtn));
     }
 
     private void HabilitarControles(bool activo)
     {
         foreach (var b in new[] { _bloqueoBtn, _seguimientoBtn, _actividadBtn, _avisoBtn })
-            if (b is not null) { b.IsEnabled = activo; b.Opacity = activo ? 1 : 0.5; }
-        if (_terminarBtn is not null) { _terminarBtn.IsEnabled = _sesion is not null; }
+            if (b is not null) Ds.Habilitar(b, activo);
+        if (_terminarBtn is not null) Ds.Habilitar(_terminarBtn, _sesion is not null);
     }
 
     private void PintarEstadoControles(SesionDeClase? s)
@@ -253,8 +263,7 @@ public partial class ClaseSesionPage : ContentPage
             var focoEsActividad = s.Foco?.ObjetoTipo == "activity";
             _actividadBtn.Text = abierta is not null ? "Cerrar recepción" : "Lanzar actividad";
             var puede = s.Estado == "abierta" && (abierta is not null || focoEsActividad);
-            _actividadBtn.IsEnabled = puede;
-            _actividadBtn.Opacity = puede ? 1 : 0.5;
+            Ds.Habilitar(_actividadBtn, puede);
         }
     }
 
@@ -361,7 +370,7 @@ public partial class ClaseSesionPage : ContentPage
             {
                 BackgroundColor = p.Admitido ? Ds.Exito : p.Estado == "esperando" ? Ds.Alerta : Ds.TintaSuave, StrokeThickness = 0, WidthRequest = 48, HeightRequest = 48,
                 StrokeShape = new RoundRectangle { CornerRadius = 999 },
-                Content = new Label { Text = p.Iniciales, FontAttributes = FontAttributes.Bold, TextColor = p.Estado == "esperando" ? Ds.Tinta : Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+                Content = new Label { Text = p.Iniciales, FontFamily = Ds.FuenteMedia, TextColor = p.Estado == "esperando" ? Ds.Tinta : Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
             }, 0, 0);
             fila.Add(new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Children = { Ds.Cuerpo(p.Nombre, 16), Ds.Secundario(p.EstadoLegible + (p.AdmisionNominal ? " · invitado" : string.Empty), 13) } }, 1, 0);
             Button accion = p.Estado == "esperando"
@@ -370,7 +379,7 @@ public partial class ClaseSesionPage : ContentPage
                     ? Ds.Boton("Expulsar", Ds.Rango.Quiet, async (_, _) => { if (await DisplayAlertAsync("¿Expulsar de la clase?", $"{p.Nombre} saldrá de la sesión. Sus respuestas se conservan.", "Expulsar", "Cancelar")) await ParticipanteAsync(p.Id, "expulsar"); }, 52)
                     : Ds.Boton("Readmitir", Ds.Rango.Quiet, async (_, _) => await ParticipanteAsync(p.Id, "admitir"), 52);
             accion.FontSize = 15;
-            fila.Add(accion, 2, 0);
+            fila.Add(Ds.Capsula(accion), 2, 0);
             ParticipantesHost.Add(fila);
             ParticipantesHost.Add(Ds.Separador());
         }

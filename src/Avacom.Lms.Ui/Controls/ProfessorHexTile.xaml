@@ -47,7 +47,7 @@
                 WidthRequest="32" />
             <Label
                 FontAttributes="Bold"
-                FontFamily="OpenSansSemibold"
+                FontFamily="InterMedium"
                 FontSize="13"
                 HorizontalTextAlignment="Center"
                 LineBreakMode="WordWrap"

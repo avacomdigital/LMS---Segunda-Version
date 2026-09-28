@@ -9,10 +9,11 @@
     SizeChanged="OnPageSizeChanged">
     <Grid RowDefinitions="86,*">
         <Grid Padding="44,0" ColumnDefinitions="*,Auto" ZIndex="3">
-            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
-                <Image HeightRequest="52" Source="avacom_mark.png" WidthRequest="46" />
-                <Label FontAttributes="Bold" FontSize="27" Text="AVACOM" TextColor="#E5262B" VerticalTextAlignment="Center" />
-                <Label FontAttributes="Bold" FontSize="16" Margin="8,0,0,0" Text="CLASSROOM" TextColor="#52525B" VerticalTextAlignment="Center" />
+            <HorizontalStackLayout Spacing="16" VerticalOptions="Center">
+                <!-- El logotipo ya incluye el símbolo y la palabra «AVACOM»; sólo se
+                     añade «CLASSROOM». 56 de alto equivale al tope de la versión web. -->
+                <Image Aspect="AspectFit" HeightRequest="56" Source="avacom_logo.png" VerticalOptions="Center" WidthRequest="209" />
+                <Label FontAttributes="Bold" FontSize="16" Text="CLASSROOM" TextColor="#52525B" VerticalTextAlignment="Center" />
             </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
                 <Border BackgroundColor="#977528" HeightRequest="48" StrokeThickness="0" WidthRequest="48">

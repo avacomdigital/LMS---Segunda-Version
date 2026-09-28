@@ -12,8 +12,11 @@ public static class MauiProgram
 			.UseMauiApp<App>()
 			.ConfigureFonts(fonts =>
 			{
-				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+				// Inter 4.1 (OFL) en cuatro pesos estáticos; los alias son los que usan Ds y los estilos XAML.
+				fonts.AddFont("Inter-Light.ttf", "InterLight");
+				fonts.AddFont("Inter-Regular.ttf", "InterRegular");
+				fonts.AddFont("Inter-Medium.ttf", "InterMedium");
+				fonts.AddFont("Inter-SemiBold.ttf", "InterSemiBold");
 			});
 
 #if DEBUG

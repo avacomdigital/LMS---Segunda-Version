@@ -5,66 +5,80 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     Shell.NavBarIsVisible="False">
-    <Grid RowDefinitions="Auto,*,Auto" Padding="24,16,24,20" RowSpacing="14">
-        <!-- Cabecera · dark glass: código en grande, conectados, lección, conexión -->
-        <Border Grid.Row="0" Padding="22,12" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="22">
-                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="0">
-                    <Label Text="CÓDIGO DE UNIÓN" FontSize="12" FontAttributes="Bold" TextColor="#D4D4D8" CharacterSpacing="2" />
-                    <Label x:Name="CodigoLabel" Text="······" FontSize="72" FontAttributes="Bold" TextColor="White" CharacterSpacing="8" LineHeight="0.95" />
+    <!-- Dos columnas: la secuencia (360) y la proyección. A 1920×1000 la columna izquierda termina en x = 384 (20 % del
+         ancho) y la fila superior, de 84, en y = 100 (10 % del alto): las líneas de la cuadrícula con que se revisa la
+         composición. El código de unión sólo ocupa su columna; la barra de controles nace en el 90 % del alto. -->
+    <Grid RowDefinitions="84,*,Auto" ColumnDefinitions="360,*" Padding="24,16,24,20" RowSpacing="14" ColumnSpacing="14">
+
+        <!-- Código de unión · dark glass, sólo sobre la columna de la secuencia -->
+        <Border Grid.Row="0" Grid.Column="0" Padding="20,0" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
+            <Border.Shadow><Shadow Brush="#18181B" Offset="0,8" Radius="20" Opacity="0.22" /></Border.Shadow>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
+                    <Label Text="CÓDIGO DE UNIÓN" FontFamily="InterRegular" FontSize="10" TextColor="#A1A1AA" CharacterSpacing="2.5" />
+                    <Label x:Name="CodigoLabel" Text="······" FontFamily="InterLight" FontSize="40" TextColor="White" CharacterSpacing="5" LineHeight="1" />
                 </VerticalStackLayout>
-                <Border Grid.Column="1" BackgroundColor="#1AFFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="18,10" VerticalOptions="Center">
+                <Border Grid.Column="1" BackgroundColor="#1AFFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="14,6" VerticalOptions="Center">
                     <VerticalStackLayout Spacing="0">
-                        <Label x:Name="ConectadosLabel" Text="0" FontSize="34" FontAttributes="Bold" TextColor="White" HorizontalTextAlignment="Center" />
-                        <Label Text="conectados" FontSize="13" TextColor="#D4D4D8" HorizontalTextAlignment="Center" />
+                        <Label x:Name="ConectadosLabel" Text="0" FontFamily="InterMedium" FontSize="22" TextColor="White" HorizontalTextAlignment="Center" />
+                        <Label Text="conectados" FontFamily="InterRegular" FontSize="11" TextColor="#A1A1AA" HorizontalTextAlignment="Center" />
                     </VerticalStackLayout>
                 </Border>
-                <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="2">
-                    <Label x:Name="LeccionLabel" Text="Clase" FontSize="22" FontAttributes="Bold" TextColor="White" LineBreakMode="TailTruncation" />
-                    <Label x:Name="CursoLabel" Text="" FontSize="14" TextColor="#D4D4D8" LineBreakMode="TailTruncation" />
-                </VerticalStackLayout>
-                <Border x:Name="ConexionChip" Grid.Column="3" BackgroundColor="#1AFFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="14,8" VerticalOptions="Center">
-                    <Label x:Name="ConexionLabel" Text="●  Conectando…" FontSize="13" FontAttributes="Bold" TextColor="#F3C701" />
-                </Border>
-                <Button x:Name="ParticipantesBtn" Grid.Column="4" Text="Participantes" BackgroundColor="#33FFFFFF" TextColor="White" FontSize="17" FontAttributes="Bold" CornerRadius="16" HeightRequest="64" Padding="18,0" Clicked="OnParticipantes" />
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" ColumnDefinitions="360,*" ColumnSpacing="14">
-            <!-- Columna izquierda · secuencia de la lección -->
-            <Border Grid.Column="0" Padding="0" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
-                <Grid RowDefinitions="Auto,*,Auto">
-                    <Label Text="Secuencia" FontSize="16" FontAttributes="Bold" TextColor="#52525B" Margin="18,14,18,6" />
-                    <ScrollView Grid.Row="1"><VerticalStackLayout x:Name="SecuenciaHost" Spacing="6" Padding="12,0,12,12" /></ScrollView>
-                    <VerticalStackLayout x:Name="ActividadHost" Grid.Row="2" Padding="12,0,12,12" Spacing="8" />
+        <!-- Lección en curso · glass chrome sobre la proyección: título, estado de la conexión y participantes -->
+        <Border Grid.Row="0" Grid.Column="1" Padding="22,0,12,0" BackgroundColor="#B3FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 22">
+            <Border.Shadow><Shadow Brush="#18181B" Offset="0,4" Radius="16" Opacity="0.08" /></Border.Shadow>
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="1">
+                    <Label x:Name="LeccionLabel" Text="Clase" FontFamily="InterMedium" FontSize="20" TextColor="#18181B" LineBreakMode="TailTruncation" />
+                    <Label x:Name="CursoLabel" Text="" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="TailTruncation" />
+                </VerticalStackLayout>
+                <Border x:Name="ConexionChip" Grid.Column="1" BackgroundColor="#FEF9E6" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="14,8" VerticalOptions="Center">
+                    <HorizontalStackLayout Spacing="8">
+                        <Ellipse x:Name="ConexionPunto" WidthRequest="10" HeightRequest="10" Fill="#F3C701" VerticalOptions="Center" />
+                        <Label x:Name="ConexionLabel" Text="Conectando…" FontFamily="InterMedium" FontSize="13" TextColor="#3F3F46" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+                <!-- El botón se fabrica en código con el kit (Ds.Boton + Ds.Capsula): mismo relieve que la barra de controles -->
+                <ContentView x:Name="ParticipantesSlot" Grid.Column="2" VerticalOptions="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Columna izquierda · secuencia de la lección -->
+        <Border Grid.Row="1" Grid.Column="0" Padding="0" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <Label Text="Secuencia" FontFamily="InterMedium" FontSize="14" TextColor="#52525B" CharacterSpacing="0.5" Margin="18,14,18,6" />
+                <ScrollView Grid.Row="1"><VerticalStackLayout x:Name="SecuenciaHost" Spacing="6" Padding="12,0,12,12" /></ScrollView>
+                <VerticalStackLayout x:Name="ActividadHost" Grid.Row="2" Padding="12,0,12,12" Spacing="8" />
+            </Grid>
+        </Border>
+
+        <!-- Centro · proyección -->
+        <Grid Grid.Row="1" Grid.Column="1">
+            <ui:AulaContenidoView x:Name="Proyeccion" />
+            <!-- Panel de participantes (superpuesto a la derecha) -->
+            <Border x:Name="ParticipantesPanel" IsVisible="False" WidthRequest="420" HorizontalOptions="End" VerticalOptions="Fill" Padding="18" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Participantes" FontFamily="InterMedium" FontSize="20" VerticalOptions="Center" />
+                        <Button Grid.Column="1" Text="Cerrar" BackgroundColor="Transparent" TextColor="#27272A" FontFamily="InterMedium" FontSize="16" HeightRequest="52" Clicked="OnParticipantes" />
+                    </Grid>
+                    <ScrollView Grid.Row="1"><VerticalStackLayout x:Name="ParticipantesHost" Spacing="8" Padding="0,10,0,0" /></ScrollView>
                 </Grid>
             </Border>
-
-            <!-- Centro · proyección -->
-            <Grid Grid.Column="1">
-                <ui:AulaContenidoView x:Name="Proyeccion" />
-                <!-- Panel de participantes (superpuesto a la derecha) -->
-                <Border x:Name="ParticipantesPanel" IsVisible="False" WidthRequest="420" HorizontalOptions="End" VerticalOptions="Fill" Padding="18" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
-                    <Grid RowDefinitions="Auto,*">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <Label Text="Participantes" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
-                            <Button Grid.Column="1" Text="Cerrar" BackgroundColor="Transparent" TextColor="#27272A" FontSize="16" FontAttributes="Bold" HeightRequest="52" Clicked="OnParticipantes" />
-                        </Grid>
-                        <ScrollView Grid.Row="1"><VerticalStackLayout x:Name="ParticipantesHost" Spacing="8" Padding="0,10,0,0" /></ScrollView>
-                    </Grid>
-                </Border>
-                <!-- Hoja de avisos (frases prehechas, sin teclado) -->
-                <Border x:Name="AvisoPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,12" Padding="18" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="Enviar un aviso al grupo" FontSize="18" FontAttributes="Bold" />
-                        <FlexLayout x:Name="FrasesHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Center" />
-                    </VerticalStackLayout>
-                </Border>
-            </Grid>
+            <!-- Hoja de avisos (frases prehechas, sin teclado) -->
+            <Border x:Name="AvisoPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,12" Padding="18" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Enviar un aviso al grupo" FontFamily="InterMedium" FontSize="18" />
+                    <FlexLayout x:Name="FrasesHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Center" />
+                </VerticalStackLayout>
+            </Border>
         </Grid>
 
-        <!-- Barra de controles · dark glass. El único Destructive va detrás de una confirmación. -->
-        <Border Grid.Row="2" Padding="16,12" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
+        <!-- Barra de controles · dark glass, a lo ancho. El único Destructive va detrás de una confirmación. -->
+        <Border Grid.Row="2" Grid.ColumnSpan="2" Padding="16,10" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
             <HorizontalStackLayout x:Name="ControlesHost" Spacing="16" HorizontalOptions="Center" />
         </Border>
     </Grid>

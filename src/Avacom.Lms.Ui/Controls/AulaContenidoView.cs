@@ -152,16 +152,16 @@ public sealed class AulaContenidoView : ContentView
         if (!PuedeNavegar) return;
         var anterior = Ds.Boton("◀  Anterior", Ds.Rango.Secondary, (_, _) => { if (indice > 0) UnidadPedida?.Invoke(this, unidades[indice - 1].UnidadRef); });
         var siguiente = Ds.Boton("Siguiente  ▶", Ds.Rango.Secondary, (_, _) => { if (indice < unidades.Count - 1) UnidadPedida?.Invoke(this, unidades[indice + 1].UnidadRef); });
-        anterior.IsEnabled = indice > 0;
-        siguiente.IsEnabled = indice < unidades.Count - 1;
-        anterior.Opacity = anterior.IsEnabled ? 1 : 0.45;
-        siguiente.Opacity = siguiente.IsEnabled ? 1 : 0.45;
+        var capsulaAnterior = Ds.Capsula(anterior);
+        var capsulaSiguiente = Ds.Capsula(siguiente);
+        Ds.Habilitar(anterior, indice > 0, 0.45);
+        Ds.Habilitar(siguiente, indice < unidades.Count - 1, 0.45);
         var puntos = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
         for (var i = 0; i < unidades.Count; i++)
             puntos.Add(new BoxView { WidthRequest = i == indice ? 26 : 10, HeightRequest = 10, CornerRadius = 5, Color = i == indice ? Ds.Rojo : Color.FromArgb("#C7C4BE") });
-        _mandos.Add(anterior, 0, 0);
+        _mandos.Add(capsulaAnterior, 0, 0);
         _mandos.Add(puntos, 1, 0);
-        _mandos.Add(siguiente, 2, 0);
+        _mandos.Add(capsulaSiguiente, 2, 0);
     }
 
     // ------------------------------------------------------------------ bloques
@@ -194,7 +194,7 @@ public sealed class AulaContenidoView : ContentView
                 for (var i = 0; i < items.Count; i++)
                 {
                     var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(36), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 8 };
-                    fila.Add(new Label { Text = b.Ordenada == true ? $"{i + 1}." : "•", FontSize = 20 * Escala, FontAttributes = FontAttributes.Bold, TextColor = Ds.Rojo }, 0, 0);
+                    fila.Add(new Label { Text = b.Ordenada == true ? $"{i + 1}." : "•", FontSize = 20 * Escala, FontFamily = Ds.FuenteMedia, TextColor = Ds.Rojo }, 0, 0);
                     fila.Add(Ds.ConTramos(b.ItemsTramos is not null && i < b.ItemsTramos.Count ? b.ItemsTramos[i] : null, items[i], 20 * Escala), 1, 0);
                     pila.Add(fila);
                 }

@@ -62,12 +62,23 @@
 		     en Resources\Images una versión dibujada a mano que no coincidía con
 		     la marca. Se enlaza con el nombre que ya usan las páginas. -->
 		<MauiImage Include="..\..\assets\avacom-symbol.svg" Link="Resources\Images\avacom_mark.svg" />
-		
+		<!-- Logotipo completo (símbolo + «AVACOM») para la cabecera del menú principal.
+		     El SVG mide 71x19; sin BaseSize se rasterizaría a ese tamaño y se vería
+		     borroso al ampliarlo. 209x56 conserva la proporción y equivale a la altura
+		     máxima que usa la versión web (clamp(20px, 2.9167vw, 56px) a 1920 px). -->
+		<MauiImage Include="..\..\assets\avacom-logo.svg" Link="Resources\Images\avacom_logo.svg" BaseSize="209,56" />
+		<!-- Logotipo apilado del kit LMS (símbolo + «AVACOM») para la tarjeta de inicio de sesión.
+		     El viewBox es 792x612; 155x120 conserva la proporción y cubre la altura a la que se muestra. -->
+		<MauiImage Include="..\..\assets\avacom-lms-kit-logo.svg" Link="Resources\Images\avacom_lms_kit_logo.svg" BaseSize="155,120" />
+
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<!-- Lápiz 3D de la pantalla de ingreso (Pencil3DView, render nativo). La fuente única del modelo vive en assets\3d;
+		     el empaquetado usa Link si existe y, si no, LogicalName, así que sólo se pone LogicalName. -->
+		<MauiAsset Include="..\..\assets\3d\lapiz.glb" LogicalName="models\lapiz.glb" />
 	</ItemGroup>
 
 	<ItemGroup>

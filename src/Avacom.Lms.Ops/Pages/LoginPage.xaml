@@ -1,16 +1,67 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage x:Class="Avacom.Lms.Ops.Pages.LoginPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" Shell.NavBarIsVisible="False">
-    <Grid>
+<ContentPage x:Class="Avacom.Lms.Ops.Pages.LoginPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:controls="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui" xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui" Shell.NavBarIsVisible="False">
+    <!-- Composición sobre la cuadrícula de tercios: la tarjeta va centrada en la línea vertical del primer tercio
+         (columna 1: de 1/6 a 1/2 del ancho) y el lápiz 3D en la del segundo (columna 2: de 1/2 a 5/6). En Y ambos
+         ocupan de 1/6 a 5/6 (empiezan y terminan a la mitad de las celdas superior e inferior). -->
+    <Grid ColumnDefinitions="*,2*,2*,*" RowDefinitions="*,4*,*">
         <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FDECEC" Offset="0"/><GradientStop Color="#E6F6FC" Offset="0.42"/><GradientStop Color="#FEF9E6" Offset="0.78"/><GradientStop Color="#F5E8F1" Offset="1"/></LinearGradientBrush></Grid.Background>
-        <Border WidthRequest="520" Padding="42" VerticalOptions="Center" HorizontalOptions="Center"><Border.Shadow><Shadow Brush="#26000000" Offset="0,10" Radius="24"/></Border.Shadow>
-            <VerticalStackLayout Spacing="20">
-                <VerticalStackLayout HorizontalOptions="Center" Spacing="0"><Label Text="⬡" FontSize="54" TextColor="{StaticResource BrandRed}" HorizontalTextAlignment="Center"/><Label Text="AVACOM" FontSize="29" FontAttributes="Bold" TextColor="{StaticResource BrandRed}"/><Label Text="LMS OPS" FontSize="13" CharacterSpacing="3" HorizontalTextAlignment="Center"/></VerticalStackLayout>
-                <Label Text="Nodo principal del aula" FontSize="20" FontAttributes="Bold"/><Label Text="Configura la conexión al servicio local. El estado siempre permanece visible para facilitar el soporte en la pantalla OPS." Style="{StaticResource Muted}"/>
-                <Label Text="Dirección del servidor" FontAttributes="Bold"/><Entry x:Name="ServerEntry" Text="http://127.0.0.1:8000" Keyboard="Url"/>
-                <Border x:Name="StatusCard" BackgroundColor="{StaticResource ErrorSoft}" Padding="14" StrokeThickness="0"><HorizontalStackLayout Spacing="10"><Label x:Name="StatusDot" Text="●" TextColor="{StaticResource BrandRed}"/><Label x:Name="StatusLabel" Text="Sin comprobar · modo demo disponible"/></HorizontalStackLayout></Border>
-                <Button x:Name="CheckButton" Text="Comprobar conexión" Style="{StaticResource DarkButton}" Clicked="OnCheckConnection"/><Button Text="EC   Iniciar como profesor" Style="{StaticResource PrimaryButton}" Clicked="OnEnterDemo"/>
-                <Label Text="El prototipo puede recorrerse sin backend. Al conectarse, usa /health/ y los contratos REST/WebSocket definidos." Style="{StaticResource Muted}" HorizontalTextAlignment="Center"/>
-            </VerticalStackLayout>
-        </Border>
+        <!-- Fondo decorativo (capa más baja, bajo la tarjeta): retícula de hexágonos grandes con las puntas redondeadas, en un solo
+             GraphicsView que se adapta solo al tamaño de la ventana. InputTransparent: es 100 % decorativa y nunca captura toques ni clics.
+             La tinta translúcida (negro al 10 %) da sobre blanco el mismo gris de la referencia (#E6E6E6) y sobre el degradado
+             sólo oscurece un poco el tono que ya hay, en vez de un gris opaco que se perdería en las zonas azul y rosa. -->
+        <GraphicsView Grid.ColumnSpan="4" Grid.RowSpan="3" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <GraphicsView.Drawable>
+                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#1A000000" StrokeWidth="1.25"/>
+            </GraphicsView.Drawable>
+        </GraphicsView>
+        <!-- Tarjeta de vidrio (liquid glass): deja ver el fondo desenfocado y teñido de blanco. El canto es un degradado de luz que
+             entra por arriba a la izquierda, se apaga en los lados y vuelve a asomar abajo a la derecha, y una sombra amplia y suave
+             la despega del fondo. Botones, tipografía y contenido siguen tal cual. -->
+        <controls:GlassBorder Grid.Column="1" Grid.Row="1" Padding="0" HorizontalOptions="Fill" VerticalOptions="Fill" StrokeShape="RoundRectangle 24" StrokeThickness="1.5" TintColor="White" TintOpacity="0.45" BlurRadius="8" Brightness="0.05" Saturation="1.2">
+            <controls:GlassBorder.Stroke><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FFFFFFFF" Offset="0"/><GradientStop Color="#8CFFFFFF" Offset="0.3"/><GradientStop Color="#4DFFFFFF" Offset="0.5"/><GradientStop Color="#80FFFFFF" Offset="0.7"/><GradientStop Color="#D9FFFFFF" Offset="1"/></LinearGradientBrush></controls:GlassBorder.Stroke>
+            <controls:GlassBorder.Shadow><Shadow Brush="#000000" Opacity="0.12" Offset="0,20" Radius="48"/></controls:GlassBorder.Shadow>
+            <Grid>
+                <!-- Capas del material, bajo el contenido y sin captar toques: el canto interior (el vidrio es más luminoso junto
+                     al borde) y el brillo del tercio superior, donde la luz se refleja en la superficie. -->
+                <Border InputTransparent="True" BackgroundColor="Transparent" StrokeThickness="1" StrokeShape="RoundRectangle 22" Margin="2">
+                    <Border.Stroke><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#8CFFFFFF" Offset="0"/><GradientStop Color="#14FFFFFF" Offset="0.5"/><GradientStop Color="#66FFFFFF" Offset="1"/></LinearGradientBrush></Border.Stroke>
+                </Border>
+                <Border InputTransparent="True" StrokeThickness="0" StrokeShape="Rectangle" VerticalOptions="Start" HeightRequest="180">
+                    <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#4DFFFFFF" Offset="0"/><GradientStop Color="#00FFFFFF" Offset="1"/></LinearGradientBrush></Border.Background>
+                </Border>
+                <Grid RowDefinitions="1*,2*">
+                    <!-- Tercio superior de la tarjeta: identidad + mensaje. Se apoya sobre la línea divisoria. -->
+                    <VerticalStackLayout Grid.Row="0" Padding="40,0,40,18" Spacing="8" VerticalOptions="End">
+                        <!-- El SVG lleva aire dentro de su viewBox (≈6% a la izquierda, ≈24% abajo); el margen negativo alinea el dibujo con el texto -->
+                        <Image Source="avacom_lms_kit_logo.png" Aspect="AspectFit" HeightRequest="100" HorizontalOptions="Start" Margin="-8,0,0,-18"/>
+                        <Label Text="Nodo principal del aula" FontSize="22" FontAttributes="Bold"/>
+                        <Label Text="Configura la conexión al servicio local. El estado siempre permanece visible para facilitar el soporte en la pantalla OPS." Style="{StaticResource Muted}" LineBreakMode="WordWrap"/>
+                    </VerticalStackLayout>
+                    <!-- Dos tercios inferiores: acción. La línea divisoria cae exactamente a 1/3 de la altura de la tarjeta. -->
+                    <VerticalStackLayout Grid.Row="1" Padding="40,0,40,0" Spacing="14" VerticalOptions="Start">
+                        <BoxView HeightRequest="1" Color="#14000000"/>
+                        <Label Text="Dirección del servidor" FontSize="13" Margin="0,8,0,0"/>
+                        <Entry x:Name="ServerEntry" Text="http://127.0.0.1:8000" Keyboard="Url"/>
+                        <Border x:Name="StatusCard" BackgroundColor="{StaticResource ErrorSoft}" Padding="14" StrokeThickness="0"><HorizontalStackLayout Spacing="10"><Label x:Name="StatusDot" Text="●" TextColor="{StaticResource BrandRed}"/><Label x:Name="StatusLabel" Text="Sin comprobar · modo demo disponible"/></HorizontalStackLayout></Border>
+                        <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource Ink}" Margin="0,4,0,0">
+                            <Border.Shadow><Shadow Brush="#66000000" Offset="0,8" Radius="18"/></Border.Shadow>
+                            <Button x:Name="CheckButton" Text="Comprobar conexión" Style="{StaticResource DarkButton}" CornerRadius="12" BorderWidth="0" Clicked="OnCheckConnection">
+                                <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#3A3A40" Offset="0"/><GradientStop Color="#232326" Offset="0.55"/><GradientStop Color="#0E0E10" Offset="1"/></LinearGradientBrush></Button.Background>
+                            </Button>
+                        </Border>
+                        <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,4,0,0">
+                            <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
+                            <Button Text="EC   Iniciar como profesor" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEnterDemo">
+                                <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
+                            </Button>
+                        </Border>
+                        <Label Text="El prototipo puede recorrerse sin backend. Al conectarse, usa /health/ y los contratos REST/WebSocket definidos." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="11" LineBreakMode="WordWrap"/>
+                    </VerticalStackLayout>
+                </Grid>
+            </Grid>
+        </controls:GlassBorder>
+        <!-- Lápiz 3D decorativo (Three.js en un HybridWebView transparente): gira despacio sobre su eje vertical, inclinado
+             8°, flotando apenas. Sólo se ve el lápiz; el fondo sigue debajo y la capa no captura toques. -->
+        <controls:Pencil3DView Grid.Column="2" Grid.Row="1" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill" SecondsPerTurn="12" TiltDegrees="8" FloatPixels="3" FillRatio="0.78"/>
     </Grid>
 </ContentPage>
