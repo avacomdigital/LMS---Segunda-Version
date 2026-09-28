@@ -205,7 +205,7 @@ Todos los eventos del módulo siguen la nomenclatura `identidad.<agregado>.<hech
 | D-1 | Bloqueo por intentos | Contador `intentos_fallidos` en la credencial y estado `bloqueada` | Se calcula sobre el registro de intentos; `DESBLOQUEO` es una fila más | Conserva el historial completo; desbloquear no borra evidencia |
 | D-2 | Datos personales | Sin cifrado en reposo | AES-256-GCM + índice HMAC | Datos de menores en un SQLite que viaja en portátil |
 | D-3 | Hash de credenciales | `valor_hash + sal + iteraciones` genéricos | Argon2id en cadena única | Estándar OWASP; parámetros incluidos en la cadena |
-| D-4 | Grupos, dispositivos y cola | Son de MOD-002, MOD-009 y MOD-015 | Viven dentro de `acceso` con prefijo `m01_` | Aún no existen esos módulos en este prototipo; se replicarán desde su dueño cuando existan |
+| D-4 | Grupos, dispositivos y cola | Son de MOD-002, MOD-009 y MOD-015 | Grupos y cola viven dentro de `acceso` con prefijo `m01_`; los dispositivos pasaron a MOD-009 (`device_manager`, `m09_dispositivo`) el 2026-09-28 | Grupos y cola se replicarán desde su dueño cuando exista; los dispositivos ya se leen por el puerto del dueño |
 | D-5 | Inactividad | Temporizador del sistema | Se decide al primer contacto tras el plazo | Sin proceso en segundo plano; mismo efecto para quien usa la sesión |
 | D-6 | Cierre por otro dispositivo | Índice único parcial | Cierre explícito en `abrir_sesion()` | La fila cerrada conserva su motivo e historial |
 | D-7 | Identificador de cinco segmentos y `secuencia` | Obligatorios en toda tabla | UUID y sin `secuencia` | El generador pertenece a MOD-015; se añadirá con él |

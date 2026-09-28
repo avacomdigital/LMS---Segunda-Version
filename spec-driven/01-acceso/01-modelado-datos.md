@@ -296,7 +296,9 @@ Invariantes: una vigente por `(usuario, rol, alcance_tipo, alcance_id)`; `hasta 
 
 `grupo_id`, `usuario_id`, `papel` (`ESTUDIANTE` / `DOCENTE`), `desde`, `hasta`. Es lo que convierte `ASSIGNED_GROUPS` en una consulta: *existe un grupo donde el actor es DOCENTE vigente y el objetivo es miembro vigente*.
 
-### 3.14 · `m01_dispositivo` · Dispositivo
+### 3.14 · `m01_dispositivo` · Dispositivo → `m09_dispositivo` (MOD-009, 2026-09-28)
+
+> Esta tabla se mudó a `device_manager` (`m09_dispositivo`, con `identificador_hw`, `ultimo_latido_en`, `plataforma`, `version_app` y `bloqueado`) por las migraciones `device_manager/0001` y `acceso/0005`; las tres FK de este módulo (`m01_sesion`, `m01_autorizacion_temporal`, `m01_intento_acceso`) apuntan a ella. Lo que sigue describe la tabla tal como nació aquí. Ver [03-device-manager](../03-device-manager/00-modelo-y-api.md).
 
 `organizacion_id`, `identificador` (lo genera la app y lo guarda en el almacén seguro), `nombre` («tableta-07»), `tipo`, `activo`, `registrado_en`, `ultimo_visto_en`. Contexto, nunca identidad.
 
@@ -547,7 +549,7 @@ Regla verificable: una prueba recorre `dominio/` y `aplicacion/` y falla si alg�
 ## 7 · Relación con el expediente y con los demás módulos del Maestro
 
 - `m01_usuario.id` **es** el `persona_id` del expediente. `vinculado_a` permite reasignar lo que hizo una cuenta provisional.
-- Grupos (MOD-002) y dispositivos (MOD-009) viven hoy dentro de `acceso`; cuando existan esos módulos, se replicarán desde su dueño.
+- Grupos (MOD-002) viven hoy dentro de `acceso`; cuando exista ese módulo, se replicarán desde su dueño. Los dispositivos ya tienen dueño desde el 2026-09-28 (MOD-009, `device_manager`): este módulo los lee por su puerto `RepositorioDispositivos`, que llama a `device_manager/servicios.py` dentro de la transacción del login.
 - La orden de limpiar el contenedor de la tableta (MOD-009) se deriva de `identidad.sesion.cerrada.v1` con motivo `otro_dispositivo` o `dispositivo_compartido`.
 - La exigencia de sesión en el expediente sigue preparada y no activada (`AVACOM_LMS_EXIGIR_SESION=0`, Q-34).
 

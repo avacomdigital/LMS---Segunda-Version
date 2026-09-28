@@ -72,9 +72,9 @@ Lo que la tableta necesita para pintar PAN-101. **Sin PII.** Incluye las excepci
 
 Primer arranque (JRN-001). Sólo mientras no exista organización (409 `ya_instalado` después). Crea organización, las cinco políticas por perfil y el primer administrador. Devuelve `password_inicial` **una sola vez** si no se envió contraseña (PAN-204).
 
-### 1.3 · `POST /api/acceso/dispositivos/`
+### 1.3 · Dispositivos → MOD-009
 
-Registro idempotente de la tableta: `{ "identificador", "nombre", "tipo" }` → 201 la primera vez, 200 después.
+Desde el 2026-09-28 el registro idempotente de la tableta vive en **MOD-009 · Device Manager**: `POST /api/dispositivos/` (`{ "identificador_hw" | "identificador", "nombre", "tipo", "plataforma", "version_app" }` → 201 la primera vez, 200 después), con inventario, latido y bloqueo. Ver [03-device-manager](../03-device-manager/00-modelo-y-api.md). Este módulo sólo lo lee al abrir sesión: `dispositivo` en el login sigue siendo la huella, y una tableta bloqueada responde `403 dispositivo_bloqueado`.
 
 ### 1.4 · `POST /api/acceso/sesiones/` · Autenticar (FUN-004, FUN-005)
 
@@ -247,8 +247,8 @@ Permiso `identity.user.unlock`. → `200 { "estado": "ACTIVO", "bloqueado_hasta"
 | `/api/acceso/grupos/` | GET, POST | `identity.group.read` / `identity.group.manage` | `{ "codigo", "nombre", "periodo", "nivel_clave"?, "politica_credencial_id"? }` |
 | `/api/acceso/grupos/{id}/` | GET, PATCH | idem | Detalle con `miembros` (incluye `provisional`) |
 | `/api/acceso/grupos/{id}/miembros/` · `…/{usuario_id}/` | POST, DELETE | `identity.group.member.manage` | Un docente sólo añade o retira estudiantes de sus grupos |
-| `/api/acceso/dispositivos/` | GET | `identity.exam_access.grant` o `identity.device.manage` | |
-| `/api/acceso/dispositivos/{id}/` | PATCH | `identity.device.manage` | Dar de baja cierra sus sesiones (`dispositivo_baja`) |
+| `/api/dispositivos/` (MOD-009) | GET | `identity.exam_access.grant` o `identity.device.manage` | Movido a `device_manager` el 2026-09-28; mismos permisos traducidos desde `device.read` |
+| `/api/dispositivos/{id}/` (MOD-009) | PATCH | `identity.device.manage` | Dar de baja cierra sus sesiones de login (`dispositivo_baja`, por este módulo) y su sesión de alumno |
 
 ---
 

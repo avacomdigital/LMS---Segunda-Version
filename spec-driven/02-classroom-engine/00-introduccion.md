@@ -569,16 +569,16 @@ BR-048
 El profesor puede expulsar o readmitir a un participante durante la sesión, y la expulsión no borra las respuestas ya registradas.
 
 BR-049
-El contenido proyectado es el que el profesor declara como foco de la sesión, y el cambio de foco se propaga a los dispositivos en seguimiento en un máximo de 3 segundos.
+El contenido proyectado es el que el profesor declara como selector de la sesión, y el cambio de selector se propaga a los dispositivos en seguimiento en un máximo de 3 segundos.
 
 BR-050
 Un alumno en modo seguimiento no navega libremente; al liberar el seguimiento recupera la navegación y el sistema registra el cambio en la sesión.
 
 BR-051
-Una sesión interrumpida por caída del nodo se reanuda en el mismo foco y con los mismos participantes cuando el nodo vuelve, dentro de la ventana de 3 minutos.
+Una sesión interrumpida por caída del nodo se reanuda en el mismo selector y con los mismos participantes cuando el nodo vuelve, dentro de la ventana de 3 minutos.
 
 BR-052
-Una sesión cerrada no admite participantes nuevos ni cambios de foco, y las respuestas encoladas en dispositivos se siguen aceptando hasta el cierre de sus asignaciones.
+Una sesión cerrada no admite participantes nuevos ni cambios de selector, y las respuestas encoladas en dispositivos se siguen aceptando hasta el cierre de sus asignaciones.
 
 INV-025
 Una sesión de clase existe siempre en exactamente uno de sus estados y solo transita por transiciones autorizadas.

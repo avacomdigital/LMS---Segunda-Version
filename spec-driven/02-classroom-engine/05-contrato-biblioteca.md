@@ -56,7 +56,7 @@ Las URL del servidor de medios no llevan token: la capacidad está en la propia 
 | `GET /v2/health` | `contenido_v2.estado()` | `{contract, schema, index: ready\|rebuilding, installedCourses: n}`. ¿Hay contenido? ¿Se está reconstruyendo el índice? | `EstadoFuente` → `GET /api/aula/fuente/` |
 | `GET /v2/courses?page&pageSize` | `FuenteBiblioteca.cursos()` | Fichas (`CourseSummary`) de los cursos instalados y permitidos por la política, paginadas; la huella `v2-…` sale de `courseId@version` | `ConsultarCursos` → `GET /api/aula/cursos/` |
 | `GET /v2/courses/{courseId}?mode=class&profile=teacher\|student` | `esquema_curso()` | El **esquema**: metadatos, lecciones con resúmenes de objeto (`pageCount`, `questionCount`, `mediaId`) y medios (`hasCaptions`, `hasTranscript`, `entry`, `simulation`). Para la lista basta con esto | `ConsultarCursos` (una por curso) y primer paso de `curso()` |
-| `GET /v2/courses/{courseId}/lessons/{lessonId}?mode=class&profile=&seed=` | `leccion()` | La lección **completa**, filtrada por modo y recortada por perfil. `seed` fija el barajado de las opciones | `ConsultarCurso`, `ConsultarLeccion`, `ConsultarObjeto`, `IniciarSesion`, `DeclararFoco`, `Distribuir`, `EvaluarRespuesta` (una por lección con objetos) |
+| `GET /v2/courses/{courseId}/lessons/{lessonId}?mode=class&profile=&seed=` | `leccion()` | La lección **completa**, filtrada por modo y recortada por perfil. `seed` fija el barajado de las opciones | `ConsultarCurso`, `ConsultarLeccion`, `ConsultarObjeto`, `IniciarSesion`, `DeclararSelector`, `Distribuir`, `EvaluarRespuesta` (una por lección con objetos) |
 | `GET /v2/courses/{courseId}/objects/{objectId}?profile=&seed=` | `objeto()` | Un objeto completo. Disponible en el cliente; el aula hoy arma el curso por lecciones | — |
 | `POST /v2/media-sessions` `{courseId, mediaIds, ttlSec: 60}` → `GET <url>` en `mediaPort` | `abrir_medio()` | Bytes del medio con `Range` y `HEAD`, en paso a través. Subtítulos (`extras.captions` → `…/@captions`), transcripción (`…/@transcript`) y archivos de una simulación (`<baseUrl><mediaId>/<ruta>`) | `AbrirMedio` → `GET /api/aula/cursos/{ref}/medios/{media_ref}/[subtitulos\|transcripcion\|ruta]` |
 | `POST /v2/evaluate` | `evaluar()` | Un veredicto. **Siempre con `version`** (acepta versiones archivadas) | `EvaluarRespuesta` → `POST /api/aula/cursos/{ref}/evaluar/` |
@@ -81,13 +81,13 @@ La tabla del mapeo §2, con su estado en el LMS:
 
 | Identificador | Estable | ¿Se guarda? | Dónde, hoy |
 |---|---|---|---|
-| `courseId` | sí | **sí** | `m07_sesion.curso_ref`, `m07_foco.curso_ref`, `m07_distribucion.curso_ref`; `m10_intento.curso_ref` |
-| `version` | — | **sí, junto al `courseId`** | `m07_sesion.curso_version`, `m07_foco.curso_version` (la de la vista con la que se inició o proyectó; en vivo, `2.0.0`). El veredicto de `/evaluar/` devuelve `version` para que MOD-010 la escriba en el intento |
-| `lessonId` | sí | sí | `leccion_ref` en sesión, foco y distribución |
-| `objectId` | sí | sí | `objeto_ref` en foco y distribución; `objectId` en cada evaluación |
-| `questionId` | sí | sí | `unidad_ref` del foco cuando se proyecta una pregunta; `questionId` en cada evaluación |
+| `courseId` | sí | **sí** | `m07_sesion.curso_ref`, `m07_selector.curso_ref`, `m07_distribucion.curso_ref`; `m10_intento.curso_ref` |
+| `version` | — | **sí, junto al `courseId`** | `m07_sesion.curso_version`, `m07_selector.curso_version` (la de la vista con la que se inició o proyectó; en vivo, `2.0.0`). El veredicto de `/evaluar/` devuelve `version` para que MOD-010 la escriba en el intento |
+| `lessonId` | sí | sí | `leccion_ref` en sesión, selector y distribución |
+| `objectId` | sí | sí | `objeto_ref` en selector y distribución; `objectId` en cada evaluación |
+| `questionId` | sí | sí | `unidad_ref` del selector cuando se proyecta una pregunta; `questionId` en cada evaluación |
 | `optionId` | sí | sí (en la respuesta) | `response.selectedOptionIds` validado contra los `id` de la pregunta; **una posición es 400** |
-| `mediaId` | sí | sólo si hace falta | `media_ref` del foco cuando se proyecta un medio suelto |
+| `mediaId` | sí | sólo si hace falta | `media_ref` del selector cuando se proyecta un medio suelto |
 | `topicRef` | sí | recomendado | Viaja en la vista (`tema_ref`); no se guarda todavía (informe por tema es de MOD-012) |
 | `translationGroupId` | sí | opcional | Viaja en la vista (`grupo_traduccion`); no se guarda |
 | `title`, `subtitle` | **no** | sólo como rótulo histórico | `curso_rotulo`, `leccion_rotulo`, `rotulo` (artículo 13.3). **Nunca son clave** |
@@ -199,7 +199,7 @@ Con la app «AVACOM Contenido» encendida (`Avacom.Content.App.exe`, API en `api
 | `…/medios/no-existe/` | 404 `referencia_no_encontrada` |
 | `POST …/evaluar/` opción `a` · relacionar 2 de 3 · abierta · lote de 2 | `1.0/1.0 correcta` · `2.0/3.0` · `puntaje: null, pendiente: true` · `pendientes: 0` |
 | `POST …/evaluar/` con `selectedIndex` | 400 antes de llegar a la biblioteca |
-| `POST /api/aula/sesiones/` vía `leccion` con `fuente=biblioteca` | Sesión abierta con `curso_version: "2.0.0"`, foco inicial en la primera lámina; cerrada después |
+| `POST /api/aula/sesiones/` vía `leccion` con `fuente=biblioteca` | Sesión abierta con `curso_version: "2.0.0"`, selector inicial en la primera lámina; cerrada después |
 
 ### 7.2 · Sin la biblioteca: el host de pruebas
 
@@ -225,7 +225,7 @@ Totales: **59** pruebas del aula, **177** del backend, **15** del núcleo MAUI.
 
 | | Estado |
 |---|---|
-| Las tablas del expediente guardan `courseId` **y** `version` | ✅ `m07_sesion`, `m07_foco`; `m10_intento` guarda `curso_ref` y recibe `version` en el veredicto (falta la columna: Q-48) |
+| Las tablas del expediente guardan `courseId` **y** `version` | ✅ `m07_sesion`, `m07_selector`; `m10_intento` guarda `curso_ref` y recibe `version` en el veredicto (falta la columna: Q-48) |
 | Guardan `lessonId`, `objectId`, `questionId`, no títulos | ✅ `*_ref`; los títulos sólo como `*_rotulo` |
 | La respuesta de una opción guarda su `id`, no su índice | ✅ `selectedOptionIds` validado contra los `id` de la pregunta; un índice es 400 |
 | `score` y `correct` admiten nulo | ✅ `puntaje`, `correcta` → `None` (también cuando la API los omite) |
@@ -296,6 +296,6 @@ La primera versión se escribió sólo con el mapeo de campos, con ocho supuesto
 | Calificar a mano una abierta con `grading-guide` | MOD-011 | El cliente ya la pide; falta la pantalla del docente y la ruta, fuera del aula |
 | Responder la actividad desde la tableta (S2) | Frontend MOD-007 | La vista previa puede pasar a enviar `POST /evaluar/` con la forma de §4 cuando MOD-010 guarde el intento; conviene pasar `semilla=<sesion>` para que toda la clase vea el mismo orden |
 | Pasar `semilla` desde OPS y Student | Frontend MOD-007 | El backend ya la acepta; hoy los clientes no la mandan |
-| Bajar sólo el objeto en foco (`/v2/courses/{id}/objects/{oid}`) en vez del curso entero | Backend MOD-007 | Hoy cada petición de objeto arma el curso (esquema + lecciones), unas decenas de milisegundos en loopback; optimizar si una tableta lo nota |
+| Bajar sólo el objeto en selector (`/v2/courses/{id}/objects/{oid}`) en vez del curso entero | Backend MOD-007 | Hoy cada petición de objeto arma el curso (esquema + lecciones), unas decenas de milisegundos en loopback; optimizar si una tableta lo nota |
 | Árbol, búsqueda y política (`/v2/tree`, `/v2/search`, `/v2/policies`) | MOD-004 | Fuera del aula |
 | Caché en memoria de minutos invalidada por la huella | — | **No se implementa**: el artículo 14 prefiere preguntar siempre; `huella` queda disponible si algún día hace falta |

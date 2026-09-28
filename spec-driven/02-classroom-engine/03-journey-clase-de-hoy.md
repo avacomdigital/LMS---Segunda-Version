@@ -23,6 +23,7 @@ Lo que el siguiente prompt tiene que dar por hecho, sin volver a deducirlo:
 6. **Sin tiempo real todavía.** OPS refresca la sesión cada 3 s y Student cada 2 s (`intervalo_sondeo_ms`). El WebSocket es Q-51.
 7. **Fuera de este módulo**: el examen (`fuera_de_alcance`, MOD-010), la corrección de respuestas (MOD-010 con el flujo de intentos existente, Q-48), el padrón real (MOD-002) y los permisos `classroom.*` (Q-50).
 8. **WebView obligatoria.** Los laboratorios (PhET y `html5_canvas`) se muestran en `WebView`. En Windows exige el runtime **WebView2**; el instalador de OPS debe comprobarlo o incluirlo (nota añadida en [02](02-sugerencias-frontend.md) §4.1).
+9. **Selector y Device Manager (2026-09-28).** Lo que se proyecta se llama **selector** (`POST …/selector/`, antes «foco»); no es un lanzamiento. La tableta que entra queda en el inventario de MOD-009 (`/api/dispositivos/`, [03-device-manager](../03-device-manager/00-modelo-y-api.md)): la lista de participantes de P3 muestra la tableta de cada uno y permite **bloquearla o desbloquearla**; una tableta bloqueada no entra a clase ni recibe lanzamientos, y el panel «Actividad en curso» dice cuántas quedaron fuera. El tablero ganó el hexágono **«Dispositivos»** (en el lugar de «Asistencia», fuera del MVP) con el inventario y el bloqueo por tableta.
 
 ---
 
@@ -59,7 +60,7 @@ Lo que el siguiente prompt tiene que dar por hecho, sin volver a deducirlo:
 | Qué ve | Cabecera del curso (título, subtítulo, «Sexto · Básica secundaria», portada). Una tarjeta por **lección** con sus objetos como chips con icono y `componente`: ▣ presentación · ▤ lectura · ⌗ laboratorio · ✎ actividad · ✓ examen (atenuado, «lo aplica MOD-010»). Panel plegable con `notas_docente` del curso y de la lección |
 | Qué toca | **«Dar clase con esta lección»** (botón grande en cada lección) o **«Clase libre»** (arriba a la derecha) |
 | Qué llama | `GET /api/aula/cursos/{curso_ref}/?fuente=ejemplo&rol=docente` para pintar · luego `POST /api/aula/sesiones/` con `{via: "leccion", curso_ref, leccion_ref, fuente: "ejemplo", profesor_id, profesor_rotulo, superficie: "pantalla"}` (o `{via: "libre", …}`) |
-| Qué vuelve | `201` con la sesión: `id`, `codigo_union`, `foco` inicial (primer objeto de la lección), `seguimiento: true` |
+| Qué vuelve | `201` con la sesión: `id`, `codigo_union`, `selector` inicial (primer objeto de la lección), `seguimiento: true` |
 | Si falla | `409 sesion_activa_existente` → «Ya tienes una clase abierta»: **Continuar** (abre P3 con `sesion_id`) o **Cerrarla y empezar otra**. `404 referencia_no_encontrada` no debería ocurrir desde esta pantalla; se muestra el `detail` |
 
 ### P3 · Clase en curso (la pantalla principal)
@@ -68,13 +69,13 @@ Es PAN-001 y PAN-022 del Maestro en una sola superficie: el profesor **ve lo que
 
 | Zona | Qué ve | Qué toca | Qué llama |
 |---|---|---|---|
-| Cabecera | **Código de unión en grande** (≥ 96 pt) · «N conectados» · nombre de la lección · indicador de conexión (CMP-001) | «Ver participantes» despliega la lista | `GET /api/aula/sesiones/{id}/` cada 3 s → `codigo_union`, `conteo`, `participantes`, `foco`, `seguimiento`, `pantallas_bloqueadas`, `distribuciones` |
-| Columna izquierda · Secuencia | Los objetos de la lección en orden; el que está en foco resaltado. En una presentación, sus láminas como miniaturas numeradas | Tocar un objeto o una lámina = **proyectar** | `POST …/foco/` `{objeto_ref, unidad_ref?}` → foco vigente |
-| Centro · Proyección | `AulaContenidoView` en modo docente: la lámina con sus bloques; el laboratorio en `WebView`; la lectura por páginas; la actividad con sus preguntas en vista previa | ◀ ▶ para lámina anterior / siguiente («Lámina N de M») | `POST …/foco/` con la `unidad_ref` de la lámina vecina |
-| Barra de controles (inferior) | Cinco botones grandes: **Bloquear pantallas** (interruptor) · **Seguimiento** (interruptor, encendido por defecto) · **Lanzar actividad** (activo cuando el foco es una actividad) · **Aviso** · **Terminar clase** | Un toque cada uno | `POST …/controles/` `{tipo: "bloqueo"|"seguimiento", activo}` · `POST …/distribuciones/` `{clase: "actividad", objeto_ref}` · `POST …/avisos/` `{texto}` · `POST …/cerrar/` |
+| Cabecera | **Código de unión en grande** (≥ 96 pt) · «N conectados» · nombre de la lección · indicador de conexión (CMP-001) | «Ver participantes» despliega la lista | `GET /api/aula/sesiones/{id}/` cada 3 s → `codigo_union`, `conteo`, `participantes`, `selector`, `seguimiento`, `pantallas_bloqueadas`, `distribuciones` |
+| Columna izquierda · Secuencia | Los objetos de la lección en orden; el que está en selector resaltado. En una presentación, sus láminas como miniaturas numeradas | Tocar un objeto o una lámina = **proyectar** | `POST …/selector/` `{objeto_ref, unidad_ref?}` → selector vigente |
+| Centro · Proyección | `AulaContenidoView` en modo docente: la lámina con sus bloques; el laboratorio en `WebView`; la lectura por páginas; la actividad con sus preguntas en vista previa | ◀ ▶ para lámina anterior / siguiente («Lámina N de M») | `POST …/selector/` con la `unidad_ref` de la lámina vecina |
+| Barra de controles (inferior) | Cinco botones grandes: **Bloquear pantallas** (interruptor) · **Seguimiento** (interruptor, encendido por defecto) · **Lanzar actividad** (activo cuando el selector es una actividad) · **Aviso** · **Terminar clase** | Un toque cada uno | `POST …/controles/` `{tipo: "bloqueo"|"seguimiento", activo}` · `POST …/distribuciones/` `{clase: "actividad", objeto_ref}` · `POST …/avisos/` `{texto}` · `POST …/cerrar/` |
 | Panel «Actividad en curso» (aparece al lanzar) | «Practica: los tres estados · 2 de 3 entregadas» con barra | **Cerrar recepción** | `POST …/distribuciones/{id}/cerrar/` |
 | Hoja «Aviso» | Frases prehechas tocables: «Miren al frente», «Dos minutos», «Guarden lo que llevan», «Levanten la mano si terminaron» | Una frase | `POST …/avisos/` `{texto}` |
-| Lista de participantes (desplegable) | Nombre · estado (Esperando · Conectado · Reconectando · Salió) | **Admitir** (si espera) · **Expulsar** | `POST …/participantes/{pid}/admitir/` · `…/expulsar/` |
+| Lista de participantes (desplegable) | Nombre · estado (Esperando · Conectado · Reconectando · Salió) · la tableta con la que entró y, si está bloqueada, la píldora «Tableta bloqueada · sin lanzamientos» | **Admitir** (si espera) · **Expulsar** · **Bloquear tableta** / **Desbloquear** (MOD-009) | `POST …/participantes/{pid}/admitir/` · `…/expulsar/` · `POST /api/dispositivos/{id}/bloquear/` · `…/desbloquear/` |
 
 Si falla: `409 sin_participantes_admitidos` al lanzar → «Todavía no hay tabletas conectadas». `409 sesion_cerrada` o `transicion_invalida` → volver a P1 con aviso. Sin respuesta del backend → el indicador pasa a «sin señal» y los botones se deshabilitan hasta que vuelva; nada se borra.
 
@@ -85,7 +86,7 @@ Si falla: `409 sin_participantes_admitidos` al lanzar → «Todavía no hay tabl
 | Qué ve | Confirmación «¿Terminar la clase?». Si hay actividades abiertas, MSG-016: «{n} alumnos siguen respondiendo. Si cierras ahora, se entrega lo que llevan» |
 | Qué toca | **Terminar** (y, si hace falta, **Terminar de todos modos**) |
 | Qué llama | `POST /api/aula/sesiones/{id}/cerrar/` `{}`; ante `409 actividades_abiertas`, de nuevo con `{forzar: true}` |
-| Qué vuelve | `estado: "cerrada"` y `resumen`: participantes, conectados máximo, focos, distribuciones, actividades, avisos, pendientes, duración |
+| Qué vuelve | `estado: "cerrada"` y `resumen`: participantes, conectados máximo, selectores, distribuciones, actividades, avisos, pendientes, duración |
 | Qué muestra | Tarjetas del resumen y botón **«Volver a Clase de hoy»** (P1). Una sesión cerrada no se reabre |
 
 ---
@@ -109,17 +110,17 @@ Referencias reales de `example.json`, en el orden en que se tocan. Es el recorri
 |---|---|---|---|---|
 | 1 | Tablero | Tocar «Clase de hoy» | `GET /api/aula/cursos/?fuente=ejemplo` | P1 con **Ciencias naturales** → «Estados de la materia y sus cambios» |
 | 2 | P1 | Tocar el curso | `GET /api/aula/cursos/avacom.co.lower-secondary.6.science.states-of-matter/?fuente=ejemplo&rol=docente` | P2 con 3 lecciones; la 3.ª sólo tiene el examen atenuado |
-| 3 | P2 | «Dar clase con esta lección» en **Los tres estados de la materia** (`l1-three-states`) | `POST /api/aula/sesiones/` `{via: "leccion", curso_ref, leccion_ref: "l1-three-states", fuente: "ejemplo", profesor_id, superficie: "pantalla"}` | P3 con código de 6 dígitos y foco en **Todo lo que nos rodea es materia** (`l1-lecture`) |
+| 3 | P2 | «Dar clase con esta lección» en **Los tres estados de la materia** (`l1-three-states`) | `POST /api/aula/sesiones/` `{via: "leccion", curso_ref, leccion_ref: "l1-three-states", fuente: "ejemplo", profesor_id, superficie: "pantalla"}` | P3 con código de 6 dígitos y selector en **Todo lo que nos rodea es materia** (`l1-lecture`) |
 | 4 | Student S1 | Escribir el código | `POST /api/aula/sesiones/unirse/` | S2 muestra la lámina 1; en P3 «1 conectado» |
-| 5 | P3 | ▶ dos veces | `POST …/foco/` `{objeto_ref: "l1-lecture", unidad_ref: "l1-lecture-s2"}` y luego `"l1-lecture-s3"` | Lámina 2 (imagen de marcador + lista con negritas) y lámina 3 (video: en el ejemplo, tarjeta «no incluido», `404` explicado) |
-| 6 | P3 | Tocar **Escucha y repasa** (`l1-explanation`) | `POST …/foco/` `{objeto_ref: "l1-explanation"}` | Página 1 con audio (WAV de marcador) y texto resaltado; página 2 con el PDF de 3 páginas |
-| 7 | P3 | Tocar **Laboratorio: partículas en movimiento** (`l1-lab-phet`) | `POST …/foco/` `{objeto_ref: "l1-lab-phet"}` | La `WebView` carga `…/medios/sim-phet-states/states-of-matter-basics_es.html?fuente=ejemplo` (partículas en movimiento); atribución CC BY 4.0 en el pie |
+| 5 | P3 | ▶ dos veces | `POST …/selector/` `{objeto_ref: "l1-lecture", unidad_ref: "l1-lecture-s2"}` y luego `"l1-lecture-s3"` | Lámina 2 (imagen de marcador + lista con negritas) y lámina 3 (video: en el ejemplo, tarjeta «no incluido», `404` explicado) |
+| 6 | P3 | Tocar **Escucha y repasa** (`l1-explanation`) | `POST …/selector/` `{objeto_ref: "l1-explanation"}` | Página 1 con audio (WAV de marcador) y texto resaltado; página 2 con el PDF de 3 páginas |
+| 7 | P3 | Tocar **Laboratorio: partículas en movimiento** (`l1-lab-phet`) | `POST …/selector/` `{objeto_ref: "l1-lab-phet"}` | La `WebView` carga `…/medios/sim-phet-states/states-of-matter-basics_es.html?fuente=ejemplo` (partículas en movimiento); atribución CC BY 4.0 en el pie |
 | 8 | P3 | Encender **Bloquear pantallas** | `POST …/controles/` `{tipo: "bloqueo", activo: true}` | S2 pasa a «Mira al frente» en ≤ 3 s |
 | 9 | P3 | Apagar **Bloquear pantallas** | `{tipo: "bloqueo", activo: false}` | S2 vuelve al laboratorio |
-| 10 | P3 | Tocar **Practica: los tres estados** (`l1-activity`) y **Lanzar actividad** | `POST …/foco/` y `POST …/distribuciones/` `{clase: "actividad", objeto_ref: "l1-activity"}` | Panel «1 de 1 pendiente»; S2 muestra la tarjeta pendiente con 6 preguntas (opción múltiple, V/F, completar, relacionar, ordenar, abierta), sin ninguna clave |
+| 10 | P3 | Tocar **Practica: los tres estados** (`l1-activity`) y **Lanzar actividad** | `POST …/selector/` y `POST …/distribuciones/` `{clase: "actividad", objeto_ref: "l1-activity"}` | Panel «1 de 1 pendiente»; S2 muestra la tarjeta pendiente con 6 preguntas (opción múltiple, V/F, completar, relacionar, ordenar, abierta), sin ninguna clave |
 | 11 | P3 | **Aviso** → «Dos minutos» | `POST …/avisos/` `{texto: "Dos minutos"}` | Banda en S2 |
 | 12 | P3 | **Cerrar recepción** | `POST …/distribuciones/{id}/cerrar/` | El panel cambia a «cerrada» |
-| 13 | P3 | **Terminar clase** | `POST …/cerrar/` `{}` | P4 con el resumen (1 participante, 5 focos, 1 actividad, 1 aviso) |
+| 13 | P3 | **Terminar clase** | `POST …/cerrar/` `{}` | P4 con el resumen (1 participante, 5 selectores, 1 actividad, 1 aviso) |
 | 14 | P4 | «Volver a Clase de hoy» | — | P1. En S2: «La clase terminó» |
 
 Variante para probar MSG-016: saltar el paso 12 y terminar en el 13 → `409 actividades_abiertas` → «Terminar de todos modos» → `{forzar: true}`.
@@ -134,7 +135,7 @@ Todas están implementadas y probadas. La columna «En este journey» dice cuál
 |---|---|---|
 | Listar materias y cursos | `GET /api/aula/cursos/?fuente=` | P1 |
 | Vista de aula del curso (docente / estudiante) | `GET /api/aula/cursos/{ref}/?rol=` | P2, S2 |
-| Una lección o un objeto sueltos | `GET …/lecciones/{ref}/` · `GET …/objetos/{ref}/` | S2 (baja sólo el objeto en foco) |
+| Una lección o un objeto sueltos | `GET …/lecciones/{ref}/` · `GET …/objetos/{ref}/` | S2 (baja sólo el objeto en selector) |
 | Medios (imagen, audio, PDF, simulación, subtítulos, transcripción) | `GET …/medios/{media_ref}/[ruta]` | P3, S2 |
 | Iniciar la clase (4 vías) | `POST /api/aula/sesiones/` | P2 (`leccion` y `libre`) |
 | Detalle para el profesor | `GET /api/aula/sesiones/{id}/` | P3 (cada 3 s) |
@@ -143,7 +144,7 @@ Todas están implementadas y probadas. La columna «En este journey» dice cuál
 | Presencia (conectado · reconectando · salio) | `POST …/participantes/{pid}/presencia/` | S2 (al salir) |
 | Admitir · expulsar | `POST …/participantes/{pid}/admitir/` · `expulsar/` | P3 (lista desplegable) |
 | Rechazar a quien espera | `POST …/participantes/{pid}/rechazar/` | Después (sólo tiene sentido con padrón) |
-| Declarar el foco (objeto, lámina, página, medio) | `POST …/foco/` | P3 |
+| Declarar el selector (objeto, lámina, página, medio) | `POST …/selector/` | P3 |
 | Bloquear pantallas · seguimiento | `POST …/controles/` | P3 |
 | Lanzar actividad · difundir recurso | `POST …/distribuciones/` | P3 (actividad) |
 | Confirmar entrega desde la tableta | `POST …/distribuciones/{id}/confirmar/` | S2 (al abrir la tarjeta) |

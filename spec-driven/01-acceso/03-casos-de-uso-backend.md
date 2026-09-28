@@ -295,7 +295,7 @@ curl -X POST http://127.0.0.1:8000/api/acceso/instalacion/ -H "Content-Type: app
 
 **Qué hacen.** La tableta se presenta al aula («soy esta», idempotente); el profesor las ve para elegir cuál autorizar; administración las renombra o da de baja. Dar de baja **cierra las sesiones abiertas en ella** con motivo `dispositivo_baja`.
 
-**Rutas.** `POST` / `GET /api/acceso/dispositivos/`, `PATCH /api/acceso/dispositivos/{id}/`.
+**Rutas.** Desde el 2026-09-28 estos tres casos de uso viven en **MOD-009 · Device Manager** (`backend/device_manager/`, `POST` / `GET /api/dispositivos/`, `PATCH /api/dispositivos/{id}/`, más `bloquear/`, `desbloquear/` y `latido/`; ver [03-device-manager](../03-device-manager/00-modelo-y-api.md)). Este módulo conserva su puerto `RepositorioDispositivos` para leerlos en el login y para cerrar las sesiones de una tableta dada de baja.
 
 **Nota del Maestro.** El dispositivo es **contexto, nunca identidad**: la sesión es de la persona; la tableta sólo dice desde dónde.
 

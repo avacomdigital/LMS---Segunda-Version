@@ -8,7 +8,8 @@
 | Plataforma | Python 3.12 · Django 5.2.3 · DRF 3.16.1 · SQLite · arquitectura hexagonal (misma disposición que `acceso/`) |
 | Cliente | .NET MAUI: AVACOM LMS OPS (Windows, pantalla táctil **sin teclado**) y AVACOM LMS Student (Windows y Android) |
 | Fuentes y prioridad | 1 · restricciones de [00 · Introducción](00-introduccion.md) · 2 · [01 · Constitución](../01-constitucion.md) · 3 · [00 · Línea base](../00-linea-base-conexion-biblioteca.md) · 4 · [06 · Contrato biblioteca](../06-contrato-biblioteca.md) (propuesta) · 5 · MOD-007 del Maestro · 6 · Arquitectura y Datos, Parte XI · 7 · [`example.json`](example.json), orientativo |
-| Documentos hermanos | [02 · Sugerencias para el frontend MAUI](02-sugerencias-frontend.md) · [Modelado del acceso](../01-acceso/01-modelado-datos.md) (MOD-001, del que este módulo lee) |
+| Documentos hermanos | [02 · Sugerencias para el frontend MAUI](02-sugerencias-frontend.md) · [Modelado del acceso](../01-acceso/01-modelado-datos.md) (MOD-001, del que este módulo lee) · [Device Manager](../03-device-manager/00-modelo-y-api.md) (MOD-009, del que este módulo lee y al que pide) |
+| Actualización 2026-09-28 | Segunda versión del modelo de datos aplicada al aula (migración `0002_selector_lanzamiento_dispositivos`): **`Foco` pasa a llamarse `Selector`** (`m07_selector`, `POST …/selector/`, clave `selector` en las respuestas, `selectores` en el resumen); la distribución es el **lanzamiento** (`alcance`, `destinatarios`, `excluidos_bloqueados`, `intentos_permitidos`, `tiempo_limite_seg`); el participante referencia su tableta y su sesión de alumno en MOD-009 (`dispositivo_id`, `dim_sesion_alumno_id`), que resuelve el puerto `Dispositivos`: una tableta bloqueada no entra (403 `dispositivo_bloqueado`) ni recibe lanzamientos. 199 pruebas en verde en el backend |
 
 ---
 
@@ -20,9 +21,9 @@
 4. **Tres catálogos, no una lista plana.** Primero *qué experiencia* es el objeto (`lecture`, `explanation`, `simulation_lab`, `activity`, `exam`), después *qué contenido* pinta cada bloque (`heading`, `text`, `list`, `image`, `video`, `audio`, `pdf`) y, dentro de una actividad, *qué pregunta* (`multiple_choice`, `true_false`, `fill_blanks`, `matching`, `ordering`, `open`). Cada uno lleva `componente`: el nombre del control MAUI que lo representa.
 5. **Ninguna clave de corrección sale del backend, para ningún rol.** `isCorrect`, `answer`, `acceptedAnswers`, `pairs`, `correctOrder`, `modelAnswer`, `rubric`, `feedback`… se eliminan por construcción y por un barrido recursivo final (artículo 14.5). Las notas del docente sólo salen con rol `docente`.
 6. **El examen no lo ejecuta el aula.** El objeto `exam` se muestra en la estructura como `fuera_de_alcance` con `modulo: MOD-010`, sin preguntas. El aula proyecta, lanza actividades y sigue el grupo; el intento es de MOD-010.
-7. **La sesión de clase es lo que MOD-007 posee**: `m07_sesion` (estados `planificada → abierta ⇄ suspendida → cerrada → archivada`, INV-025), `m07_participante` con su bitácora `m07_presencia`, el **foco** como bitácora con un solo vigente (`m07_foco`), los **controles** de seguimiento y bloqueo como periodos (`m07_control`), las **distribuciones** con avance de entrega, los **avisos**, el **resumen** de cierre y la **cola de salida** `aula.*.v1`.
-8. **Las invariantes son índices** (CV-07): un código de unión por sesión activa, una sesión activa por grupo (DEC-035), una sesión *abierta* por profesor (BR-045), una participación por persona y sesión (FUN-077), un foco vigente por sesión, un control abierto por tipo, una entrega por participante y distribución.
-9. **Las cuatro vías producen la misma sesión** (BR-044): `arbol`, `leccion`, `recurso` y `libre`. Por defecto los alumnos **siguen** al profesor (BR-050) y el cambio de foco se valida contra el curso vigente antes de propagarse (BR-049).
+7. **La sesión de clase es lo que MOD-007 posee**: `m07_sesion` (estados `planificada → abierta ⇄ suspendida → cerrada → archivada`, INV-025), `m07_participante` con su bitácora `m07_presencia`, el **selector** como bitácora con un solo vigente (`m07_selector`), los **controles** de seguimiento y bloqueo como periodos (`m07_control`), las **distribuciones** con avance de entrega, los **avisos**, el **resumen** de cierre y la **cola de salida** `aula.*.v1`.
+8. **Las invariantes son índices** (CV-07): un código de unión por sesión activa, una sesión activa por grupo (DEC-035), una sesión *abierta* por profesor (BR-045), una participación por persona y sesión (FUN-077), un selector vigente por sesión, un control abierto por tipo, una entrega por participante y distribución.
+9. **Las cuatro vías producen la misma sesión** (BR-044): `arbol`, `leccion`, `recurso` y `libre`. Por defecto los alumnos **siguen** al profesor (BR-050) y el cambio de selector se valida contra el curso vigente antes de propagarse (BR-049).
 10. **Todo lo que otro módulo aporta entra por un puerto**: biblioteca (curso), identidad y padrón (MOD-001/002), evaluación (MOD-010), reloj (MOD-015, BR-062), auditoría (MOD-019) y cola de salida. Los once permisos `classroom.*` se nombran aquí y los siembra MOD-001 (§12).
 
 ---
@@ -34,10 +35,10 @@
 | Dato | Dónde vive | Qué guarda MOD-007 |
 |---|---|---|
 | Asignatura, nivel, grado, país, idioma (`classification`) | Biblioteca (manifiesto) | Nada. El panel «Asignaturas» se calcula en vivo agrupando por `subject` |
-| Curso, versión, título, créditos, portada | Biblioteca | `curso_ref`, `curso_version` y `curso_rotulo` en la sesión y en el foco |
+| Curso, versión, título, créditos, portada | Biblioteca | `curso_ref`, `curso_version` y `curso_rotulo` en la sesión y en el selector |
 | Lección, objetivos, temas | Biblioteca | `leccion_ref` y `leccion_rotulo` |
-| Objeto (presentación, lectura, laboratorio, actividad, examen) | Biblioteca | `objeto_ref`, `objeto_tipo` y rótulo en el foco y en la distribución |
-| Lámina, página, pregunta (la «unidad» que se proyecta) | Biblioteca | `unidad_ref` y `unidad_indice` en el foco |
+| Objeto (presentación, lectura, laboratorio, actividad, examen) | Biblioteca | `objeto_ref`, `objeto_tipo` y rótulo en el selector y en la distribución |
+| Lámina, página, pregunta (la «unidad» que se proyecta) | Biblioteca | `unidad_ref` y `unidad_indice` en el selector |
 | Medios (imagen, video, audio, pdf, simulación) | Biblioteca | `media_ref` cuando se proyecta un medio suelto |
 | Preguntas, opciones, claves, rúbricas | Biblioteca | **Nada.** Ni siquiera transitan hacia el cliente (§2.5) |
 | Quién está en clase, qué se proyectó, qué se lanzó, qué se avisó, cómo terminó | **LMS · MOD-007** | Las 10 tablas `m07_*` |
@@ -46,7 +47,7 @@ Consecuencias verificables:
 
 - **Ninguna FK hacia contenido** (CV-08): toda referencia es texto. Cambiar la versión del curso en la biblioteca cambia lo que ven las tabletas sin ninguna operación en el LMS (artículo 14.3).
 - **La fuente de ejemplo no es una caché.** Lee `example.json` del disco en cada petición, igual que el cliente relee `enlace.json`. No existe ninguna tabla ni columna donde quepa el manifiesto.
-- **Los rótulos no deciden nada.** `curso_rotulo`, `leccion_rotulo`, `rotulo` del foco… existen para poder mostrar la sesión de ayer con la biblioteca cerrada, y se escriben una sola vez.
+- **Los rótulos no deciden nada.** `curso_rotulo`, `leccion_rotulo`, `rotulo` del selector… existen para poder mostrar la sesión de ayer con la biblioteca cerrada, y se escriben una sola vez.
 - **Prueba de esquema.** `classroom_engine.tests.test_arquitectura.test_el_esquema_es_solo_de_aula_sin_curso_ni_claves` falla si aparece una tabla cuyo nombre contenga `curso`, `asignatura`, `leccion`, `objeto`, `lamina`, `bloque`, `medio`, `pregunta`, `opcion` o `materia`, o una columna con `clave`, `correcta` o `solucion`.
 
 ---
@@ -149,15 +150,15 @@ Comunes: `pregunta_ref`, `enunciado`, `enunciado_tramos`, `tema_ref`, `dificulta
 
 | Referencia | Origen en el manifiesto | Dónde la escribe MOD-007 |
 |---|---|---|
-| `curso_ref` · `curso_version` | `id` · `version` | `m07_sesion`, `m07_foco`, `m07_distribucion`, eventos |
-| `leccion_ref` | `lessons[].id` | `m07_sesion` (vía `leccion`), `m07_foco`, `m07_distribucion` |
-| `objeto_ref` · `objeto_tipo` | `objects[].id` · `objects[].type` | `m07_sesion` (vía `recurso`), `m07_foco`, `m07_distribucion` |
-| `unidad_ref` · `unidad_indice` | `slides[].id` / `pages[].id` / `questions[].id` | `m07_foco` (la lámina, página o pregunta proyectada) |
-| `media_ref` | `media[].id` | `m07_foco` y `m07_distribucion` cuando se proyecta o difunde un medio suelto |
+| `curso_ref` · `curso_version` | `id` · `version` | `m07_sesion`, `m07_selector`, `m07_distribucion`, eventos |
+| `leccion_ref` | `lessons[].id` | `m07_sesion` (vía `leccion`), `m07_selector`, `m07_distribucion` |
+| `objeto_ref` · `objeto_tipo` | `objects[].id` · `objects[].type` | `m07_sesion` (vía `recurso`), `m07_selector`, `m07_distribucion` |
+| `unidad_ref` · `unidad_indice` | `slides[].id` / `pages[].id` / `questions[].id` | `m07_selector` (la lámina, página o pregunta proyectada) |
+| `media_ref` | `media[].id` | `m07_selector` y `m07_distribucion` cuando se proyecta o difunde un medio suelto |
 | `nodo_ref` | (árbol académico, MOD-003) | `m07_sesion` (vía `arbol`) |
 | `pregunta_ref` | `questions[].id` | **No la escribe MOD-007**: es de MOD-010 (`m10_intento_pregunta`) |
 
-Toda escritura valida la referencia contra el curso vigente (`dominio.curso.localizar`): un foco o una distribución apuntan siempre a algo que existe en la versión que se está dando.
+Toda escritura valida la referencia contra el curso vigente (`dominio.curso.localizar`): un selector o una distribución apuntan siempre a algo que existe en la versión que se está dando.
 
 ### 2.5 · Lo que nunca sale del backend
 
@@ -171,13 +172,13 @@ Toda escritura valida la referencia contra el curso vigente (`dominio.curso.loca
 
 ### 2.6 · El examen queda fuera de MOD-007
 
-Por decisión del prompt, los `exam` no entran al Classroom Engine. La vista los conserva para que la estructura de la lección sea completa (la lección 3 sólo tiene un examen), con `fuera_de_alcance: true`, `modulo: "MOD-010"`, sus `ajustes` de selección (`random_balanced`, 4 preguntas, tolerancias) y tiempo (`sum_of_estimates`, 25 % extra), y `total_preguntas_banco: 12`, **sin preguntas**. Iniciar una sesión por vía `recurso` con un examen, declararlo como foco o lanzarlo como actividad responde `400` nombrando a MOD-010.
+Por decisión del prompt, los `exam` no entran al Classroom Engine. La vista los conserva para que la estructura de la lección sea completa (la lección 3 sólo tiene un examen), con `fuera_de_alcance: true`, `modulo: "MOD-010"`, sus `ajustes` de selección (`random_balanced`, 4 preguntas, tolerancias) y tiempo (`sum_of_estimates`, 25 % extra), y `total_preguntas_banco: 12`, **sin preguntas**. Iniciar una sesión por vía `recurso` con un examen, declararlo como selector o lanzarlo como actividad responde `400` nombrando a MOD-010.
 
 ### 2.7 · Componentes especiales: cómo se mapean
 
 | Componente que trae el contenido | Cómo llega en la vista de aula | Lo que el cliente necesita saber |
 |---|---|---|
-| **Presentaciones** | Son los `lecture` con `slides[]`: la presentación nativa del manifiesto (`presentacion` → `laminas[]`). No hay binario `.pptx` en el esquema | El foco proyecta una lámina (`unidad_ref`, `unidad_indice`). Si la biblioteca llegara a publicar un `.pptx`, lo convertiría ella a láminas, PDF o HTML; el LMS no analiza binarios de Office (Q-47) |
+| **Presentaciones** | Son los `lecture` con `slides[]`: la presentación nativa del manifiesto (`presentacion` → `laminas[]`). No hay binario `.pptx` en el esquema | El selector proyecta una lámina (`unidad_ref`, `unidad_indice`). Si la biblioteca llegara a publicar un `.pptx`, lo convertiría ella a láminas, PDF o HTML; el LMS no analiza binarios de Office (Q-47) |
 | **Videos** | Bloque `video` con recorte `desde_seg`/`hasta_seg` y `autoplay`; el medio aporta `duracion_seg`, `subtitulos_url` (WebVTT) y `transcripcion_url` | Un mismo `vid-changes` se usa dos veces con recortes distintos (0–60 s y 60–150 s). El reproductor debe respetar el recorte y ofrecer subtítulos |
 | **Audios** | Bloque `audio` en páginas de `explanation`, con `duracion_seg` y transcripción | Reproductor sencillo con transcripción visible (accesibilidad y aula ruidosa) |
 | **PDF** | Bloque `pdf` con `desde_pagina`/`hasta_pagina` y `url_pagina_inicial` (`#page=N`) | Mostrar el rango pedido, no el documento completo |
@@ -211,12 +212,12 @@ El árbol antiguo (`secciones[] → items[]`) se normaliza con la misma forma (`
 | R-05 | Código de unión único entre activas, conservado al suspender y reanudar; rotable (FUN-065/066, CMP-012) | `ux_m07_codigo`, `RotarCodigo`, `ReanudarSesion` |
 | R-06 | Sólo entra el inscrito o el admitido a mano; expulsión que no borra respuestas (BR-047/048, FUN-067/068/078) | `m07_participante.estado`, `admision_nominal`, puerto `Identidad` |
 | R-07 | Readmitir sin duplicar la participación (FUN-077) | `ux_m07_part` + `UnirseASesion` con `participante_id` |
-| R-08 | El foco es lo que el profesor declara y se propaga en ≤ 3 s; el alumno en seguimiento no navega (BR-049/050) | `m07_foco` (un vigente), `m07_control(seguimiento)`, `intervalo_sondeo_ms: 2000` |
+| R-08 | El selector es lo que el profesor declara y se propaga en ≤ 3 s; el alumno en seguimiento no navega (BR-049/050) | `m07_selector` (un vigente), `m07_control(seguimiento)`, `intervalo_sondeo_ms: 2000` |
 | R-09 | Bloquear y liberar pantallas (CAP-042, FUN-074) | `m07_control(bloqueo)`, evento `aula.dispositivos.bloqueados.v1` |
 | R-10 | Difundir recurso o actividad con confirmación y avance por dispositivo (CAP-040, FUN-070/071) | `m07_distribucion`, `m07_distribucion_entrega` |
 | R-11 | Presencia técnica registrada por el nodo, no asistencia académica (FUN-073, CAP-038) | `m07_presencia`, `ultimo_latido_en` |
-| R-12 | Reanudar tras caída con mismo foco, participantes y código (BR-051, FUN-076) | Estados `suspendida ⇄ abierta`; nada se reescribe al reanudar |
-| R-13 | Cerrada no admite nuevos ni cambios de foco; consolidar evidencia (BR-052, FUN-079, CAP-045) | `exigir_abierta`, `m07_resumen`, `CerrarSesion` |
+| R-12 | Reanudar tras caída con mismo selector, participantes y código (BR-051, FUN-076) | Estados `suspendida ⇄ abierta`; nada se reescribe al reanudar |
+| R-13 | Cerrada no admite nuevos ni cambios de selector; consolidar evidencia (BR-052, FUN-079, CAP-045) | `exigir_abierta`, `m07_resumen`, `CerrarSesion` |
 | R-14 | La marca temporal la asigna el nodo (BR-062); nada del dispositivo decide tiempo | Puerto `Reloj`; `servidor_en` en cada respuesta |
 | R-15 | Hecho + auditoría + evento en una transacción (Parte VII, Outbox) | `UnidadDeTrabajoAula`, `m07_evento_salida` |
 | R-16 | Dominio y aplicación sin framework; otros módulos sólo por puertos | `test_arquitectura`, `aplicacion/puertos.py` |
@@ -240,12 +241,12 @@ El árbol antiguo (`secciones[] → items[]`) se normaliza con la misma forma (`
 | Implementar `m06_plan` y `m06_bloque` aquí | Rechazada: es otro módulo |
 | **Puerto `PlanDeClase` + `plan_id` de texto; el plan efímero se deriva de los objetos de la lección** | **Elegida**. «MOD-006 materializa el plan o genera uno vacío» (JRN-006) |
 
-### 4.3 · Cómo representar el foco
+### 4.3 · Cómo representar el selector
 
 | Opción | Decisión |
 |---|---|
 | Columna `bloque_vigente_id` en la sesión (como el Maestro) | Rechazada sola: pierde el historial que BR-050 exige registrar |
-| **Bitácora `m07_foco` con índice parcial de un solo vigente** | **Elegida**. El resumen cuenta focos; la sesión no duplica el puntero |
+| **Bitácora `m07_selector` con índice parcial de un solo vigente** | **Elegida**. El resumen cuenta selectores; la sesión no duplica el puntero |
 
 ### 4.4 · Seguimiento y bloqueo
 
@@ -294,7 +295,7 @@ El árbol antiguo (`secciones[] → items[]`) se normaliza con la misma forma (`
    ├──n m07_participante 1──n m07_presencia            (bitácora de presencia técnica)
    │        │1
    │        └──n m07_distribucion_entrega n──1 m07_distribucion n──1 m07_sesion
-   ├──n m07_foco        (un solo vigente por sesión · ux_m07_foco_vigente)
+   ├──n m07_selector        (un solo vigente por sesión · ux_m07_selector_vigente)
    ├──n m07_control     (un abierto por tipo · ux_m07_control_abierto)
    ├──n m07_aviso       (participante nulo = grupo)
    └──1 m07_resumen     (al cerrar · se conserva cinco años)
@@ -333,7 +334,8 @@ Convenciones: PK de texto UUID (CV-02), fechas en **bigint milisegundos** del re
 | `id` | char(36) PK | **Identificador de participación** que la tableta vuelve a presentar (FUN-077) |
 | `sesion_id` | FK | |
 | `persona_id` · `persona_rotulo` | char(64) · char(120) | Igual que en el expediente |
-| `dispositivo` | char(64) | Contexto, nunca identidad (DEC-023) |
+| `dispositivo` | char(64) | La huella que declara la tableta. Contexto, nunca identidad (DEC-023) |
+| `dispositivo_id` · `dim_sesion_alumno_id` | char(36) | Referencias lógicas a `m09_dispositivo` y `m09_dim_sesion_alumno` (MOD-009, 2026-09-28): la tableta reconocida por el inventario y la sesión de alumno abierta en ella al unirse. Vacías si la tableta no declaró huella (prototipo) |
 | `sesion_usuario_id` | char(36) | `m01_sesion` (MOD-001), lógica |
 | `estado` | char(16) | `esperando` · `conectado` · `reconectando` · `salio` · `rechazado` · `expulsado` |
 | `admision_nominal` | bool | BR-047: invitado admitido por el profesor |
@@ -346,21 +348,21 @@ Invariantes: `ux_m07_part` UNIQUE(`sesion_id`, `persona_id`) · `ck_m07_part_sal
 
 `participante_id`, `estado`, `dispositivo`, `detalle` («ingreso», «readmisión», «admitido por el profesor», «suspensión: caida_nodo», «cierre de la sesión»), `momento`. De aquí se reconstruye `conectados_maximo` del resumen.
 
-### 5.4 · `m07_foco` · Foco
+### 5.4 · `m07_selector` · Selector
 
 | Columna | Nota |
 |---|---|
 | `id`, `sesion_id` | |
 | `curso_ref`, `curso_version`, `leccion_ref`, `objeto_ref`, `objeto_tipo`, `unidad_ref`, `unidad_indice`, `media_ref`, `rotulo` | Referencias validadas contra el curso vigente; `objeto_tipo = medio` cuando se proyecta un medio suelto |
-| `vigente`, `declarado_en`, `declarado_por`, `sustituido_en` | Un solo vigente: `ux_m07_foco_vigente`; `ck_m07_foco_sustitucion` (no vigente ⇒ fecha); `ck_m07_foco_referencia` (curso o medio) |
+| `vigente`, `declarado_en`, `declarado_por`, `sustituido_en` | Un solo vigente: `ux_m07_selector_vigente`; `ck_m07_selector_sustitucion` (no vigente ⇒ fecha); `ck_m07_selector_referencia` (curso o medio) |
 
 ### 5.5 · `m07_control` · Control
 
 `id`, `sesion_id`, `tipo` (`seguimiento` · `bloqueo`), `desde`, `hasta`, `motivo`, `creado_por`, `cerrado_por`. Abierto (`hasta` nulo) = activo. `ux_m07_control_abierto` UNIQUE(`sesion_id`, `tipo`) WHERE hasta IS NULL · `ck_m07_control_vigencia`. Al iniciar la sesión se abre `seguimiento` (BR-050); al cerrar se cierran todos.
 
-### 5.6 · `m07_distribucion` · Distribucion
+### 5.6 · `m07_distribucion` · Distribucion (el lanzamiento)
 
-`id`, `sesion_id`, `clase` (`recurso` · `actividad`), `curso_ref`, `leccion_ref`, `objeto_ref`, `objeto_tipo`, `media_ref`, `rotulo`, `alcance` (`grupo` · `seleccion`), `disponible_estudio` (MOD-008), `asignacion_ref` (MOD-010, hoy vacío · Q-49), `abierta_en`, `cerrada_en`, `creado_por`. `ck_m07_dist_referencia` (objeto o medio) · `ck_m07_dist_cierre_posterior`.
+`id`, `sesion_id`, `clase` (`recurso` · `actividad`), `curso_ref`, `leccion_ref`, `objeto_ref`, `objeto_tipo`, `media_ref`, `rotulo`, `alcance` (`grupo` · `seleccion`), `destinatarios` (JSON: `persona_id` de quienes lo recibieron al lanzar), `excluidos_bloqueados` (JSON: `persona_id` dejados fuera por tableta bloqueada o retirada, MOD-009), `intentos_permitidos` y `tiempo_limite_seg` (las reglas con las que se lanzó; nulos = manda el objeto), `disponible_estudio` (MOD-008), `asignacion_ref` (MOD-010, hoy vacío · Q-49), `abierta_en`, `cerrada_en`, `creado_por`. `ck_m07_dist_referencia` (objeto o medio) · `ck_m07_dist_cierre_posterior` · `ck_m07_dist_intentos` (≥ 1) · `ck_m07_dist_tiempo` (≥ 1). Es la tabla `lanzamiento` de la segunda versión del modelo de datos (2026-09-28).
 
 ### 5.7 · `m07_distribucion_entrega` · DistribucionEntrega
 
@@ -372,7 +374,7 @@ Invariantes: `ux_m07_part` UNIQUE(`sesion_id`, `persona_id`) · `ck_m07_part_sal
 
 ### 5.9 · `m07_resumen` · Resumen (1:1, cinco años)
 
-`participantes`, `conectados_maximo`, `admitidos_nominal`, `focos`, `distribuciones`, `actividades`, `avisos`, `pendientes` (intentos abiertos al cierre, por el puerto `Evaluacion`), `duracion_ms`, `origen_cierre`, `consolidado_en`.
+`participantes`, `conectados_maximo`, `admitidos_nominal`, `selectores`, `distribuciones`, `actividades`, `avisos`, `pendientes` (intentos abiertos al cierre, por el puerto `Evaluacion`), `duracion_ms`, `origen_cierre`, `consolidado_en`.
 
 ### 5.10 · `m07_evento_salida` · EventoSalida (Transactional Outbox)
 
@@ -388,7 +390,7 @@ planificada ─► abierta ─► cerrada ─► archivada  esperando ─► con
               suspendida ─► cerrada                            (admitir/readmitir: → conectado)
 ```
 
-Transiciones autorizadas en `dominio.sesion.TRANSICIONES`; cualquier otra responde `409 transicion_invalida` o `409 sesion_cerrada`. Una sesión `suspendida` conserva código, foco y participantes (que pasan a `reconectando`); no admite foco, controles, distribuciones ni avisos hasta reanudar, pero sí que las tabletas vuelvan a presentarse.
+Transiciones autorizadas en `dominio.sesion.TRANSICIONES`; cualquier otra responde `409 transicion_invalida` o `409 sesion_cerrada`. Una sesión `suspendida` conserva código, selector y participantes (que pasan a `reconectando`); no admite selector, controles, distribuciones ni avisos hasta reanudar, pero sí que las tabletas vuelvan a presentarse.
 
 Lo anterior definió cada tabla. Lo que sigue analiza ese mismo modelo desde nueve ángulos de diseño relacional, para dejar explícito el razonamiento detrás de cada decisión.
 
@@ -398,7 +400,7 @@ Lo anterior definió cada tabla. Lo que sigue analiza ese mismo modelo desde nue
 |---|---|---|
 | El hecho de la clase | `m07_sesion` | ¿Qué clase está ocurriendo, iniciada por quién, para qué grupo, a partir de qué contenido, y en qué estado del ciclo de vida? |
 | Quién está presente | `m07_participante`, `m07_presencia` | ¿Qué tabletas entraron, en qué estado técnico están ahora, y cuál es su bitácora de conexión? (presencia técnica, no asistencia académica) |
-| Qué se está mostrando | `m07_foco` | ¿Qué está proyectando el profesor en este instante, y qué se proyectó antes? |
+| Qué se está mostrando | `m07_selector` | ¿Qué está proyectando el profesor en este instante, y qué se proyectó antes? |
 | Qué restricciones rigen | `m07_control` | ¿Deben las tabletas seguir al profesor, y están las pantallas bloqueadas, desde cuándo y hasta cuándo? |
 | Qué se envió a los estudiantes | `m07_distribucion`, `m07_distribucion_entrega` | ¿Qué recurso o actividad se repartió, a quién, y quién ya confirmó recibirlo? |
 | Qué se comunicó | `m07_aviso` | ¿Qué mensaje le mandó el profesor al grupo o a un estudiante puntual? |
@@ -413,7 +415,7 @@ El hilo común es la **regla de oro** (artículo 14): estas diez tablas describe
 |---|---|---|
 | `sesion` → `participante` | 1:N | Una clase reúne a muchas tabletas; cada una es una fila, aunque se reconecte varias veces (la reconexión reutiliza la misma fila, `ux_m07_part`) |
 | `participante` → `presencia` | 1:N | Bitácora append-only: cada cambio de estado técnico (conectado, reconectando, salió…) es una fila nueva, nunca una actualización — de aquí sale `conectados_maximo` |
-| `sesion` → `foco` | 1:N (con **uno vigente**) | El foco cambia muchas veces durante la clase (BR-049) y BR-050 exige conservar el historial; «cuál es el vigente» es un índice parcial (§5.18), no la cardinalidad |
+| `sesion` → `selector` | 1:N (con **uno vigente**) | El selector cambia muchas veces durante la clase (BR-049) y BR-050 exige conservar el historial; «cuál es el vigente» es un índice parcial (§5.18), no la cardinalidad |
 | `sesion` → `control` | 1:N (a lo sumo **dos abiertos** a la vez) | Hay dos tipos de control (`seguimiento`, `bloqueo`) y cada uno se abre y cierra por separado; el historial completo queda, sólo se exige un abierto **por tipo** |
 | `sesion` → `distribucion` | 1:N | Una clase reparte varios recursos y lanza varias actividades a lo largo de la hora |
 | `distribucion` ↔ `participante` | **N:M** vía `distribucion_entrega` | Cada distribución llega a varios estudiantes y cada estudiante recibe varias distribuciones a lo largo de la clase; el cruce es la única forma de saber, por pareja, si *ese* estudiante ya confirmó *esa* entrega |
@@ -438,13 +440,13 @@ Sin esta tabla, «mostrar la barra de progreso de la distribución» (CAP-040) s
 
 ### 5.15 · PK, FK, identidad e integridad referencial
 
-**Claves.** El módulo repite el patrón de `acceso` (§3.22 de ese documento): UUID para todo lo que otro módulo, el cliente MAUI o un evento pueden necesitar señalar por separado (`sesion`, `participante`, `foco`, `control`, `distribucion`, `aviso` — los seis tienen `id` explícito); `BigAutoField` implícito donde la fila jamás se referencia por sí sola y sólo importa como parte de una bitácora o de un cruce (`presencia`, `distribucion_entrega`, `evento_salida` — ninguna declara `id`); y PK compartida en `resumen.sesion_id`, la misma técnica de partición 1:1 que `persona` en `acceso`, aquí usada para una extensión temporal (el cierre) en vez de una extensión de confidencialidad.
+**Claves.** El módulo repite el patrón de `acceso` (§3.22 de ese documento): UUID para todo lo que otro módulo, el cliente MAUI o un evento pueden necesitar señalar por separado (`sesion`, `participante`, `selector`, `control`, `distribucion`, `aviso` — los seis tienen `id` explícito); `BigAutoField` implícito donde la fila jamás se referencia por sí sola y sólo importa como parte de una bitácora o de un cruce (`presencia`, `distribucion_entrega`, `evento_salida` — ninguna declara `id`); y PK compartida en `resumen.sesion_id`, la misma técnica de partición 1:1 que `persona` en `acceso`, aquí usada para una extensión temporal (el cierre) en vez de una extensión de confidencialidad.
 
 Un caso propio del módulo: `participante.id` no es sólo una PK técnica — es, por diseño, el **identificador de participación** que la tableta guarda y vuelve a presentar al reconectar (FUN-077). Un UUID generado como clave sustituta se **promueve** a token de dominio visible por el cliente, porque el dominio necesita un identificador estable, impredecible y ya único que el aparato pueda conservar sin pedir uno nuevo cada vez.
 
-**Integridad referencial física, dentro del módulo.** Todo lo que cuelga de `m07_sesion` usa `CASCADE` (`participante`, `foco`, `control`, `distribucion`, `aviso`) y `distribucion_entrega` usa `CASCADE` hacia sus dos padres (`distribucion`, `participante`): son composición real, la sesión es la raíz del agregado (§5.17) y sus partes no tienen sentido sin ella. En la práctica esa cascada casi nunca se ejecuta — CV-05 hace que nadie borre una `m07_sesion` — pero declararla es la integridad correcta igual: una fila huérfana sería peor que una que nunca se produce.
+**Integridad referencial física, dentro del módulo.** Todo lo que cuelga de `m07_sesion` usa `CASCADE` (`participante`, `selector`, `control`, `distribucion`, `aviso`) y `distribucion_entrega` usa `CASCADE` hacia sus dos padres (`distribucion`, `participante`): son composición real, la sesión es la raíz del agregado (§5.17) y sus partes no tienen sentido sin ella. En la práctica esa cascada casi nunca se ejecuta — CV-05 hace que nadie borre una `m07_sesion` — pero declararla es la integridad correcta igual: una fila huérfana sería peor que una que nunca se produce.
 
-**Integridad referencial lógica, hacia fuera del módulo.** Aquí está la diferencia real frente a `acceso`: `grupo_id`, `profesor_id`, `persona_id`, `dispositivo`, `sesion_usuario_id` y todos los `*_ref` de curso/lección/objeto/media **no son FK** — son texto plano (CV-08). No es un descuido: es la decisión explícita de §4.6 («acopla MOD-007 a las tablas de otro módulo y rompe el modo sin padrón, Q-34»). La integridad no desaparece, **se traslada**: la valida el puerto `Identidad` contra `acceso` al escribir (`esta_inscrito`) y el puerto `FuenteDeCursos` contra la biblioteca en vivo antes de guardar un foco o una distribución (`dominio.curso.localizar`, §2.4). El mismo backend usa entonces **dos estrategias de integridad referencial a propósito**: física (con `FOREIGN KEY` reales) dentro de un módulo que posee sus datos, y de aplicación (con un puerto que valida antes de escribir) en la frontera entre módulos que no deben acoplarse por esquema. Ambas son integridad referencial; sólo cambia dónde se hace cumplir.
+**Integridad referencial lógica, hacia fuera del módulo.** Aquí está la diferencia real frente a `acceso`: `grupo_id`, `profesor_id`, `persona_id`, `dispositivo`, `sesion_usuario_id` y todos los `*_ref` de curso/lección/objeto/media **no son FK** — son texto plano (CV-08). No es un descuido: es la decisión explícita de §4.6 («acopla MOD-007 a las tablas de otro módulo y rompe el modo sin padrón, Q-34»). La integridad no desaparece, **se traslada**: la valida el puerto `Identidad` contra `acceso` al escribir (`esta_inscrito`) y el puerto `FuenteDeCursos` contra la biblioteca en vivo antes de guardar un selector o una distribución (`dominio.curso.localizar`, §2.4). El mismo backend usa entonces **dos estrategias de integridad referencial a propósito**: física (con `FOREIGN KEY` reales) dentro de un módulo que posee sus datos, y de aplicación (con un puerto que valida antes de escribir) en la frontera entre módulos que no deben acoplarse por esquema. Ambas son integridad referencial; sólo cambia dónde se hace cumplir.
 
 ### 5.16 · Por qué el modelo está en 3FN
 
@@ -453,14 +455,14 @@ Un caso propio del módulo: `participante.id` no es sólo una PK técnica — es
 **3FN**, con el mismo cuidado en los casos que a primera vista parecen copias:
 
 - `curso_rotulo`, `leccion_rotulo`, `objeto_rotulo`, `grupo_rotulo`, `profesor_rotulo` **parecen** redundantes (copian un título que también existe en la biblioteca o en `acceso`) pero no son una dependencia transitiva porque **no se actualizan nunca** tras la escritura inicial (§1: «los rótulos no deciden nada»): son una fotografía histórica, no un valor que deba mantenerse sincronizado. La prueba de que no violan 3FN es que **pueden divergir** legítimamente del valor actual en la fuente — si un curso cambia de título mañana, la clase de hoy sigue mostrando el título con el que se dio, a propósito. Es el mismo patrón que una factura que conserva el nombre del producto tal como se llamaba el día de la venta.
-- `m07_foco` y `m07_distribucion` repiten `curso_ref`/`curso_version` aunque `m07_sesion` ya los tiene: no es redundancia, es un hecho propio de cada evento — qué versión del curso estaba vigente en **ese** instante de proyección o de reparto, que en principio podría no coincidir con la versión con la que arrancó la sesión.
-- No existe un contador `sesion.participantes_actual` ni `sesion.foco_actual_id`: ambos se calculan (`COUNT`, índice parcial `ux_m07_foco_vigente`) en vez de mantenerse como columna cacheada — el mismo criterio que evitó `usuario.credencial_activa_id` en `acceso`.
+- `m07_selector` y `m07_distribucion` repiten `curso_ref`/`curso_version` aunque `m07_sesion` ya los tiene: no es redundancia, es un hecho propio de cada evento — qué versión del curso estaba vigente en **ese** instante de proyección o de reparto, que en principio podría no coincidir con la versión con la que arrancó la sesión.
+- No existe un contador `sesion.participantes_actual` ni `sesion.selector_actual_id`: ambos se calculan (`COUNT`, índice parcial `ux_m07_selector_vigente`) en vez de mantenerse como columna cacheada — el mismo criterio que evitó `usuario.credencial_activa_id` en `acceso`.
 
 ### 5.17 · Tablas transitivas y forma del modelo
 
 **Tabla transitiva** (de tránsito obligado): `m07_distribucion_entrega` es la única — `distribucion` y `participante` sólo se conectan a través de ella (§5.14).
 
-**Forma del modelo.** De los dos módulos analizados, `classroom_engine` es el que más se acerca, visualmente, a una **estrella**: `m07_sesion` es un centro único del que cuelgan directamente cinco tablas satélite (`participante`, `foco`, `control`, `distribucion`, `aviso`), sin que esas cinco dependan entre sí (salvo `distribucion_entrega`, que conecta dos de ellas). No hay cadena de dependencias-de-dependencias como la de `acceso` (`miembro_grupo → grupo → politica_credencial → organizacion`): aquí casi todo está a un salto de la sesión. Dicho eso, **sigue sin ser un esquema en estrella en el sentido de un almacén de datos**: estas tablas se escriben continuamente mientras la clase ocurre (no se cargan una vez por ETL), llevan sus propias reglas de integridad (`CHECK`, índices parciales) y no están desnormalizadas para lectura agregada. Lo interesante es que **`m07_resumen` es, literalmente, la fila de hechos que un modelo en estrella real querría**: llega pre-agregada (conteos, duración, origen de cierre) exactamente en el grano «una fila por sesión de clase», calculada una sola vez al cerrar y nunca más tocada. Si algún módulo de reportes necesita un data mart de actividad de aula, `m07_resumen` es casi directamente su tabla de hechos; el resto de `m07_*` sería la fuente para construir dimensiones (`dim_sesion`, `dim_participante`) o hechos de grano más fino (uno por foco, uno por distribución).
+**Forma del modelo.** De los dos módulos analizados, `classroom_engine` es el que más se acerca, visualmente, a una **estrella**: `m07_sesion` es un centro único del que cuelgan directamente cinco tablas satélite (`participante`, `selector`, `control`, `distribucion`, `aviso`), sin que esas cinco dependan entre sí (salvo `distribucion_entrega`, que conecta dos de ellas). No hay cadena de dependencias-de-dependencias como la de `acceso` (`miembro_grupo → grupo → politica_credencial → organizacion`): aquí casi todo está a un salto de la sesión. Dicho eso, **sigue sin ser un esquema en estrella en el sentido de un almacén de datos**: estas tablas se escriben continuamente mientras la clase ocurre (no se cargan una vez por ETL), llevan sus propias reglas de integridad (`CHECK`, índices parciales) y no están desnormalizadas para lectura agregada. Lo interesante es que **`m07_resumen` es, literalmente, la fila de hechos que un modelo en estrella real querría**: llega pre-agregada (conteos, duración, origen de cierre) exactamente en el grano «una fila por sesión de clase», calculada una sola vez al cerrar y nunca más tocada. Si algún módulo de reportes necesita un data mart de actividad de aula, `m07_resumen` es casi directamente su tabla de hechos; el resto de `m07_*` sería la fuente para construir dimensiones (`dim_sesion`, `dim_participante`) o hechos de grano más fino (uno por selector, uno por distribución).
 
 ### 5.18 · Qué consulta justifica cada índice
 
@@ -473,15 +475,15 @@ Un caso propio del módulo: `participante.id` no es sólo una PK técnica — es
 | `ux_m07_part` (única, `sesion, persona_id`) | «¿Esta persona ya es participante?» al unirse o reconectar, sin duplicar la fila (FUN-077) |
 | `ix_m07_part_estado` (`sesion, estado`) | El conteo en vivo (conectados/esperando/reconectando) que pide **cada sondeo de 2 segundos** de cada tableta y del panel del profesor — probablemente el índice de mayor tráfico de todo el backend |
 | `ix_m07_presencia` (`participante, momento`) | Reconstruir `conectados_maximo` y la línea de tiempo de conexión de un participante al cerrar la sesión (`m07_resumen`) |
-| `ux_m07_foco_vigente` (única, `sesion` con `vigente=True`) | «¿Qué se está mostrando ahora?» — otra consulta de sondeo de 2 s, en cada tableta conectada |
-| `ix_m07_foco` (`sesion, declarado_en`) | Historial de foco para el panel docente («qué vimos, en orden») |
-| `ux_m07_control_abierto` (única, `sesion, tipo` con `hasta IS NULL`) | «¿Está el bloqueo o el seguimiento activo ahora?» — se sondea junto con el foco |
+| `ux_m07_selector_vigente` (única, `sesion` con `vigente=True`) | «¿Qué se está mostrando ahora?» — otra consulta de sondeo de 2 s, en cada tableta conectada |
+| `ix_m07_selector` (`sesion, declarado_en`) | Historial de selector para el panel docente («qué vimos, en orden») |
+| `ux_m07_control_abierto` (única, `sesion, tipo` con `hasta IS NULL`) | «¿Está el bloqueo o el seguimiento activo ahora?» — se sondea junto con el selector |
 | `ix_m07_dist_abiertas` (`sesion, cerrada_en`) | Qué distribuciones siguen abiertas — el aviso `409 actividades_abiertas` de `CerrarSesion` (FUN-079) depende de esta consulta |
 | `ux_m07_entrega` (única, `distribucion, participante`) | «¿Ya confirmó este estudiante esta distribución?» — la barra de progreso de CAP-040 se agrupa sobre este índice |
 | `ix_m07_aviso` (`sesion, enviado_en`) | El parámetro `avisos_desde` de `estado/`: «avisos nuevos desde la última vez que pregunté» |
 | `ix_m07_outbox` (`publicado_en, creado_en`) | El mismo patrón de relevo de outbox que en `acceso` |
 
-La observación que vale la pena resaltar: al menos tres de estos índices (`ix_m07_part_estado`, `ux_m07_foco_vigente`, `ux_m07_control_abierto`) se ejecutan una vez cada dos segundos por cada tableta conectada (§9.6) — son, con diferencia, los índices más exigidos de los dos módulos analizados, y están diseñados exactamente para esa carga: lecturas puntuales por sesión, resueltas por un índice parcial o compuesto, nunca un recorrido completo de la tabla.
+La observación que vale la pena resaltar: al menos tres de estos índices (`ix_m07_part_estado`, `ux_m07_selector_vigente`, `ux_m07_control_abierto`) se ejecutan una vez cada dos segundos por cada tableta conectada (§9.6) — son, con diferencia, los índices más exigidos de los dos módulos analizados, y están diseñados exactamente para esa carga: lecturas puntuales por sesión, resueltas por un índice parcial o compuesto, nunca un recorrido completo de la tabla.
 
 ### 5.19 · Linaje de datos: de dónde viene cada dato y cuál es la fuente de verdad
 
@@ -518,7 +520,7 @@ Los dieciséis de la sección L del Maestro, en `m07_evento_salida` con `agregad
 | `aula.dispositivo.expulsado.v1` | FUN-078 | `participante_id`, `persona_id` |
 | `aula.dispositivos.bloqueados.v1` | FUN-074 | `bloqueados` (true al bloquear, false al liberar) |
 | `aula.presencia.registrada.v1` | FUN-073 | `participante_id`, `estado` |
-| `aula.recurso.proyectado.v1` | FUN-069 / foco inicial | `curso_ref`, `curso_version`, `leccion_ref`, `objeto_ref`, `objeto_tipo`, `unidad_ref`, `unidad_indice`, `media_ref`, `rotulo`, `inicial` |
+| `aula.recurso.proyectado.v1` | FUN-069 / selector inicial | `curso_ref`, `curso_version`, `leccion_ref`, `objeto_ref`, `objeto_tipo`, `unidad_ref`, `unidad_indice`, `media_ref`, `rotulo`, `inicial` |
 | `aula.actividad.lanzada.v1` | FUN-070 | `distribucion_id`, `curso_ref`, `objeto_ref`, `asignacion_ref`, `destinatarios` |
 | `aula.actividad.cerrada.v1` | FUN-071 / cierre forzado | `distribucion_id`, `asignacion_ref`, `por_cierre_de_sesion` |
 | `aula.resultados.mostrados.v1` | FUN-072 | `distribucion_id` |
@@ -526,7 +528,7 @@ Los dieciséis de la sección L del Maestro, en `m07_evento_salida` con `agregad
 | `aula.sesion.reanudada.v1` | FUN-076 | `causa`, `instante_corte`, `instante_reanudacion`, `dispositivos_por_recuperar`, `codigo_union` |
 | `aula.sesion.finalizada.v1` | FUN-079 | `instante_fin`, `origen_cierre`, `actividades_cerradas`, `dispositivos_liberados`, `presencia_consolidada`, `pendientes` |
 
-Además, asientos en `m19_auditoria` con acciones `aula.*` (sesión iniciada, suspendida, reanudada, finalizada, archivada; participante ingreso/admitido/rechazado/expulsado; foco declarado; control cambiado; distribución creada/cerrada; resultados; código rotado).
+Además, asientos en `m19_auditoria` con acciones `aula.*` (sesión iniciada, suspendida, reanudada, finalizada, archivada; participante ingreso/admitido/rechazado/expulsado; selector declarado; control cambiado; distribución creada/cerrada; resultados; código rotado).
 
 ---
 
@@ -670,7 +672,7 @@ Una pregunta de completar, tal como la ve el estudiante (sin `acceptedAnswers`, 
 | Medios de **marcador** para el ejemplo (PNG, WAV, PDF de 3 páginas, HTML de simulación, VTT, texto) con `Range` y `HEAD` | Se pueden probar `Image`, `MediaElement`, el visor PDF y la `WebView` sin la biblioteca. El video se responde `404` explicativo: un MP4 no se fabrica |
 | `rol` (`estudiante` por defecto) y barrido de claves para todos | La tableta del alumno recibe exactamente lo que puede ver; el panel del docente recibe además las notas |
 | `exam` marcado `fuera_de_alcance` con `modulo` | El componente pinta la estructura completa y deja el examen a MOD-010 |
-| Rutas de lección y objeto sueltos | La tableta que sigue la clase baja sólo lo que el foco señala |
+| Rutas de lección y objeto sueltos | La tableta que sigue la clase baja sólo lo que el selector señala |
 | Alias `ejemplo` y resolución automática de la fuente | El desarrollador de MAUI no necesita el `id` largo ni el parámetro para empezar |
 | `resumen` con conteos y `objetos_por_tipo` | Cabecera y pruebas de la pantalla sin recorrer el árbol |
 
@@ -693,21 +695,21 @@ Toda respuesta de marcador lleva `X-Avacom-Marcador: ejemplo` y `X-Avacom-Rotulo
 |---|---|---|---|
 | `/api/aula/sesiones/` | GET | Listar (y archivar las cerradas hace > 24 h) | `?estado=abierta,suspendida&grupo=&profesor=` → `{sesiones[], archivadas_ahora, servidor_en}` |
 | `/api/aula/sesiones/` | POST | **FUN-064** Iniciar | `{via, grupo_id?, curso_ref?, leccion_ref?, objeto_ref?, nodo_ref?, fuente?, plan_id?, superficie?, profesor_id, profesor_rotulo?}` → `201` detalle docente |
-| `/api/aula/sesiones/{id}/` | GET | PAN-001 / PAN-022 | Detalle docente: sesión + `foco` + `seguimiento` + `pantallas_bloqueadas` + `controles` + `participantes` + `conteo` + `distribuciones` + `avisos` + `resumen` |
-| `/api/aula/sesiones/unirse/` | POST | **FUN-067 / FUN-077** | `{codigo_union, persona_id, persona_rotulo?, dispositivo?, participante_id?, sesion_usuario_id?}` → `201` (nuevo) / `200` (readmisión) estado para la tableta + `nuevo`, `en_espera` |
+| `/api/aula/sesiones/{id}/` | GET | PAN-001 / PAN-022 | Detalle docente: sesión + `selector` + `seguimiento` + `pantallas_bloqueadas` + `controles` + `participantes` + `conteo` + `distribuciones` + `avisos` + `resumen` |
+| `/api/aula/sesiones/unirse/` | POST | **FUN-067 / FUN-077** | `{codigo_union, persona_id, persona_rotulo?, dispositivo?, plataforma?, version_app?, participante_id?, sesion_usuario_id?}` → `201` (nuevo) / `200` (readmisión) estado para la tableta + `nuevo`, `en_espera`. Con `dispositivo`, MOD-009 reconoce (o registra) la tableta y abre su sesión de alumno; `403 dispositivo_bloqueado` / `dispositivo_inactivo` si no puede entrar |
 | `…/{id}/participantes/{pid}/admitir/` · `rechazar/` · `expulsar/` | POST | **FUN-067 / 068 / 078** | `{motivo?}` → participante |
 | `…/{id}/participantes/{pid}/presencia/` | POST | **FUN-073** | `{estado: conectado|reconectando|salio, dispositivo?, avisos_desde?}` → estado para la tableta |
 | `…/{id}/estado/?participante=&avisos_desde=` | GET | Sondeo de la tableta | Estado para la tableta (`intervalo_sondeo_ms: 2000`) |
-| `…/{id}/foco/` | POST | **FUN-069 · BR-049** | `{objeto_ref, unidad_ref?, leccion_ref?}` o `{media_ref, rotulo}` → `201` foco vigente |
+| `…/{id}/selector/` | POST | **FUN-069 · BR-049** | `{objeto_ref, unidad_ref?, leccion_ref?}` o `{media_ref, rotulo}` → `201` selector vigente |
 | `…/{id}/controles/` | POST | **FUN-074 · BR-050** | `{tipo: bloqueo|seguimiento, activo, motivo?}` → `{cambio, seguimiento, pantallas_bloqueadas, controles}` |
-| `…/{id}/distribuciones/` | POST | **FUN-070 · CAP-040** | `{clase: recurso|actividad, objeto_ref?|media_ref?, alcance?, participantes[]?, disponible_estudio?}` → `201` distribución con `entregas` |
+| `…/{id}/distribuciones/` | POST | **FUN-070 · CAP-040** | `{clase: recurso|actividad, objeto_ref?|media_ref?, alcance?, participantes[]?, intentos_permitidos?, tiempo_limite_seg?, disponible_estudio?}` → `201` distribución con `entregas`, `destinatarios` y `excluidos_bloqueados`; `409 sin_participantes_admitidos` (con `excluidos_bloqueados`) si no queda ninguna tableta que pueda recibirla |
 | `…/{id}/distribuciones/{did}/confirmar/` | POST | Confirmación de la tableta | `{participante_id, estado?: entregado|fallido}` |
 | `…/{id}/distribuciones/{did}/cerrar/` | POST | **FUN-071** | → distribución cerrada |
 | `…/{id}/distribuciones/{did}/resultados/` | POST | **FUN-072** | → `{distribucion, mostrado_en}` (los datos agregados son de MOD-010/011) |
 | `…/{id}/avisos/` | POST | **FUN-075** | `{texto, participante_id?}` → `201` aviso |
 | `…/{id}/codigo/rotar/` | POST | **FUN-066** | → `{codigo_union, rotado_en}` |
 | `…/{id}/suspender/` | POST | Caída del nodo / manual | `{causa: caida_nodo|corte_electrico|reinicio|manual}` → detalle |
-| `…/{id}/reanudar/` | POST | **FUN-076 · BR-051** | → detalle (mismo código, foco y participantes) |
+| `…/{id}/reanudar/` | POST | **FUN-076 · BR-051** | → detalle (mismo código, selector y participantes) |
 | `…/{id}/cerrar/` | POST | **FUN-079 · BR-052** | `{origen?, forzar?}` → detalle con `resumen`; `409 actividades_abiertas` si hay actividades abiertas y no se fuerza (MSG-016) |
 
 Iniciar desde una lección (respuesta abreviada):
@@ -718,7 +720,7 @@ Iniciar desde una lección (respuesta abreviada):
   "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter", "curso_version": "1.0.0",
   "curso_rotulo": "Estados de la materia y sus cambios", "leccion_ref": "l1-three-states", "leccion_rotulo": "Los tres estados de la materia",
   "profesor_id": "prof-1", "profesor_rotulo": "Prof. Gómez", "superficie": "pantalla", "iniciada_en": 1789683790346,
-  "foco": { "objeto_ref": "l1-lecture", "objeto_tipo": "lecture", "unidad_ref": "", "rotulo": "Todo lo que nos rodea es materia", "vigente": true },
+  "selector": { "objeto_ref": "l1-lecture", "objeto_tipo": "lecture", "unidad_ref": "", "rotulo": "Todo lo que nos rodea es materia", "vigente": true },
   "seguimiento": true, "pantallas_bloqueadas": false,
   "conteo": {"total": 0, "conectados": 0, "reconectando": 0, "esperando": 0, "salieron": 0},
   "participantes": [], "distribuciones": [], "avisos": [], "resumen": null, "servidor_en": 1789683790382 }
@@ -733,7 +735,7 @@ Lo que recibe la tableta al unirse y en cada sondeo (`estado/`): **sin código d
   "activa": true,
   "participante": { "id": "ae63f13b-…", "persona_id": "ana-perez", "persona_rotulo": "Ana Pérez", "dispositivo": "student-tab-07",
                     "estado": "conectado", "admision_nominal": false, "ingreso": 1789683790399, "ultimo_latido_en": 1789683790399 },
-  "foco": { "objeto_ref": "l1-lecture", "objeto_tipo": "lecture", "unidad_ref": "l1-lecture-s2", "unidad_indice": 2,
+  "selector": { "objeto_ref": "l1-lecture", "objeto_tipo": "lecture", "unidad_ref": "l1-lecture-s2", "unidad_indice": 2,
             "rotulo": "Tres estados, tres formas de ordenarse", "declarado_en": 1789683790422 },
   "seguimiento": true, "pantallas_bloqueadas": true,
   "pendientes": [ { "id": "2f2b93ef-…", "clase": "actividad", "objeto_ref": "l1-activity", "objeto_tipo": "activity",
@@ -745,13 +747,13 @@ Lo que recibe la tableta al unirse y en cada sondeo (`estado/`): **sin código d
 El resumen al cerrar:
 
 ```json
-{ "participantes": 1, "conectados_maximo": 1, "admitidos_nominal": 0, "focos": 2, "distribuciones": 1, "actividades": 1,
+{ "participantes": 1, "conectados_maximo": 1, "admitidos_nominal": 0, "selectores": 2, "distribuciones": 1, "actividades": 1,
   "avisos": 1, "pendientes": 0, "duracion_ms": 164, "origen_cierre": "profesor", "consolidado_en": 1789683790510 }
 ```
 
 ### 9.6 · Tiempo real
 
-Hoy la tableta **sondea** `GET …/estado/` cada `intervalo_sondeo_ms` (2 s), lo que cumple BR-049 (≤ 3 s) en un aula de 50 dispositivos con un backend en el mismo equipo. El paso siguiente es el canal de Django Channels ya previsto en [07 · Comunicación](../07-comunicacion-ops-student.md) §4.8: `ws://<IP>:8000/ws/aula/{sesion_id}/?participante=` que difunde, tal cual, los eventos de `m07_evento_salida` (foco, controles, distribuciones, avisos, cierre). El contrato de los eventos no cambia: es el de §6 (Q-51).
+Hoy la tableta **sondea** `GET …/estado/` cada `intervalo_sondeo_ms` (2 s), lo que cumple BR-049 (≤ 3 s) en un aula de 50 dispositivos con un backend en el mismo equipo. El paso siguiente es el canal de Django Channels ya previsto en [07 · Comunicación](../07-comunicacion-ops-student.md) §4.8: `ws://<IP>:8000/ws/aula/{sesion_id}/?participante=` que difunde, tal cual, los eventos de `m07_evento_salida` (selector, controles, distribuciones, avisos, cierre). El contrato de los eventos no cambia: es el de §6 (Q-51).
 
 ### 9.7 · Degradación
 
@@ -763,7 +765,7 @@ Hoy la tableta **sondea** `GET …/estado/` cada `intervalo_sondeo_ms` (2 s), lo
 | Iniciar o proyectar con la fuente caída | `503` (FUN-064/069 exigen que el recurso esté disponible) | No |
 | Video del ejemplo | `404` explicativo con `sugerencia` | No |
 | Código de una sesión cerrada | `404 codigo_invalido` (BR-052) | No |
-| Sesión suspendida | Unirse sí (`reconectando`); foco, controles, distribuciones y avisos `409` hasta reanudar | Sólo presencia |
+| Sesión suspendida | Unirse sí (`reconectando`); selector, controles, distribuciones y avisos `409` hasta reanudar | Sólo presencia |
 | «No se pudo comprobar» | Nunca se marca ausente nada: la sesión se abre igual por vía `libre` | — |
 
 ---
@@ -776,7 +778,7 @@ Hoy la tableta **sondea** `GET …/estado/` cada `intervalo_sondeo_ms` (2 s), lo
 | FUN-065 · FUN-066 · CMP-012 | `codigo_union`, `ux_m07_codigo` | `POST codigo/rotar/` | `test_rotar_el_codigo` |
 | CAP-038 · FUN-067/068/077/078 · BR-047/048 | `m07_participante`, `m07_presencia`, `ux_m07_part` | `unirse/`, `admitir/`, `rechazar/`, `expulsar/` | `ParticipantesTests`, `ConPadronTests` |
 | FUN-073 | `m07_presencia`, `ultimo_latido_en` | `presencia/`, `estado/` | `test_presencia_declarada_y_estado_para_la_tableta` |
-| CAP-039 · FUN-069 · BR-049 | `m07_foco`, `ux_m07_foco_vigente` | `POST foco/` | `test_declarar_el_foco_lo_ve_la_tableta` |
+| CAP-039 · FUN-069 · BR-049 | `m07_selector`, `ux_m07_selector_vigente` | `POST selector/` | `test_declarar_el_selector_lo_ve_la_tableta` |
 | CAP-042 · FUN-074 · BR-050 | `m07_control`, `ux_m07_control_abierto` | `POST controles/` | `test_bloquear_pantallas_y_liberar_el_seguimiento` |
 | CAP-040 · FUN-070/071/072 | `m07_distribucion`, `m07_distribucion_entrega` | `distribuciones/…` | `test_lanzar_una_actividad_confirmar_y_cerrar` |
 | FUN-075 | `m07_aviso` | `POST avisos/` | `test_avisos_al_grupo_y_a_una_tableta` |
@@ -797,7 +799,7 @@ Hoy la tableta **sondea** `GET …/estado/` cada `intervalo_sondeo_ms` (2 s), lo
 | `classroom_engine.tests.test_arquitectura` (3) | Sin frameworks en dominio/aplicación; vistas sin ORM; esquema sólo `m07_*` sin contenido ni claves |
 | `classroom_engine.tests.test_curso` (30) | Endpoint de prueba, clasificación, componentes, láminas/tramos, lectura (audio/pdf), laboratorio (WebView, parámetros), seis preguntas sin claves, examen fuera de alcance, notas del docente por rol, lista por asignatura, lección/objeto sueltos, resolución automática de la fuente, fuente desconocida, sin `link.json` («sin contenido», `fuente/`), la fuente de ejemplo no califica pero valida la forma, marcadores (PNG/WAV/PDF/HTML/VTT/texto, `Range`, `HEAD`), video 404; normalizador (tramos, agrupación, `sin_claves`, `localizar`, árbol del contrato 1); **la misma vista servida por la API de Contenido v2** (host de pruebas: `mode`/`profile`, opciones barajadas por `id`, lista, `?version=`, 401 con un solo reintento, códigos de error, estado de la fuente, medios en paso a través, evaluar por tipo con crédito parcial decimal, abierta pendiente, lote) |
 | `classroom_engine.tests.test_respuestas` (5) | La forma de `response` por tipo de pregunta (17 casos inválidos), tipo desconocido reenviado, `score`/`correct` nulos y decimales, corrección manual sin nota |
-| `classroom_engine.tests.test_sesiones` (21) | Iniciar por las cuatro vías, BR-045, DEC-035, vías mal formadas, unirse y readmitir, código equivocado, presencia, expulsar/readmitir, foco, controles, distribuciones, avisos, rotar código, suspender/reanudar, cerrar con resumen y BR-052, archivo a 24 h, padrón de MOD-001 (inscrito entra, invitado espera, 403 al estudiante) |
+| `classroom_engine.tests.test_sesiones` (21) | Iniciar por las cuatro vías, BR-045, DEC-035, vías mal formadas, unirse y readmitir, código equivocado, presencia, expulsar/readmitir, selector, controles, distribuciones, avisos, rotar código, suspender/reanudar, cerrar con resumen y BR-052, archivo a 24 h, padrón de MOD-001 (inscrito entra, invitado espera, 403 al estudiante) |
 
 Ejecutar: `cd backend; .venv\Scripts\python manage.py test classroom_engine` (o toda la suite sin argumento).
 

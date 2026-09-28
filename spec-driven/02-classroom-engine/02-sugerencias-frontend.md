@@ -19,7 +19,7 @@ Qué construir, en orden:
 1. **`IAulaApi` / `AulaApi` en Core**: el cliente HTTP de `/api/aula/` con los DTO de §3. Misma degradación que `BibliotecaDeContenido`: un `503` no es excepción, es un motivo que se muestra.
 2. **`AulaContenidoView` en Ui**: un control compartido que recibe un `ObjetoAula` y lo pinta según `componente` (presentación, lectura, laboratorio web, actividad). Dentro, un `DataTemplateSelector` por bloque y otro por pregunta (§4).
 3. **OPS · «Dar clase»**: desde el curso abierto (`CursoBibliotecaPage`), iniciar la sesión y operar la clase: código en grande, lista de conectados, proyectar, bloquear, lanzar, avisar, cerrar (§5.1).
-4. **Student · «Entrar a la clase»**: teclado numérico de seis dígitos, seguir el foco, pantalla bloqueada, actividades pendientes, salir (§5.2).
+4. **Student · «Entrar a la clase»**: teclado numérico de seis dígitos, seguir el selector, pantalla bloqueada, actividades pendientes, salir (§5.2).
 
 Qué **no** construir: tablas locales del curso, análisis de `.pptx`, lógica de corrección, cálculo de notas, ni una segunda copia de lo que ya hace `CourseContentView` para el modo libre.
 
@@ -65,7 +65,7 @@ Qué **no** construir: tablas locales del curso, análisis de `.pptx`, lógica d
 | PAN-020 · PAN-021 (grupo y vía) | S2 | `DashboardPage` («Clase de hoy») → `DarClasePage` (OPS) | `GET /api/aula/cursos/` · `POST /api/aula/sesiones/` |
 | PAN-001 · PAN-022 (sesión activa, espejo de control) | S1/S2 | `SesionDocentePage` (OPS): columna izquierda estructura + control, derecha proyección | `GET /api/aula/sesiones/{id}/` cada 3 s |
 | PAN-002 (código en grande) | S1 | Bloque superior de `SesionDocentePage`, tipografía ≥ 96 pt, contraste rojo/blanco | `codigo_union`, `conteo` |
-| PAN-003 (proyección de recurso) | S1 | `AulaContenidoView` en modo docente + `ControlDeAvance` (anterior · N de M · siguiente) | `foco`, `POST foco/` |
+| PAN-003 (proyección de recurso) | S1 | `AulaContenidoView` en modo docente + `ControlDeAvance` (anterior · N de M · siguiente) | `selector`, `POST selector/` |
 | PAN-004 (actividad en vivo, vista del grupo) | S1 | `ActividadEnVivoView`: entregas confirmadas / pendientes, sin nombres cuando el tipo lo exige | `distribuciones[].entregas` |
 | PAN-050 (lanzar actividad) · PAN-055 (distribuir) | S2 | Hoja modal `LanzarActividadSheet`: objeto, alcance, «disponible en modo estudio» | `POST distribuciones/` |
 | PAN-008 (cierre, resumen) | S1 | `ResumenCierreView` | `POST cerrar/` → `resumen`; `409 actividades_abiertas` → MSG-016 |
@@ -90,8 +90,8 @@ Qué **no** construir: tablas locales del curso, análisis de `.pptx`, lógica d
 | RF-A08 | El PDF abre en `desde_pagina` (`url_pagina_inicial`) y muestra «páginas N–M» | Windows: página 1 de 3 |
 | RF-A09 | El docente inicia la clase **sin escribir nada**: grupo, curso y lección se eligen tocando; el código lo genera el backend | Recorrido en OPS sin teclado |
 | RF-A10 | Student guarda `participante_id` y `sesion_id` en `Preferences` y, al reabrir la app o volver la red, se readmite con `participante_id` sin pedir el código | Cerrar y abrir Student durante la clase |
-| RF-A11 | Student sondea `estado/` cada `intervalo_sondeo_ms`; un cambio de `foco` se pinta antes de 3 s; con `seguimiento: true` no hay navegación libre; con `pantallas_bloqueadas: true` se muestra la pantalla de bloqueo por encima de todo | CA-A04..CA-A06 |
-| RF-A12 | El reloj de la tableta no decide nada: la antigüedad de un aviso o de un foco se calcula con `servidor_en` | Cambiar la hora del dispositivo no altera nada visible |
+| RF-A11 | Student sondea `estado/` cada `intervalo_sondeo_ms`; un cambio de `selector` se pinta antes de 3 s; con `seguimiento: true` no hay navegación libre; con `pantallas_bloqueadas: true` se muestra la pantalla de bloqueo por encima de todo | CA-A04..CA-A06 |
+| RF-A12 | El reloj de la tableta no decide nada: la antigüedad de un aviso o de un selector se calcula con `servidor_en` | Cambiar la hora del dispositivo no altera nada visible |
 | RF-A13 | Sin backend: «No hay conexión con el aula» + reintentar; con `503`: motivo + `sugerencia`; con `409 sesion_activa_existente`: ofrecer «Continuar esa clase» (`sesion_id`) o «Cerrarla» | Escenarios de §8 |
 | RF-A14 | El examen (`fuera_de_alcance`) se muestra en la estructura, atenuado, con «Lo aplica el módulo de evaluación»; no se puede proyectar ni lanzar | Toque sobre el examen |
 | RF-A15 | Los avisos se muestran como CMP-005 (no bloqueante), nunca como modal que interrumpa la actividad | |
@@ -104,11 +104,11 @@ Qué **no** construir: tablas locales del curso, análisis de `.pptx`, lógica d
 | CA-A01 | Con el backend en `127.0.0.1:8000` y sin biblioteca, `AulaContenidoView` pinta las tres lecciones del ejemplo: 2 presentaciones, 1 lectura, 2 laboratorios, 2 actividades y 1 examen atenuado |
 | CA-A02 | La lámina 2 muestra la imagen de marcador (PNG rojo/gris), el pie y la lista con negritas |
 | CA-A03 | El laboratorio «Curva de calentamiento» abre en la `WebView` con partículas moviéndose y el texto «Temperatura inicial: -10 °C» (leyó `startTemp`) |
-| CA-A04 | OPS declara el foco en la lámina 3 → dos tabletas cambian a la lámina 3 en menos de 3 s |
-| CA-A05 | OPS bloquea → las tabletas muestran la pantalla de bloqueo; OPS libera → vuelven al foco sin recargar |
+| CA-A04 | OPS declara el selector en la lámina 3 → dos tabletas cambian a la lámina 3 en menos de 3 s |
+| CA-A05 | OPS bloquea → las tabletas muestran la pantalla de bloqueo; OPS libera → vuelven al selector sin recargar |
 | CA-A06 | OPS lanza «Practica: los tres estados» → cada tableta muestra la tarjeta pendiente, la abre, responde con el flujo de intentos y confirma la entrega; OPS ve «2 de 2 entregadas» |
 | CA-A07 | OPS cierra con la actividad abierta → diálogo MSG-016; confirma → resumen con 2 participantes |
-| CA-A08 | Cerrar y reabrir Student durante la clase no pide el código y conserva el foco |
+| CA-A08 | Cerrar y reabrir Student durante la clase no pide el código y conserva el selector |
 | CA-A09 | Apagar el backend con la clase abierta: OPS muestra «sin señal» en la lista de conectados y Student «Reconectando con el aula» (MSG-002); al volver, ambos se recuperan sin reiniciar |
 | CA-A10 | En la tableta Android, imagen, audio, PDF y laboratorio cargan por `http://<IP>:8000/…` (`usesCleartextTraffic`) |
 
@@ -244,7 +244,7 @@ public sealed record VistaCurso(
     [property: JsonPropertyName("lecciones")] IReadOnlyList<LeccionAula> Lecciones, [property: JsonPropertyName("notas_docente")] NotasDocente? NotasDocente);
 ```
 
-Sesión (mismo estilo, abreviado): `SesionDeClase` (`Id`, `Estado`, `Activa`, `CodigoUnion`, `CursoRef`, `CursoRotulo`, `LeccionRef`, `Foco`, `Seguimiento`, `PantallasBloqueadas`, `Conteo`, `Participantes`, `Distribuciones`, `Avisos`, `Resumen`, `ServidorEn`), `FocoAula` (`ObjetoRef`, `ObjetoTipo`, `UnidadRef`, `UnidadIndice`, `MediaRef`, `Rotulo`, `DeclaradoEn`), `ParticipanteAula` (`Id`, `PersonaId`, `PersonaRotulo`, `Dispositivo`, `Estado`, `AdmisionNominal`, `UltimoLatidoEn`), `DistribucionAula` (`Id`, `Clase`, `ObjetoRef`, `ObjetoTipo`, `Rotulo`, `Abierta`, `Entregas{Total, Entregadas, Pendientes}`, `Entrega` para la tableta), `AvisoAula`, `EstadoTableta` (`Sesion`, `Activa`, `Participante`, `Foco`, `Seguimiento`, `PantallasBloqueadas`, `Pendientes`, `Avisos`, `ServidorEn`, `IntervaloSondeoMs`), `ResumenSesion`.
+Sesión (mismo estilo, abreviado): `SesionDeClase` (`Id`, `Estado`, `Activa`, `CodigoUnion`, `CursoRef`, `CursoRotulo`, `LeccionRef`, `Selector`, `Seguimiento`, `PantallasBloqueadas`, `Conteo`, `Participantes`, `Distribuciones`, `Avisos`, `Resumen`, `ServidorEn`), `SelectorAula` (`ObjetoRef`, `ObjetoTipo`, `UnidadRef`, `UnidadIndice`, `MediaRef`, `Rotulo`, `DeclaradoEn`), `ParticipanteAula` (`Id`, `PersonaId`, `PersonaRotulo`, `Dispositivo`, `Estado`, `AdmisionNominal`, `UltimoLatidoEn`), `DistribucionAula` (`Id`, `Clase`, `ObjetoRef`, `ObjetoTipo`, `Rotulo`, `Abierta`, `Entregas{Total, Entregadas, Pendientes}`, `Entrega` para la tableta), `AvisoAula`, `EstadoTableta` (`Sesion`, `Activa`, `Participante`, `Selector`, `Seguimiento`, `PantallasBloqueadas`, `Pendientes`, `Avisos`, `ServidorEn`, `IntervaloSondeoMs`), `ResumenSesion`.
 
 `IAulaApi` (Core):
 
@@ -260,7 +260,7 @@ public interface IAulaApi
     // docente
     Task<SesionDeClase?> IniciarAsync(IniciarSesionSolicitud s, CancellationToken ct = default);   // 409 → UltimoMotivo + SesionExistenteId
     Task<SesionDeClase?> SesionAsync(string sesionId, CancellationToken ct = default);
-    Task<FocoAula?> ProyectarAsync(string sesionId, string objetoRef, string? unidadRef, CancellationToken ct = default);
+    Task<SelectorAula?> ProyectarAsync(string sesionId, string objetoRef, string? unidadRef, CancellationToken ct = default);
     Task<bool> ControlAsync(string sesionId, string tipo, bool activo, CancellationToken ct = default);
     Task<DistribucionAula?> DistribuirAsync(string sesionId, DistribuirSolicitud s, CancellationToken ct = default);
     Task<DistribucionAula?> CerrarDistribucionAsync(string sesionId, string distribucionId, CancellationToken ct = default);
@@ -286,7 +286,7 @@ Regla de degradación (copiada de `BibliotecaDeContenido`): `503`, `501` y error
 
 | `componente` | Control propuesto (Ui) | Comportamiento |
 |---|---|---|
-| `presentacion` | `PresentacionView`: `Grid` con la lámina actual (bloques en `VerticalStackLayout`) + barra inferior «Lámina N de M» + título | Docente: botones grandes anterior/siguiente que llaman `ProyectarAsync(objeto, unidad)`; el temporizador usa `duracion_seg` como referencia, sin alarma (CMP-003). Estudiante en seguimiento: sin botones; pinta `foco.unidad_ref`. `CarouselView` sólo en modo libre |
+| `presentacion` | `PresentacionView`: `Grid` con la lámina actual (bloques en `VerticalStackLayout`) + barra inferior «Lámina N de M» + título | Docente: botones grandes anterior/siguiente que llaman `ProyectarAsync(objeto, unidad)`; el temporizador usa `duracion_seg` como referencia, sin alarma (CMP-003). Estudiante en seguimiento: sin botones; pinta `selector.unidad_ref`. `CarouselView` sólo en modo libre |
 | `lectura` | `LecturaView`: `ScrollView` de páginas con pestañas o «Página N de M» | Igual que la presentación pero con desplazamiento vertical y audio/pdf embebidos |
 | `laboratorio_web` | `LaboratorioView`: cabecera (objetivo, instrucciones con tramos, pasos como lista numerada, preguntas guía plegables) + `WebView` a `Absoluta(url_lanzamiento)` | Reglas de §4.3. En OPS el laboratorio ocupa la proyección completa; en Student, si `SirveEnTableta` es falso, se sustituye por la tarjeta «Se ve en la pantalla del aula» |
 | `actividad` | `ActividadView`: instrucciones + `ajustes` (intentos, retroalimentación) + lista de preguntas con `PreguntaTemplateSelector` | La respuesta viaja por el flujo de intentos existente (`IniciarIntentoAsync`, `ResponderAsync`, `FinalizarIntentoAsync`) con `evaluacion_ref = objeto_ref` cuando MOD-010 lo soporte (Q-48). Hasta entonces, el modo «vista previa» pinta las preguntas sin enviar |
@@ -317,7 +317,7 @@ Es importante aclarar que para algunos componentes se llegue a requerir WebView 
 | **`orientacion: landscape`** | Android: `MainActivity.RequestedOrientation = ScreenOrientation.Landscape` mientras la vista está activa; al salir, `Unspecified`. Windows: nada |
 | **`destinos`** | `screen` y `tablet` según la app. Si falta `tablet`, Student no carga la `WebView` (ahorra memoria y evita simulaciones de ratón en pantallas de 8") |
 | **Licencia** | Si `licencia.tipo` es `cc-by-4.0`, mostrar `licencia.atribucion` en el pie (obligación de la licencia PhET) |
-| **Memoria** | Una sola `WebView` viva por página; al cambiar de foco, `Source = about:blank` antes de la nueva URL (evita la carrera descrita en `CourseContentView.LimpiarVisor`) |
+| **Memoria** | Una sola `WebView` viva por página; al cambiar de selector, `Source = about:blank` antes de la nueva URL (evita la carrera descrita en `CourseContentView.LimpiarVisor`) |
 | **Android texto claro** | `usesCleartextTraffic="true"` en el manifiesto (RF-L05 de [07](../07-comunicacion-ops-student.md)) |
 | **Sin internet** | La `WebView` no muestra páginas de error de red: si `Navigated` trae `Result != Success`, tarjeta «Este material no se pudo abrir» + reintentar |
 
@@ -336,8 +336,8 @@ Nada del cliente decide si la respuesta es correcta: el veredicto llega de `Resp
 
 ### 4.5 · Presentaciones (láminas)
 
-- Docente (OPS): la lámina ocupa la proyección; abajo, «N de M», anterior/siguiente, y un panel lateral plegable con `notas_docente.tips` de la lámina y del objeto. Cada avance llama `ProyectarAsync(objeto_ref, unidad_ref)`; el foco vuelve confirmado en la siguiente lectura de `SesionAsync`.
-- Estudiante (Student): pinta `foco.unidad_ref` con `seguimiento: true`; cuando el docente libera el seguimiento aparecen anterior/siguiente locales.
+- Docente (OPS): la lámina ocupa la proyección; abajo, «N de M», anterior/siguiente, y un panel lateral plegable con `notas_docente.tips` de la lámina y del objeto. Cada avance llama `ProyectarAsync(objeto_ref, unidad_ref)`; el selector vuelve confirmado en la siguiente lectura de `SesionAsync`.
+- Estudiante (Student): pinta `selector.unidad_ref` con `seguimiento: true`; cuando el docente libera el seguimiento aparecen anterior/siguiente locales.
 - Duración: `duracion_seg` se muestra como referencia («~7 min») sin cuenta regresiva ni alarma (CMP-003).
 
 ### 4.6 · Texto con tramos
@@ -360,7 +360,7 @@ static FormattedString Formateado(IReadOnlyList<Tramo>? tramos, string? plano) =
    - `409 sesion_activa_existente` → diálogo «Ya tienes una clase abierta» con «Continuar» (`SesionAsync(sesion_id)`) o «Cerrarla y empezar otra» (`CerrarAsync` y reintentar).
    - `503` → «AVACOM Biblioteca está cerrada» + `sugerencia`; ofrecer «Clase libre» igual.
 3. `SesionDocentePage` (PAN-001): código en grande y `conteo.conectados` que sube; la lista de participantes con CMP-013 (Esperando · Conectado · Reconectando · Salió) y acciones admitir/rechazar/expulsar. Refresco de `SesionAsync` cada 3 s hasta el WebSocket.
-4. Proyectar: la estructura de la lección a la izquierda; tocar un objeto o una lámina → `ProyectarAsync`. `AulaContenidoView` en modo docente pinta el foco.
+4. Proyectar: la estructura de la lección a la izquierda; tocar un objeto o una lámina → `ProyectarAsync`. `AulaContenidoView` en modo docente pinta el selector.
 5. Controles: dos interruptores grandes, «Seguimiento» (BR-050) y «Bloquear pantallas» (CAP-042) → `ControlAsync`.
 6. Lanzar: desde una actividad, «Lanzar al grupo» → `DistribuirAsync(clase: actividad)`; `PAN-004` con `entregas.entregadas / total`; «Cerrar recepción» → `CerrarDistribucionAsync`. `409 sin_participantes_admitidos` → «Todavía no hay tabletas conectadas».
 7. Avisar: hoja con frases prehechas tocables («Miren al frente», «Dos minutos», «Guarden lo que llevan») porque **no hay teclado** en el nodo; texto libre sólo en Student o desde el navegador.
@@ -375,7 +375,7 @@ static FormattedString Formateado(IReadOnlyList<Tramo>? tramos, string? plano) =
    - `404 codigo_invalido` → MSG-022 adaptado: «Ese código no es. Pídele a tu profesor que lo muestre».
    - `403 participante_expulsado` → «Habla con tu profesor para volver a entrar».
 3. `SesionEstudiantePage` (PAN-102): `EstadoAsync` cada `intervalo_sondeo_ms`.
-   - `foco` cambió → cargar el objeto (`GET …/objetos/{objeto_ref}/`, con la `fuente_curso` de la sesión) y pintar `unidad_ref`.
+   - `selector` cambió → cargar el objeto (`GET …/objetos/{objeto_ref}/`, con la `fuente_curso` de la sesión) y pintar `unidad_ref`.
    - `seguimiento: true` → sin navegación propia; `false` → aparecen anterior/siguiente.
    - `pantallas_bloqueadas: true` → `BloqueoView` a pantalla completa: «Mira al frente», sin cuenta regresiva.
    - `pendientes` con `entrega: pendiente` → tarjeta «Actividad: {rotulo}»; al abrirla, `ConfirmarEntregaAsync` y el flujo de intentos.
@@ -407,7 +407,7 @@ Avacom.Lms.Ui
 
 Avacom.Lms.Ops
   Pages/DarClasePage.xaml(.cs)        asignatura → curso → lección → vía → POST sesiones/
-  Pages/SesionDocentePage.xaml(.cs)   PAN-001/022: código, participantes, foco, controles, distribuciones, avisos, cierre
+  Pages/SesionDocentePage.xaml(.cs)   PAN-001/022: código, participantes, selector, controles, distribuciones, avisos, cierre
   ViewModels/SesionDocenteViewModel.cs
 
 Avacom.Lms.Student
@@ -416,7 +416,7 @@ Avacom.Lms.Student
   ViewModels/SesionEstudianteViewModel.cs
 ```
 
-ViewModels con `ObservableObject` (CommunityToolkit.Mvvm, ya disponible con MAUI) y comandos asíncronos; las páginas sólo enlazan. `AulaContenidoView` no conoce HTTP: recibe `ObjetoAula`, `FocoAula?` y `Func<string, Uri> absoluta`.
+ViewModels con `ObservableObject` (CommunityToolkit.Mvvm, ya disponible con MAUI) y comandos asíncronos; las páginas sólo enlazan. `AulaContenidoView` no conoce HTTP: recibe `ObjetoAula`, `SelectorAula?` y `Func<string, Uri> absoluta`.
 
 ---
 
@@ -431,7 +431,7 @@ ViewModels con `ObservableObject` (CommunityToolkit.Mvvm, ya disponible con MAUI
 | T-A05 | Video y audio (MediaElement o `HtmlReproductor`) con recorte y transcripción | `Ui/Controls/…` | RF-A07 con `fuente=biblioteca` (el ejemplo no trae video) |
 | T-A06 | PDF por rango (Windows embebido, Android `Launcher`) | `Ui/Controls/…` | RF-A08 |
 | T-A07 | `DarClasePage` con asignaturas → curso → lección → vía | `Ops/Pages/DarClasePage.xaml(.cs)` | RF-A09 sin teclado |
-| T-A08 | `SesionDocentePage`: código, participantes, foco, controles, distribuciones, avisos, cierre | `Ops/Pages/SesionDocentePage.xaml(.cs)`, `ViewModels/` | CA-A04..CA-A07 |
+| T-A08 | `SesionDocentePage`: código, participantes, selector, controles, distribuciones, avisos, cierre | `Ops/Pages/SesionDocentePage.xaml(.cs)`, `ViewModels/` | CA-A04..CA-A07 |
 | T-A09 | `UnirseClasePage` con teclado numérico | `Student/Pages/UnirseClasePage.xaml(.cs)` | US-A7 |
 | T-A10 | `SesionEstudiantePage` con sondeo, seguimiento, bloqueo, pendientes, avisos | `Student/Pages/SesionEstudiantePage.xaml(.cs)`, `ViewModels/` | CA-A04..CA-A06, CA-A08 |
 | T-A11 | Persistir `participante_id`/`sesion_id` y readmisión | `Student/Sesion.cs` | CA-A08 |
@@ -448,7 +448,7 @@ Orden sugerido: T-A01/T-A02 en paralelo → T-A03 (el componente, sobre `pruebas
 | Situación | OPS | Student |
 |---|---|---|
 | Backend apagado | Lista de conectados con «sin señal»; botones de clase deshabilitados; reintento automático | MSG-002 «Reconectando con el aula»; última pantalla intacta |
-| Biblioteca cerrada (`503`) al iniciar o proyectar | Tarjeta con motivo y `sugerencia`; «Clase libre» sigue disponible | El foco que ya tenía se conserva; los medios que no carguen muestran tarjeta «no se pudo abrir» |
+| Biblioteca cerrada (`503`) al iniciar o proyectar | Tarjeta con motivo y `sugerencia`; «Clase libre» sigue disponible | El selector que ya tenía se conserva; los medios que no carguen muestran tarjeta «no se pudo abrir» |
 | `409 sesion_activa_existente` | Continuar / Cerrar y empezar | — |
 | `409 sesion_cerrada` | «La clase ya terminó» | «La clase terminó» → menú |
 | Sesión suspendida | Banner «Clase suspendida con el mismo código» (MSG-026) y botón «Reanudar» | PAN-007 · MSG-003 |
