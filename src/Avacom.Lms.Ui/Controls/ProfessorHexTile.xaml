@@ -8,9 +8,10 @@
     WidthRequest="146"
     ZIndex="1">
     <Grid x:Name="TileRoot" SemanticProperties.Description="{Binding Text, Source={x:Reference Root}}">
-        <!-- Capas de sombra con la misma geometría: evitan el rectángulo que genera
+        <!-- Capas de sombra del material blanco con la misma geometría: evitan el rectángulo que genera
              VisualElement.Shadow en WinUI y conservan la silueta del hexágono. -->
         <Path
+            x:Name="Sombra3"
             Aspect="Fill"
             Data="M 67,7 Q 80,0 93,7 L 147,39 Q 160,47 160,61 L 160,123 Q 160,137 147,145 L 93,177 Q 80,184 67,177 L 13,145 Q 0,137 0,123 L 0,61 Q 0,47 13,39 Z"
             Fill="#08000000"
@@ -18,6 +19,7 @@
             Scale="0.98"
             TranslationY="10" />
         <Path
+            x:Name="Sombra2"
             Aspect="Fill"
             Data="M 67,7 Q 80,0 93,7 L 147,39 Q 160,47 160,61 L 160,123 Q 160,137 147,145 L 93,177 Q 80,184 67,177 L 13,145 Q 0,137 0,123 L 0,61 Q 0,47 13,39 Z"
             Fill="#0C000000"
@@ -25,6 +27,7 @@
             Scale="0.985"
             TranslationY="7" />
         <Path
+            x:Name="Sombra1"
             Aspect="Fill"
             Data="M 67,7 Q 80,0 93,7 L 147,39 Q 160,47 160,61 L 160,123 Q 160,137 147,145 L 93,177 Q 80,184 67,177 L 13,145 Q 0,137 0,123 L 0,61 Q 0,47 13,39 Z"
             Fill="#12000000"
@@ -32,9 +35,14 @@
             Scale="0.99"
             TranslationY="4" />
         <Path
+            x:Name="Cuerpo"
             Aspect="Fill"
             Data="M 67,7 Q 80,0 93,7 L 147,39 Q 160,47 160,61 L 160,123 Q 160,137 147,145 L 93,177 Q 80,184 67,177 L 13,145 Q 0,137 0,123 L 0,61 Q 0,47 13,39 Z"
             Fill="White" />
+        <!-- Material Liquid Glass (Glass="True"): el mismo hexágono pintado en un lienzo propio (HexGlassDrawable) con
+             resplandor del acento, degradado, reflejo y canto. El margen negativo da sitio al resplandor. En Windows un
+             Path con relleno degradado falla al dibujarse (D2DERR_BAD_NUMBER), por eso no se usa Path aquí. -->
+        <GraphicsView x:Name="Vidrio" BackgroundColor="Transparent" InputTransparent="True" IsVisible="False" Margin="-24" />
         <VerticalStackLayout
             HorizontalOptions="Center"
             Spacing="9"
@@ -46,6 +54,7 @@
                 HeightRequest="32"
                 WidthRequest="32" />
             <Label
+                x:Name="Etiqueta"
                 FontAttributes="Bold"
                 FontFamily="InterMedium"
                 FontSize="13"

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="Avacom.Lms.Ui.Controls.CourseGlassCard"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:Avacom.Lms.Ui.Controls">
+    <!-- Tarjeta de curso en Liquid Glass (nivel 3): [bloque de icono del color de la materia] [título · descripción ·
+         metadatos] [Ver lecciones ›]. Toda la tarjeta es tocable (se hunde y dispara Abrir); el botón hace lo mismo.
+         El bloque de icono se construye en el code-behind porque su degradado y su halo dependen de AccentColor. -->
+    <controls:LiquidGlassPanel x:Name="Lamina" CornerRadius="22" TintOpacity="0.14" BlurRadius="10" ContentPadding="22,20" SheenHeight="90">
+        <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="20">
+            <Grid x:Name="BloqueHost" VerticalOptions="Center" />
+            <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                <Label FontFamily="InterSemiBold" FontSize="21" LineBreakMode="WordWrap" Text="{Binding Titulo, Source={x:Reference Root}}" TextColor="White">
+                    <Label.Shadow><Shadow Brush="#3B1E5E" Opacity="0.28" Offset="0,2" Radius="10" /></Label.Shadow>
+                </Label>
+                <Label x:Name="SubtituloLabel" FontFamily="InterRegular" FontSize="15" IsVisible="False" LineBreakMode="WordWrap" Text="{Binding Subtitulo, Source={x:Reference Root}}" TextColor="#D9FFFFFF" />
+                <Label FontFamily="InterMedium" FontSize="13.5" LineBreakMode="WordWrap" Text="{Binding Detalle, Source={x:Reference Root}}" TextColor="#B3FFFFFF" />
+            </VerticalStackLayout>
+            <controls:GlassButton x:Name="VerBtn" Grid.Column="2" Clicked="OnVerClicked" HeightRequest="64" Text="Ver lecciones  ›" VerticalOptions="Center" WidthRequest="220" />
+        </Grid>
+    </controls:LiquidGlassPanel>
+</ContentView>

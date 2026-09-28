@@ -28,6 +28,9 @@ public partial class GlassBorder : Border
     public static readonly BindableProperty SaturationProperty =
         BindableProperty.Create(nameof(Saturation), typeof(double), typeof(GlassBorder), 1.15, propertyChanged: AlCambiarMaterial);
 
+    public static readonly BindableProperty BackdropProperty =
+        BindableProperty.Create(nameof(Backdrop), typeof(bool), typeof(GlassBorder), true, propertyChanged: AlCambiarMaterial);
+
     static GlassBorder() => RegistrarPlataforma();
 
     public GlassBorder() => ActualizarRespaldo();
@@ -46,6 +49,13 @@ public partial class GlassBorder : Border
 
     /// <summary>Saturación del fondo desenfocado (1 = tal cual). Algo más de 1 devuelve el tono que la sombra y el tinte apagan.</summary>
     public double Saturation { get => (double)GetValue(SaturationProperty); set => SetValue(SaturationProperty, value); }
+
+    /// <summary>
+    /// Si en Windows se usa el pincel de composición que muestrea lo de detrás (verdadero por defecto). Apagado, la
+    /// tarjeta es el tinte plano translúcido: vale para láminas dentro de un <c>ScrollView</c> que conviven con lienzos
+    /// Win2D (formas, GraphicsView), con los que el pincel de fondo no se lleva bien, y como reserva para equipos flojos.
+    /// </summary>
+    public bool Backdrop { get => (bool)GetValue(BackdropProperty); set => SetValue(BackdropProperty, value); }
 
     /// <summary>El tinte con su opacidad aplicada: fondo plano donde no hay desenfoque y color de reserva en Windows.</summary>
     internal Color Tinte => (TintColor ?? Colors.White).WithAlpha((float)Math.Clamp(TintOpacity, 0, 1));

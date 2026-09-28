@@ -56,10 +56,15 @@
 
 ### P1 · `ClaseHoyPage` · Materias de hoy
 
-- **Barra superior** (glass chrome): «← Menú» quiet, título «Clase de hoy» con subtítulo «N materias asignadas», chip de fuente («Curso de ejemplo · Biblioteca pendiente» en ámbar, «Biblioteca conectada» en verde, «Sin conexión con el aula» en rojo).
-- **Cuerpo**: pregunta «¿Qué vas a dar hoy?», un `ProfessorHexTile` por asignatura (color *Live class*), y por asignatura una sección con su píldora y una **tarjeta por curso** (icono de categoría 64 px, título, subtítulo, «Básica secundaria · Sexto · 3 lecciones · 180 min», botón Secondary «Ver lecciones ›»). Toda la tarjeta es tocable.
-- Si este equipo dejó una clase abierta o suspendida (`Sesion.ClaseAbiertaId`), aparece arriba una tarjeta violeta «Continuar la clase» (el único Primary de la pantalla) con código y conectados.
-- Sin backend o con `503`: alerta con `detail` + `sugerencia` y botón «Reintentar». Sin materias: estado vacío del kit.
+Desde 2026-09-28 viste el lenguaje **Liquid Glass** (`Avacom.Lms.Ui/Design/Glass.cs`): fondo lavanda con el panal de hexágonos redondeados (`RoundedHexagonBackgroundDrawable`) detrás de todo y, encima, cuatro niveles de vidrio (panal → menú → tarjetas y avisos → botones, chips y hexágonos). No hay barra horizontal superior.
+
+- **Menú vertical fijo** a la izquierda (`VerticalNavigation` dentro de una `LiquidGlassPanel`, 250 px; 224 en anchos intermedios; raíl de iconos por debajo de 1100 px, nunca barra horizontal). Sólo cuatro opciones, apiladas **desde abajo** porque el tablero táctil es gigante: «Menú principal» (activa, pegada al borde inferior; vuelve al tablero), «Lección» (la clase abierta si la hay; si no, baja a la lista de cursos), línea translúcida, «Configuración» (representada en el prototipo) y «Cerrar sesión» (`//login`). Sin perfil, avatar ni progreso.
+- **Chip de la fuente** (`SourceStatusChip`) arriba a la derecha del contenido, tocable como antes: alterna Biblioteca ↔ curso de ejemplo y conserva sus cinco estados («Comprobando…», «Biblioteca conectada» verde, «Curso de ejemplo» ámbar, «Biblioteca apagada» ámbar, «Sin conexión con el aula» rojo).
+- **Hero** sobre el fondo, sin tarjeta: «¡Hola!», «¿Qué vas a dar hoy?» (44/SemiBold, blanco), la descripción y «N materias asignadas»; a la derecha, un libro abierto de cristal con tres hexágonos flotantes (`GlassBookView`, sólo decorativo).
+- **Cuerpo**: un `ProfessorHexTile` con `Glass="True"` por asignatura (acento por materia: ciencias rosa, comunicación azul, matemáticas ámbar, sociales violeta; `Glass.AcentoMateria`), que al tocarse desplaza a su sección; por asignatura, una píldora del acento con «N cursos» y una **`CourseGlassCard` por curso** (bloque de icono del acento, título, subtítulo, metadatos completos y botón de vidrio «Ver lecciones ›»). Toda la tarjeta sigue siendo tocable.
+- Si este equipo dejó una clase abierta o suspendida (`Sesion.ClaseAbiertaId`), aparece antes de los hexágonos una lámina violeta intensa «Continuar la clase» (el único Primary de la pantalla) con código y conectados.
+- Sin backend o con `503`: alerta de vidrio semántico (`Glass.Alerta`, ámbar o rojo) con `detail` + `sugerencia`, «Reintentar» y, si la biblioteca está apagada, «Usar el curso de ejemplo» (Primary sólo si no hay clase que continuar). Sin materias: `Glass.EstadoVacio`.
+- Lección aprendida en Windows: un `Path` cuya geometría trae un arco diminuto (radio ≈ 1) produce un NaN al convertirse a bézier y Direct2D aborta el dibujado (`D2DERR_BAD_NUMBER`); el primer fallo deja inutilizados **todos** los lienzos Win2D de la ventana (iconos del tablero incluidos). Las geometrías de los iconos se simplifican a mano y los cuerpos con degradado se pintan en `GraphicsView` propios (`HexGlassDrawable`), nunca con `Path` + pincel degradado.
 
 ### P2 · `ClaseCursoPage` · Curso y lecciones
 

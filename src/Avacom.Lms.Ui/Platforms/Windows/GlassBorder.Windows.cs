@@ -19,7 +19,8 @@ public partial class GlassBorder
 
     private static void AplicarVidrio(IBorderHandler handler, IBorderView view)
     {
-        if (view is not GlassBorder vidrio || handler.PlatformView is not ContentPanel panel) return;
+        // Sin Backdrop se deja el relleno plano que acaba de pintar el mapeo base (el tinte translúcido).
+        if (view is not GlassBorder { Backdrop: true } vidrio || handler.PlatformView is not ContentPanel panel) return;
         var contorno = panel.Children.OfType<Microsoft.UI.Xaml.Shapes.Path>().FirstOrDefault();
         if (contorno is null) return;
         panel.Background = null;

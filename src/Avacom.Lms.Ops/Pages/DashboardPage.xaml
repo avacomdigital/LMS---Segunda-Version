@@ -4,10 +4,22 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui"
     BackgroundColor="#F1F1F1"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
     <Grid RowDefinitions="86,*">
+        <!-- Fondo decorativo (capa más baja, bajo cabecera, menú y dock): retícula de hexágonos grandes con las
+             puntas redondeadas, en un solo GraphicsView que se adapta solo al tamaño de la ventana y la orientación.
+             Se declara primero y sin ZIndex para quedar debajo de todo lo existente; InputTransparent: es 100 %
+             decorativa y nunca captura toques, clics ni gestos. La tinta translúcida (negro al 10 %) da sobre el
+             #F1F1F1 de la página el mismo contraste que el gris #E6E6E6 de la referencia sobre blanco. -->
+        <GraphicsView Grid.RowSpan="2" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <GraphicsView.Drawable>
+                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#1A000000" StrokeWidth="1.25" />
+            </GraphicsView.Drawable>
+        </GraphicsView>
+
         <Grid Padding="44,0" ColumnDefinitions="*,Auto" ZIndex="3">
             <HorizontalStackLayout Spacing="16" VerticalOptions="Center">
                 <!-- El logotipo ya incluye el símbolo y la palabra «AVACOM»; sólo se
