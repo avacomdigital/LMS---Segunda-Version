@@ -52,8 +52,26 @@ public sealed class AulaContenidoView : ContentView
     /// <summary>Convierte una ruta relativa del backend (`/api/aula/…`) en URL absoluta.</summary>
     public Func<string, Uri>? Absoluta { get; set; }
 
-    /// <summary>Docente o estudiante con navegación libre: se muestran anterior/siguiente.</summary>
-    public bool PuedeNavegar { get; set; }
+    private bool _puedeNavegar;
+    private IReadOnlyList<UnidadAula>? _unidadesEnPantalla;
+    private int _indiceEnPantalla;
+
+    /// <summary>
+    /// Docente o estudiante con navegación libre: se muestran anterior/siguiente. Cambiarlo repinta los mandos
+    /// de la unidad en pantalla al instante: liberar o activar el seguimiento no puede esperar al siguiente
+    /// cambio de selector del profesor (visto en la prueba del 2026-09-28, 07 · Contrato de lanzamiento).
+    /// </summary>
+    public bool PuedeNavegar
+    {
+        get => _puedeNavegar;
+        set
+        {
+            if (_puedeNavegar == value) return;
+            _puedeNavegar = value;
+            if (_unidadesEnPantalla is not null) PintarMandos(_unidadesEnPantalla, _indiceEnPantalla);
+            else _mandos.IsVisible = false;
+        }
+    }
 
     /// <summary>Tamaño base del texto: 18 en tableta, 24 en la pantalla del aula.</summary>
     public double Escala { get; set; } = 1.0;
@@ -68,6 +86,7 @@ public sealed class AulaContenidoView : ContentView
     {
         Objeto = null;
         UnidadRef = null;
+        _unidadesEnPantalla = null;
         LimpiarWeb();
         var pila = new VerticalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, Padding = 32 };
         pila.Add(new Label { Text = "⬡", FontSize = 54, TextColor = Ds.Rojo, HorizontalTextAlignment = TextAlignment.Center });
@@ -83,6 +102,7 @@ public sealed class AulaContenidoView : ContentView
     public void Mostrar(ObjetoAula objeto, string? unidadRef)
     {
         Objeto = objeto;
+        _unidadesEnPantalla = null;
         LimpiarWeb();
         switch (objeto.Componente)
         {
@@ -131,6 +151,8 @@ public sealed class AulaContenidoView : ContentView
         var indice = Math.Max(0, unidades.ToList().FindIndex(u => u.UnidadRef == unidadRef));
         var unidad = unidades[indice];
         UnidadRef = unidad.UnidadRef;
+        _unidadesEnPantalla = unidades;
+        _indiceEnPantalla = indice;
 
         var pila = new VerticalStackLayout { Spacing = 18 * Escala, Padding = new Thickness(28 * Escala, 24 * Escala) };
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };

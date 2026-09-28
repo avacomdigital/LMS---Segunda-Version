@@ -143,16 +143,26 @@ public partial class ClaseSiguiendoPage : ContentPage
 
     // -------------------------------------------------------------- pendientes
 
+    private string? _firmaPendientes;
+
     private void PintarPendientes(EstadoTableta estado)
     {
-        PendientesHost.Clear();
         // Lo que el profesor lanzó y sigue abierto: actividades (se responden) y recursos (se abren y se recorren).
         var pendientes = (estado.Pendientes ?? []).Where(p => p.Clase is "actividad" or "recurso").ToList();
-        if (pendientes.Count == 0)
+        if (pendientes.Count == 0 && _mostrandoPendiente)
         {
-            if (_mostrandoPendiente) { _mostrandoPendiente = false; _selectorPintado = null; }
-            return;
+            // Lo que estaba abierto se retiró: se vuelve a lo que el profesor proyecta.
+            _mostrandoPendiente = false;
+            _selectorPintado = null;
+            Visor.PuedeNavegar = !estado.Seguimiento;
         }
+        // Las tarjetas sólo se reconstruyen cuando cambia algo (ids, entrega, si hay una abierta): rehacerlas en
+        // cada sondeo de 2 s parpadea y deja a la accesibilidad sin el botón entre una y otra.
+        var firma = string.Join("|", pendientes.Select(p => $"{p.Id}:{p.Entrega}:{p.Rotulo}")) + $"#{_mostrandoPendiente}";
+        if (firma == _firmaPendientes) return;
+        _firmaPendientes = firma;
+        PendientesHost.Clear();
+        if (pendientes.Count == 0) return;
         foreach (var d in pendientes)
         {
             var esActividad = d.Clase == "actividad";
@@ -183,8 +193,10 @@ public partial class ClaseSiguiendoPage : ContentPage
     {
         if (_mostrandoPendiente)
         {
+            // «Volver a la clase»: se vuelve a lo proyectado y, con seguimiento activo, sin mandos.
             _mostrandoPendiente = false;
             _selectorPintado = null;
+            Visor.PuedeNavegar = !(_estado?.Seguimiento ?? true);
             if (_estado is not null) { await PintarSelectorAsync(_estado); PintarPendientes(_estado); }
             return;
         }

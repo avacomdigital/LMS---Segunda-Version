@@ -47,6 +47,8 @@ public partial class ClaseUnirsePage : ContentPage
     {
         base.OnAppearing();
         NombreLabel.Text = Sesion.Nombre;
+        // Al volver a esta pantalla (la clase terminó, el alumno salió) el código anterior ya no sirve: casillas limpias.
+        Tecla("Borrar");
         await ReadmitirSiHaceFaltaAsync();
     }
 

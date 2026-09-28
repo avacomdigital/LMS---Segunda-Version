@@ -97,3 +97,6 @@ installer/build/PruebaAsistente.exe
 /specs/presentaciones/
 # Analisis de diseño en curso con el CTO (modelo de datos, diagramas, HTML)
 /specs/analisis/
+
+# Arnés de UI Automation de Student: capturas, textos y pid de cada corrida
+tests/Avacom.Lms.Student.Uia/salida/
