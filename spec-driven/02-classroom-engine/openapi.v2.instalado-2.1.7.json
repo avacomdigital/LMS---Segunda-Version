@@ -1,0 +1,2394 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AVACOM Content API",
+    "version": "2.0.0",
+    "description": "Loopback API of the AVACOM Content app for the LMS. Discover the port and token in link.json (%ProgramData%\\AVACOM\\content\\link.json). Every request needs the X-Avacom-Token header. Course content follows contracts/course.schema.json. Media are served by a second loopback server through media sessions."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:{apiPort}",
+      "variables": {
+        "apiPort": {
+          "default": "0",
+          "description": "apiPort from link.json"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "token": []
+    }
+  ],
+  "paths": {
+    "/v2/health": {
+      "get": {
+        "summary": "Service status",
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error. Codes: unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/openapi.json": {
+      "get": {
+        "summary": "This document",
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/tree": {
+      "get": {
+        "summary": "Content tree country > level > grade > subject > topic with course counts",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "ISO 3166-1 alpha-2, e.g. CO",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "description": "Level code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grade",
+            "in": "query",
+            "required": false,
+            "description": "Grade code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "required": false,
+            "description": "Subject code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "description": "Topic code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "simple, class, exam, review, free_learning. Repeat or comma-separate for OR.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "objectType",
+            "in": "query",
+            "required": false,
+            "description": "lecture, explanation, simulation_lab, activity, exam",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "questionType",
+            "in": "query",
+            "required": false,
+            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering, drag_drop",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "mediaKind",
+            "in": "query",
+            "required": false,
+            "description": "image, video, audio, pdf, simulation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "simProvider",
+            "in": "query",
+            "required": false,
+            "description": "phet, avacom, third_party",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "curriculumFramework",
+            "in": "query",
+            "required": false,
+            "description": "e.g. DBA",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "curriculumCode",
+            "in": "query",
+            "required": false,
+            "description": "Exact code or prefix",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "description": "BCP 47 tag, e.g. es-CO",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minDurationMin",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "maxDurationMin",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "description": "student (default) or teacher. Teacher enables teacher notes in search.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/curriculum": {
+      "get": {
+        "summary": "Curriculum catalog (read only): every node the installed courses declare, as one tree.",
+        "description": "The catalog is the sum of what is installed, so it grows and shrinks with the packages. A node whose parent is not installed comes out at the root. Courses hidden by school policy do not contribute.",
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CurriculumCatalogNode"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/curriculum/{nodeId}/content": {
+      "get": {
+        "summary": "Content anchored to a curriculum node: what teaches it and what assesses it.",
+        "description": "Turns a node into the list of pieces a teacher can put in a plan. The node brings its lineage always, and its branch when descendants=true.",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "description": "Node id, as GET /v2/curriculum serves it.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "descendants",
+            "in": "query",
+            "required": false,
+            "description": "true also returns what is anchored to the nodes below this one.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CurriculumAnchor"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/courses": {
+      "get": {
+        "summary": "List installed courses",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "ISO 3166-1 alpha-2, e.g. CO",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "description": "Level code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grade",
+            "in": "query",
+            "required": false,
+            "description": "Grade code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "required": false,
+            "description": "Subject code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "description": "Topic code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "simple, class, exam, review, free_learning. Repeat or comma-separate for OR.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "objectType",
+            "in": "query",
+            "required": false,
+            "description": "lecture, explanation, simulation_lab, activity, exam",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "questionType",
+            "in": "query",
+            "required": false,
+            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering, drag_drop",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "mediaKind",
+            "in": "query",
+            "required": false,
+            "description": "image, video, audio, pdf, simulation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "simProvider",
+            "in": "query",
+            "required": false,
+            "description": "phet, avacom, third_party",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "curriculumFramework",
+            "in": "query",
+            "required": false,
+            "description": "e.g. DBA",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "curriculumCode",
+            "in": "query",
+            "required": false,
+            "description": "Exact code or prefix",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "description": "BCP 47 tag, e.g. es-CO",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minDurationMin",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "maxDurationMin",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "description": "student (default) or teacher. Teacher enables teacher notes in search.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Full text, accent insensitive, prefix from 3 letters",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "relevance",
+                "title",
+                "updated"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoursePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error. Codes: invalid_parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error. Codes: index_rebuilding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/search": {
+      "get": {
+        "summary": "Search courses, lessons, objects and questions",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "course",
+                "lesson",
+                "object",
+                "question"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "description": "ISO 3166-1 alpha-2, e.g. CO",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "description": "Level code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grade",
+            "in": "query",
+            "required": false,
+            "description": "Grade code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "required": false,
+            "description": "Subject code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "description": "Topic code",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "simple, class, exam, review, free_learning. Repeat or comma-separate for OR.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "objectType",
+            "in": "query",
+            "required": false,
+            "description": "lecture, explanation, simulation_lab, activity, exam",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "questionType",
+            "in": "query",
+            "required": false,
+            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering, drag_drop",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "mediaKind",
+            "in": "query",
+            "required": false,
+            "description": "image, video, audio, pdf, simulation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "simProvider",
+            "in": "query",
+            "required": false,
+            "description": "phet, avacom, third_party",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": true
+          },
+          {
+            "name": "curriculumFramework",
+            "in": "query",
+            "required": false,
+            "description": "e.g. DBA",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "curriculumCode",
+            "in": "query",
+            "required": false,
+            "description": "Exact code or prefix",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "description": "BCP 47 tag, e.g. es-CO",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minDurationMin",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "maxDurationMin",
+            "in": "query",
+            "required": false,
+            "description": "",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "description": "student (default) or teacher. Teacher enables teacher notes in search.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error. Codes: invalid_parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/courses/{courseId}": {
+      "get": {
+        "summary": "Course metadata, lesson outline with object summaries and media list",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "description": "student (default) removes teacher notes",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher"
+              ]
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "Keeps only objects that declare this mode",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "simple",
+                "class",
+                "exam",
+                "review",
+                "free_learning"
+              ]
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseOutline"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. Codes: policy_disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: course_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/courses/{courseId}/lessons/{lessonId}": {
+      "get": {
+        "summary": "Full lesson, filtered by mode and redacted by profile",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lessonId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "description": "student (default) removes teacher notes",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher"
+              ]
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "description": "Keeps only objects that declare this mode",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "simple",
+                "class",
+                "exam",
+                "review",
+                "free_learning"
+              ]
+            }
+          },
+          {
+            "name": "includeActivityKeys",
+            "in": "query",
+            "required": false,
+            "description": "Only for activities with feedback=immediate. Never allowed with exams (403 answer_keys_forbidden).",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "required": false,
+            "description": "Makes shuffled options and ordering items reproducible for one student",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lesson as defined in course.schema.json#/$defs/Lesson plus courseId and version. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. Codes: policy_disabled, answer_keys_forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: course_not_found, lesson_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/courses/{courseId}/objects/{objectId}": {
+      "get": {
+        "summary": "One lesson object, redacted",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "description": "student (default) removes teacher notes",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "student",
+                "teacher"
+              ]
+            }
+          },
+          {
+            "name": "includeActivityKeys",
+            "in": "query",
+            "required": false,
+            "description": "Only for activities with feedback=immediate. Never allowed with exams (403 answer_keys_forbidden).",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "required": false,
+            "description": "Makes shuffled options and ordering items reproducible for one student",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object as defined in course.schema.json#/$defs/LessonObject plus courseId, version, lessonId. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error. Codes: policy_disabled, answer_keys_forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: object_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/courses/{courseId}/exams/{objectId}/pool": {
+      "get": {
+        "summary": "Exam settings and question metadata to assemble each student's exam",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamPool"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error. Codes: invalid_parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: object_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/courses/{courseId}/exams/{objectId}/questions": {
+      "get": {
+        "summary": "Visible questions chosen for one student, in the requested order",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "description": "Comma separated question ids",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "explode": false
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "required": false,
+            "description": "Makes shuffled options and ordering items reproducible for one student",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExamQuestions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: question_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/courses/{courseId}/questions/{questionId}/grading-guide": {
+      "get": {
+        "summary": "Model answer, rubric and incorrect examples of an open question (teacher grading screen)",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version of the attempt; archived versions allowed",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradingGuide"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error. Codes: invalid_parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: question_not_found, version_not_available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/evaluate": {
+      "post": {
+        "summary": "Score one response. Answer keys never leave the Content app.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: object_not_found, question_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error. Codes: invalid_response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/evaluate/batch": {
+      "post": {
+        "summary": "Score up to 200 responses",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "items"
+                ],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "maxItems": 200,
+                    "items": {
+                      "$ref": "#/components/schemas/EvaluateRequest"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Results in request order. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EvaluationResult"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/media-sessions": {
+      "post": {
+        "summary": "Create capability URLs for the media of a lesson, a list of media or the whole course",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error. Codes: invalid_parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error. Codes: course_not_found, lesson_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/media-sessions/{sessionId}": {
+      "delete": {
+        "summary": "Revoke a media session immediately",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "404": {
+            "description": "Error. Codes: media_session_not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/packages": {
+      "get": {
+        "summary": "Integrity of every installed package.",
+        "description": "Answers whether what is installed is still the content that was signed, without opening a lesson. School policy is not applied: this is a technical question about the machine, not about what may be served to a class today.",
+        "parameters": [
+          {
+            "name": "deep",
+            "in": "query",
+            "required": false,
+            "description": "true reads and hashes every file of the package. It is the only way to see a file altered in place, and on a course with video it means reading hundreds of megabytes: for a screen that refreshes often, leave it out.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PackageIntegrity"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/packages/{courseId}": {
+      "get": {
+        "summary": "Integrity of one installed package.",
+        "description": "The same check for a single course, which is what a plan of class needs before projecting it.",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "Course to check.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deep",
+            "in": "query",
+            "required": false,
+            "description": "true reads and hashes every file of the package. It is the only way to see a file altered in place, and on a course with video it means reading hundreds of megabytes: for a screen that refreshes often, leave it out.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageIntegrity"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The course is not installed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "token": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Avacom-Token"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Stable machine-readable code. Switch on this, never on the message."
+              },
+              "message": {
+                "type": "string",
+                "description": "Sentence for a log or a developer. Wording may change between versions."
+              },
+              "details": {
+                "type": "object",
+                "description": "Extra context when there is any, such as which parameter was rejected."
+              }
+            },
+            "description": "Every failure answers with this shape and nothing else."
+          }
+        },
+        "example": {
+          "error": {
+            "code": "course_not_found",
+            "message": "Course not found",
+            "details": {
+              "courseId": "avacom.co.primary.4.math.nope"
+            }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "properties": {
+          "contract": {
+            "type": "integer",
+            "const": 2,
+            "description": "Major version of this API. A change here is a breaking change."
+          },
+          "schema": {
+            "type": "string",
+            "description": "Version of course.schema.json the installed courses were validated against."
+          },
+          "index": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "rebuilding"
+            ],
+            "description": "State of the local index. While it rebuilds, catalog calls answer 503."
+          },
+          "installedCourses": {
+            "type": "integer",
+            "description": "Courses installed and readable on this node right now."
+          },
+          "appVersion": {
+            "type": "string",
+            "description": "Build of the content app running on this OPS, as major.minor.patch. Ask for it before blaming the content: two classrooms can be on different builds."
+          }
+        },
+        "example": {
+          "contract": 2,
+          "schema": "1.0",
+          "index": "ready",
+          "installedCourses": 4,
+          "appVersion": "2.0.0"
+        }
+      },
+      "NamedCode": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Stable key inside its country tree. Never translated."
+          },
+          "name": {
+            "type": "string",
+            "description": "Local name to show, in the language of the country."
+          },
+          "order": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Sort position among its siblings. Absent means sort by name."
+          }
+        }
+      },
+      "Classification": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 of the country whose tree this course hangs from."
+          },
+          "countryName": {
+            "type": "string",
+            "description": "Name of that country, ready to show."
+          },
+          "level": {
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Level of the country's tree the course hangs from, with its code, its name and its order among its siblings."
+          },
+          "grade": {
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Grade inside that level. The code is the one the country uses: 4, 11, transicion. In the complementary track there is no school grade and this holds the area, such as Idiomas."
+          },
+          "subject": {
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Subject inside that grade, with the name to show."
+          },
+          "topic": {
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Topic inside that subject. It is the last level of the tree, and each course fills one of them per language. In the complementary track it holds the proficiency level, such as A1."
+          },
+          "track": {
+            "type": "string",
+            "enum": [
+              "school",
+              "complementary"
+            ],
+            "description": "Which tree of the country this course hangs from. school: the official school tree. complementary: education that does not belong to a school grade, such as languages, where grade holds the area, subject the subject of that area and topic the proficiency level. Absent means school."
+          }
+        }
+      },
+      "CourseSummary": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "description": "Permanent id of the course. It never changes across versions: store it."
+          },
+          "version": {
+            "type": "string",
+            "description": "Semantic version of this release. Store it beside the courseId, because an attempt belongs to the version it was made with."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title to show. It changes between versions, so never use it as a key."
+          },
+          "subtitle": {
+            "type": "string",
+            "description": "Second line of the title, when there is one."
+          },
+          "language": {
+            "type": "string",
+            "description": "BCP 47 tag of this course. One course file per language."
+          },
+          "translationGroupId": {
+            "type": "string",
+            "description": "Courses that are translations of each other share this id."
+          },
+          "classification": {
+            "$ref": "#/components/schemas/Classification",
+            "description": "Where the course hangs in the country's tree. The keys of /v2/tree are built out of these codes, and so is the courseId."
+          },
+          "estimatedDurationMin": {
+            "type": "integer",
+            "description": "Minutes the whole course is expected to take."
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Modes this course can be delivered in: simple, class, exam, review, free_learning."
+          },
+          "curriculumRefs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "framework": {
+                  "type": "string",
+                  "description": "Official framework such as DBA or CCSS, or a reserved AVACOM catalog."
+                },
+                "code": {
+                  "type": "string",
+                  "description": "Entry inside that framework."
+                }
+              }
+            },
+            "description": "Curriculum anchors of the course. This listing carries only framework and code; the course detail also carries relation."
+          },
+          "lessonCount": {
+            "type": "integer",
+            "description": "Lessons the course has."
+          },
+          "coverMediaId": {
+            "type": "string",
+            "description": "Media id of the cover image, to resolve through a media session."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "When this version was packaged, ISO 8601 UTC."
+          }
+        }
+      },
+      "CoursePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourseSummary"
+            },
+            "description": "Courses of this page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page returned, counting from 1."
+          },
+          "pageSize": {
+            "type": "integer",
+            "description": "Courses per page, at most 100."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Courses matching the filter, across every page."
+          }
+        }
+      },
+      "TreeNode": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "country",
+              "level",
+              "grade",
+              "subject",
+              "topic"
+            ],
+            "description": "Level of the tree this node sits at: country, level, grade, subject or topic."
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable key of the node inside its parent."
+          },
+          "name": {
+            "type": "string",
+            "description": "Local name to show."
+          },
+          "key": {
+            "type": "string",
+            "description": "Policy reference, e.g. CO/primary/4/math"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Courses hanging from this node, including its children."
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TreeNode"
+            },
+            "description": "Nodes one level down. A topic has none."
+          }
+        },
+        "example": {
+          "kind": "grade",
+          "code": "4",
+          "name": "Cuarto",
+          "key": "CO/primary/4",
+          "count": 1,
+          "children": []
+        }
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "description": "What was hit: a course, a lesson, an object or a question."
+                },
+                "courseId": {
+                  "type": "string",
+                  "description": "Course the hit belongs to."
+                },
+                "lessonId": {
+                  "type": "string",
+                  "description": "Lesson of the hit, when the scope reaches that deep."
+                },
+                "objectId": {
+                  "type": "string",
+                  "description": "Object of the hit, when the scope reaches that deep."
+                },
+                "questionId": {
+                  "type": "string",
+                  "description": "Question of the hit, when the scope is a question."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Title of what was hit, ready to show."
+                },
+                "snippet": {
+                  "type": "string",
+                  "description": "The hit in context, with the matched terms wrapped in ** markers. Inline Markdown, not HTML: escape it before inserting."
+                },
+                "treePath": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Names from the country down to the course that holds the hit, to show where it lives without asking for the tree."
+                }
+              }
+            },
+            "description": "Hits, most relevant first."
+          },
+          "total": {
+            "type": "integer",
+            "description": "Hits found, which may exceed the ones returned."
+          }
+        }
+      },
+      "CourseOutline": {
+        "type": "object",
+        "description": "Course metadata (see course.schema.json), lessons with object summaries {id, type, title, modes, topicRef, estimatedDurationSec, questionCount, pageCount, mediaId} curriculumNodes (the skills this course works, see CurriculumNode: the only place the catalog travels, so keep them) and previousTopics [string] (topics worth covering before this course, plain text for a teacher: a suggestion, not a reference and not a gate), media {id, kind, title, mimeType, bytes, durationSec, pageCount, width, height, altText, hasCaptions, hasTranscript, entry, simulation, license}. bytes is what the medium occupies ENCRYPTED, which is what actually travels to a device: use it to budget a preload or to report storage. It is projected from the package's signed inventory and never declared in course.json. A simulation reports the whole folder."
+      },
+      "ExamPool": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "description": "Course the exam belongs to."
+          },
+          "version": {
+            "type": "string",
+            "description": "Version of the course this pool came from. Store it with the attempt."
+          },
+          "objectId": {
+            "type": "string",
+            "description": "Id of the exam object."
+          },
+          "settings": {
+            "type": "object",
+            "description": "Selection and delivery settings, so the LMS can assemble a balanced exam."
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "questionId": {
+                  "type": "string",
+                  "description": "Id of the question inside the course."
+                },
+                "type": {
+                  "type": "string",
+                  "description": "One of the six question kinds."
+                },
+                "topicRef": {
+                  "type": "string",
+                  "description": "Topic the question measures. Required inside an exam, and what coverAllTopics balances against."
+                },
+                "difficulty": {
+                  "type": "integer",
+                  "description": "From 1, very easy, to 5, very hard. Used to balance one exam against another."
+                },
+                "estimatedSec": {
+                  "type": "integer",
+                  "description": "Seconds the question is expected to take. The exam time limit adds these up when the exam declares extraPercent."
+                },
+                "points": {
+                  "type": "number",
+                  "description": "Points the question is worth."
+                }
+              }
+            },
+            "description": "Every question available, with the metadata needed to pick, and no answer keys."
+          }
+        }
+      },
+      "ExamQuestions": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "description": "Course the questions belong to."
+          },
+          "version": {
+            "type": "string",
+            "description": "Version they came from."
+          },
+          "objectId": {
+            "type": "string",
+            "description": "Id of the exam object."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the exam, ready to show."
+          },
+          "instructions": {
+            "type": "string",
+            "description": "What the student reads before starting."
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Question without answer keys, feedback or teacher notes"
+            },
+            "description": "Questions in the order requested, redacted: no key ever comes out of here."
+          }
+        }
+      },
+      "GradingGuide": {
+        "type": "object",
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "description": "Course the question belongs to."
+          },
+          "version": {
+            "type": "string",
+            "description": "Version the guide came from."
+          },
+          "questionId": {
+            "type": "string",
+            "description": "Question being graded."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The prompt, repeated so the teacher does not have to look it up."
+          },
+          "points": {
+            "type": "number",
+            "description": "Points the question is worth."
+          },
+          "responseFormat": {
+            "type": "string",
+            "description": "How the student answered: text, drawing or audio."
+          },
+          "modelAnswer": {
+            "type": "string",
+            "description": "An answer that would earn full marks. For the teacher only."
+          },
+          "rubric": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Criteria with their points and bands."
+          },
+          "incorrectExamples": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Answers anticipated as wrong, with the reason each one fails."
+          }
+        }
+      },
+      "EvaluateRequest": {
+        "type": "object",
+        "required": [
+          "courseId",
+          "objectId",
+          "questionId",
+          "response"
+        ],
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "description": "Course of the question being evaluated."
+          },
+          "version": {
+            "type": "string",
+            "description": "Optional. Defaults to the installed version; archived versions allowed."
+          },
+          "objectId": {
+            "type": "string",
+            "description": "Object the question belongs to. It decides whether keys may be shown."
+          },
+          "questionId": {
+            "type": "string",
+            "description": "Question being evaluated."
+          },
+          "response": {
+            "type": "object",
+            "description": "multiple_choice {selectedOptionIds[]}, true_false {value}, fill_blanks {blanks:{id:value}}, matching {pairs:[{leftId,rightId}]}, ordering {order[]}, drag_drop {placements:[{itemId,targetId}]}, open {text|drawingRef|audioRef}"
+          }
+        }
+      },
+      "EvaluationResult": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "description": "Question this result belongs to."
+          },
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Points earned, rounded to four decimals with banker's rounding."
+          },
+          "maxScore": {
+            "type": "number",
+            "description": "Points the question was worth."
+          },
+          "correct": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the answer counts as right. With partial credit it can be false and still score."
+          },
+          "requiresManualGrading": {
+            "type": "boolean",
+            "description": "True for an open question: the app never grades prose."
+          },
+          "feedback": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What to show the student, chosen from what the content declared for this mistake."
+          }
+        },
+        "example": {
+          "questionId": "l3-q6",
+          "score": 2.0,
+          "maxScore": 2.0,
+          "correct": true,
+          "requiresManualGrading": false,
+          "feedback": "Bien: el vapor se enfria y vuelve a liquido."
+        }
+      },
+      "MediaSessionRequest": {
+        "type": "object",
+        "required": [
+          "courseId"
+        ],
+        "properties": {
+          "courseId": {
+            "type": "string",
+            "description": "Course whose media will be served."
+          },
+          "lessonId": {
+            "type": "string",
+            "description": "Open a session for every medium of this lesson. Use it instead of listing ids one by one."
+          },
+          "mediaIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Specific media to open, when a whole lesson is more than needed."
+          },
+          "ttlSec": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 28800,
+            "default": 14400,
+            "description": "Seconds the session stays valid. It expires on its own; a class never needs hours."
+          }
+        }
+      },
+      "MediaSession": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Id of the session, to revoke it when the class ends."
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Loopback base the media server answers on. The port changes between runs."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the session stops answering. ISO 8601 UTC with second precision, always ending in Z, like every other timestamp of this API."
+          },
+          "urls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "mediaId to URL. Simulations point to their entry file; relative resources resolve under the same folder."
+          },
+          "extras": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "captions": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "transcript": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "files": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Simulations only. GET returns {mediaId, entry, files[]} with every relative path of the simulation folder; each file is served at <baseUrl><mediaId>/<path>."
+                }
+              }
+            },
+            "description": "Per mediaId: captions (VTT) and transcript for audio and video, files list URL for simulations."
+          }
+        },
+        "example": {
+          "sessionId": "c1f0e4a27b9d4e51",
+          "baseUrl": "http://127.0.0.1:5181",
+          "expiresAt": "2026-09-22T18:40:00Z"
+        }
+      },
+      "CurriculumNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable id of the node. It is what curriculumRefs points at, it never changes, and it is shared between courses: store it as the aggregation key."
+          },
+          "name": {
+            "type": "string",
+            "description": "The node in the words a teacher would use, in the language of the curriculum. Show this, never the id."
+          },
+          "parent": {
+            "type": "string",
+            "description": "The broader node this one belongs to. Absent means it is the top of its branch. Mastery rolls up along this chain."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "formative_field",
+              "strand",
+              "subject",
+              "unit",
+              "topic",
+              "subtopic",
+              "project",
+              "challenge",
+              "skill",
+              "objective",
+              "competency"
+            ],
+            "description": "What the node is in the tree of its education level. The first six are levels and go from broad to narrow in that order; the last three hang at the end of a branch. Absent means skill."
+          },
+          "replaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Node ids this one superseded when the curriculum redrew them. Evidence gathered under those ids keeps counting for this node; nothing new should be anchored to them."
+          },
+          "order": {
+            "type": "integer",
+            "description": "Where the node goes among its siblings, from 0. Absent means sort by name."
+          }
+        },
+        "description": "A node of the AVACOM curriculum catalog. The catalog is the sum of what the installed courses declare: there is no central list to ask for, and GET /v2/curriculum serves what this machine has."
+      },
+      "CurriculumCatalogNode": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CurriculumNode"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "courses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Installed courses that declare this node."
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurriculumCatalogNode"
+            },
+            "description": "Nodes that hang from this one."
+          }
+        },
+        "description": "A node of the catalog as this machine knows it, with the courses that declare it and the nodes below."
+      },
+      "CurriculumAnchor": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Node this anchor points at. It can be an id the asked-for node superseded, which is how old content keeps answering."
+          },
+          "courseId": {
+            "type": "string",
+            "description": "Course that declares the anchor."
+          },
+          "version": {
+            "type": "string",
+            "description": "Installed version of that course."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "course",
+              "lesson",
+              "object",
+              "question"
+            ],
+            "description": "What is anchored: the course, a lesson, an object or a question."
+          },
+          "refId": {
+            "type": "string",
+            "description": "Id of the anchored piece inside the course."
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "teaches",
+              "assesses"
+            ],
+            "description": "teaches, assesses, or absent when the content did not declare it. Absent must not be read as either."
+          },
+          "lessonId": {
+            "type": "string",
+            "description": "Lesson the piece belongs to, when it is a lesson, an object or a question."
+          },
+          "objectId": {
+            "type": "string",
+            "description": "Object the piece belongs to, when it is an object or a question."
+          },
+          "objectType": {
+            "type": "string",
+            "description": "Type of that object: lecture, explanation, simulation_lab, activity or exam."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title to show: the object's, the lesson's or the course's, whichever the anchor is on."
+          }
+        },
+        "description": "One anchor of installed content to a node of the curriculum catalog."
+      },
+      "IntegrityProblem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Code of the check that failed: E-PKG-FORMAT, E-PKG-PUBLISHER-UNTRUSTED, E-PKG-SIGNATURE, E-PKG-HASH, E-PKG-LICENSE, E-PKG-EXTRA or E-PKG-MISSING."
+          },
+          "message": {
+            "type": "string",
+            "description": "What failed, in English and naming the file when there is one."
+          }
+        },
+        "description": "One thing wrong with an installed package."
+      },
+      "PackageIntegrity": {
+        "type": "object",
+        "properties": {
+          "packageKey": {
+            "type": "string",
+            "description": "Key of the installed package: courseId@version."
+          },
+          "courseId": {
+            "type": "string",
+            "description": "Course the package carries."
+          },
+          "version": {
+            "type": "string",
+            "description": "Installed version."
+          },
+          "title": {
+            "type": "string",
+            "description": "Course title, to show without a second call."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "broken",
+              "missing"
+            ],
+            "description": "ok when every check passed, broken when one failed, missing when the folder is in the index but not on disk."
+          },
+          "deep": {
+            "type": "boolean",
+            "description": "Whether every file was read and hashed. False means only sizes, signature, licence and course.json were checked."
+          },
+          "files": {
+            "type": "integer",
+            "description": "Files on disk inside the package."
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "What the package occupies on disk, in bytes."
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this answer was produced, ISO 8601 UTC. Nothing is cached: it is the moment of the call."
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntegrityProblem"
+            },
+            "description": "Empty when the status is ok."
+          }
+        },
+        "description": "The integrity of one installed package, checked at the moment of the call."
+      }
+    }
+  }
+}

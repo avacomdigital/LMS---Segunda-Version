@@ -1,0 +1,2010 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:avacom:content:course:1.0",
+  "title": "AVACOM Course",
+  "description": "Structure of an AVACOM course file (course.json). One file per course version. Travels encrypted inside the signed package as course.json.enc. Structural validation only: semantic rules (unique ids, references, modes, exam balance, answer completeness) live in the validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "title",
+    "language",
+    "classification",
+    "modes",
+    "teacherNotes",
+    "media",
+    "lessons"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "id": {
+      "$ref": "#/$defs/Id",
+      "description": "Permanent course id. Never changes across versions. The LMS stores it to explain past sessions."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+      "description": "Semantic version of this course release."
+    },
+    "title": {
+      "$ref": "#/$defs/ShortText"
+    },
+    "subtitle": {
+      "$ref": "#/$defs/ShortText"
+    },
+    "description": {
+      "$ref": "#/$defs/RichText"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$",
+      "description": "BCP 47 tag, e.g. es-CO, en-US. One course file per language."
+    },
+    "translationGroupId": {
+      "$ref": "#/$defs/Id",
+      "description": "One course per language. Courses that are translations of each other share this id. Informational: each translation is validated, packaged and licensed on its own."
+    },
+    "classification": {
+      "$ref": "#/$defs/Classification"
+    },
+    "curriculumRefs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CurriculumRef"
+      }
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ShortText"
+      },
+      "uniqueItems": true
+    },
+    "estimatedDurationMin": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "coverMediaId": {
+      "$ref": "#/$defs/Id",
+      "description": "Must reference a media item of kind image."
+    },
+    "credits": {
+      "$ref": "#/$defs/Credits"
+    },
+    "modes": {
+      "$ref": "#/$defs/ModeList",
+      "description": "Modes this course can be used in. Lessons and objects narrow this list, never widen it."
+    },
+    "teacherNotes": {
+      "$ref": "#/$defs/TeacherNotes"
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Media"
+      }
+    },
+    "lessons": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Lesson"
+      },
+      "description": "Array order is the teaching order."
+    }
+  },
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 120,
+      "description": "Lowercase ascii, digits and . _ - separators. Permanent: once published an id is never reused or renamed."
+    },
+    "ShortText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "RichText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000,
+      "description": "AVACOM Markdown subset: **bold**, *italic*, bullet and numbered lists, line breaks, inline math between $...$. Raw HTML is not allowed and is escaped by the renderer."
+    },
+    "RelativePath": {
+      "type": "string",
+      "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:)[A-Za-z0-9._\\-/ ]+$",
+      "maxLength": 400,
+      "description": "Path relative to the package root, forward slashes, no scheme, no drive letter, no '..'. Name in clear text, without the .enc suffix."
+    },
+    "Mode": {
+      "type": "string",
+      "enum": [
+        "simple",
+        "class",
+        "exam",
+        "review",
+        "free_learning"
+      ],
+      "description": "simple: no login, open access (preschool, guest). class: teacher directs. exam: students are evaluated. review: student repeats past class content, never graded. free_learning: student explores other subjects or topics on their own."
+    },
+    "ModeList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/Mode"
+      }
+    },
+    "Classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "country",
+        "level",
+        "grade",
+        "subject",
+        "topic"
+      ],
+      "description": "Position of the course in its country tree: country > level > grade > subject > topic. Every country has its own tree and its own levels. There are no cross-country equivalences at course level. Several courses can share the same topic.",
+      "properties": {
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2."
+        },
+        "level": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name",
+            "order"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id",
+              "description": "Level code defined by the country tree. Each country has its own levels. AVACOM codes in use: preschool, primary, lower_secondary, upper_secondary, adult_education, admission_exam_prep."
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText",
+              "description": "Local name, e.g. Secundaria avanzada."
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Sort position of the level inside the country tree."
+            }
+          }
+        },
+        "grade": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name",
+            "order"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id"
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Sort position inside the level."
+            }
+          }
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id"
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText"
+            }
+          }
+        },
+        "topic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id"
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "CurriculumRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "framework",
+        "code"
+      ],
+      "properties": {
+        "framework": {
+          "$ref": "#/$defs/ShortText",
+          "description": "e.g. DBA, EBC (Colombia), SEP (Mexico), NaCCA (Ghana), CCSS (USA)."
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "description": {
+          "$ref": "#/$defs/RichText"
+        }
+      }
+    },
+    "Credits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "publisher": {
+          "$ref": "#/$defs/ShortText"
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          }
+        },
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          }
+        }
+      }
+    },
+    "TeacherNotes": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Guidance for the teacher. Visible only in teacher profile (screen, laptop portal, teacher tablet). Never sent to student devices.",
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/RichText"
+        },
+        "tips": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          }
+        },
+        "timing": {
+          "$ref": "#/$defs/RichText"
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          }
+        },
+        "commonMistakes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          }
+        },
+        "differentiation": {
+          "$ref": "#/$defs/RichText",
+          "description": "How to adapt for students who need more support or more challenge."
+        }
+      }
+    },
+    "License": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "avacom",
+            "cc-by-4.0",
+            "cc-by-sa-4.0",
+            "cc-by-nc-4.0",
+            "cc-by-3.0",
+            "public-domain",
+            "licensed",
+            "other"
+          ]
+        },
+        "attribution": {
+          "$ref": "#/$defs/RichText",
+          "description": "Exact text to show near the point of use when the license requires it."
+        },
+        "sourceUrl": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Provenance only. Never loaded at runtime. The only field where a URL is allowed."
+        },
+        "publishedDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Publication date of the obtained version. Decides the applicable license for PhET."
+        },
+        "obtainedDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "agreementRef": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Contract or partnership reference when a commercial agreement is required."
+        }
+      }
+    },
+    "Media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "path",
+        "mimeType",
+        "license"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "image",
+            "video",
+            "audio",
+            "pdf",
+            "simulation"
+          ]
+        },
+        "path": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "File path. For kind simulation: folder that contains the simulation."
+        },
+        "entry": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "Simulation only: html entry file, relative to path."
+        },
+        "mimeType": {
+          "type": "string",
+          "pattern": "^[a-z]+/[a-z0-9.+\\-]+$"
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText"
+        },
+        "altText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Required for images. Read aloud by accessibility tools."
+        },
+        "captionsPath": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "WebVTT captions for video."
+        },
+        "transcriptPath": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "Plain text transcript for audio or video."
+        },
+        "durationSec": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "simulation": {
+          "$ref": "#/$defs/SimulationRuntime"
+        },
+        "license": {
+          "$ref": "#/$defs/License"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "altText"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "simulation"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "entry",
+              "simulation"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "entry"
+                  ]
+                },
+                {
+                  "required": [
+                    "simulation"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "SimulationRuntime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "technology"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": [
+            "phet",
+            "avacom",
+            "third_party"
+          ]
+        },
+        "technology": {
+          "type": "string",
+          "enum": [
+            "html5",
+            "html5_jquery",
+            "html5_canvas",
+            "html5_webgl",
+            "flash_ruffle"
+          ],
+          "description": "flash_ruffle: legacy Flash run through a bundled Ruffle build."
+        },
+        "designWidth": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Native width the simulation was designed for. Used by scale-to-fit."
+        },
+        "designHeight": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "orientation": {
+          "type": "string",
+          "enum": [
+            "landscape",
+            "portrait",
+            "any"
+          ]
+        },
+        "shims": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "touch_to_mouse",
+              "scale_to_fit",
+              "block_network",
+              "mute_autoplay"
+            ]
+          },
+          "description": "Compatibility layers the player injects. block_network is always applied, listing it is informational."
+        },
+        "supportsTargets": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "tablet"
+            ]
+          },
+          "description": "Devices where the simulation was tested and works."
+        }
+      }
+    },
+    "Lesson": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "modes",
+        "teacherNotes",
+        "objects"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText"
+        },
+        "summary": {
+          "$ref": "#/$defs/RichText"
+        },
+        "objectives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          }
+        },
+        "estimatedDurationMin": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "modes": {
+          "$ref": "#/$defs/ModeList"
+        },
+        "curriculumRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CurriculumRef"
+          }
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes"
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Topic"
+          },
+          "description": "Topics and subtopics taught in this lesson. Ids are unique across the course, so objects and questions of any lesson (for example a final exam) can point here with topicRef."
+        },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/LessonObject"
+          },
+          "description": "Array order is the teaching order."
+        }
+      }
+    },
+    "Topic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText"
+        },
+        "subtopics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "title": {
+                "$ref": "#/$defs/ShortText"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ObjectBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "title",
+        "modes",
+        "teacherNotes"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "type": {
+          "type": "string"
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText"
+        },
+        "modes": {
+          "$ref": "#/$defs/ModeList"
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes"
+        },
+        "topicRef": {
+          "$ref": "#/$defs/Id",
+          "description": "Topic or subtopic id defined in any lesson of the same course."
+        },
+        "estimatedDurationSec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "curriculumRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CurriculumRef"
+          }
+        }
+      }
+    },
+    "LessonObject": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "lecture",
+            "explanation",
+            "simulation_lab",
+            "activity",
+            "exam"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "lecture"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/LectureObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "explanation"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/ExplanationObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "simulation_lab"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/SimulationLabObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "activity"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/ActivityObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "exam"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/ExamObject"
+          }
+        }
+      ]
+    },
+    "LectureObject": {
+      "description": "Cátedra. Led by the teacher on the interactive screen (86 inch, 4 meters). Slides advance at the teacher's pace. In synchronized class mode tablets mirror the current slide.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "slides"
+      ],
+      "properties": {
+        "type": {
+          "const": "lecture"
+        },
+        "slides": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ContentPage"
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExplanationObject": {
+      "description": "Explicación. Material the student reads, watches or listens to at their own pace on the tablet.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "pages"
+      ],
+      "properties": {
+        "type": {
+          "const": "explanation"
+        },
+        "pages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ContentPage"
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ContentPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "blocks"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText"
+        },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Block"
+          }
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes"
+        },
+        "estimatedSec": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "Block": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "heading",
+            "text",
+            "list",
+            "formula",
+            "image",
+            "video",
+            "audio",
+            "pdf"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "heading"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "text"
+            ],
+            "properties": {
+              "type": true,
+              "text": {
+                "$ref": "#/$defs/ShortText"
+              },
+              "level": {
+                "enum": [
+                  1,
+                  2
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "text"
+            ],
+            "properties": {
+              "type": true,
+              "text": {
+                "$ref": "#/$defs/RichText"
+              },
+              "style": {
+                "enum": [
+                  "normal",
+                  "highlight",
+                  "definition",
+                  "note",
+                  "warning"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "list"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "items"
+            ],
+            "properties": {
+              "type": true,
+              "ordered": {
+                "type": "boolean"
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/RichText"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "formula"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "latex"
+            ],
+            "properties": {
+              "type": true,
+              "latex": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000
+              },
+              "display": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "video"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText"
+              },
+              "startSec": {
+                "type": "number",
+                "minimum": 0
+              },
+              "endSec": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "autoplay": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "audio"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "pdf"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText"
+              },
+              "fromPage": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "toPage": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "SimulationLabObject": {
+      "description": "Simulador o laboratorio. Runs a simulation media item (PhET or HTML/JavaScript) in an isolated player without network.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "mediaId",
+        "learningGoal",
+        "instructions"
+      ],
+      "properties": {
+        "type": {
+          "const": "simulation_lab"
+        },
+        "mediaId": {
+          "$ref": "#/$defs/Id",
+          "description": "Must reference a media item of kind simulation."
+        },
+        "learningGoal": {
+          "$ref": "#/$defs/RichText"
+        },
+        "instructions": {
+          "$ref": "#/$defs/RichText"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          }
+        },
+        "guidingQuestions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          }
+        },
+        "launchParams": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Passed to the entry file as query string, e.g. PhET screens=1."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ActivityObject": {
+      "description": "Actividad. Formative exercises with feedback. Never produces a grade.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "instructions",
+        "settings",
+        "questions"
+      ],
+      "properties": {
+        "type": {
+          "const": "activity"
+        },
+        "instructions": {
+          "$ref": "#/$defs/RichText"
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "feedback"
+          ],
+          "properties": {
+            "feedback": {
+              "enum": [
+                "immediate",
+                "on_submit",
+                "none"
+              ]
+            },
+            "attemptsAllowed": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "0 means unlimited."
+            },
+            "shuffleQuestions": {
+              "type": "boolean"
+            },
+            "shuffleOptions": {
+              "type": "boolean"
+            },
+            "timeLimitSec": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Question"
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExamObject": {
+      "description": "Examen. Graded evaluation. Answer keys never leave the Content app.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "instructions",
+        "settings",
+        "questions"
+      ],
+      "properties": {
+        "type": {
+          "const": "exam"
+        },
+        "instructions": {
+          "$ref": "#/$defs/RichText"
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "selection",
+            "timeLimit",
+            "passingScorePct",
+            "showResults"
+          ],
+          "properties": {
+            "selection": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "strategy"
+              ],
+              "properties": {
+                "strategy": {
+                  "enum": [
+                    "fixed",
+                    "random_balanced"
+                  ],
+                  "description": "fixed: every student gets all questions. random_balanced: each student gets questionCount questions with similar total difficulty and total time, covering the same topics."
+                },
+                "questionCount": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "difficultyTolerancePct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "timeTolerancePct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "coverAllTopics": {
+                  "type": "boolean"
+                }
+              },
+              "if": {
+                "properties": {
+                  "strategy": {
+                    "const": "random_balanced"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "questionCount",
+                  "difficultyTolerancePct",
+                  "timeTolerancePct",
+                  "coverAllTopics"
+                ]
+              }
+            },
+            "timeLimit": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "policy"
+              ],
+              "properties": {
+                "policy": {
+                  "enum": [
+                    "sum_of_estimates",
+                    "fixed",
+                    "none"
+                  ]
+                },
+                "fixedSec": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "extraPct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 200,
+                  "description": "Margin added on top of the sum of estimates."
+                }
+              },
+              "if": {
+                "properties": {
+                  "policy": {
+                    "const": "fixed"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "fixedSec"
+                ]
+              }
+            },
+            "passingScorePct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "showResults": {
+              "enum": [
+                "never",
+                "after_submit",
+                "after_teacher_release"
+              ]
+            },
+            "allowBackNavigation": {
+              "type": "boolean"
+            },
+            "shuffleOptions": {
+              "type": "boolean"
+            }
+          }
+        },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Question"
+          },
+          "description": "Question pool."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "Feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correct",
+        "incorrect"
+      ],
+      "properties": {
+        "correct": {
+          "$ref": "#/$defs/RichText"
+        },
+        "incorrect": {
+          "$ref": "#/$defs/RichText"
+        }
+      }
+    },
+    "QuestionBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "prompt",
+        "difficulty",
+        "estimatedSec",
+        "points",
+        "feedback"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "type": {
+          "type": "string"
+        },
+        "prompt": {
+          "$ref": "#/$defs/RichText"
+        },
+        "mediaIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "topicRef": {
+          "$ref": "#/$defs/Id",
+          "description": "Topic or subtopic id defined in any lesson of the same course. Required inside exams."
+        },
+        "difficulty": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "1 very easy, 5 very hard."
+        },
+        "estimatedSec": {
+          "type": "integer",
+          "minimum": 5,
+          "description": "Estimated time to solve."
+        },
+        "points": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "cognitiveLevel": {
+          "enum": [
+            "remember",
+            "understand",
+            "apply",
+            "analyze",
+            "evaluate",
+            "create"
+          ]
+        },
+        "curriculumRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CurriculumRef"
+          }
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes"
+        },
+        "feedback": {
+          "$ref": "#/$defs/Feedback"
+        },
+        "partialCredit": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Question": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "open",
+            "multiple_choice",
+            "fill_blanks",
+            "matching",
+            "true_false",
+            "ordering"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "open"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/OpenQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "multiple_choice"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/MultipleChoiceQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "fill_blanks"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/FillBlanksQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "matching"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/MatchingQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "true_false"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/TrueFalseQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ordering"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/OrderingQuestion"
+          }
+        }
+      ]
+    },
+    "ChoiceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "required": [
+            "mediaId"
+          ]
+        }
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "text": {
+          "$ref": "#/$defs/RichText"
+        },
+        "mediaId": {
+          "$ref": "#/$defs/Id"
+        }
+      }
+    },
+    "OpenQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "responseFormat",
+        "modelAnswer",
+        "rubric",
+        "incorrectExamples"
+      ],
+      "properties": {
+        "type": {
+          "const": "open"
+        },
+        "responseFormat": {
+          "enum": [
+            "text",
+            "drawing",
+            "audio"
+          ]
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "modelAnswer": {
+          "$ref": "#/$defs/RichText"
+        },
+        "rubric": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "criterion",
+              "points"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "criterion": {
+                "$ref": "#/$defs/RichText"
+              },
+              "points": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "levels": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "label",
+                    "points"
+                  ],
+                  "properties": {
+                    "label": {
+                      "$ref": "#/$defs/ShortText"
+                    },
+                    "description": {
+                      "$ref": "#/$defs/RichText"
+                    },
+                    "points": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "incorrectExamples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "reason"
+            ],
+            "properties": {
+              "text": {
+                "$ref": "#/$defs/RichText"
+              },
+              "reason": {
+                "$ref": "#/$defs/RichText"
+              }
+            }
+          }
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "MultipleChoiceQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "allowMultiple",
+        "options"
+      ],
+      "properties": {
+        "type": {
+          "const": "multiple_choice"
+        },
+        "allowMultiple": {
+          "type": "boolean"
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "isCorrect"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "text"
+                ]
+              },
+              {
+                "required": [
+                  "mediaId"
+                ]
+              }
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "text": {
+                "$ref": "#/$defs/RichText"
+              },
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "isCorrect": {
+                "type": "boolean"
+              },
+              "feedback": {
+                "$ref": "#/$defs/RichText",
+                "description": "Specific feedback when this option is chosen."
+              }
+            }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "FillBlanksQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "template",
+        "blanks"
+      ],
+      "properties": {
+        "type": {
+          "const": "fill_blanks"
+        },
+        "template": {
+          "$ref": "#/$defs/RichText",
+          "description": "Text with placeholders {{blankId}}."
+        },
+        "blanks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "inputMode",
+              "acceptedAnswers",
+              "wrongAnswers"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "inputMode": {
+                "enum": [
+                  "text",
+                  "select",
+                  "numeric"
+                ]
+              },
+              "acceptedAnswers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              },
+              "wrongAnswers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "feedback": {
+                      "$ref": "#/$defs/RichText"
+                    }
+                  }
+                }
+              },
+              "choices": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": "Required for inputMode select. Must contain the accepted answer and at least one wrong answer."
+              },
+              "caseSensitive": {
+                "type": "boolean"
+              },
+              "ignoreAccents": {
+                "type": "boolean"
+              },
+              "numericTolerance": {
+                "type": "number",
+                "minimum": 0,
+                "description": "numeric mode: accepted if |response - accepted| <= tolerance."
+              }
+            },
+            "if": {
+              "properties": {
+                "inputMode": {
+                  "const": "select"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "choices"
+              ]
+            }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "MatchingQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "left",
+        "right",
+        "pairs",
+        "wrongPairs"
+      ],
+      "properties": {
+        "type": {
+          "const": "matching"
+        },
+        "left": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/ChoiceItem"
+          }
+        },
+        "right": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/ChoiceItem"
+          },
+          "description": "May contain more items than left: extras act as distractors."
+        },
+        "pairs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "leftId",
+              "rightId"
+            ],
+            "properties": {
+              "leftId": {
+                "$ref": "#/$defs/Id"
+              },
+              "rightId": {
+                "$ref": "#/$defs/Id"
+              }
+            }
+          }
+        },
+        "wrongPairs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "leftId",
+              "rightId",
+              "feedback"
+            ],
+            "properties": {
+              "leftId": {
+                "$ref": "#/$defs/Id"
+              },
+              "rightId": {
+                "$ref": "#/$defs/Id"
+              },
+              "feedback": {
+                "$ref": "#/$defs/RichText"
+              }
+            }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "TrueFalseQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "answer"
+      ],
+      "properties": {
+        "type": {
+          "const": "true_false"
+        },
+        "answer": {
+          "type": "boolean"
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "OrderingQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "items",
+        "correctOrder",
+        "wrongOrders"
+      ],
+      "properties": {
+        "type": {
+          "const": "ordering"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/ChoiceItem"
+          },
+          "description": "Always shuffled before showing. File order carries no meaning."
+        },
+        "correctOrder": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "wrongOrders": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "order",
+              "feedback"
+            ],
+            "properties": {
+              "order": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "$ref": "#/$defs/Id"
+                }
+              },
+              "feedback": {
+                "$ref": "#/$defs/RichText"
+              }
+            }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

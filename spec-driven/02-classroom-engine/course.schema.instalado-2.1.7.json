@@ -1,0 +1,2487 @@
+{
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:avacom:content:course:1.0",
+  "title": "AVACOM Course",
+  "description": "Structure of an AVACOM course file (course.json). One file per course version. Travels encrypted inside the signed package as course.json.enc. Structural validation only: semantic rules (unique ids, references, modes, exam balance, answer completeness) live in the validator.",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "title",
+    "language",
+    "classification",
+    "modes",
+    "teacherNotes",
+    "media",
+    "lessons"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0",
+      "description": "Version of this contract. Hay una sola, y los siete tipos de pregunta forman parte de ella."
+    },
+    "id": {
+      "$ref": "#/$defs/Id",
+      "description": "Permanent course id. Never changes across versions. The LMS stores it to explain past sessions."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+      "description": "Semantic version of this course release."
+    },
+    "title": {
+      "$ref": "#/$defs/ShortText",
+      "description": "Title of the course, ready to show. It changes between versions, so it is never used as a key."
+    },
+    "subtitle": {
+      "$ref": "#/$defs/ShortText",
+      "description": "Second line of the title, when one sentence is not enough."
+    },
+    "description": {
+      "$ref": "#/$defs/RichText",
+      "description": "What the course is about, for whoever is choosing it in the catalogue."
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$",
+      "description": "BCP 47 tag, e.g. es-CO, en-US. One course file per language."
+    },
+    "translationGroupId": {
+      "$ref": "#/$defs/Id",
+      "description": "One course per language. Courses that are translations of each other share this id. Informational: each translation is validated, packaged and licensed on its own."
+    },
+    "previousTopics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ShortText"
+      },
+      "description": "Topics worth covering before this course, written out for a teacher to read. Plain text on purpose: a suggestion, never a gate, and not a reference to anything. Nothing is blocked, nothing is measured and nothing is resolved against the catalog."
+    },
+    "classification": {
+      "$ref": "#/$defs/Classification",
+      "description": "Where the course hangs in the country's tree: level, grade, subject and topic. The courseId is derived from it."
+    },
+    "curriculumRefs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CurriculumRef"
+      },
+      "description": "Frameworks and LMS catalogs this whole course is anchored to. Anchors on a lesson, object or question are narrower and more useful."
+    },
+    "curriculumNodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CurriculumNode"
+      },
+      "description": "The skills this course works, with their names. Every avacom-node and avacom-objective the course points at has to be declared here: that is what turns a mistyped id from invisible into an error."
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ShortText"
+      },
+      "uniqueItems": true,
+      "description": "Extra words for search that do not appear in the text. Title, description and topic names are already indexed."
+    },
+    "estimatedDurationMin": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Minutes the whole course is expected to take. Informational: the classroom never enforces it."
+    },
+    "coverMediaId": {
+      "$ref": "#/$defs/Id",
+      "description": "Must reference a media item of kind image."
+    },
+    "credits": {
+      "$ref": "#/$defs/Credits",
+      "description": "Who made the course and who publishes it, for the credits screen."
+    },
+    "modes": {
+      "$ref": "#/$defs/ModeList",
+      "description": "Modes this course can be used in. Lessons and objects narrow this list, never widen it."
+    },
+    "teacherNotes": {
+      "$ref": "#/$defs/TeacherNotes",
+      "description": "What the teacher needs in order to give this course. The student profile never receives it."
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Media"
+      },
+      "description": "Every file the course uses. Nothing may be referenced that is not declared here, and nothing declared here may go unused."
+    },
+    "lessons": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/Lesson"
+      },
+      "description": "Array order is the teaching order."
+    }
+  },
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 120,
+      "description": "Lowercase ascii, digits and . _ - separators. Permanent: once published an id is never reused or renamed."
+    },
+    "ShortText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "RichText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20000,
+      "description": "AVACOM Markdown subset: **bold**, *italic*, bullet and numbered lists, line breaks, inline math between $...$. Raw HTML is not allowed and is escaped by the renderer."
+    },
+    "RelativePath": {
+      "type": "string",
+      "pattern": "^(?![/\\\\])(?!.*\\.\\.)(?!.*:)[A-Za-z0-9._\\-/ ]+$",
+      "maxLength": 400,
+      "description": "Path relative to the package root, forward slashes, no scheme, no drive letter, no '..'. Name in clear text, without the .enc suffix."
+    },
+    "Mode": {
+      "type": "string",
+      "enum": [
+        "simple",
+        "class",
+        "exam",
+        "review",
+        "free_learning"
+      ],
+      "description": "simple: no login, open access (preschool, guest). class: teacher directs. exam: students are evaluated. review: student repeats past class content, never graded. free_learning: student explores other subjects or topics on their own."
+    },
+    "ModeList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/Mode"
+      }
+    },
+    "Classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "country",
+        "level",
+        "grade",
+        "subject",
+        "topic"
+      ],
+      "description": "Position of the course in its country tree: country > level > grade > subject > topic. Every country has its own tree and its own levels. There are no cross-country equivalences at course level. Several courses can share the same topic. What each of the four slots holds depends on track.",
+      "properties": {
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2."
+        },
+        "level": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name",
+            "order"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id",
+              "description": "Level code defined by the country tree. Each country has its own levels. AVACOM codes in use: preschool, primary, lower_secondary, upper_secondary, adult_education, admission_exam_prep."
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText",
+              "description": "Local name, e.g. Secundaria avanzada."
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Sort position of the level inside the country tree."
+            }
+          },
+          "description": "Level of the country tree. Each country defines its own, so there are no equivalences between countries. In the complementary track it is the area, such as Idiomas."
+        },
+        "grade": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name",
+            "order"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id",
+              "description": "Grade key inside its level, exactly as the country's tree spells it: 4, 11, transicion."
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText",
+              "description": "Grade name to show, in the language of the country."
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Sort position inside the level."
+            }
+          },
+          "description": "Grade inside the level, with its local name and sort position. In the complementary track there is no school grade: this slot holds the subject of the area, such as Ingles."
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id",
+              "description": "Subject key inside its grade, such as math, science or social-studies."
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText",
+              "description": "Subject name to show, in the language of the country."
+            }
+          },
+          "description": "Subject inside the grade. In the complementary track, the proficiency level, such as A1."
+        },
+        "topic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "name"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/$defs/Id",
+              "description": "Topic key inside its subject. It is the last level of the tree, and one course fills it per language."
+            },
+            "name": {
+              "$ref": "#/$defs/ShortText",
+              "description": "Topic name to show, in the language of the country."
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Sort position of the topic inside its subject."
+            }
+          },
+          "description": "Topic inside the subject. Several courses can share one topic. In the complementary track it is the topic of that proficiency level, such as Verb to be."
+        },
+        "track": {
+          "enum": [
+            "school",
+            "complementary"
+          ],
+          "description": "Which tree of the country this course hangs from. school: the official school tree, where the four slots are the level, the grade, the subject and the topic as a ministry spells them. complementary: education that does not belong to a school grade, such as languages or arts, where the same four slots hold the area, the subject, the proficiency level and the topic, in that order. Absent means school, which is what every course written so far is. It is declared and not guessed from the level code, because a consumer that has to recognise a magic string gets it wrong the day a country adds one."
+        }
+      }
+    },
+    "CurriculumRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "framework",
+        "code"
+      ],
+      "properties": {
+        "framework": {
+          "$ref": "#/$defs/ShortText",
+          "description": "e.g. DBA, EBC (Colombia), SEP (Mexico), NaCCA (Ghana), CCSS (USA)."
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Entry of the framework. Free text for an official framework such as a DBA code; for the reserved frameworks it must have the shape of an id, because it is a catalog key."
+        },
+        "relation": {
+          "enum": [
+            "teaches",
+            "assesses"
+          ],
+          "description": "How this content relates to the reference. teaches: it presents the subject. assesses: it produces evidence of whether the student masters it, graded or not. Omitted means not declared: a consumer must not assume one. On an object, assesses needs a type that captures a response (activity, exam)."
+        },
+        "description": {
+          "$ref": "#/$defs/RichText",
+          "description": "Note for whoever reads the anchor. The software ignores it: what binds is framework plus code."
+        }
+      },
+      "description": "Reference to an entry of a curriculum framework, or to a node of the AVACOM curriculum catalog (framework 'avacom-node', code = the stable node id). Those ids are minted by whoever authors the content, not by the LMS: this app serves them and the LMS consumes them. Structural only: the app cannot check that the code exists."
+    },
+    "Credits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "publisher": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Who publishes the course. AVACOM, unless it was made for somebody else."
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          },
+          "description": "Who wrote the course. Shown to the teacher, never to the student."
+        },
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          },
+          "description": "Who reviewed it before it was published."
+        }
+      }
+    },
+    "TeacherNotes": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Guidance for the teacher. Visible only in teacher profile (screen, laptop portal, teacher tablet). Never sent to student devices.",
+      "properties": {
+        "summary": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the teacher needs to know before walking into the classroom, in two or three lines."
+        },
+        "tips": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          },
+          "description": "How to run it in front of a class."
+        },
+        "timing": {
+          "$ref": "#/$defs/RichText",
+          "description": "How the time is meant to be spent. It is advice, not a clock: the app never enforces it."
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          },
+          "description": "What the classroom needs besides the screen."
+        },
+        "commonMistakes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          },
+          "description": "What students usually get wrong here, so the teacher can get ahead of it."
+        },
+        "differentiation": {
+          "$ref": "#/$defs/RichText",
+          "description": "How to adapt for students who need more support or more challenge."
+        }
+      }
+    },
+    "License": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "avacom",
+            "cc-by-4.0",
+            "cc-by-sa-4.0",
+            "cc-by-nc-4.0",
+            "cc-by-3.0",
+            "public-domain",
+            "licensed",
+            "other"
+          ],
+          "description": "avacom: produced in house. public-domain: no rights reserved. licensed: bought or granted, and needs agreementRef. other: anything else, explained in the text. The cc-by variants are Creative Commons and demand attribution."
+        },
+        "attribution": {
+          "$ref": "#/$defs/RichText",
+          "description": "Exact text to show near the point of use when the license requires it."
+        },
+        "sourceUrl": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Provenance only. Never loaded at runtime. The only field where a URL is allowed."
+        },
+        "publishedDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Publication date of the obtained version. Decides the applicable license for PhET."
+        },
+        "obtainedDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Date the permission was obtained, ISO 8601."
+        },
+        "agreementRef": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Contract or partnership reference when a commercial agreement is required."
+        }
+      }
+    },
+    "Media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "path",
+        "mimeType",
+        "license"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the medium inside the course. Blocks and questions point at it, and a media session opens it by this id."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "image",
+            "video",
+            "audio",
+            "pdf",
+            "simulation"
+          ],
+          "description": "image: a still. video: with captions when there is speech. audio: with a transcript when there is speech. pdf: a document to show or print. simulation: a folder with an entry html."
+        },
+        "path": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "File path. For kind simulation: folder that contains the simulation."
+        },
+        "entry": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "Simulation only: html entry file, relative to path."
+        },
+        "mimeType": {
+          "type": "string",
+          "pattern": "^[a-z]+/[a-z0-9.+\\-]+$",
+          "description": "Media type of the file, which must match kind: image/*, video/*, audio/*, application/pdf, or text/html for a simulation."
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Name of the medium, to recognise it in the app and in the credits. It is not the caption the student reads."
+        },
+        "altText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Required for images. Read aloud by accessibility tools."
+        },
+        "captionsPath": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "WebVTT captions for video."
+        },
+        "transcriptPath": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "Plain text transcript for audio or video."
+        },
+        "posterPath": {
+          "$ref": "#/$defs/RelativePath",
+          "description": "Still image shown before a video plays. A catalog needs to represent the video without opening it."
+        },
+        "hasSpeech": {
+          "type": "boolean",
+          "description": "Audio and video only. true: someone speaks, so captions and a transcript are required. false: no speech (a letter sound, an instrument, ambience), and none is required."
+        },
+        "durationSec": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Seconds the video or audio lasts."
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Pages the pdf has. A page range on a block is checked against it."
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Pixel width of the image or video, as delivered."
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Pixel height of the image or video, as delivered."
+        },
+        "simulation": {
+          "$ref": "#/$defs/SimulationRuntime",
+          "description": "How the simulator has to be run: technology, shims, orientation and target devices. Only for kind simulation."
+        },
+        "license": {
+          "$ref": "#/$defs/License",
+          "description": "Licence of the file and what its attribution demands. It travels inside the package and feeds the credits screen."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "altText"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "simulation"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "entry",
+              "simulation"
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "entry"
+                  ]
+                },
+                {
+                  "required": [
+                    "simulation"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "video"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "posterPath"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "audio",
+                  "video"
+                ]
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "hasSpeech"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "kind",
+              "hasSpeech"
+            ],
+            "properties": {
+              "kind": {
+                "const": "video"
+              },
+              "hasSpeech": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "captionsPath",
+              "transcriptPath"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "kind",
+              "hasSpeech"
+            ],
+            "properties": {
+              "kind": {
+                "const": "audio"
+              },
+              "hasSpeech": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "transcriptPath"
+            ]
+          }
+        }
+      ]
+    },
+    "SimulationRuntime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "technology"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": [
+            "phet",
+            "avacom",
+            "third_party"
+          ],
+          "description": "phet: from phet.colorado.edu, with its licence rules. avacom: produced in house. third_party: anyone else, which needs an agreement."
+        },
+        "technology": {
+          "type": "string",
+          "enum": [
+            "html5",
+            "html5_jquery",
+            "html5_canvas",
+            "html5_webgl",
+            "flash_ruffle"
+          ],
+          "description": "flash_ruffle: legacy Flash run through a bundled Ruffle build."
+        },
+        "designWidth": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Native width the simulation was designed for. Used by scale-to-fit."
+        },
+        "designHeight": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Native height in pixels the simulation was designed for. Used by scale-to-fit."
+        },
+        "orientation": {
+          "type": "string",
+          "enum": [
+            "landscape",
+            "portrait",
+            "any"
+          ],
+          "description": "landscape, portrait, or any when it works either way."
+        },
+        "shims": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "touch_to_mouse",
+              "scale_to_fit",
+              "block_network",
+              "mute_autoplay"
+            ]
+          },
+          "description": "Compatibility layers the player injects. block_network is always applied, listing it is informational."
+        },
+        "supportsTargets": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "screen",
+              "tablet"
+            ]
+          },
+          "description": "Devices where the simulation was tested and works."
+        }
+      }
+    },
+    "Lesson": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "modes",
+        "teacherNotes",
+        "objects"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the lesson inside the course. The LMS stores it with every attempt, so it never changes once published."
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Title of the lesson, ready to show."
+        },
+        "summary": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the lesson covers, in a sentence or two."
+        },
+        "objectives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          },
+          "description": "What the lesson sets out to achieve, in the words of whoever wrote it. Free text: to aggregate progress the LMS uses curriculumRefs, which carry ids."
+        },
+        "estimatedDurationMin": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minutes the lesson is expected to take, for planning a class."
+        },
+        "modes": {
+          "$ref": "#/$defs/ModeList",
+          "description": "Modes this lesson can be delivered in. They cannot go beyond the modes of the course."
+        },
+        "curriculumRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CurriculumRef"
+          },
+          "description": "Frameworks and LMS catalogs this lesson is anchored to."
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes",
+          "description": "Notes only the teacher sees. The student profile removes them before the lesson is handed over."
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Topic"
+          },
+          "description": "Topics and subtopics taught in this lesson. Ids are unique across the course, so objects and questions of any lesson (for example a final exam) can point here with topicRef."
+        },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/LessonObject"
+          },
+          "description": "Array order is the teaching order."
+        }
+      }
+    },
+    "Topic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the topic inside the course. Questions point at it with topicRef, and an exam balances itself against it."
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Name of the topic, ready to show."
+        },
+        "subtopics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id",
+                "description": "Id of the subtopic inside the course. A question may point here instead of at the topic, to measure something finer."
+              },
+              "title": {
+                "$ref": "#/$defs/ShortText",
+                "description": "Name of the subtopic, ready to show."
+              }
+            }
+          },
+          "description": "Subtopics inside the topic. Their ids are unique across the whole course, so any question can point at them."
+        }
+      }
+    },
+    "ObjectBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "title",
+        "modes",
+        "teacherNotes"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the object inside the course. It is what the LMS records as the thing the student did."
+        },
+        "type": {
+          "type": "string",
+          "description": "lecture: the teacher drives it on the screen. explanation: the student walks it alone. simulation_lab: an isolated player with no network. activity: practice, never graded. exam: graded, and its keys never leave the app."
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Title of the object, ready to show."
+        },
+        "modes": {
+          "$ref": "#/$defs/ModeList",
+          "description": "Modes this object can be delivered in. They cannot go beyond the modes of its lesson."
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes",
+          "description": "Notes only the teacher sees. The student profile removes them."
+        },
+        "topicRef": {
+          "$ref": "#/$defs/Id",
+          "description": "Topic or subtopic id defined in any lesson of the same course."
+        },
+        "estimatedDurationSec": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Seconds the object is expected to take, for budgeting a class."
+        },
+        "curriculumRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CurriculumRef"
+          },
+          "description": "Frameworks and LMS catalogs this object is anchored to. assesses is only valid where the student answers something."
+        }
+      }
+    },
+    "LessonObject": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "lecture",
+            "explanation",
+            "simulation_lab",
+            "activity",
+            "exam"
+          ],
+          "description": "Which of the five object kinds this is: lecture, explanation, simulation_lab, activity or exam."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "lecture"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/LectureObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "explanation"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/ExplanationObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "simulation_lab"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/SimulationLabObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "activity"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/ActivityObject"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "exam"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/ExamObject"
+          }
+        }
+      ]
+    },
+    "LectureObject": {
+      "description": "Cátedra. Led by the teacher on the interactive screen (86 inch, 4 meters). Slides advance at the teacher's pace. In synchronized class mode tablets mirror the current slide.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "slides"
+      ],
+      "properties": {
+        "type": {
+          "const": "lecture"
+        },
+        "slides": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ContentPage"
+          },
+          "description": "Slides the teacher advances. Whatever does not fit is cropped without warning, so one idea per slide."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExplanationObject": {
+      "description": "Explicación. Material the student reads, watches or listens to at their own pace on the tablet.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "pages"
+      ],
+      "properties": {
+        "type": {
+          "const": "explanation"
+        },
+        "pages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ContentPage"
+          },
+          "description": "Pages the student walks at their own pace. Unlike a lecture slide, a page scrolls."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ContentPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "blocks"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the page inside the course. A lecture is a sequence of pages and the viewer shows one at a time."
+        },
+        "title": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Title of the page. Without one, the page opens with its first heading."
+        },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/Block"
+          },
+          "description": "Content of the page, in reading order. A lecture slide crops whatever does not fit, with no warning."
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes",
+          "description": "Notes only the teacher sees, tied to this page."
+        },
+        "estimatedSec": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Seconds this page is expected to take. Used to budget a class, never enforced."
+        }
+      }
+    },
+    "Block": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "heading",
+            "text",
+            "list",
+            "formula",
+            "image",
+            "video",
+            "audio",
+            "pdf"
+          ],
+          "description": "What the block renders. heading: a title. text: a paragraph. list: bullets or numbers. formula: LaTeX. image, video, audio, pdf: a declared medium."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "heading"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "text"
+            ],
+            "properties": {
+              "type": true,
+              "text": {
+                "$ref": "#/$defs/ShortText",
+                "description": "Text of the block. Required for heading and text. Inline Markdown counts, and LaTeX between dollar signs renders as a formula."
+              },
+              "level": {
+                "enum": [
+                  1,
+                  2
+                ],
+                "description": "Heading rank inside the page. 1 is the page title, 2 a section inside it."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "text"
+            ],
+            "properties": {
+              "type": true,
+              "text": {
+                "$ref": "#/$defs/RichText"
+              },
+              "style": {
+                "enum": [
+                  "normal",
+                  "highlight",
+                  "definition",
+                  "note",
+                  "warning"
+                ],
+                "description": "How the paragraph is set. normal: body text. highlight: stands out. definition: a term being defined. note: an aside. warning: a caution."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "list"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "items"
+            ],
+            "properties": {
+              "type": true,
+              "ordered": {
+                "type": "boolean",
+                "description": "Numbered list instead of bullets. Use it only when the order carries meaning."
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/RichText"
+                },
+                "description": "Entries of the list, in order."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "formula"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "latex"
+            ],
+            "properties": {
+              "type": true,
+              "latex": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4000,
+                "description": "LaTeX of the formula, rendered offline with KaTeX. Nothing beyond what KaTeX ships."
+              },
+              "display": {
+                "type": "boolean",
+                "description": "Render the formula on its own line instead of inside the paragraph."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id",
+                "description": "Medium this block shows, by its id in media. Required for image, video, audio and pdf."
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText",
+                "description": "Line under the medium, read by everybody. It is not altText, which is read instead of the image."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "video"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText"
+              },
+              "startSec": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Second the fragment starts at, so a lecture can show part of a video without editing the file."
+              },
+              "endSec": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Second the fragment stops at. Must be greater than startSec."
+              },
+              "autoplay": {
+                "type": "boolean",
+                "description": "Start the video without waiting for a tap. Only honoured in lecture mode, where the teacher is driving."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "audio"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "pdf"
+              }
+            }
+          },
+          "then": {
+            "additionalProperties": false,
+            "required": [
+              "mediaId"
+            ],
+            "properties": {
+              "type": true,
+              "mediaId": {
+                "$ref": "#/$defs/Id"
+              },
+              "caption": {
+                "$ref": "#/$defs/RichText"
+              },
+              "fromPage": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "First page of the pdf to show, counting from 1."
+              },
+              "toPage": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Last page of the pdf to show. Must be inside the document and not before fromPage."
+              }
+            }
+          }
+        }
+      ]
+    },
+    "SimulationLabObject": {
+      "description": "Simulador o laboratorio. Runs a simulation media item (PhET or HTML/JavaScript) in an isolated player without network.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "mediaId",
+        "learningGoal",
+        "instructions"
+      ],
+      "properties": {
+        "type": {
+          "const": "simulation_lab"
+        },
+        "mediaId": {
+          "$ref": "#/$defs/Id",
+          "description": "Must reference a media item of kind simulation."
+        },
+        "learningGoal": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the student should take away from the simulator, in one sentence."
+        },
+        "instructions": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the student reads before touching the simulator."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          },
+          "description": "What to do in the simulator, in order."
+        },
+        "guidingQuestions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RichText"
+          },
+          "description": "Questions to think about while using the simulator. Prose: nothing is answered or stored."
+        },
+        "launchParams": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Passed to the entry file as query string, e.g. PhET screens=1."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ActivityObject": {
+      "description": "Actividad. Formative exercises with feedback. Never produces a grade.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "instructions",
+        "settings",
+        "questions"
+      ],
+      "properties": {
+        "type": {
+          "const": "activity"
+        },
+        "instructions": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the student reads before answering."
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "feedback"
+          ],
+          "properties": {
+            "feedback": {
+              "enum": [
+                "immediate",
+                "on_submit",
+                "none"
+              ],
+              "description": "When the student learns whether the answer was right. immediate: as each question is answered. on_submit: when the whole activity is sent. none: never, the teacher reviews it."
+            },
+            "attemptsAllowed": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "How many times the author thinks a question should be checkable. It is a suggestion, not a rule: the LMS decides the real limit, because it is the one that remembers what the student already spent in earlier sessions. 0 means unlimited."
+            },
+            "shuffleQuestions": {
+              "type": "boolean",
+              "description": "Shuffle the order of the questions themselves."
+            },
+            "shuffleOptions": {
+              "type": "boolean",
+              "description": "Shuffle the options inside each question, with a seed that is stable per student."
+            },
+            "timeLimitSec": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Seconds the student has. Absent means no limit, which is the usual case in an activity."
+            }
+          },
+          "description": "How the activity behaves while the student works through it."
+        },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/Question"
+              },
+              {
+                "required": [
+                  "points"
+                ]
+              }
+            ]
+          },
+          "description": "Questions of the activity, shown in this order. An activity never produces a grade."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExamObject": {
+      "description": "Examen. Graded evaluation. Answer keys never leave the Content app.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/ObjectBase"
+        }
+      ],
+      "required": [
+        "instructions",
+        "settings",
+        "questions"
+      ],
+      "properties": {
+        "type": {
+          "const": "exam"
+        },
+        "instructions": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the student reads before starting the exam."
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "selection",
+            "showResults"
+          ],
+          "properties": {
+            "selection": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "strategy"
+              ],
+              "properties": {
+                "strategy": {
+                  "enum": [
+                    "fixed",
+                    "random_balanced"
+                  ],
+                  "description": "fixed: every student gets all questions. random_balanced: each student gets questionCount questions with similar total difficulty and total time, covering the same topics."
+                },
+                "questionCount": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Questions each student answers. With the fixed strategy it must equal the pool size or be omitted."
+                },
+                "difficultyTolerancePercent": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "How far, as a percentage, the total difficulty of one exam may drift from the target."
+                },
+                "timeTolerancePercent": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "description": "How far, as a percentage, the total estimated time may drift between students."
+                },
+                "coverAllTopics": {
+                  "type": "boolean",
+                  "description": "Every topic present in the pool must appear at least once, which sets a floor on questionCount."
+                }
+              },
+              "if": {
+                "properties": {
+                  "strategy": {
+                    "const": "random_balanced"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "questionCount",
+                  "difficultyTolerancePercent",
+                  "timeTolerancePercent",
+                  "coverAllTopics"
+                ]
+              },
+              "description": "How each student's set of questions is drawn from the pool."
+            },
+            "timeLimit": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fixedSec": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Seconds allowed, the same for everyone. Declaring it is what makes the limit fixed."
+                },
+                "extraPercent": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 200,
+                  "description": "Margin added on top of the sum of estimatedSec of the drawn questions. Declaring it is what makes the limit follow the exam that was actually drawn."
+                }
+              },
+              "not": {
+                "required": [
+                  "fixedSec",
+                  "extraPercent"
+                ]
+              },
+              "description": "How long the exam lasts, said by declaring one of the two fields and only one. fixedSec: that many seconds. extraPercent: the sum of estimatedSec of the questions drawn, plus that margin. Leaving the whole object out: no limit."
+            },
+            "showResults": {
+              "enum": [
+                "never",
+                "after_submit",
+                "after_teacher_release"
+              ],
+              "description": "When the student sees the outcome. never: only the teacher does. after_submit: on sending. after_teacher_release: when the teacher opens it."
+            },
+            "allowBackNavigation": {
+              "type": "boolean",
+              "description": "Let the student return to a question already answered."
+            },
+            "shuffleOptions": {
+              "type": "boolean",
+              "description": "Shuffle the options inside each question, seeded per student."
+            }
+          },
+          "description": "How the exam is assembled and delivered."
+        },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/Question"
+              },
+              {
+                "not": {
+                  "required": [
+                    "points"
+                  ]
+                }
+              }
+            ]
+          },
+          "description": "Question pool. None of them declares points: each student draws a different set, so what the exam adds up to cannot be written here. Every drawn question weighs the same."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "Feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correct",
+        "incorrect"
+      ],
+      "properties": {
+        "correct": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the student reads when the answer is right. Worth saying why it is right, not only that it is."
+        },
+        "incorrect": {
+          "$ref": "#/$defs/RichText",
+          "description": "What the student reads when nothing more precise applies. The feedback declared for each wrong answer comes first."
+        }
+      }
+    },
+    "QuestionBase": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "prompt",
+        "difficulty",
+        "estimatedSec",
+        "feedback"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the question inside the course. An attempt from last year points at it, so it is never reused or renamed."
+        },
+        "type": {
+          "type": "string",
+          "description": "Which of the six question kinds this is."
+        },
+        "prompt": {
+          "$ref": "#/$defs/RichText",
+          "description": "What is being asked, ready to show."
+        },
+        "mediaIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Id"
+          },
+          "description": "Media shown with the prompt, in this order."
+        },
+        "topicRef": {
+          "$ref": "#/$defs/Id",
+          "description": "Topic or subtopic id defined in any lesson of the same course. Required inside exams."
+        },
+        "difficulty": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "1 very easy, 5 very hard."
+        },
+        "estimatedSec": {
+          "type": "integer",
+          "minimum": 5,
+          "description": "Estimated time to solve."
+        },
+        "points": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Points the question is worth inside its activity. In an open question the rubric must add up to exactly this. An exam question does not carry it: the exam draws a different set for each student, so the total is not knowable when the course is written, and every drawn question weighs the same."
+        },
+        "cognitiveLevel": {
+          "enum": [
+            "remember",
+            "understand",
+            "apply",
+            "analyze",
+            "evaluate",
+            "create"
+          ],
+          "description": "Bloom level the question asks for, from remember to create. Informational: it changes nothing in the player."
+        },
+        "curriculumRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CurriculumRef"
+          },
+          "description": "Frameworks and LMS catalogs this question measures. It is the anchor the LMS aggregates mastery by."
+        },
+        "teacherNotes": {
+          "$ref": "#/$defs/TeacherNotes",
+          "description": "Notes only the teacher sees about this question."
+        },
+        "feedback": {
+          "$ref": "#/$defs/Feedback",
+          "description": "What to show when the answer is right and when it is wrong, for the cases no declared wrong answer covers."
+        },
+        "partialCredit": {
+          "type": "boolean",
+          "description": "Award part of the points when part of the answer is right. Without it the question is all or nothing."
+        }
+      }
+    },
+    "Question": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "open",
+            "multiple_choice",
+            "fill_blanks",
+            "matching",
+            "true_false",
+            "ordering",
+            "drag_drop"
+          ],
+          "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering o drag_drop."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "open"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/OpenQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "multiple_choice"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/MultipleChoiceQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "fill_blanks"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/FillBlanksQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "matching"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/MatchingQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "true_false"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/TrueFalseQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ordering"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/OrderingQuestion"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "drag_drop"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/$defs/DragDropQuestion"
+          }
+        }
+      ]
+    },
+    "ChoiceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "required": [
+            "mediaId"
+          ]
+        }
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the option inside its question. Store this, never the position: options arrive shuffled."
+        },
+        "text": {
+          "$ref": "#/$defs/RichText",
+          "description": "Text of the option. Either this or mediaId, and it may carry inline Markdown and LaTeX."
+        },
+        "mediaId": {
+          "$ref": "#/$defs/Id",
+          "description": "Medium that is the option, when the student chooses between images instead of between sentences."
+        }
+      }
+    },
+    "OpenQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "responseFormat",
+        "modelAnswer",
+        "rubric",
+        "incorrectExamples"
+      ],
+      "properties": {
+        "type": {
+          "const": "open"
+        },
+        "responseFormat": {
+          "enum": [
+            "text",
+            "drawing",
+            "audio"
+          ],
+          "description": "text: writes. drawing: draws on the tablet. audio: records, which needs a device with a microphone."
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Characters the student may write. Absent means no limit."
+        },
+        "modelAnswer": {
+          "$ref": "#/$defs/RichText",
+          "description": "An answer that would earn full marks. It never reaches the student: it belongs to the teacher's grading guide."
+        },
+        "rubric": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "criterion",
+              "points"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id",
+                "description": "Id of the criterion inside the question. The mark is recorded against it."
+              },
+              "criterion": {
+                "$ref": "#/$defs/RichText",
+                "description": "What this criterion measures, in the words the teacher reads while grading."
+              },
+              "points": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Points this criterion is worth."
+              },
+              "levels": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "label",
+                    "points"
+                  ],
+                  "properties": {
+                    "label": {
+                      "$ref": "#/$defs/ShortText",
+                      "description": "Short name of the band, such as achieved or partially."
+                    },
+                    "description": {
+                      "$ref": "#/$defs/RichText",
+                      "description": "What an answer has to do to sit in this band."
+                    },
+                    "points": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Points this band awards. Never more than the points of its criterion."
+                    }
+                  }
+                },
+                "description": "Bands inside the criterion, from the weakest to the strongest."
+              }
+            }
+          },
+          "description": "Criteria the teacher grades against. Their points must add up to the points of the question."
+        },
+        "incorrectExamples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "reason"
+            ],
+            "properties": {
+              "text": {
+                "$ref": "#/$defs/RichText",
+                "description": "An answer anticipated as wrong, written the way a student would write it."
+              },
+              "reason": {
+                "$ref": "#/$defs/RichText",
+                "description": "Why that answer does not earn the marks. The teacher reads it while grading."
+              }
+            }
+          },
+          "description": "Answers anticipated as wrong, each with its reason. They are what lets a teacher grade consistently."
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ShortText"
+          },
+          "description": "Words the teacher looks for when grading. Never shown to the student and never graded automatically."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "MultipleChoiceQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "allowMultiple",
+        "options"
+      ],
+      "properties": {
+        "type": {
+          "const": "multiple_choice"
+        },
+        "allowMultiple": {
+          "type": "boolean",
+          "description": "The student may tick more than one option. With a single answer the player uses radio buttons."
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "isCorrect"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "text"
+                ]
+              },
+              {
+                "required": [
+                  "mediaId"
+                ]
+              }
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id",
+                "description": "Id of the option inside its question. Store this, never the position: options arrive shuffled."
+              },
+              "text": {
+                "$ref": "#/$defs/RichText",
+                "description": "Text of the option. Either this or mediaId, and it may carry inline Markdown and LaTeX."
+              },
+              "mediaId": {
+                "$ref": "#/$defs/Id",
+                "description": "Medium that is the option, when the student chooses between images instead of between sentences."
+              },
+              "isCorrect": {
+                "type": "boolean",
+                "description": "This option counts as right. Never reaches a student: redaction strips it."
+              },
+              "feedback": {
+                "$ref": "#/$defs/RichText",
+                "description": "Specific feedback when this option is chosen."
+              }
+            }
+          },
+          "description": "Options shown, shuffled unless shuffling is off. Two to eight of them."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "FillBlanksQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "template",
+        "blanks"
+      ],
+      "properties": {
+        "type": {
+          "const": "fill_blanks"
+        },
+        "template": {
+          "$ref": "#/$defs/RichText",
+          "description": "Text with placeholders {{blankId}}."
+        },
+        "blanks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "inputMode",
+              "acceptedAnswers",
+              "wrongAnswers"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id",
+                "description": "Id of the blank. It has to appear in the template as a placeholder, exactly once."
+              },
+              "inputMode": {
+                "enum": [
+                  "text",
+                  "select",
+                  "numeric"
+                ],
+                "description": "text: the student writes. select: picks from choices. numeric: a number, compared with numericTolerance."
+              },
+              "acceptedAnswers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": "Every wording that counts as right. Comparison honours caseSensitive and ignoreAccents."
+              },
+              "wrongAnswers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "value"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "description": "The wrong wording, written exactly as a student would type it."
+                    },
+                    "feedback": {
+                      "$ref": "#/$defs/RichText",
+                      "description": "What to show when the student writes precisely this. Without it, the general feedback of the question is shown."
+                    }
+                  }
+                },
+                "description": "Mistakes anticipated for this blank, each with the feedback to show. Declaring them is what makes an activity teach instead of only marking."
+              },
+              "choices": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": "Required for inputMode select. Must contain the accepted answer and at least one wrong answer."
+              },
+              "caseSensitive": {
+                "type": "boolean",
+                "description": "Tell upper and lower case apart. Off by default, which is what a classroom expects."
+              },
+              "ignoreAccents": {
+                "type": "boolean",
+                "description": "Accept the answer without its accents. Useful where the keyboard makes them hard to type."
+              },
+              "numericTolerance": {
+                "type": "number",
+                "minimum": 0,
+                "description": "numeric mode: accepted if |response - accepted| <= tolerance."
+              }
+            },
+            "if": {
+              "properties": {
+                "inputMode": {
+                  "const": "select"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "choices"
+              ]
+            }
+          },
+          "description": "One entry per placeholder in the template, matched by id."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "MatchingQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "left",
+        "right",
+        "pairs",
+        "wrongPairs"
+      ],
+      "properties": {
+        "type": {
+          "const": "matching"
+        },
+        "left": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/ChoiceItem"
+          },
+          "description": "Items the student drags from. Every one of them must appear in pairs."
+        },
+        "right": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/ChoiceItem"
+          },
+          "description": "May contain more items than left: extras act as distractors."
+        },
+        "pairs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "leftId",
+              "rightId"
+            ],
+            "properties": {
+              "leftId": {
+                "$ref": "#/$defs/Id",
+                "description": "Item of the left column, by its id. Each one is paired exactly once."
+              },
+              "rightId": {
+                "$ref": "#/$defs/Id",
+                "description": "Item of the right column it pairs with. The same one may serve several left items."
+              }
+            }
+          },
+          "description": "The correct matches. One left item is never paired twice."
+        },
+        "wrongPairs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "leftId",
+              "rightId",
+              "feedback"
+            ],
+            "properties": {
+              "leftId": {
+                "$ref": "#/$defs/Id",
+                "description": "Item of the left column of the mistake being anticipated."
+              },
+              "rightId": {
+                "$ref": "#/$defs/Id",
+                "description": "Item of the right column the student is expected to pair it with by mistake."
+              },
+              "feedback": {
+                "$ref": "#/$defs/RichText",
+                "description": "What to show when the student makes precisely that pairing."
+              }
+            }
+          },
+          "description": "Matches anticipated as wrong, each with the feedback that explains why."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "TrueFalseQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "answer"
+      ],
+      "properties": {
+        "type": {
+          "const": "true_false"
+        },
+        "answer": {
+          "type": "boolean",
+          "description": "Whether the statement is true. Never reaches a student: redaction strips it."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "OrderingQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "items",
+        "correctOrder",
+        "wrongOrders"
+      ],
+      "properties": {
+        "type": {
+          "const": "ordering"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/ChoiceItem"
+          },
+          "description": "Always shuffled before showing. File order carries no meaning."
+        },
+        "correctOrder": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Id"
+          },
+          "description": "Ids of the items in the right order. The player never shows them in it."
+        },
+        "wrongOrders": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "order",
+              "feedback"
+            ],
+            "properties": {
+              "order": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "$ref": "#/$defs/Id"
+                },
+                "description": "Ids in the wrong order this entry describes."
+              },
+              "feedback": {
+                "$ref": "#/$defs/RichText",
+                "description": "What to show when the student lands on precisely this order."
+              }
+            }
+          },
+          "description": "Orderings anticipated as wrong, each with the feedback that explains the mistake."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "CurriculumNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Stable id of the skill. It is what curriculumRefs points at, it never changes, and it is shared between courses: two courses that work the same skill write the same id."
+        },
+        "name": {
+          "$ref": "#/$defs/ShortText",
+          "description": "The skill in the words a teacher would use, in the language of the curriculum. This is what the LMS shows instead of the id."
+        },
+        "parent": {
+          "$ref": "#/$defs/Id",
+          "description": "The broader node this one belongs to, declared in this same list. Absent means it hangs from nothing: it is the top of its branch."
+        },
+        "type": {
+          "enum": [
+            "formative_field",
+            "strand",
+            "subject",
+            "unit",
+            "topic",
+            "subtopic",
+            "project",
+            "challenge",
+            "skill",
+            "objective",
+            "competency"
+          ],
+          "description": "What this node is in the tree of its education level. The first six are levels of the tree and go from broad to narrow in that order; the rest are what hangs at the end of a branch: a project or a challenge to carry out, a skill to master, an objective of the curriculum, a competency it belongs to. Absent means skill, which is what a course declares when it names what it works without describing the tree above it."
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999,
+          "description": "Where this node goes among the ones that share its parent, from 0. Absent means the order does not matter and the consumer sorts by name. It travels because a curriculum tree read in alphabetical order stops looking like the one the school approved."
+        },
+        "replaces": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/Id"
+          },
+          "description": "Node ids that this one supersedes, when a curriculum redraws them: a renamed node keeps its id and does not appear here, but a node split in two, or two merged into one, do. It is what lets evidence gathered under the old id keep counting. The ids listed here must not be declared in this same list: a node cannot be alive and superseded at once."
+        }
+      },
+      "description": "A node of the AVACOM curriculum catalog, declared by the course that works it. The catalog is the sum of what the installed courses declare: there is no central list to keep in step. Most courses declare only the skills they work; a course that also carries the tree above them declares each level with its type."
+    },
+    "DragDropQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionBase"
+        }
+      ],
+      "required": [
+        "items",
+        "targets",
+        "placements",
+        "wrongPlacements"
+      ],
+      "properties": {
+        "type": {
+          "const": "drag_drop"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/ChoiceItem"
+          },
+          "description": "What the student drags. An item that appears in no placement is a distractor: it does not belong anywhere, and placing it is a mistake."
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/DragTarget"
+          },
+          "description": "Where the items are dropped. Each one receives as many items as its placements say, and every target has to receive at least one."
+        },
+        "placements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "itemId",
+              "targetId"
+            ],
+            "properties": {
+              "itemId": {
+                "$ref": "#/$defs/Id",
+                "description": "Item that is dragged, by its id. Each item lands in one target at most: an item placed twice is not a harder question, it is an ambiguous one."
+              },
+              "targetId": {
+                "$ref": "#/$defs/Id",
+                "description": "Target it belongs to. The same target may receive several items."
+              }
+            }
+          },
+          "description": "The correct placements. This is the answer key, and it never reaches a student device."
+        },
+        "wrongPlacements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "itemId",
+              "targetId",
+              "feedback"
+            ],
+            "properties": {
+              "itemId": {
+                "$ref": "#/$defs/Id",
+                "description": "Item of the mistake being anticipated."
+              },
+              "targetId": {
+                "$ref": "#/$defs/Id",
+                "description": "Target where the student is expected to drop it by mistake."
+              },
+              "feedback": {
+                "$ref": "#/$defs/RichText",
+                "description": "What to show when the student makes precisely that mistake. It is what turns a wrong answer into a lesson."
+              }
+            }
+          },
+          "description": "The mistakes worth answering, with what to say. A drag and drop with distractors invites specific errors: anticipating them is what makes the question teach."
+        }
+      },
+      "description": "Drag and drop: items that go into targets. Different from matching, where every left item pairs with exactly one right item; here a target holds several items, and an item may belong nowhere."
+    },
+    "DragTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "label"
+          ]
+        },
+        {
+          "required": [
+            "mediaId"
+          ]
+        }
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the target inside its question. Store this, never the position."
+        },
+        "label": {
+          "$ref": "#/$defs/ShortText",
+          "description": "Name of the target, what the student reads on the zone."
+        },
+        "mediaId": {
+          "$ref": "#/$defs/Id",
+          "description": "Medium that is the target, when the items are dropped on an image instead of on a labelled box."
+        }
+      },
+      "description": "A zone where items are dropped, named or shown as an image."
+    }
+  }
+}
