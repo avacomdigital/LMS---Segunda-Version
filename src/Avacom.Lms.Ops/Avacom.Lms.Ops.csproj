@@ -70,6 +70,9 @@
 		<!-- Logotipo apilado del kit LMS (símbolo + «AVACOM») para la tarjeta de inicio de sesión.
 		     El viewBox es 792x612; 155x120 conserva la proporción y cubre la altura a la que se muestra. -->
 		<MauiImage Include="..\..\assets\avacom-lms-kit-logo.svg" Link="Resources\Images\avacom_lms_kit_logo.svg" BaseSize="155,120" />
+		<!-- Fondo de «Clase de hoy»: la imagen de referencia de discos en relieve (1632x941, ya recortada la franja del borde
+		     izquierdo). Se muestra con AspectFill a pantalla completa; Resize=false para no generar variantes por densidad. -->
+		<MauiImage Include="..\..\assets\fondo-discos.png" Link="Resources\Images\fondo_discos.png" Resize="false" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />

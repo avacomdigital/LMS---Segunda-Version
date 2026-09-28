@@ -6,7 +6,7 @@ namespace Avacom.Lms.Ui.Controls;
 /// <summary>
 /// Lámina Liquid Glass: un <see cref="GlassBorder"/> (en Windows, lo de detrás desenfocado, saturado y teñido; en las
 /// demás plataformas el tinte plano) vestido con el canto luminoso, un canto interior a 2 px, el reflejo del tercio
-/// superior y una sombra violeta amplia. Sirve igual desde XAML (<c>&lt;ui:LiquidGlassPanel&gt;…&lt;/ui:LiquidGlassPanel&gt;</c>)
+/// superior y una sombra de tinta amplia y suave (fondo claro). Sirve igual desde XAML (<c>&lt;ui:LiquidGlassPanel&gt;…&lt;/ui:LiquidGlassPanel&gt;</c>)
 /// que desde código (<c>new LiquidGlassPanel { Content = … }</c>): el contenido va en <see cref="ContentView.Content"/>
 /// y lo presenta la plantilla, así que las capas del material nunca estorban a lo que se pone dentro.
 ///
@@ -21,7 +21,7 @@ public class LiquidGlassPanel : ContentView
     public static readonly BindableProperty CornerRadiusProperty = Crear(nameof(CornerRadius), 22.0);
     public static readonly BindableProperty TintColorProperty =
         BindableProperty.Create(nameof(TintColor), typeof(Color), typeof(LiquidGlassPanel), Colors.White, propertyChanged: AlCambiar);
-    public static readonly BindableProperty TintOpacityProperty = Crear(nameof(TintOpacity), 0.14);
+    public static readonly BindableProperty TintOpacityProperty = Crear(nameof(TintOpacity), 0.45);
     public static readonly BindableProperty BlurRadiusProperty = Crear(nameof(BlurRadius), 10.0);
     public static readonly BindableProperty BrightnessProperty = Crear(nameof(Brightness), 0.06);
     public static readonly BindableProperty SaturationProperty = Crear(nameof(Saturation), 1.15);
@@ -35,10 +35,10 @@ public class LiquidGlassPanel : ContentView
     public static readonly BindableProperty SheenOpacityProperty = Crear(nameof(SheenOpacity), 0.30);
     public static readonly BindableProperty EdgeOpacityProperty = Crear(nameof(EdgeOpacity), 1.0);
     public static readonly BindableProperty ShadowColorProperty =
-        BindableProperty.Create(nameof(ShadowColor), typeof(Color), typeof(LiquidGlassPanel), Glass.SombraVioleta, propertyChanged: AlCambiar);
-    public static readonly BindableProperty ShadowOpacityProperty = Crear(nameof(ShadowOpacity), 0.20);
+        BindableProperty.Create(nameof(ShadowColor), typeof(Color), typeof(LiquidGlassPanel), Ds.Tinta, propertyChanged: AlCambiar);
+    public static readonly BindableProperty ShadowOpacityProperty = Crear(nameof(ShadowOpacity), 0.10);
     public static readonly BindableProperty ShadowRadiusProperty = Crear(nameof(ShadowRadius), 36.0);
-    public static readonly BindableProperty ShadowOffsetYProperty = Crear(nameof(ShadowOffsetY), 16.0);
+    public static readonly BindableProperty ShadowOffsetYProperty = Crear(nameof(ShadowOffsetY), 14.0);
 
     private GlassBorder? lamina;
     private Border? canto;

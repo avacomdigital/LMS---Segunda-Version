@@ -6,20 +6,22 @@ namespace Avacom.Lms.Ui.Design;
 
 /// <summary>
 /// Lenguaje Liquid Glass de AVACOM para el tablero táctil del aula (estrenado en «Clase de hoy», 2026-09-28):
-/// fondo lavanda con un panal de hexágonos grandes y redondeados y, encima, superficies de vidrio en cuatro niveles
-/// para que la interfaz tenga jerarquía y no se ahogue en desenfoque:
+/// fondo claro (la imagen de discos en relieve <c>fondo_discos.png</c>, blanca como el resto de la aplicación) y,
+/// encima, superficies de vidrio en niveles para que la interfaz tenga jerarquía y no se ahogue en desenfoque:
 /// <list type="number">
-///   <item><b>Panal</b>: <c>RoundedHexagonBackgroundDrawable</c> con <see cref="TrazoPanal"/> al 40 %, detrás de todo.</item>
-///   <item><b>Menú lateral</b>: una <see cref="LiquidGlassPanel"/> grande (tinte 0,14, desenfoque 14, radio 28).</item>
-///   <item><b>Tarjetas</b>: <see cref="LiquidGlassPanel"/> (tinte 0,14, desenfoque 10, radio 22) y avisos semánticos
-///   con tinte del color (<see cref="Alerta"/>).</item>
-///   <item><b>Botones, chips, píldoras y hexágonos</b>: sin desenfoque; degradado translúcido, canto luminoso y halo
-///   del color de acento (<see cref="GlassButton"/>, <see cref="SourceStatusChip"/>, <see cref="Pildora"/>,
+///   <item><b>Fondo</b>: la imagen de discos, detrás de todo y sin captar toques.</item>
+///   <item><b>Menú lateral</b>: sólido <c>#5A5A56</c> (el mismo gris del dock del tablero), sin vidrio.</item>
+///   <item><b>Tarjetas</b>: <see cref="LiquidGlassPanel"/> (tinte blanco 0,45–0,55, desenfoque 10, radio 22) y
+///   avisos semánticos con tinte suave del color (<see cref="Alerta"/>).</item>
+///   <item><b>Botones, chips, píldoras y hexágonos</b>: sin desenfoque; degradado translúcido, bisel o canto luminoso
+///   y halo del color de acento (<see cref="GlassButton"/>, <see cref="SourceStatusChip"/>, <see cref="Pildora"/>,
 ///   <see cref="Bloque"/>, <c>ProfessorHexTile.Glass</c>).</item>
 /// </list>
-/// Todo el texto va en blanco (100 / 85 / 75 / 65 %) con Inter en pesos reales, como manda <see cref="Ds"/>; los
-/// títulos llevan una sombra violeta breve que sostiene la legibilidad sobre el vidrio claro. Los colores semánticos
-/// y el Primary rojo siguen siendo los de <see cref="Ds"/>: el vidrio cambia el material, no el significado.
+/// El texto va en la tinta de <see cref="Ds"/> (Tinta / TintaMedia / TintaSuave) con Inter en pesos reales; sólo el
+/// menú sólido y las píldoras de acento llevan texto blanco. Los colores semánticos y el Primary rojo siguen siendo
+/// los de <see cref="Ds"/>: el vidrio cambia el material, no el significado.
+/// (La primera versión, de fondo lavanda con panal y textos blancos, se descartó el mismo día por oscura y ajena al
+/// resto de la aplicación; los tokens lavanda quedan por si vuelven a hacer falta.)
 /// </summary>
 public static class Glass
 {
@@ -131,9 +133,9 @@ public static class Glass
         },
         new Point(0, 0), new Point(0, 1));
 
-    /// <summary>Sombra violeta amplia y suave que despega una lámina del fondo.</summary>
-    public static Shadow SombraVidrio(double opacidad = 0.20, double radio = 36, double desplazamiento = 16) =>
-        new() { Brush = new SolidColorBrush(SombraVioleta), Offset = new Point(0, desplazamiento), Radius = (float)radio, Opacity = (float)opacidad };
+    /// <summary>Sombra amplia y suave (tinta) que despega una lámina del fondo claro.</summary>
+    public static Shadow SombraVidrio(double opacidad = 0.12, double radio = 36, double desplazamiento = 14) =>
+        new() { Brush = new SolidColorBrush(Ds.Tinta), Offset = new Point(0, desplazamiento), Radius = (float)radio, Opacity = (float)opacidad };
 
     /// <summary>Halo del color de acento alrededor de un control coloreado.</summary>
     public static Shadow Halo(Color tono, double opacidad = 0.45, double radio = 24, double desplazamiento = 8) =>
@@ -150,17 +152,17 @@ public static class Glass
     // ------------------------------------------------------------------- textos
     public static Label Titulo(string texto, double tamano = 21) => new()
     {
-        Text = texto, FontSize = tamano, FontFamily = Ds.FuenteSemi, TextColor = Blanco, LineBreakMode = LineBreakMode.WordWrap, Shadow = SombraTexto(),
+        Text = texto, FontSize = tamano, FontFamily = Ds.FuenteSemi, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap,
     };
 
     public static Label Cuerpo(string texto, double tamano = 16) => new()
     {
-        Text = texto, FontSize = tamano, FontFamily = Ds.FuenteRegular, TextColor = Blanco85, LineBreakMode = LineBreakMode.WordWrap,
+        Text = texto, FontSize = tamano, FontFamily = Ds.FuenteRegular, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap,
     };
 
     public static Label Secundario(string texto, double tamano = 14) => new()
     {
-        Text = texto, FontSize = tamano, FontFamily = Ds.FuenteMedia, TextColor = Blanco75, LineBreakMode = LineBreakMode.WordWrap,
+        Text = texto, FontSize = tamano, FontFamily = Ds.FuenteMedia, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.WordWrap,
     };
 
     // ------------------------------------------------------------- componentes
@@ -210,18 +212,18 @@ public static class Glass
     }
 
     /// <summary>
-    /// Alerta no bloqueante (CMP-005) en vidrio semántico: ámbar, rojo o verde translúcidos. La tinta del texto se elige
-    /// por contraste: blanca sobre rojo e info, oscura sobre ámbar y verde.
+    /// Alerta no bloqueante (CMP-005) en vidrio semántico sobre fondo claro: tinte suave del color (como las variantes
+    /// «Suave» del kit) con la tinta oscura del mismo tono, para contraste WCAG.
     /// </summary>
     public static LiquidGlassPanel Alerta(string titulo, string? detalle, Tono tono)
     {
         var (fondo, opacidad, tinta) = tono switch
         {
-            Tono.Alerta => (Ds.Alerta, 0.55, TintaAlerta),
-            Tono.Peligro => (Ds.Peligro, 0.62, Blanco),
-            Tono.Exito => (Ds.Exito, 0.55, TintaExito),
-            Tono.Info => (Ds.Info, 0.50, Blanco),
-            _ => (Blanco, 0.18, Blanco),
+            Tono.Alerta => (Ds.Alerta, 0.30, Color.FromArgb("#6B5800")),
+            Tono.Peligro => (Ds.Peligro, 0.16, Color.FromArgb("#8A1C1F")),
+            Tono.Exito => (Ds.Exito, 0.18, Color.FromArgb("#0B5A38")),
+            Tono.Info => (Ds.Info, 0.18, Color.FromArgb("#0B4F70")),
+            _ => (Blanco, 0.55, Ds.Tinta),
         };
         var pila = new VerticalStackLayout { Spacing = 4 };
         pila.Add(new Label { Text = titulo, FontFamily = Ds.FuenteSemi, FontSize = 17, TextColor = tinta, LineBreakMode = LineBreakMode.WordWrap });
@@ -250,7 +252,7 @@ public static class Glass
         if (geometriaIcono is not null)
             pila.Add(new Path
             {
-                Data = Geometria(geometriaIcono), Aspect = Stretch.Uniform, Fill = new SolidColorBrush(Blanco75),
+                Data = Geometria(geometriaIcono), Aspect = Stretch.Uniform, Fill = new SolidColorBrush(Ds.TintaSuave),
                 WidthRequest = 44, HeightRequest = 44, HorizontalOptions = LayoutOptions.Center, Margin = new Thickness(0, 0, 0, 6),
             });
         var cabeza = Titulo(titulo, 22);

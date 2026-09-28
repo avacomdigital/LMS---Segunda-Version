@@ -11,11 +11,12 @@ namespace Avacom.Lms.Ops.Pages;
 /// toque, y el chip de la fuente permite volver. Todo el journey de MOD-007 empieza aquí; nada se
 /// escribe en esta pantalla.
 ///
-/// Desde 2026-09-28 la pantalla viste el lenguaje Liquid Glass (<see cref="Glass"/>): fondo lavanda con panal,
-/// menú vertical fijo a la izquierda (Menú principal, Lección, Configuración y Cerrar sesión, apilados desde
-/// abajo para el tablero táctil) y láminas de vidrio para las tarjetas, los avisos y el chip de la fuente. La lógica
-/// no cambió: los mismos hosts (<c>AvisoHost</c>, <c>HexHost</c>, <c>ListaHost</c>), el mismo chip tocable con sus
-/// cinco estados, las mismas rutas y la regla de un solo Primary por pantalla («Continuar la clase»).
+/// Desde 2026-09-28 la pantalla viste el lenguaje Liquid Glass (<see cref="Glass"/>): fondo claro con la imagen de
+/// discos en relieve, menú vertical fijo y sólido a la izquierda (Menú principal, Lección, Configuración y Cerrar
+/// sesión, apilados desde abajo para el tablero táctil) y láminas de vidrio para las tarjetas, los avisos y el chip
+/// de la fuente. La lógica no cambió: los mismos hosts (<c>AvisoHost</c>, <c>HexHost</c>, <c>ListaHost</c>), el
+/// mismo chip tocable con sus cinco estados, las mismas rutas y la regla de un solo Primary por pantalla
+/// («Continuar la clase»).
 /// </summary>
 public partial class ClaseHoyPage : ContentPage
 {
@@ -152,11 +153,11 @@ public partial class ClaseHoyPage : ContentPage
         var continuar = Ds.Boton("Continuar la clase", Ds.Rango.Primary, async (_, _) => await Shell.Current.GoToAsync($"clase-sesion?sesion={Uri.EscapeDataString(sesion.Id)}"), 64, 240);
         continuar.VerticalOptions = LayoutOptions.Center;
         grid.Add(continuar, 1, 0);
-        // Violeta más intenso que el resto de láminas: es la tarjeta que manda.
+        // Tinte violeta (el VioletaSuave del kit, en vidrio) que la distingue del resto de láminas: es la tarjeta que manda.
         return new LiquidGlassPanel
         {
-            CornerRadius = Ds.RadioTarjeta, TintColor = Glass.Violeta, TintOpacity = 0.42, BlurRadius = 10,
-            ContentPadding = new Thickness(22, 18), ShadowOpacity = 0.28, Content = grid,
+            CornerRadius = Ds.RadioTarjeta, TintColor = Glass.Violeta, TintOpacity = 0.18, BlurRadius = 10,
+            ContentPadding = new Thickness(22, 18), ShadowOpacity = 0.14, Content = grid,
         };
     }
 
@@ -192,13 +193,13 @@ public partial class ClaseHoyPage : ContentPage
 
     private async void OnCerrarSesion(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//login");
 
-    /// <summary>Menú fijo de 250 px en pantallas grandes, 224 en anchos intermedios y raíl de iconos si no cabe; nunca una barra horizontal.</summary>
+    /// <summary>Menú fijo de 216 px en pantallas grandes, 196 en anchos intermedios y raíl de iconos si no cabe; nunca una barra horizontal.</summary>
     private void OnPageSizeChanged(object? sender, EventArgs e)
     {
         if (Width <= 0) return;
         var compacto = Width < 1100;
-        Marco.ColumnDefinitions[0].Width = new GridLength(compacto ? 96 : Width < 1400 ? 224 : 250);
+        Marco.ColumnDefinitions[0].Width = new GridLength(compacto ? 84 : Width < 1400 ? 196 : 216);
         Navegacion.Compact = compacto;
-        MenuPanel.ContentPadding = compacto ? new Thickness(8, 18) : new Thickness(14, 18);
+        MenuPanel.Padding = compacto ? new Thickness(6, 16) : new Thickness(12, 16);
     }
 }

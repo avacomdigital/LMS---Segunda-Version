@@ -5,21 +5,21 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
     <ContentView.Resources>
-        <!-- Opción del menú: cápsula de 64 px (objetivo táctil) con icono de 26 px y etiqueta 17/Medium. El estado
-             activo, el hover y el modo raíl los pinta el code-behind sobre estas mismas bases. -->
+        <!-- Opción del menú: cápsula compacta de 54 px (objetivo táctil suficiente) con icono de 22 px y etiqueta
+             14/Medium. El estado activo, el hover y el modo raíl los pinta el code-behind sobre estas mismas bases. -->
         <Style x:Key="NavItem" TargetType="Border">
-            <Setter Property="HeightRequest" Value="64" />
-            <Setter Property="MinimumHeightRequest" Value="64" />
-            <Setter Property="StrokeShape" Value="RoundRectangle 18" />
+            <Setter Property="HeightRequest" Value="54" />
+            <Setter Property="MinimumHeightRequest" Value="54" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 16" />
             <Setter Property="StrokeThickness" Value="1" />
             <Setter Property="Stroke" Value="Transparent" />
             <Setter Property="BackgroundColor" Value="Transparent" />
-            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Padding" Value="12,0" />
             <Setter Property="HorizontalOptions" Value="Fill" />
         </Style>
         <Style x:Key="NavIcon" TargetType="Path">
-            <Setter Property="WidthRequest" Value="26" />
-            <Setter Property="HeightRequest" Value="26" />
+            <Setter Property="WidthRequest" Value="22" />
+            <Setter Property="HeightRequest" Value="22" />
             <Setter Property="Aspect" Value="Uniform" />
             <Setter Property="Fill" Value="White" />
             <Setter Property="HorizontalOptions" Value="Center" />
@@ -27,7 +27,7 @@
         </Style>
         <Style x:Key="NavLabel" TargetType="Label">
             <Setter Property="FontFamily" Value="InterMedium" />
-            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontSize" Value="14" />
             <Setter Property="TextColor" Value="White" />
             <Setter Property="VerticalOptions" Value="Center" />
             <Setter Property="LineBreakMode" Value="TailTruncation" />
@@ -36,9 +36,9 @@
     <!-- Apilado desde abajo (pantalla táctil gigante: lo de abajo es lo que se alcanza). De arriba abajo: Cerrar sesión,
          Configuración, línea translúcida, Lección y, pegado al borde inferior, Menú principal. -->
     <Grid RowDefinitions="*,Auto">
-        <VerticalStackLayout Grid.Row="1" Spacing="6" VerticalOptions="End">
+        <VerticalStackLayout Grid.Row="1" Spacing="4" VerticalOptions="End">
             <Border x:Name="SalirItem" Style="{StaticResource NavItem}">
-                <Grid ColumnDefinitions="30,*" ColumnSpacing="14">
+                <Grid ColumnDefinitions="24,*" ColumnSpacing="10">
                     <Path Style="{StaticResource NavIcon}" Data="M112,216 A8,8 0 0 1 104,224 L48,224 A16,16 0 0 1 32,208 L32,48 A16,16 0 0 1 48,32 L104,32 A8,8 0 0 1 104,48 L48,48 L48,208 L104,208 A8,8 0 0 1 112,216 Z M221.66,122.34 L181.66,82.34 A8,8 0 0 0 170.34,93.66 L196.69,120 L104,120 A8,8 0 0 0 104,136 L196.69,136 L170.34,162.34 A8,8 0 0 0 181.66,173.66 L221.66,133.66 A8,8 0 0 0 221.66,122.34 Z" />
                     <Label Grid.Column="1" Style="{StaticResource NavLabel}" Text="Cerrar sesión" />
                 </Grid>
@@ -48,7 +48,7 @@
                 </Border.GestureRecognizers>
             </Border>
             <Border x:Name="ConfiguracionItem" Style="{StaticResource NavItem}">
-                <Grid ColumnDefinitions="30,*" ColumnSpacing="14">
+                <Grid ColumnDefinitions="24,*" ColumnSpacing="10">
                     <Path Style="{StaticResource NavIcon}" Data="M211.1,105.7 L238.9,112.4 L238.9,143.6 L211.1,150.3 L202.5,171.0 L217.4,195.4 L195.4,217.4 L171.0,202.5 L150.3,211.1 L143.6,238.9 L112.4,238.9 L105.7,211.1 L85.0,202.5 L60.6,217.4 L38.6,195.4 L53.5,171.0 L44.9,150.3 L17.1,143.6 L17.1,112.4 L44.9,105.7 L53.5,85.0 L38.6,60.6 L60.6,38.6 L85.0,53.5 L105.7,44.9 L112.4,17.1 L143.6,17.1 L150.3,44.9 L171.0,53.5 L195.4,38.6 L217.4,60.6 L202.5,85.0 Z M128,92 A36,36 0 1 0 128,164 A36,36 0 1 0 128,92 Z" />
                     <Label Grid.Column="1" Style="{StaticResource NavLabel}" Text="Configuración" />
                 </Grid>
@@ -57,9 +57,9 @@
                     <PointerGestureRecognizer PointerEntered="OnEntrar" PointerExited="OnSalir" PointerPressed="OnPresionar" PointerReleased="OnSoltar" />
                 </Border.GestureRecognizers>
             </Border>
-            <BoxView x:Name="Separador" Margin="12,10" Color="#4DFFFFFF" HeightRequest="1" />
+            <BoxView x:Name="Separador" Margin="10,8" Color="#4DFFFFFF" HeightRequest="1" />
             <Border x:Name="LeccionItem" Style="{StaticResource NavItem}">
-                <Grid ColumnDefinitions="30,*" ColumnSpacing="14">
+                <Grid ColumnDefinitions="24,*" ColumnSpacing="10">
                     <Path Style="{StaticResource NavIcon}" Data="M232,48 H160 A40,40 0 0 0 128,64 A40,40 0 0 0 96,48 H24 A8,8 0 0 0 16,56 V200 A8,8 0 0 0 24,208 H96 A24,24 0 0 1 120,232 A8,8 0 0 0 136,232 A24,24 0 0 1 160,208 H232 A8,8 0 0 0 240,200 V56 A8,8 0 0 0 232,48 Z M96,192 H32 V64 H96 A24,24 0 0 1 120,88 V200 A39.81,39.81 0 0 0 96,192 Z M224,192 H160 A39.81,39.81 0 0 0 136,200 V88 A24,24 0 0 1 160,64 H224 Z" />
                     <Label Grid.Column="1" Style="{StaticResource NavLabel}" Text="Lección" />
                 </Grid>
@@ -69,7 +69,7 @@
                 </Border.GestureRecognizers>
             </Border>
             <Border x:Name="MenuPrincipalItem" Style="{StaticResource NavItem}">
-                <Grid ColumnDefinitions="30,*" ColumnSpacing="14">
+                <Grid ColumnDefinitions="24,*" ColumnSpacing="10">
                     <Path Style="{StaticResource NavIcon}" Data="M218.83,103.77 L138.83,28.29 A16,16 0 0 0 117.17,28.29 L37.17,103.77 A16,16 0 0 0 32,115.55 L32,208 A16,16 0 0 0 48,224 L96,224 A16,16 0 0 0 112,208 L112,160 L144,160 L144,208 A16,16 0 0 0 160,224 L208,224 A16,16 0 0 0 224,208 L224,115.55 A16,16 0 0 0 218.83,103.77 Z M208,208 L160,208 L160,160 A16,16 0 0 0 144,144 L112,144 A16,16 0 0 0 96,160 L96,208 L48,208 L48,115.55 L128,40 L208,115.55 Z" />
                     <Label Grid.Column="1" Style="{StaticResource NavLabel}" Text="Menú principal" />
                 </Grid>

@@ -8,8 +8,9 @@ namespace Avacom.Lms.Ui.Controls;
 /// con la mano: Menú principal queda pegado al borde inferior, Lección encima y, tras una línea translúcida,
 /// Configuración y Cerrar sesión (la salida es lo más lejano). Sin perfil, avatar, progreso ni otras opciones.
 ///
-/// La opción activa (<see cref="Active"/>) es una cápsula de vidrio con canto luminoso y halo violeta; las demás son
-/// transparentes y se iluminan al pasar el puntero. Hover 1,02 (150 ms) · pressed 0,97 (90 ms) · release 1,0 (140 ms).
+/// Vive sobre la barra sólida <c>#5A5A56</c> (el gris del dock del tablero), con iconos y etiquetas en blanco. La
+/// opción activa (<see cref="Active"/>) es una cápsula blanca translúcida con canto claro; las demás son transparentes
+/// y se iluminan al pasar el puntero. Hover 1,02 (150 ms) · pressed 0,97 (90 ms) · release 1,0 (140 ms).
 /// Con <see cref="Compact"/> se ocultan las etiquetas y queda un raíl de iconos para anchos insuficientes; nunca se
 /// convierte en una barra horizontal. Los iconos son geometrías vectoriales (Phosphor, caja de 256), no emojis.
 /// </summary>
@@ -21,6 +22,9 @@ public partial class VerticalNavigation : ContentView
         BindableProperty.Create(nameof(Active), typeof(string), typeof(VerticalNavigation), OpcionMenu, propertyChanged: (b, _, _) => ((VerticalNavigation)b).Pintar());
     public static readonly BindableProperty CompactProperty =
         BindableProperty.Create(nameof(Compact), typeof(bool), typeof(VerticalNavigation), false, propertyChanged: (b, _, _) => ((VerticalNavigation)b).Pintar());
+
+    private static readonly Color Reposo = Colors.Transparent;
+    private static readonly Color BajoPuntero = Color.FromArgb("#1FFFFFFF");
 
     private readonly Dictionary<string, Border> opciones;
     private readonly HashSet<Border> bajoPuntero = new();
@@ -48,19 +52,30 @@ public partial class VerticalNavigation : ContentView
 
     private bool EsActiva(Border borde) => opciones.TryGetValue(Active ?? string.Empty, out var activa) && ReferenceEquals(activa, borde);
 
+    /// <summary>Cápsula de la opción activa: blanco translúcido algo más presente arriba, canto claro y sin sombra (la barra es sólida).</summary>
+    private static void PintarActiva(Border borde, bool iluminada)
+    {
+        borde.Background = Glass.Relleno(Colors.White, iluminada ? 0.32 : 0.24, iluminada ? 0.18 : 0.12);
+        borde.Stroke = Glass.CantoLuminoso(iluminada ? 0.7 : 0.55);
+    }
+
     private void Pintar()
     {
         if (opciones is null) return;
         foreach (var (clave, borde) in opciones)
         {
             var activa = clave == Active;
-            borde.BackgroundColor = Colors.Transparent;
-            borde.Background = activa ? Glass.Relleno(Colors.White, 0.36, 0.16) : null!;
-            borde.Stroke = activa ? Glass.CantoLuminoso(0.95) : new SolidColorBrush(Colors.Transparent);
-            borde.Shadow = activa ? Glass.Halo(Glass.Violeta, 0.40, 22, 8) : null!;
-            borde.Padding = Compact ? new Thickness(0) : new Thickness(14, 0);
+            borde.BackgroundColor = Reposo;
+            borde.Shadow = null!;
+            if (activa) PintarActiva(borde, false);
+            else
+            {
+                borde.Background = null!;
+                borde.Stroke = new SolidColorBrush(Colors.Transparent);
+            }
+            borde.Padding = Compact ? new Thickness(0) : new Thickness(12, 0);
             if (borde.Content is not Grid fila) continue;
-            if (fila.ColumnDefinitions.Count > 0) fila.ColumnDefinitions[0].Width = Compact ? GridLength.Star : new GridLength(30);
+            if (fila.ColumnDefinitions.Count > 0) fila.ColumnDefinitions[0].Width = Compact ? GridLength.Star : new GridLength(24);
             foreach (var hijo in fila.Children)
             {
                 if (hijo is Label etiqueta)
@@ -70,15 +85,15 @@ public partial class VerticalNavigation : ContentView
                 }
             }
         }
-        Separador.Margin = Compact ? new Thickness(14, 10) : new Thickness(12, 10);
+        Separador.Margin = Compact ? new Thickness(12, 8) : new Thickness(10, 8);
     }
 
     private async void OnEntrar(object? sender, PointerEventArgs e)
     {
         if (sender is not Border borde) return;
         bajoPuntero.Add(borde);
-        if (EsActiva(borde)) borde.Shadow = Glass.Halo(Glass.Violeta, 0.58, 28, 8);
-        else borde.BackgroundColor = Color.FromArgb("#1FFFFFFF");
+        if (EsActiva(borde)) PintarActiva(borde, true);
+        else borde.BackgroundColor = BajoPuntero;
         await borde.ScaleToAsync(1.02, 150, Easing.CubicOut);
     }
 
@@ -86,8 +101,8 @@ public partial class VerticalNavigation : ContentView
     {
         if (sender is not Border borde) return;
         bajoPuntero.Remove(borde);
-        if (EsActiva(borde)) borde.Shadow = Glass.Halo(Glass.Violeta, 0.40, 22, 8);
-        else borde.BackgroundColor = Colors.Transparent;
+        if (EsActiva(borde)) PintarActiva(borde, false);
+        else borde.BackgroundColor = Reposo;
         await borde.ScaleToAsync(1, 150, Easing.CubicOut);
     }
 

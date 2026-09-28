@@ -20,7 +20,7 @@ public class GlassButton : ContentView
     public static readonly BindableProperty FontSizeProperty =
         BindableProperty.Create(nameof(FontSize), typeof(double), typeof(GlassButton), 18.0, propertyChanged: AlCambiar);
     public static readonly BindableProperty TextColorProperty =
-        BindableProperty.Create(nameof(TextColor), typeof(Color), typeof(GlassButton), Colors.White, propertyChanged: AlCambiar);
+        BindableProperty.Create(nameof(TextColor), typeof(Color), typeof(GlassButton), Ds.Tinta, propertyChanged: AlCambiar);
     public static readonly BindableProperty AccentProperty =
         BindableProperty.Create(nameof(Accent), typeof(Color), typeof(GlassButton), null, propertyChanged: AlCambiar);
     public static readonly BindableProperty CornerRadiusProperty =
@@ -96,9 +96,12 @@ public class GlassButton : ContentView
     {
         var acento = Accent;
         cuerpo.StrokeShape = new RoundRectangle { CornerRadius = CornerRadius };
-        cuerpo.Stroke = Glass.CantoLuminoso(0.95);
-        cuerpo.Background = acento is null ? Glass.Relleno(Colors.White, 0.30, 0.14) : Glass.RellenoAcento(acento, 0.92);
-        cuerpo.Shadow = acento is null ? Glass.SombraVidrio(0.18, 22, 8) : Glass.Halo(acento, 0.42, 20, 8);
+        // Sobre fondo claro el cuerpo blanco translúcido lleva el bisel del kit (luz arriba-izquierda, sombra
+        // abajo-derecha) para que se lea como botón; con acento, canto luminoso y halo del color.
+        cuerpo.Stroke = acento is null ? Ds.Bisel() : Glass.CantoLuminoso(0.95);
+        cuerpo.StrokeThickness = acento is null ? 1.5 : 1;
+        cuerpo.Background = acento is null ? Glass.Relleno(Colors.White, 0.78, 0.50) : Glass.RellenoAcento(acento, 0.92);
+        cuerpo.Shadow = acento is null ? Glass.SombraVidrio(0.14, 20, 8) : Glass.Halo(acento, 0.42, 20, 8);
         etiqueta.Text = Text;
         etiqueta.FontSize = FontSize;
         // Sobre un acento claro (ámbar, cian) la etiqueta pasa a tinta oscura; sobre vidrio blanco manda TextColor.

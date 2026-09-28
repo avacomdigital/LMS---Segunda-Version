@@ -4,36 +4,26 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
-    xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui"
-    BackgroundColor="#B5A6C5"
+    BackgroundColor="#F1F1F1"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
-    <!-- P1 · Clase de hoy en Liquid Glass. Dos columnas y una sola fila: el menú vertical fijo a la izquierda
-         (250 px; 224 en anchos intermedios; raíl de iconos por debajo de 1100, ver OnPageSizeChanged) y el
-         contenido, que se desplaza en vertical, a la derecha. No hay barra horizontal superior: el chip de la
-         fuente vive ahora arriba a la derecha del contenido y sigue siendo tocable (alterna Biblioteca ↔ ejemplo).
-         Jerarquía del vidrio: panal (1) → menú (2) → tarjetas y avisos (3) → botones, chips y hexágonos (4). -->
-    <Grid x:Name="Marco" ColumnDefinitions="250,*">
-        <Grid.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#A99ABD" Offset="0" />
-                <GradientStop Color="#B5A6C5" Offset="0.55" />
-                <GradientStop Color="#C2B3CF" Offset="1" />
-            </LinearGradientBrush>
-        </Grid.Background>
+    <!-- P1 · Clase de hoy. Dos columnas y una sola fila: el menú vertical fijo a la izquierda (250 px; 224 en anchos
+         intermedios; raíl de iconos por debajo de 1100, ver OnPageSizeChanged) y el contenido, que se desplaza en
+         vertical, a la derecha. No hay barra horizontal superior: el chip de la fuente vive arriba a la derecha del
+         contenido y sigue siendo tocable (alterna Biblioteca ↔ ejemplo). Fondo claro como el resto de la aplicación
+         (la imagen de discos en relieve), menú sólido del gris del dock y Liquid Glass sólo en tarjetas y avisos. -->
+    <Grid x:Name="Marco" ColumnDefinitions="216,*">
+        <!-- Fondo: la imagen de referencia de discos en relieve (assets/fondo-discos.png), a pantalla completa y detrás
+             de todo, al 25 % sobre el gris #F1F1F1 de la página para que sólo insinúe el relieve. InputTransparent: es
+             100 % decorativa y nunca captura toques ni desplazamiento. -->
+        <Image Grid.ColumnSpan="2" Aspect="AspectFill" HorizontalOptions="Fill" InputTransparent="True" Opacity="0.25" Source="fondo_discos.png" VerticalOptions="Fill" />
 
-        <!-- Nivel 1 · panal de hexágonos grandes con las puntas redondeadas, continuo por toda la pantalla y detrás
-             de todo. InputTransparent: es 100 % decorativo y nunca captura toques ni desplazamiento. -->
-        <GraphicsView Grid.ColumnSpan="2" HorizontalOptions="Fill" InputTransparent="True" VerticalOptions="Fill">
-            <GraphicsView.Drawable>
-                <gfx:RoundedHexagonBackgroundDrawable CornerRadius="14" Gap="6" HexagonWidth="250" Opacity="0.4" StrokeColor="#C9BDD5" StrokeWidth="1" />
-            </GraphicsView.Drawable>
-        </GraphicsView>
-
-        <!-- Nivel 2 · menú lateral: una gran lámina de vidrio con las cuatro opciones apiladas desde abajo. -->
-        <ui:LiquidGlassPanel x:Name="MenuPanel" Grid.Column="0" Margin="20,20,0,20" BlurRadius="14" ContentPadding="14,18" CornerRadius="28" ShadowOpacity="0.22" ShadowRadius="40" SheenHeight="220" TintOpacity="0.14">
+        <!-- Menú lateral: barra sólida #5A5A56 (la del dock del tablero), estrecha (216 px), radio 28 y una sombra
+             ligera y difusa que la despega del fondo, con las cuatro opciones apiladas desde abajo. -->
+        <Border x:Name="MenuPanel" Grid.Column="0" Margin="20,20,0,20" Padding="12,16" BackgroundColor="#5A5A56" StrokeShape="RoundRectangle 28" StrokeThickness="0">
+            <Border.Shadow><Shadow Brush="#000000" Opacity="0.16" Offset="0,10" Radius="28" /></Border.Shadow>
             <ui:VerticalNavigation x:Name="Navegacion" Active="menu" CerrarSesionTapped="OnCerrarSesion" ConfiguracionTapped="OnConfiguracion" LeccionTapped="OnLeccion" MenuPrincipalTapped="OnVolver" />
-        </ui:LiquidGlassPanel>
+        </Border>
 
         <!-- Contenido principal, desplazable. Los tres hosts (AvisoHost, HexHost, ListaHost) son los mismos de siempre:
              el code-behind los llena con la clase abierta, los avisos, los hexágonos de materia y las secciones de cursos. -->
@@ -44,9 +34,7 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="28" RowDefinitions="Auto,*">
                     <VerticalStackLayout Grid.RowSpan="2" Spacing="8" VerticalOptions="Center">
                         <Label Style="{StaticResource GlassEyebrow}" Text="¡Hola!" />
-                        <Label Style="{StaticResource GlassHero}" Text="¿Qué vas a dar hoy?">
-                            <Label.Shadow><Shadow Brush="#3B1E5E" Opacity="0.3" Offset="0,2" Radius="12" /></Label.Shadow>
-                        </Label>
+                        <Label Style="{StaticResource GlassHero}" Text="¿Qué vas a dar hoy?" />
                         <Label Style="{StaticResource GlassLead}" Text="Toca una materia para ver sus cursos y elige la lección con la que empieza la clase. El curso lo entrega AVACOM Biblioteca; aquí sólo se da la clase." />
                         <Label x:Name="SubtituloLabel" Margin="0,6,0,0" Style="{StaticResource GlassCaption}" Text="Materias asignadas" />
                     </VerticalStackLayout>
