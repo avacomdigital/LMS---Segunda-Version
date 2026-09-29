@@ -1,11 +1,32 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage x:Class="Avacom.Lms.Student.Pages.StudentMenuPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui" Shell.NavBarIsVisible="False">
+<ContentPage x:Class="Avacom.Lms.Student.Pages.StudentMenuPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui" xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui" Shell.NavBarIsVisible="False">
     <Grid RowDefinitions="72,*,72" BackgroundColor="{StaticResource CanvasGray}">
+        <!-- Fondo decorativo (capa más baja, bajo cabecera, hexágonos y barra inferior): retícula de hexágonos grandes con las
+             puntas redondeadas, en un solo GraphicsView que se adapta solo al tamaño de la ventana y a la orientación. Se declara
+             primero y sin ZIndex para quedar debajo de todo lo existente; InputTransparent: es 100 % decorativa y nunca captura
+             toques, clics ni gestos. La tinta translúcida (negro al 10 %) da sobre el #F1F1F1 de la página el mismo contraste que
+             el gris #E6E6E6 de la referencia sobre blanco (igual que el menú de OPS). -->
+        <GraphicsView Grid.RowSpan="3" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <GraphicsView.Drawable>
+                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#1A000000" StrokeWidth="1.25" />
+            </GraphicsView.Drawable>
+        </GraphicsView>
         <Grid Padding="24,0" ColumnDefinitions="*,Auto"><HorizontalStackLayout VerticalOptions="Center"><Label Text="⬡" FontSize="34" TextColor="{StaticResource BrandRed}"/><Label Text="AVACOM  CLASSROOM" FontAttributes="Bold" FontSize="17" VerticalTextAlignment="Center"/></HorizontalStackLayout><HorizontalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="9"><Border BackgroundColor="#6B6B6B" WidthRequest="42" HeightRequest="42" StrokeThickness="0"><Label Text="EM" TextColor="White" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/></Border><VerticalStackLayout VerticalOptions="Center" Spacing="0"><Label x:Name="StudentName" Text="Ethan" FontAttributes="Bold"/><Label Text="Estudiante" FontSize="12"/></VerticalStackLayout></HorizontalStackLayout></Grid>
         <ScrollView Grid.Row="1"><VerticalStackLayout Spacing="4" Padding="16,12,16,30" HorizontalOptions="Center"><VerticalStackLayout HorizontalOptions="Center" Margin="0,0,0,10"><Label x:Name="WelcomeLabel" Text="Bienvenido" FontSize="25" FontAttributes="Bold" HorizontalTextAlignment="Center"/><Label Text="¿Qué quieres hacer hoy?" Style="{StaticResource Muted}" HorizontalTextAlignment="Center"/></VerticalStackLayout>
-            <HorizontalStackLayout Spacing="-4" HorizontalOptions="Center"><ui:HexagonButton Text="Clase en vivo" Icon="◉" AccentColor="{StaticResource BrandViolet}" WidthRequest="136" HeightRequest="157" Tapped="OnClaseEnVivo"/><ui:HexagonButton Text="Asignaturas" Icon="▤" AccentColor="{StaticResource BrandRed}" WidthRequest="136" HeightRequest="157" Tapped="OnCourses"/><ui:HexagonButton Text="Comunicación" Icon="♧" AccentColor="{StaticResource BrandRed}" WidthRequest="136" HeightRequest="157"/></HorizontalStackLayout>
-            <HorizontalStackLayout Spacing="-4" HorizontalOptions="Center" Margin="0,-24,0,0"><ui:HexagonButton Text="Enciclopedia" Icon="▥" AccentColor="{StaticResource BrandYellow}" WidthRequest="136" HeightRequest="157"/><ui:HexagonButton Text="Perfil" Icon="○" AccentColor="{StaticResource Ink}" WidthRequest="136" HeightRequest="157"/><ui:HexagonButton Text="Progreso" Icon="↗" AccentColor="{StaticResource BrandViolet}" WidthRequest="136" HeightRequest="157"/></HorizontalStackLayout>
-            <HorizontalStackLayout Spacing="-4" HorizontalOptions="Center" Margin="0,-24,0,0"><ui:HexagonButton Text="Calendario" Icon="▦" AccentColor="{StaticResource BrandGreen}" WidthRequest="136" HeightRequest="157"/><ui:HexagonButton Text="Ayuda" Icon="?" AccentColor="{StaticResource BrandBlue}" WidthRequest="136" HeightRequest="157"/></HorizontalStackLayout>
+            <!-- Panal de opciones: hexágonos con la punta arriba que encajan como los del fondo. Filas 3-2-3 con la del medio desplazada
+                 medio hexágono; el paso horizontal es ancho + 8 px de separación y el vertical (ancho + 8) × √3/2, que deja la misma
+                 separación en las diagonales. Se mantiene el orden de lectura de siempre. Las seis opciones sin acción todavía no
+                 llevan Tapped. -->
+            <AbsoluteLayout WidthRequest="541" HeightRequest="519" HorizontalOptions="Center">
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="0,0,175,202" Text="Clase en vivo" Icon="◉" AccentColor="{StaticResource BrandViolet}" Tapped="OnClaseEnVivo"/>
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="183,0,175,202" Text="Asignaturas" Icon="▤" AccentColor="{StaticResource BrandRed}" Tapped="OnCourses"/>
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="366,0,175,202" Text="Comunicación" Icon="♧" AccentColor="{StaticResource BrandRed}"/>
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="91.5,158.5,175,202" Text="Enciclopedia" Icon="▥" AccentColor="{StaticResource BrandYellow}"/>
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="274.5,158.5,175,202" Text="Perfil" Icon="○" AccentColor="{StaticResource Ink}"/>
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="0,317,175,202" Text="Progreso" Icon="↗" AccentColor="{StaticResource BrandViolet}"/>
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="183,317,175,202" Text="Calendario" Icon="▦" AccentColor="{StaticResource BrandGreen}"/>
+                <ui:HexagonButton AbsoluteLayout.LayoutBounds="366,317,175,202" Text="Ayuda" Icon="?" AccentColor="{StaticResource BrandBlue}"/>
+            </AbsoluteLayout>
         </VerticalStackLayout></ScrollView>
         <Border Grid.Row="2" Margin="20,5" Padding="18,8" BackgroundColor="#5A5A56" StrokeThickness="0" HorizontalOptions="Center"><HorizontalStackLayout Spacing="24"><Button Text="⌂  Menú" BackgroundColor="Transparent" TextColor="White"/><Button Text="◉  Clase en vivo" BackgroundColor="Transparent" TextColor="White" Clicked="OnClaseEnVivo"/><Button Text="▤  Asignaturas" BackgroundColor="Transparent" TextColor="White" Clicked="OnCourses"/><Button Text="?  Ayuda" BackgroundColor="Transparent" TextColor="White"/><Button Text="↪  Salir" BackgroundColor="Transparent" TextColor="White" Clicked="OnLogout"/></HorizontalStackLayout></Border>
     </Grid>

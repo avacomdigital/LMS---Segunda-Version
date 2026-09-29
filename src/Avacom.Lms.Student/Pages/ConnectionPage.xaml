@@ -1,14 +1,81 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage x:Class="Avacom.Lms.Student.Pages.ConnectionPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" Shell.NavBarIsVisible="False">
-    <Grid><Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FDECEC" Offset="0"/><GradientStop Color="#E6F6FC" Offset="0.42"/><GradientStop Color="#FEF9E6" Offset="0.78"/><GradientStop Color="#F5E8F1" Offset="1"/></LinearGradientBrush></Grid.Background>
-        <ScrollView><Border WidthRequest="500" MaximumWidthRequest="500" Padding="38" Margin="24" VerticalOptions="Center" HorizontalOptions="Center"><Border.Shadow><Shadow Brush="#26000000" Offset="0,10" Radius="24"/></Border.Shadow><VerticalStackLayout Spacing="18">
-            <VerticalStackLayout HorizontalOptions="Center" Spacing="0"><Label Text="⬡" FontSize="52" TextColor="{StaticResource BrandRed}"/><Label Text="AVACOM" FontSize="28" FontAttributes="Bold" TextColor="{StaticResource BrandRed}"/><Label Text="LMS STUDENT" FontSize="12" CharacterSpacing="2" HorizontalTextAlignment="Center"/></VerticalStackLayout>
-            <Label Text="Conéctate a tu aula" FontSize="23" FontAttributes="Bold"/><Label Text="Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor." Style="{StaticResource Muted}"/>
-            <Label Text="Tu nombre" FontAttributes="Bold"/><Entry x:Name="NameEntry" Text="Ethan Martínez" Placeholder="Nombre y apellido"/>
-            <Label Text="Dirección del aula" FontAttributes="Bold"/><Entry x:Name="ServerEntry" Text="http://192.168.1.10:8000" Keyboard="Url" Placeholder="192.168.1.10:8000"/>
-            <Border x:Name="StatusCard" BackgroundColor="#E6F6FC" Padding="13" StrokeThickness="0"><Label x:Name="StatusLabel" Text="●  Lista para comprobar la red local" TextColor="{StaticResource BrandBlue}"/></Border>
-            <Button x:Name="CheckButton" Text="Comprobar conexión" Style="{StaticResource DarkButton}" Clicked="OnCheck"/><Button Text="Entrar al aula" Style="{StaticResource PrimaryButton}" Clicked="OnEnter"/>
-            <Label Text="También puedes entrar en modo demo sin conexión." Style="{StaticResource Muted}" HorizontalTextAlignment="Center"/>
-        </VerticalStackLayout></Border></ScrollView>
+<ContentPage x:Class="Avacom.Lms.Student.Pages.ConnectionPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:controls="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui" xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui" Shell.NavBarIsVisible="False" SizeChanged="OnPageSizeChanged">
+    <!-- Misma composición que el acceso de AVACOM OPS, sobre la cuadrícula de tercios: la tarjeta va centrada en la línea vertical
+         del primer tercio (columna 1: de 1/6 a 1/2 del ancho, desplazada 50 px a la izquierda) y el lápiz 3D centrado en la línea
+         de 5/6 (columna 3: de 2/3 al borde), cabiendo en el tercio central de alto. A diferencia del acceso de OPS, Student no
+         lleva el saludo vertical «BIENVENIDO / WELCOME…»: el canal izquierdo (columna 0) queda libre para el panal. En Y, tarjeta y
+         lápiz van de 1/6 a 5/6. Es la composición de una pantalla ancha; en ventanas estrechas o
+         en vertical el code-behind (AjustarComposicion) sólo recoloca estas mismas piezas: nada se quita ni cambia de función. -->
+    <Grid x:Name="Escena" ColumnDefinitions="*,2*,*,2*" RowDefinitions="*,4*,*">
+        <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FDECEC" Offset="0"/><GradientStop Color="#E6F6FC" Offset="0.42"/><GradientStop Color="#FEF9E6" Offset="0.78"/><GradientStop Color="#F5E8F1" Offset="1"/></LinearGradientBrush></Grid.Background>
+        <!-- Fondo decorativo (capa más baja, bajo la tarjeta): retícula de hexágonos grandes con las puntas redondeadas, en un solo
+             GraphicsView que se adapta solo al tamaño de la ventana. InputTransparent: es 100 % decorativa y nunca captura toques ni clics.
+             La tinta translúcida (negro al 10 %) da sobre blanco el mismo gris de la referencia (#E6E6E6) y sobre el degradado
+             sólo oscurece un poco el tono que ya hay, en vez de un gris opaco que se perdería en las zonas azul y rosa. -->
+        <GraphicsView x:Name="Panal" Grid.ColumnSpan="4" Grid.RowSpan="3" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <GraphicsView.Drawable>
+                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#1A000000" StrokeWidth="1.25"/>
+            </GraphicsView.Drawable>
+        </GraphicsView>
+        <!-- Tarjeta de vidrio (liquid glass): deja ver el fondo desenfocado y teñido de blanco. El canto es un degradado de luz que
+             entra por arriba a la izquierda, se apaga en los lados y vuelve a asomar abajo a la derecha, y una sombra amplia y suave
+             la despega del fondo. Botones, tipografía y contenido siguen tal cual. -->
+        <controls:GlassBorder x:Name="Tarjeta" Grid.Column="1" Grid.Row="1" Padding="0" HorizontalOptions="Fill" VerticalOptions="Fill" TranslationX="-50" StrokeShape="RoundRectangle 24" StrokeThickness="1.5" TintColor="White" TintOpacity="0.32" BlurRadius="8" Brightness="0.08" Saturation="1.2">
+            <controls:GlassBorder.Stroke><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FFFFFFFF" Offset="0"/><GradientStop Color="#8CFFFFFF" Offset="0.3"/><GradientStop Color="#4DFFFFFF" Offset="0.5"/><GradientStop Color="#80FFFFFF" Offset="0.7"/><GradientStop Color="#D9FFFFFF" Offset="1"/></LinearGradientBrush></controls:GlassBorder.Stroke>
+            <controls:GlassBorder.Shadow><Shadow Brush="#000000" Opacity="0.12" Offset="0,20" Radius="48"/></controls:GlassBorder.Shadow>
+            <Grid>
+                <!-- Capas del material, bajo el contenido y sin captar toques: el canto interior (el vidrio es más luminoso junto
+                     al borde) y el brillo del tercio superior, donde la luz se refleja en la superficie. -->
+                <Border InputTransparent="True" BackgroundColor="Transparent" StrokeThickness="1" StrokeShape="RoundRectangle 22" Margin="2">
+                    <Border.Stroke><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#8CFFFFFF" Offset="0"/><GradientStop Color="#14FFFFFF" Offset="0.5"/><GradientStop Color="#66FFFFFF" Offset="1"/></LinearGradientBrush></Border.Stroke>
+                </Border>
+                <Border InputTransparent="True" StrokeThickness="0" StrokeShape="Rectangle" VerticalOptions="Start" HeightRequest="180">
+                    <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#4DFFFFFF" Offset="0"/><GradientStop Color="#00FFFFFF" Offset="1"/></LinearGradientBrush></Border.Background>
+                </Border>
+                <Grid x:Name="Contenido" RowDefinitions="1*,2*">
+                    <!-- Tercio superior de la tarjeta: identidad + mensaje. Se apoya sobre la línea divisoria. -->
+                    <VerticalStackLayout Grid.Row="0" Padding="40,0,40,18" Spacing="8" VerticalOptions="End">
+                        <!-- El SVG lleva aire dentro de su viewBox (≈6% a la izquierda, ≈24% abajo); el margen negativo alinea el dibujo con el texto -->
+                        <Image x:Name="Logo" Source="avacom_lms_kit_logo.png" Aspect="AspectFit" HeightRequest="100" HorizontalOptions="Start" Margin="-8,0,0,-18"/>
+                        <Label Text="Conéctate a tu aula" FontSize="22" FontAttributes="Bold"/>
+                        <Label x:Name="Descripcion" Text="Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor." Style="{StaticResource Muted}" LineBreakMode="WordWrap"/>
+                    </VerticalStackLayout>
+                    <!-- Dos tercios inferiores: acción. La línea divisoria cae exactamente a 1/3 de la altura de la tarjeta. El
+                         ScrollView sólo actúa si el contenido no cabe (ventana baja o teclado en pantalla en la tableta); en una
+                         ventana amplia no se nota. -->
+                    <ScrollView Grid.Row="1">
+                        <VerticalStackLayout x:Name="Formulario" Padding="40,0,40,16" Spacing="14" VerticalOptions="Start">
+                            <BoxView HeightRequest="1" Color="#14000000"/>
+                            <VerticalStackLayout Spacing="6" Margin="0,4,0,0">
+                                <Label Text="Tu nombre" FontSize="13"/>
+                                <Entry x:Name="NameEntry" Text="Ethan Martínez" Placeholder="Nombre y apellido"/>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Dirección del aula" FontSize="13"/>
+                                <Entry x:Name="ServerEntry" Text="http://192.168.1.10:8000" Keyboard="Url" Placeholder="192.168.1.10:8000"/>
+                            </VerticalStackLayout>
+                            <Border x:Name="StatusCard" BackgroundColor="#E6F6FC" Padding="14" StrokeThickness="0"><Label x:Name="StatusLabel" Text="●  Lista para comprobar la red local" TextColor="{StaticResource BrandBlue}"/></Border>
+                            <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource Ink}" Margin="0,4,0,0">
+                                <Border.Shadow><Shadow Brush="#66000000" Offset="0,8" Radius="18"/></Border.Shadow>
+                                <Button x:Name="CheckButton" Text="Comprobar conexión" Style="{StaticResource DarkButton}" CornerRadius="12" BorderWidth="0" Clicked="OnCheck">
+                                    <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#3A3A40" Offset="0"/><GradientStop Color="#232326" Offset="0.55"/><GradientStop Color="#0E0E10" Offset="1"/></LinearGradientBrush></Button.Background>
+                                </Button>
+                            </Border>
+                            <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,4,0,0">
+                                <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
+                                <Button Text="Entrar al aula" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEnter">
+                                    <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
+                                </Button>
+                            </Border>
+                            <Label Text="También puedes entrar en modo demo sin conexión." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="11" LineBreakMode="WordWrap"/>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Grid>
+            </Grid>
+        </controls:GlassBorder>
+        <!-- Lápiz 3D decorativo (render nativo en un GraphicsView transparente): gira despacio sobre su eje vertical, inclinado
+             8°, flotando apenas. Centrado en la línea de 5/6; con FillRatio 0,53 cabe en el tercio central de alto. Sólo se ve
+             el lápiz; el fondo sigue debajo y la capa no captura toques. -->
+        <controls:Pencil3DView x:Name="Lapiz" Grid.Column="3" Grid.Row="1" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill" SecondsPerTurn="12" TiltDegrees="8" FloatPixels="3" FillRatio="0.53"/>
     </Grid>
 </ContentPage>

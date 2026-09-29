@@ -55,12 +55,19 @@
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
 		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
-		
+		<!-- Marca de AVACOM: las mismas fuentes únicas que enlaza OPS desde assets, para que ambas apps muestren la misma
+		     marca sin copias divergentes. Logotipo apilado del kit LMS (símbolo + «AVACOM») para la tarjeta de acceso:
+		     el viewBox es 792x612; 155x120 conserva la proporción y cubre la altura a la que se muestra. -->
+		<MauiImage Include="..\..\assets\avacom-lms-kit-logo.svg" Link="Resources\Images\avacom_lms_kit_logo.svg" BaseSize="155,120" />
+
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<!-- Lápiz 3D de la pantalla de acceso (Pencil3DView, render nativo). La fuente única del modelo vive en assets\3d;
+		     el empaquetado usa Link si existe y, si no, LogicalName, así que sólo se pone LogicalName. -->
+		<MauiAsset Include="..\..\assets\3d\lapiz.glb" LogicalName="models\lapiz.glb" />
 	</ItemGroup>
 
 	<ItemGroup>
