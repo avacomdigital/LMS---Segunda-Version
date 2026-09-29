@@ -7,13 +7,13 @@ Los casos de uso reciben y devuelven dicts planos; aquí se traducen a filas.
 """
 from __future__ import annotations
 
-from django.db.models import Q
+from django.db.models import F, Q
 
 from expediente import servicios as expediente_servicios
 
 from .. import models as m
 from ..dominio import sesion as dom
-from ..dominio.errores import DatosInvalidos, DispositivoBloqueado, DispositivoInactivo, NoEncontrado, SinPermiso
+from ..dominio.errores import DatosInvalidos, DispositivoBloqueado, DispositivoInactivo, NoEncontrado, NoEsElTitular, SinPermiso
 from ..aplicacion.puertos import Actor
 
 # --------------------------------------------------------------------- filas → dicts
@@ -22,21 +22,25 @@ CAMPOS_SESION = (
     "id", "grupo_id", "grupo_rotulo", "profesor_id", "profesor_rotulo", "relevo_de_sesion_id", "via_origen", "plan_id",
     "nodo_ref", "fuente_curso", "curso_ref", "curso_version", "curso_rotulo", "leccion_ref", "leccion_rotulo", "objeto_ref",
     "objeto_rotulo", "codigo_union", "estado", "superficie", "iniciada_en", "suspendida_en", "causa_suspension",
-    "finalizada_en", "origen_cierre", "archivada_en", "creado_en", "creado_por",
+    "finalizada_en", "origen_cierre", "archivada_en", "anclajes", "creado_en", "creado_por",
 )
 CAMPOS_PARTICIPANTE = (
     "id", "sesion_id", "persona_id", "persona_rotulo", "dispositivo", "dispositivo_id", "dim_sesion_alumno_id", "sesion_usuario_id",
-    "estado", "admision_nominal", "ingreso", "salida", "ultimo_latido_en", "admitido_por", "motivo", "creado_en", "creado_por",
+    "estado", "admision_nominal", "ingreso", "salida", "ultimo_latido_en", "admitido_por", "motivo", "ayuda_en", "proyectado_desde",
+    "proyectado_por", "creado_en", "creado_por",
 )
 CAMPOS_SELECTOR = ("id", "sesion_id", "curso_ref", "curso_version", "leccion_ref", "objeto_ref", "objeto_tipo", "unidad_ref",
                    "unidad_indice", "media_ref", "rotulo", "vigente", "declarado_en", "declarado_por", "sustituido_en")
 CAMPOS_CONTROL = ("id", "sesion_id", "tipo", "desde", "hasta", "motivo", "creado_por", "cerrado_por")
 CAMPOS_DISTRIBUCION = ("id", "sesion_id", "clase", "curso_ref", "leccion_ref", "objeto_ref", "objeto_tipo", "media_ref",
                        "rotulo", "alcance", "destinatarios", "excluidos_bloqueados", "intentos_permitidos", "tiempo_limite_seg",
-                       "disponible_estudio", "asignacion_ref", "abierta_en", "cerrada_en", "creado_por")
+                       "disponible_estudio", "asignacion_ref", "total_preguntas", "puntos_totales", "pausada_ms", "estudio_hasta",
+                       "abierta_en", "cerrada_en", "creado_por")
+CAMPOS_INTENTO = ("id", "distribucion_id", "participante_id", "persona_id", "numero", "estado", "iniciado_en", "enviado_en",
+                  "capturado_en", "puntaje", "puntaje_maximo", "respuestas", "origen_envio", "recuperado_de_cola", "dispositivo_id")
 CAMPOS_AVISO = ("id", "sesion_id", "participante_id", "texto", "enviado_en", "creado_por")
 CAMPOS_RESUMEN = ("participantes", "conectados_maximo", "admitidos_nominal", "selectores", "distribuciones", "actividades",
-                  "avisos", "pendientes", "duracion_ms", "origen_cierre", "consolidado_en")
+                  "avisos", "pendientes", "duracion_ms", "origen_cierre", "consolidado_en", "detalle")
 
 
 def _d(fila, campos) -> dict:
@@ -67,6 +71,33 @@ class SesionesDjango:
         if profesor_id:
             filas = filas.filter(profesor_id=profesor_id)
         return [_d(f, CAMPOS_SESION) for f in filas[:200]]
+
+    def sesiones_en_estado(self, *estados: str) -> list[dict]:
+        return [_d(f, CAMPOS_SESION) for f in m.SesionDeClase.objects.filter(estado__in=estados).order_by("creado_en")]
+
+    def ultima_actividad(self, sesion_id: str) -> int:
+        """Lo más reciente que ocurrió en la sesión. Un latido de tableta cuenta: si hay alumnos conectados la
+        clase está viva aunque el profesor no toque nada (JRN-011)."""
+        sesion = m.SesionDeClase.objects.filter(pk=sesion_id).first()
+        if sesion is None:
+            return 0
+        candidatos = [sesion.iniciada_en or 0, sesion.creado_en or 0, sesion.suspendida_en or 0]
+        for campo, modelo, filtro in (
+            ("declarado_en", m.Selector, {"sesion_id": sesion_id}),
+            ("desde", m.Control, {"sesion_id": sesion_id}),
+            ("hasta", m.Control, {"sesion_id": sesion_id, "hasta__isnull": False}),
+            ("abierta_en", m.Distribucion, {"sesion_id": sesion_id}),
+            ("cerrada_en", m.Distribucion, {"sesion_id": sesion_id, "cerrada_en__isnull": False}),
+            ("enviado_en", m.Aviso, {"sesion_id": sesion_id}),
+            ("ultimo_latido_en", m.Participante, {"sesion_id": sesion_id, "ultimo_latido_en__isnull": False}),
+            ("ingreso", m.Participante, {"sesion_id": sesion_id}),
+            ("enviado_en", m.Intento, {"distribucion__sesion_id": sesion_id, "enviado_en__isnull": False}),
+            ("iniciado_en", m.Intento, {"distribucion__sesion_id": sesion_id}),
+        ):
+            ultimo = modelo.objects.filter(**filtro).order_by(f"-{campo}").values_list(campo, flat=True).first()
+            if ultimo:
+                candidatos.append(ultimo)
+        return max(candidatos)
 
     def sesion_abierta_de(self, profesor_id: str) -> dict | None:
         fila = m.SesionDeClase.objects.filter(profesor_id=profesor_id, estado=dom.ABIERTA).first()
@@ -120,6 +151,14 @@ class SesionesDjango:
             actuales = sum(1 for e in estado_por_participante.values() if e in dom.ADMITIDOS)
             maximo = max(maximo, actuales)
         return maximo
+
+    def conteo_participantes(self, sesion_id: str) -> dict:
+        por_estado: dict[str, int] = {}
+        for estado in m.Participante.objects.filter(sesion_id=sesion_id).values_list("estado", flat=True):
+            por_estado[estado] = por_estado.get(estado, 0) + 1
+        return {"total": sum(por_estado.values()), "conectados": por_estado.get(dom.CONECTADO, 0),
+                "reconectando": por_estado.get(dom.RECONECTANDO, 0), "esperando": por_estado.get(dom.ESPERANDO, 0),
+                "salieron": por_estado.get(dom.SALIO, 0)}
 
     # -------------------------------------------------------------- selector
     def selector_vigente(self, sesion_id: str) -> dict | None:
@@ -206,6 +245,39 @@ class SesionesDjango:
         m.Distribucion.objects.filter(pk=distribucion_id, cerrada_en__isnull=True).update(cerrada_en=momento)
         return self.distribucion(distribucion_id)
 
+    def actualizar_distribucion(self, distribucion_id: str, **campos) -> dict:
+        m.Distribucion.objects.filter(pk=distribucion_id).update(**campos)
+        return self.distribucion(distribucion_id)
+
+    def sumar_pausa(self, sesion_id: str, pausa_ms: int) -> int:
+        return m.Distribucion.objects.filter(sesion_id=sesion_id, cerrada_en__isnull=True).update(
+            pausada_ms=F("pausada_ms") + max(0, pausa_ms))
+
+    # -------------------------------------------------------------- intentos
+    def intentos(self, distribucion_id: str, participante_id: str | None = None) -> list[dict]:
+        filas = m.Intento.objects.filter(distribucion_id=distribucion_id).order_by("participante_id", "numero")
+        if participante_id:
+            filas = filas.filter(participante_id=participante_id)
+        return [_d(f, CAMPOS_INTENTO) for f in filas]
+
+    def intentos_de_sesion(self, sesion_id: str, estado: str | None = None) -> list[dict]:
+        filas = m.Intento.objects.filter(distribucion__sesion_id=sesion_id).order_by("distribucion_id", "participante_id", "numero")
+        if estado:
+            filas = filas.filter(estado=estado)
+        return [_d(f, CAMPOS_INTENTO) for f in filas]
+
+    def intento(self, intento_id: str) -> dict | None:
+        fila = m.Intento.objects.filter(pk=intento_id).first()
+        return _d(fila, CAMPOS_INTENTO) if fila else None
+
+    def crear_intento(self, datos: dict) -> dict:
+        campos = {k: v for k, v in datos.items() if k in CAMPOS_INTENTO}
+        return _d(m.Intento.objects.create(**campos), CAMPOS_INTENTO)
+
+    def actualizar_intento(self, intento_id: str, **campos) -> dict:
+        m.Intento.objects.filter(pk=intento_id).update(**campos)
+        return self.intento(intento_id)
+
     def entregas_pendientes_de(self, sesion_id: str, participante_id: str) -> list[dict]:
         filas = (m.DistribucionEntrega.objects.filter(participante_id=participante_id, distribucion__sesion_id=sesion_id,
                                                       distribucion__cerrada_en__isnull=True)
@@ -235,7 +307,7 @@ class SesionesDjango:
 
 class OutboxDjango:
     def publicar(self, agregado_tipo: str, agregado_id: str, tipo_evento: str, carga: dict) -> None:
-        if tipo_evento not in dom.EVENTOS:
+        if tipo_evento not in dom.EVENTOS_ACEPTADOS:
             raise ValueError(f"Evento fuera del catálogo de MOD-007: {tipo_evento}")
         m.EventoSalida.objects.create(agregado_tipo=agregado_tipo, agregado_id=agregado_id, tipo_evento=tipo_evento, carga=carga)
 
@@ -316,9 +388,11 @@ class DispositivosDeviceManager:
         from device_manager import servicios
         return servicios.por_id(dispositivo_id)
 
-    def latido(self, dispositivo_id: str, momento: int) -> None:
+    def latido(self, dispositivo_id: str, momento: int, telemetria: dict | None = None) -> None:
         from device_manager import servicios
-        servicios.latido(dispositivo_id, momento)
+        telemetria = telemetria or {}
+        servicios.latido(dispositivo_id, momento, espacio_libre_mb=telemetria.get("espacio_libre_mb"),
+                         bateria_pct=telemetria.get("bateria_pct"))
 
     def bloqueados_entre(self, dispositivo_ids: list[str]) -> set[str]:
         from device_manager import servicios
@@ -347,12 +421,39 @@ class EvaluacionExpediente:
         return Intento.objects.filter(curso_ref=curso_ref, persona_id__in=personas, estado=Intento.ABIERTO).count()
 
 
-class AutorizacionPrototipo:
-    """Mientras MOD-001 no siembre los permisos `classroom.*`: con sesión, sólo el personal (nivel ≥ 2)
-    opera la clase; sin sesión (Q-34 abierta) se permite, igual que en el expediente."""
+class AutorizacionAula:
+    """Los once permisos `classroom.*` (007-10). MOD-001 los siembra (`acceso.dominio.plantillas`) y aquí se
+    evalúan con SU política, en el nodo y con su reloj.
 
-    def exigir(self, actor: Actor, permiso: str) -> None:
+    - Con sesión: el alumno (nivel 1) nunca opera la clase; el personal necesita el permiso concedido por su rol
+      y, sobre una sesión concreta, ser su profesor titular o la administración (nivel 3).
+    - Sin sesión (Q-34 abierta, prototipo): se permite, igual que en el expediente y en MOD-009; el actor lo
+      declara el cliente y el asiento de auditoría no prueba su identidad. Con AVACOM_LMS_EXIGIR_SESION=1 esa
+      rama no existe, porque las vistas ya rechazan lo que no trae sesión.
+    - El programador del nodo actúa como `sistema` y no es una persona: nunca pasa por aquí con sesión."""
+
+    def exigir(self, actor: Actor, permiso: str, sesion: dict | None = None) -> None:
         if permiso not in dom.PERMISOS:
             raise ValueError(f"Permiso fuera del catálogo de MOD-007: {permiso}")
-        if actor.autenticado and actor.nivel < 2:
+        if not actor.autenticado:
+            return
+        if actor.nivel < 2:
             raise SinPermiso(f"La función exige {permiso}; un estudiante no opera la clase.", permiso=permiso)
+        if actor.principal is not None and not self._concedido(actor, permiso):
+            raise SinPermiso(f"Tu rol no tiene concedido {permiso}.", permiso=permiso)
+        if sesion is not None and actor.nivel < 3 and sesion.get("profesor_id") not in ("", actor.id):
+            raise NoEsElTitular(f"La clase es de {sesion.get('profesor_rotulo') or 'otro profesor'}: sólo su titular o la administración la opera.",
+                                permiso=permiso, profesor_id=sesion.get("profesor_id"))
+
+    @staticmethod
+    def _concedido(actor: Actor, permiso: str) -> bool:
+        from acceso.aplicacion import casos_uso as acu
+        from acceso.infraestructura.contenedor import servicios as servicios_acceso
+
+        s = servicios_acceso()
+        base = acu.Base(s)
+        with s.uow() as uow:
+            ctx = base.contexto(uow, actor.principal)
+            if base.politica.transversal(ctx, permiso) is not None:
+                return False
+            return base.politica.alcance_concedido(ctx, permiso) is not None

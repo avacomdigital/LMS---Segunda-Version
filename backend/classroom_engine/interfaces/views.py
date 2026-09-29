@@ -19,6 +19,9 @@ from biblioteca import cliente as cliente_biblioteca
 from biblioteca.views import _reenviar_flujo, respuesta_de_error
 
 from ..aplicacion import casos_uso as cu
+from ..aplicacion import casos_uso_actividad as ca
+from ..aplicacion import casos_uso_cierre as cc
+from ..aplicacion import casos_uso_tiempo_real as ct
 from ..aplicacion.puertos import Actor, Bytes
 from ..dominio import errores
 from ..infraestructura.contenedor import servicios
@@ -64,6 +67,12 @@ class VistaAula(APIView):
         return "docente" if request.query_params.get("rol") == "docente" else "estudiante"
 
     @staticmethod
+    def _persona(request) -> str | None:
+        """Con sesión (MOD-001) la tableta sólo habla por sí misma: la persona es la del JWT."""
+        principal = principal_de(request)
+        return principal.usuario_id if principal is not None else None
+
+    @staticmethod
     def _actor(request, datos: dict | None = None) -> Actor:
         """Con sesión, quien firma el JWT. Sin sesión (Q-34), quien el cliente declare, como en el expediente."""
         principal = principal_de(request)
@@ -71,7 +80,7 @@ class VistaAula(APIView):
         if principal is not None:
             return Actor(id=principal.usuario_id, rotulo=str(datos.get("actor_rotulo") or ""), nivel=int(principal.nivel),
                          autenticado=True, dispositivo=str(datos.get("dispositivo") or principal.dispositivo_id or ""),
-                         sesion_usuario_id=principal.sesion_id)
+                         sesion_usuario_id=principal.sesion_id, principal=principal)
         actor_id = str(datos.get("profesor_id") or datos.get("actor") or request.query_params.get("actor") or "docente")
         return Actor(id=actor_id[:64], rotulo=str(datos.get("profesor_rotulo") or datos.get("actor_rotulo") or "")[:120],
                      nivel=2, autenticado=False, dispositivo=str(datos.get("dispositivo") or "")[:64])
@@ -199,18 +208,37 @@ class UnirseView(VistaAula):
     """La tableta presenta el código de unión (PAN-100/101 → PAN-102)."""
 
     def post(self, request):
-        resultado = cu.UnirseASesion(servicios()).ejecutar(request.data or {})
+        datos = dict(request.data or {})
+        principal = principal_de(request)
+        if principal is not None:   # con sesión, la persona y su sesión de usuario las fija el JWT, no el cuerpo
+            datos["persona_id"] = principal.usuario_id
+            datos["sesion_usuario_id"] = principal.sesion_id
+        origen = request.META.get("REMOTE_ADDR", "")
+        if origen in ("127.0.0.1", "::1"):
+            origen = ""   # el propio nodo no se frena por dirección: el freno por tableta sigue valiendo
+        resultado = cu.UnirseASesion(servicios()).ejecutar(datos, origen=origen)
         return Response(resultado, status=status.HTTP_201_CREATED if resultado.get("nuevo") else status.HTTP_200_OK)
 
 
 class ParticipanteAccionView(VistaAula):
+    """admitir · rechazar · expulsar (el profesor), ayuda (la tableta levanta o baja la mano), atender (el profesor la
+    baja) y proyeccion (DEC-034: estado de la proyección de la pantalla de un alumno)."""
+
     ACCIONES = {"admitir": cu.AdmitirParticipante, "rechazar": cu.RechazarParticipante, "expulsar": cu.ExpulsarParticipante}
 
     def post(self, request, sesion_id: str, participante_id: str, accion: str):
+        datos = request.data or {}
+        if accion == "ayuda":
+            return Response(ct.SolicitarAyuda(servicios()).ejecutar(
+                sesion_id, participante_id, bool(datos.get("activa", True)), self._persona(request)))
+        if accion == "atender":
+            return Response(ct.AtenderAyuda(servicios()).ejecutar(self._actor(request, datos), sesion_id, participante_id))
+        if accion == "proyeccion":
+            return Response(ct.ProyectarAlumno(servicios()).ejecutar(
+                self._actor(request, datos), sesion_id, participante_id, bool(datos.get("activa", True))))
         caso = self.ACCIONES.get(accion)
         if caso is None:
             return Response({"detail": f"Acción desconocida «{accion}».", "codigo": "datos_invalidos"}, status=400)
-        datos = request.data or {}
         actor = self._actor(request, datos)
         if accion == "admitir":
             return Response(caso(servicios()).ejecutar(actor, sesion_id, participante_id))
@@ -223,18 +251,21 @@ class PresenciaView(VistaAula):
     def post(self, request, sesion_id: str, participante_id: str):
         datos = request.data or {}
         desde = datos.get("avisos_desde")
+        telemetria = datos.get("telemetria") if isinstance(datos.get("telemetria"), dict) else None
         return Response(cu.RegistrarPresencia(servicios()).ejecutar(
             sesion_id, participante_id, datos.get("estado"), str(datos.get("dispositivo") or ""),
-            int(desde) if desde else None))
+            int(desde) if desde else None, self._persona(request), telemetria))
 
 
 class EstadoTabletaView(VistaAula):
-    """Sondeo de sólo lectura (BR-049: el cambio de selector llega en 3 s; el cliente sondea cada 2 s hasta que haya WebSocket)."""
+    """El estado que pinta una tableta. Con WebSocket (`websockets.py`) se pide cuando llega un aviso de cambio y como
+    respaldo cada `tiempo_real.respaldo_ms`; sin socket, el cliente sondea cada `intervalo_sondeo_ms`. Cuenta como latido."""
 
     def get(self, request, sesion_id: str):
         q = request.query_params
         desde = q.get("avisos_desde")
-        return Response(cu.EstadoParaTableta(servicios()).ejecutar(sesion_id, q.get("participante") or None, int(desde) if desde else None))
+        return Response(cu.EstadoParaTableta(servicios()).ejecutar(
+            sesion_id, q.get("participante") or None, int(desde) if desde else None, self._persona(request)))
 
 
 class SelectorView(VistaAula):
@@ -260,15 +291,31 @@ class DistribucionesView(VistaAula):
 
 
 class DistribucionAccionView(VistaAula):
+    def get(self, request, sesion_id: str, distribucion_id: str, accion: str):
+        """`resultados`: el avance vivo del grupo en una actividad (sólo el profesor)."""
+        if accion == "resultados":
+            return Response(ca.ResultadosActividad(servicios()).ejecutar(self._actor(request), sesion_id, distribucion_id))
+        return Response({"detail": f"Acción desconocida «{accion}».", "codigo": "datos_invalidos"}, status=400)
+
     def post(self, request, sesion_id: str, distribucion_id: str, accion: str):
         datos = request.data or {}
+        if accion == "respuestas":
+            return Response(ca.EnviarRespuestas(servicios()).ejecutar(
+                sesion_id, distribucion_id, str(datos.get("participante_id") or ""), datos, self._persona(request)),
+                status=status.HTTP_200_OK)
+        if accion == "estudio":
+            hasta = datos.get("hasta")
+            return Response(cc.MarcarEstudio(servicios()).ejecutar(
+                self._actor(request, datos), sesion_id, distribucion_id, bool(datos.get("disponible", True)),
+                int(hasta) if hasta else None))
         if accion == "cerrar":
             return Response(cu.CerrarDistribucion(servicios()).ejecutar(self._actor(request, datos), sesion_id, distribucion_id))
         if accion == "resultados":
             return Response(cu.MostrarResultados(servicios()).ejecutar(self._actor(request, datos), sesion_id, distribucion_id))
         if accion == "confirmar":
             return Response(cu.ConfirmarEntrega(servicios()).ejecutar(
-                sesion_id, distribucion_id, str(datos.get("participante_id") or ""), str(datos.get("estado") or "entregado")))
+                sesion_id, distribucion_id, str(datos.get("participante_id") or ""), str(datos.get("estado") or "entregado"),
+                self._persona(request)))
         return Response({"detail": f"Acción desconocida «{accion}».", "codigo": "datos_invalidos"}, status=400)
 
 
@@ -296,3 +343,30 @@ class SesionTransicionView(VistaAula):
             return Response(cu.CerrarSesion(servicios()).ejecutar(actor, sesion_id, str(datos.get("origen") or "profesor"),
                                                                   bool(datos.get("forzar", False))))
         return Response({"detail": f"Acción desconocida «{accion}».", "codigo": "datos_invalidos"}, status=400)
+
+
+class EnvioDecisionView(VistaAula):
+    """DEC-019: el profesor acepta o descarta lo que llegó fuera de la ventana de gracia."""
+
+    def post(self, request, sesion_id: str, distribucion_id: str, intento_id: str, decision: str):
+        datos = request.data or {}
+        return Response(ca.DecidirEnvio(servicios()).ejecutar(self._actor(request, datos), sesion_id, distribucion_id, intento_id, decision))
+
+
+class AnclajeView(VistaAula):
+    """BR-039 / BR-040: el anclaje curricular es opcional y puede asignarse después de cerrar la clase."""
+
+    def get(self, request, sesion_id: str):
+        return Response(cc.SugerirAnclaje(servicios()).ejecutar(sesion_id))
+
+    def post(self, request, sesion_id: str):
+        datos = request.data or {}
+        return Response(cc.AnclarSesion(servicios()).ejecutar(self._actor(request, datos), sesion_id, datos.get("nodos") or []))
+
+
+class TiempoRealView(VistaAula):
+    """Diagnóstico del canal en tiempo real: sockets por sesión y cuánto tarda en llegar cada aviso (007-01)."""
+
+    def get(self, request):
+        from .websockets import ESTADISTICAS   # sólo aquí: el resto de las vistas no conoce Channels
+        return Response(ESTADISTICAS.resumen())

@@ -8,23 +8,51 @@
     <Grid>
         <Grid RowDefinitions="Auto,*" Padding="16,12,16,16" RowSpacing="12">
             <Border Grid.Row="0" Padding="12,8" BackgroundColor="#B3FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 22">
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
                     <VerticalStackLayout VerticalOptions="Center" Spacing="0">
                         <Label x:Name="TituloLabel" Text="En clase" FontSize="18" FontAttributes="Bold" LineBreakMode="TailTruncation" />
                         <Label x:Name="SubtituloLabel" Text="" FontSize="13" TextColor="#52525B" LineBreakMode="TailTruncation" />
                     </VerticalStackLayout>
+                    <!-- UXR-003: tres valores y nada más: Conectado · Reconectando · Trabajando en tu tableta -->
                     <Border x:Name="ConexionChip" Grid.Column="1" BackgroundColor="#E6F5EE" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="12,7" VerticalOptions="Center">
-                        <Label x:Name="ConexionLabel" Text="●  Conectado" FontSize="13" FontAttributes="Bold" TextColor="#019D60" />
+                        <Label x:Name="ConexionLabel" Text="●  Conectado" FontSize="13" FontAttributes="Bold" TextColor="#18181B" />
                     </Border>
-                    <Button Grid.Column="2" Text="Salir" BackgroundColor="Transparent" TextColor="#27272A" FontSize="17" FontAttributes="Bold" HeightRequest="52" Clicked="OnSalir" />
+                    <!-- 007-13: la mano levantada. El botón se fabrica en código con el kit (Ds.Boton + Ds.Capsula). -->
+                    <ContentView x:Name="AyudaSlot" Grid.Column="2" VerticalOptions="Center" />
+                    <Button Grid.Column="3" Text="Salir" BackgroundColor="Transparent" TextColor="#27272A" FontSize="17" FontAttributes="Bold" HeightRequest="52" Clicked="OnSalir" />
                 </Grid>
             </Border>
-            <Grid Grid.Row="1" RowDefinitions="Auto,*,Auto" RowSpacing="10">
-                <VerticalStackLayout x:Name="AvisosHost" Grid.Row="0" Spacing="8" />
-                <ui:AulaContenidoView x:Name="Visor" Grid.Row="1" />
-                <VerticalStackLayout x:Name="PendientesHost" Grid.Row="2" Spacing="8" />
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+                <!-- DEC-034 · CMP-063: mientras el profesor proyecta esta pantalla al grupo, se ve, siempre y con texto. -->
+                <Border x:Name="ProyectandoBanda" Grid.Row="0" IsVisible="False" BackgroundColor="#F5E8F1" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="16,10"
+                        SemanticProperties.Description="Tu pantalla se está proyectando al grupo">
+                    <Label x:Name="ProyectandoLabel" Text="Proyectando tu pantalla al grupo" FontSize="16" FontAttributes="Bold" TextColor="#18181B" VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout x:Name="AvisosHost" Grid.Row="1" Spacing="8" />
+                <Grid Grid.Row="2">
+                    <ui:AulaContenidoView x:Name="Visor" />
+                    <!-- 007-05 · PAN-110: la actividad lanzada se responde aquí, una pregunta a la vez; cada respuesta se guarda primero en la tableta. -->
+                    <ui:ActividadResponderView x:Name="Responder" IsVisible="False" />
+                    <!-- 007-02 · MSG-003: la pausa es serena, sin cuenta atrás. Se quita sola cuando el profesor reanuda. -->
+                    <Border x:Name="PausaPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="Center" MaximumWidthRequest="560"
+                            Padding="26" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 26">
+                        <Border.Shadow><Shadow Brush="#18181B" Offset="0,14" Radius="34" Opacity="0.2" /></Border.Shadow>
+                        <VerticalStackLayout x:Name="PausaHost" Spacing="8" />
+                    </Border>
+                </Grid>
+                <VerticalStackLayout x:Name="PendientesHost" Grid.Row="3" Spacing="8" />
             </Grid>
         </Grid>
         <ui:BloqueoView x:Name="Bloqueo" />
+        <!-- 007-09 · fin de la clase: qué se conservó, qué falta, qué sigue (UXR-005). Sin alertas ni códigos. -->
+        <Grid x:Name="CierreHoja" IsVisible="False" BackgroundColor="#F5F1F1F1">
+            <Border HorizontalOptions="Center" VerticalOptions="Center" MaximumWidthRequest="640" Margin="20" Padding="28"
+                    BackgroundColor="White" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 28">
+                <Border.Shadow><Shadow Brush="#18181B" Offset="0,14" Radius="34" Opacity="0.16" /></Border.Shadow>
+                <ScrollView>
+                    <VerticalStackLayout x:Name="CierreHost" Spacing="10" />
+                </ScrollView>
+            </Border>
+        </Grid>
     </Grid>
 </ContentPage>

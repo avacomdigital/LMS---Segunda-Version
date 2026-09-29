@@ -45,26 +45,50 @@
                         <Label Text="Nodo principal del aula" FontSize="22" FontAttributes="Bold"/>
                         <Label Text="Configura la conexión al servicio local. El estado siempre permanece visible para facilitar el soporte en la pantalla OPS." Style="{StaticResource Muted}" LineBreakMode="WordWrap"/>
                     </VerticalStackLayout>
-                    <!-- Dos tercios inferiores: acción. La línea divisoria cae exactamente a 1/3 de la altura de la tarjeta. -->
-                    <VerticalStackLayout Grid.Row="1" Padding="40,0,40,0" Spacing="14" VerticalOptions="Start">
+                    <!-- Dos tercios inferiores: acción. La línea divisoria cae exactamente a 1/3 de la altura de la tarjeta.
+                         Van en un ScrollView: con el acceso real (documento y clave) la lista es más alta y, si una ventana baja o el
+                         teclado en pantalla la dejan sin sitio, se desplaza en vez de cortarse. La composición de la tarjeta no cambia. -->
+                    <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
+                    <VerticalStackLayout Padding="40,0,40,24" Spacing="14" VerticalOptions="Start">
                         <BoxView HeightRequest="1" Color="#14000000"/>
-                        <Label Text="Dirección del servidor" FontSize="13" Margin="0,8,0,0"/>
-                        <Entry x:Name="ServerEntry" Text="http://127.0.0.1:8000" Keyboard="Url"/>
-                        <Border x:Name="StatusCard" BackgroundColor="{StaticResource ErrorSoft}" Padding="14" StrokeThickness="0"><HorizontalStackLayout Spacing="10"><Label x:Name="StatusDot" Text="●" TextColor="{StaticResource BrandRed}"/><Label x:Name="StatusLabel" Text="Sin comprobar · modo demo disponible"/></HorizontalStackLayout></Border>
-                        <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource Ink}" Margin="0,4,0,0">
-                            <Border.Shadow><Shadow Brush="#66000000" Offset="0,8" Radius="18"/></Border.Shadow>
-                            <Button x:Name="CheckButton" Text="Comprobar conexión" Style="{StaticResource DarkButton}" CornerRadius="12" BorderWidth="0" Clicked="OnCheckConnection">
-                                <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#3A3A40" Offset="0"/><GradientStop Color="#232326" Offset="0.55"/><GradientStop Color="#0E0E10" Offset="1"/></LinearGradientBrush></Button.Background>
-                            </Button>
-                        </Border>
-                        <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,4,0,0">
-                            <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
-                            <Button Text="EC   Iniciar como profesor" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEnterDemo">
-                                <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
-                            </Button>
-                        </Border>
-                        <Label Text="El prototipo puede recorrerse sin backend. Al conectarse, usa /health/ y los contratos REST/WebSocket definidos." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="11" LineBreakMode="WordWrap"/>
+                        <VerticalStackLayout x:Name="DireccionGrupo" Spacing="14">
+                            <Label Text="Dirección del servidor" FontSize="13" Margin="0,8,0,0"/>
+                            <Entry x:Name="ServerEntry" Text="http://127.0.0.1:8000" Keyboard="Url"/>
+                        </VerticalStackLayout>
+                        <!-- Estado y mensajes del acceso (conexión, credenciales, sesión terminada): el texto dice lo que pasa; el color sólo acompaña. -->
+                        <Border x:Name="StatusCard" BackgroundColor="{StaticResource ErrorSoft}" Padding="14" StrokeThickness="0"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><Label x:Name="StatusDot" Text="●" TextColor="{StaticResource BrandRed}" VerticalOptions="Start"/><Label x:Name="StatusLabel" Grid.Column="1" Text="Sin comprobar · modo demo disponible" LineBreakMode="WordWrap"/></Grid></Border>
+                        <!-- Sólo cuando el nodo exige sesión (007-10): documento y clave. Es la única pantalla de OPS que pide escribir. -->
+                        <VerticalStackLayout x:Name="CredencialesGrupo" IsVisible="False" Spacing="8">
+                            <Label Text="Documento" FontSize="13" Margin="0,4,0,0"/>
+                            <Entry x:Name="DocumentoEntry" Placeholder="Tu número de documento" ReturnType="Next" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" SemanticProperties.Description="Documento" Completed="OnDocumentoCompleted"/>
+                            <Label Text="Clave" FontSize="13" Margin="0,6,0,0"/>
+                            <Entry x:Name="ClaveEntry" Placeholder="Tu clave" IsPassword="True" ReturnType="Go" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" SemanticProperties.Description="Clave" Completed="OnEntrar"/>
+                            <Label Text="Usa el documento y la clave que te dio la escuela. Si no las recuerdas, pídelas a la administración." Style="{StaticResource Muted}" FontSize="12" LineBreakMode="WordWrap" Margin="0,2,0,0"/>
+                            <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,6,0,0">
+                                <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
+                                <Button x:Name="EntrarButton" Text="Entrar" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEntrar">
+                                    <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
+                                </Button>
+                            </Border>
+                            <Button x:Name="CambiarServidorButton" Text="Cambiar la dirección del servidor" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="13" HeightRequest="44" Clicked="OnCambiarServidor"/>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout x:Name="AccionesGrupo" Spacing="14">
+                            <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource Ink}" Margin="0,4,0,0">
+                                <Border.Shadow><Shadow Brush="#66000000" Offset="0,8" Radius="18"/></Border.Shadow>
+                                <Button x:Name="CheckButton" Text="Comprobar conexión" Style="{StaticResource DarkButton}" CornerRadius="12" BorderWidth="0" Clicked="OnCheckConnection">
+                                    <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#3A3A40" Offset="0"/><GradientStop Color="#232326" Offset="0.55"/><GradientStop Color="#0E0E10" Offset="1"/></LinearGradientBrush></Button.Background>
+                                </Button>
+                            </Border>
+                            <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,4,0,0">
+                                <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
+                                <Button x:Name="IniciarButton" Text="EC   Iniciar como profesor" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEnterDemo">
+                                    <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
+                                </Button>
+                            </Border>
+                            <Label Text="El prototipo puede recorrerse sin backend. Al conectarse, usa /health/ y los contratos REST/WebSocket definidos." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="11" LineBreakMode="WordWrap"/>
+                        </VerticalStackLayout>
                     </VerticalStackLayout>
+                    </ScrollView>
                 </Grid>
             </Grid>
         </controls:GlassBorder>

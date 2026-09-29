@@ -317,7 +317,7 @@ class ContinuidadTests(ConSesionDeClase):
         eventos = self.eventos(s["id"])
         self.assertEqual(eventos[-1], dom.EV_SESION_FINALIZADA)
         self.assertIn(dom.EV_ACTIVIDAD_CERRADA, eventos)
-        self.assertTrue(set(eventos) <= set(dom.EVENTOS))
+        self.assertTrue(set(eventos) <= set(dom.EVENTOS_ACEPTADOS))
         # El profesor ya puede abrir otra clase.
         self.assertEqual(self.api.post("/api/aula/sesiones/", {"via": "libre", "profesor_id": "prof-1"}, format="json").status_code, 201)
 
@@ -325,10 +325,14 @@ class ContinuidadTests(ConSesionDeClase):
         s = self.iniciar()
         self.api.post(f"/api/aula/sesiones/{s['id']}/cerrar/", {}, format="json")
         r = self.api.get("/api/aula/sesiones/")
-        self.assertEqual((r.status_code, r.json()["archivadas_ahora"]), (200, 0))
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("archivadas_ahora", r.json())      # 007-03: un GET sólo lee; archivar es del programador
         m.SesionDeClase.objects.filter(pk=s["id"]).update(finalizada_en=m.ahora_ms() - dom.ARCHIVO_TRAS_MS - 1000)
+        self.assertEqual(self.api.get("/api/aula/sesiones/?estado=archivada").json()["sesiones"], [])   # listar no archiva
+        from ..aplicacion.casos_uso_tiempo_real import ArchivarCerradas
+        from ..infraestructura.contenedor import servicios
+        self.assertEqual(ArchivarCerradas(servicios()).ejecutar(), 1)
         r = self.api.get("/api/aula/sesiones/?estado=archivada")
-        self.assertEqual(r.json()["archivadas_ahora"], 1)
         self.assertEqual([x["estado"] for x in r.json()["sesiones"]], ["archivada"])
         self.assertIsNotNone(r.json()["sesiones"][0]["archivada_en"])
 

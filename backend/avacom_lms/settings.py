@@ -17,9 +17,13 @@ DEBUG = os.environ.get("AVACOM_LMS_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
+    # `daphne` va primero: sustituye a `runserver` por un servidor ASGI que también atiende WebSocket
+    # (tiempo real del aula, `classroom_engine/interfaces/websockets.py`).
+    "daphne",
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
     "rest_framework",
+    "channels",
     "acceso",
     "device_manager",
     "biblioteca",
@@ -48,10 +52,24 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": os.environ.get("AVACOM_LMS_DB", str(BASE_DIR / "db.sqlite3")),
+        # Con el tiempo real hay varios hilos escribiendo a la vez (vistas, sockets y programador). Sin esto SQLite
+        # responde «database is locked» al instante cuando una transacción que leyó intenta escribir mientras otra
+        # confirmó: WAL deja leer mientras se escribe y BEGIN IMMEDIATE toma el turno de escritura al empezar, de modo
+        # que los escritores hacen fila (hasta `timeout` segundos) en lugar de fallar.
+        "OPTIONS": {
+            "timeout": 20,
+            "transaction_mode": "IMMEDIATE",
+            "init_command": "PRAGMA journal_mode=WAL;",
+        },
     }
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ------------------------------------------------------------- Tiempo real (Channels)
+# El nodo del aula es UN solo proceso en una LAN cerrada y sin internet: la capa de canales en memoria basta
+# y no exige Redis. Si algún día el nodo corre en varios procesos, aquí se cambia por `channels_redis`.
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 LANGUAGE_CODE = "es"
 TIME_ZONE = "America/Bogota"
@@ -102,3 +120,22 @@ AVACOM_AULA_FUENTE_CURSOS = os.environ.get("AVACOM_AULA_FUENTE_CURSOS", "bibliot
 AVACOM_AULA_CURSO_EJEMPLO = os.environ.get("AVACOM_AULA_CURSO_EJEMPLO") or str(
     BASE_DIR.parent / "spec-driven" / "02-classroom-engine" / "example.json"
 )
+
+# ------------------------------------------------- Tiempo real y programador del aula
+# Un participante «conectado» que no manda latido en este tiempo pasa a «reconectando» (FUN-073).
+AVACOM_AULA_LATIDO_VENCIDO_MS = int(os.environ.get("AVACOM_AULA_LATIDO_VENCIDO_MS", "15000"))
+# Sin latido en este tiempo, un «reconectando» pasa a «salió» (deja de contar como admitido).
+AVACOM_AULA_AUSENCIA_MS = int(os.environ.get("AVACOM_AULA_AUSENCIA_MS", str(5 * 60 * 1000)))
+# Una clase abierta sin ninguna actividad durante este tiempo se cierra sola (JRN-011: 120 min, no 20).
+AVACOM_AULA_INACTIVIDAD_MS = int(os.environ.get("AVACOM_AULA_INACTIVIDAD_MS", str(120 * 60 * 1000)))
+# Capacidad del nodo (BR-063): 50 dispositivos en operación normal y 100 en pico. Al llegar al pico
+# se rechazan las conexiones NUEVAS sin degradar a las conectadas. La licencia (MOD-018) los fijará.
+AVACOM_AULA_DISPOSITIVOS_NORMAL = int(os.environ.get("AVACOM_AULA_DISPOSITIVOS_NORMAL", "50"))
+AVACOM_AULA_DISPOSITIVOS_PICO = int(os.environ.get("AVACOM_AULA_DISPOSITIVOS_PICO", "100"))
+# `unirse` con código equivocado: intentos permitidos por tableta (o dirección) en la ventana.
+AVACOM_AULA_UNIRSE_INTENTOS = int(os.environ.get("AVACOM_AULA_UNIRSE_INTENTOS", "8"))
+AVACOM_AULA_UNIRSE_VENTANA_MS = int(os.environ.get("AVACOM_AULA_UNIRSE_VENTANA_MS", "60000"))
+# "0" desactiva el programador (presencia por latido, cierre por inactividad, archivado y detección de caída).
+AVACOM_AULA_PROGRAMADOR = os.environ.get("AVACOM_AULA_PROGRAMADOR", "1") == "1"
+# "0" desactiva la suspensión de las clases abiertas al arrancar el nodo (BR-051).
+AVACOM_AULA_DETECTAR_CAIDA = os.environ.get("AVACOM_AULA_DETECTAR_CAIDA", "1") == "1"

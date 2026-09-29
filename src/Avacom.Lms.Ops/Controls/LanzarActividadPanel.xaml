@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="Avacom.Lms.Ops.Controls.LanzarActividadPanel"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    IsVisible="False">
+    <!-- Lanzar a las tabletas (007-06 · PAN-050 · FUN-070). Overlay sobre la clase: velo tenue, tarjeta al centro y botones
+         grandes. El profesor decide a quién, cuánto tiempo y cuántos intentos SIN TECLADO: todo son fichas que se tocan.
+         La cabecera y el pie quedan fijos; sólo el cuerpo se desplaza (con 100 alumnos la cuadrícula de nombres crece).
+         Las fichas, los dos botones del pie y la nota de poco espacio se fabrican en el code-behind con el kit (Ds). -->
+    <Grid x:Name="Raiz" SizeChanged="OnRaizSizeChanged">
+
+        <!-- Velo: tocar fuera cancela. Es hermano de la tarjeta (no su padre) para que un toque dentro nunca llegue aquí. -->
+        <Border x:Name="Velo" BackgroundColor="#73141417" StrokeThickness="0">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnVeloTocado" />
+            </Border.GestureRecognizers>
+        </Border>
+
+        <Border x:Name="Tarjeta" HorizontalOptions="Center" VerticalOptions="Center" Padding="32,28,32,26" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 24">
+            <Border.Shadow><Shadow Brush="#18181B" Offset="0,12" Radius="32" Opacity="0.28" /></Border.Shadow>
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="20">
+
+                <!-- Cabecera fija -->
+                <VerticalStackLayout Grid.Row="0" Spacing="4">
+                    <Label x:Name="EtiquetaLabel" Text="LANZAR ACTIVIDAD" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                    <Label x:Name="TituloLabel" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="TailTruncation" MaxLines="2" />
+                </VerticalStackLayout>
+
+                <!-- Cuerpo desplazable -->
+                <ScrollView x:Name="Cuerpo" Grid.Row="1">
+                    <VerticalStackLayout Spacing="26" Padding="0,0,4,0">
+
+                        <!-- ¿A quién? -->
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="¿A quién?" FontFamily="InterMedium" FontSize="18" TextColor="#18181B" />
+                            <Grid x:Name="AQuienHost" ColumnDefinitions="*,*" ColumnSpacing="12" />
+                            <Label x:Name="BloqueadasLabel" IsVisible="False" FontFamily="InterRegular" FontSize="15" TextColor="#52525B" />
+                            <VerticalStackLayout x:Name="ElegirHost" IsVisible="False" Spacing="10">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <Label x:Name="ContadorLabel" Grid.Column="0" VerticalOptions="Center" FontFamily="InterMedium" FontSize="16" TextColor="#3F3F46" />
+                                    <ContentView x:Name="TodosSlot" Grid.Column="1" VerticalOptions="Center" />
+                                    <ContentView x:Name="NingunoSlot" Grid.Column="2" VerticalOptions="Center" />
+                                </Grid>
+                                <FlexLayout x:Name="AlumnosHost" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" />
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+
+                        <!-- Tiempo (sólo actividad) -->
+                        <VerticalStackLayout x:Name="TiempoSeccion" Spacing="10">
+                            <Label Text="Tiempo" FontFamily="InterMedium" FontSize="18" TextColor="#18181B" />
+                            <FlexLayout x:Name="TiempoHost" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" />
+                        </VerticalStackLayout>
+
+                        <!-- Intentos (sólo actividad) -->
+                        <VerticalStackLayout x:Name="IntentosSeccion" Spacing="10">
+                            <Label Text="Intentos" FontFamily="InterMedium" FontSize="18" TextColor="#18181B" />
+                            <FlexLayout x:Name="IntentosHost" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" />
+                        </VerticalStackLayout>
+
+                        <!-- Estudiar en casa (sólo recurso): un interruptor grande; el estado se lee también en el texto -->
+                        <Border x:Name="EstudioFila" IsVisible="False" Padding="18,14" MinimumHeightRequest="76" BackgroundColor="#F4F4F5" StrokeThickness="0" StrokeShape="RoundRectangle 16">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnEstudioTocado" />
+                            </Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="18">
+                                <Border x:Name="EstudioPista" Grid.Column="0" WidthRequest="68" HeightRequest="38" Padding="4" BackgroundColor="#A1A1AA" StrokeThickness="0" StrokeShape="RoundRectangle 19" VerticalOptions="Center">
+                                    <Border x:Name="EstudioPerilla" WidthRequest="30" HeightRequest="30" BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 15" HorizontalOptions="Start" VerticalOptions="Center" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="Dejar disponible para estudiar en casa" FontFamily="InterMedium" FontSize="18" TextColor="#18181B" />
+                                    <Label x:Name="EstudioDetalleLabel" FontFamily="InterRegular" FontSize="15" TextColor="#52525B" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <!-- Pie fijo: resumen de una línea, nota de poco espacio (no bloquea) y los dos botones -->
+                <VerticalStackLayout Grid.Row="2" Spacing="12">
+                    <Label x:Name="ResumenLabel" FontFamily="InterMedium" FontSize="19" TextColor="#3F3F46" />
+                    <ContentView x:Name="NotaHost" IsVisible="False" />
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+                        <ContentView x:Name="CancelarSlot" Grid.Column="1" />
+                        <ContentView x:Name="LanzarSlot" Grid.Column="2" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

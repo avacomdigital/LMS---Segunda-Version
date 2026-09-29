@@ -4,6 +4,7 @@ from __future__ import annotations
 from django.db import transaction
 
 from . import repositorios as r
+from .tiempo_real import TiempoRealCanales
 
 
 class UnidadDeTrabajoAula:
@@ -14,6 +15,7 @@ class UnidadDeTrabajoAula:
         self._atomic = transaction.atomic()
         self._atomic.__enter__()
         self.sesiones = r.SesionesDjango()
+        self.tiempo_real = TiempoRealCanales()
         self.outbox = r.OutboxDjango()
         self.auditoria = r.AuditoriaExpediente()
         self.identidad = r.IdentidadAcceso()

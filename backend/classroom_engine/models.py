@@ -67,6 +67,9 @@ class SesionDeClase(models.Model):
     finalizada_en = models.BigIntegerField(null=True, blank=True)
     origen_cierre = models.CharField(max_length=16, blank=True, default="")
     archivada_en = models.BigIntegerField(null=True, blank=True)
+    # Anclaje curricular (BR-039/040): nunca obligatorio y asignable después de cerrar. Provisional: lista de
+    # {ref, rotulo} hasta que el CTO decida entre `clase.tema_id` y una tabla puente (007-09).
+    anclajes = models.JSONField(default=list)
     creado_en = models.BigIntegerField(default=ahora_ms)
     creado_por = models.CharField(max_length=64, blank=True, default="")
 
@@ -116,6 +119,9 @@ class Participante(models.Model):
     ultimo_latido_en = models.BigIntegerField(null=True, blank=True)
     admitido_por = models.CharField(max_length=64, blank=True, default="")
     motivo = models.CharField(max_length=200, blank=True, default="")
+    ayuda_en = models.BigIntegerField(null=True, blank=True)          # mano levantada: instante en que pidió ayuda
+    proyectado_desde = models.BigIntegerField(null=True, blank=True)  # DEC-034: su pantalla se proyecta al grupo desde este instante
+    proyectado_por = models.CharField(max_length=64, blank=True, default="")
     creado_en = models.BigIntegerField(default=ahora_ms)
     creado_por = models.CharField(max_length=64, blank=True, default="")
 
@@ -218,6 +224,10 @@ class Distribucion(models.Model):
     tiempo_limite_seg = models.PositiveIntegerField(null=True, blank=True)
     disponible_estudio = models.BooleanField(default=False)   # MOD-008 decide si lo descarga
     asignacion_ref = models.CharField(max_length=64, blank=True, default="")   # MOD-010, devuelto por el puerto Evaluacion
+    total_preguntas = models.PositiveSmallIntegerField(default=0)   # de la actividad, fijado al lanzarla (el curso no se cachea)
+    puntos_totales = models.FloatField(default=0)
+    pausada_ms = models.BigIntegerField(default=0)                  # tiempo que la clase estuvo suspendida con la actividad abierta
+    estudio_hasta = models.BigIntegerField(null=True, blank=True)   # «dejar como tarea de estudio» hasta este instante (MOD-008)
     abierta_en = models.BigIntegerField(default=ahora_ms)
     cerrada_en = models.BigIntegerField(null=True, blank=True)
     creado_por = models.CharField(max_length=64, blank=True, default="")
@@ -254,6 +264,42 @@ class DistribucionEntrega(models.Model):
         ]
 
 
+class Intento(models.Model):
+    """El intento de un alumno sobre una actividad lanzada en clase (tabla `intento` del modelo v2, provisional
+    en MOD-007 hasta que MOD-010 tenga dueño). Las respuestas por pregunta viven dentro del intento (decisión
+    del CTO del 2026-09-24): una por elemento de `respuestas`, con su secuencia, su hora capturada y su
+    veredicto. La unicidad (pregunta, sesión, secuencia) de INV-013 se valida en la aplicación, dentro de la
+    transacción, porque no se puede expresar como restricción sobre una lista JSON."""
+
+    id = models.CharField(max_length=36, primary_key=True)
+    distribucion = models.ForeignKey(Distribucion, on_delete=models.CASCADE, related_name="intentos")
+    participante = models.ForeignKey(Participante, on_delete=models.CASCADE, related_name="intentos")
+    persona_id = models.CharField(max_length=64)
+    numero = models.PositiveSmallIntegerField(default=1)
+    estado = models.CharField(max_length=20, choices=[(e, e) for e in dom.ESTADOS_INTENTO], default=dom.EN_CURSO)
+    iniciado_en = models.BigIntegerField(default=ahora_ms)
+    enviado_en = models.BigIntegerField(null=True, blank=True)
+    capturado_en = models.BigIntegerField(null=True, blank=True)    # última captura declarada por la tableta, ya normalizada
+    puntaje = models.FloatField(null=True, blank=True)              # bruto, sólo de lo ya calificado
+    puntaje_maximo = models.FloatField(null=True, blank=True)
+    respuestas = models.JSONField(default=list)
+    origen_envio = models.CharField(max_length=16, default="directo")   # directo | cola | cierre
+    recuperado_de_cola = models.BooleanField(default=False)             # llegó por la ventana de gracia (DEC-019)
+    dispositivo_id = models.CharField(max_length=36, blank=True, default="")
+
+    class Meta:
+        db_table = "m07_intento"
+        constraints = [
+            models.UniqueConstraint(fields=["distribucion", "participante", "numero"], name="ux_m07_intento_numero"),
+            # Un solo intento en curso por alumno y actividad (v2, `intento`).
+            models.UniqueConstraint(fields=["distribucion", "participante"], condition=Q(estado=dom.EN_CURSO),
+                                    name="ux_m07_intento_en_curso"),
+            models.CheckConstraint(condition=Q(enviado_en__isnull=True) | Q(enviado_en__gte=F("iniciado_en")),
+                                   name="ck_m07_intento_envio_posterior"),
+        ]
+        indexes = [models.Index(fields=["distribucion", "estado"], name="ix_m07_intento_dist")]
+
+
 class Aviso(models.Model):
     """Mensaje de aviso del profesor a un dispositivo o al grupo (FUN-075)."""
 
@@ -284,6 +330,7 @@ class Resumen(models.Model):
     duracion_ms = models.BigIntegerField(default=0)
     origen_cierre = models.CharField(max_length=16, choices=[(o, o) for o in dom.ORIGENES_CIERRE], default="profesor")
     consolidado_en = models.BigIntegerField(default=ahora_ms)
+    detalle = models.JSONField(default=dict)   # participación por alumno y pendientes, para PAN-008 (007-09)
 
     class Meta:
         db_table = "m07_resumen"

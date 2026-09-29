@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    xmlns:ctl="clr-namespace:Avacom.Lms.Ops.Controls"
     Shell.NavBarIsVisible="False">
     <!-- Dos columnas: la secuencia (360) y la proyección. A 1920×1000 la columna izquierda termina en x = 384 (20 % del
          ancho) y la fila superior, de 84, en y = 100 (10 % del alto): las líneas de la cuadrícula con que se revisa la
@@ -11,38 +12,46 @@
     <Grid RowDefinitions="84,*,Auto" ColumnDefinitions="360,*" Padding="24,16,24,20" RowSpacing="14" ColumnSpacing="14">
 
         <!-- Código de unión · dark glass, sólo sobre la columna de la secuencia -->
-        <Border Grid.Row="0" Grid.Column="0" Padding="20,0" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
+        <!-- Se toca para ampliarlo (007-12, PAN-002): el código legible a cuatro metros vive en la hoja de pantalla completa.
+             El conteo de conectados ya no va aquí: es el recuadro verde de la esquina superior derecha. -->
+        <Border x:Name="CodigoCard" Grid.Row="0" Grid.Column="0" Padding="20,0" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
             <Border.Shadow><Shadow Brush="#18181B" Offset="0,8" Radius="20" Opacity="0.22" /></Border.Shadow>
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="2">
-                    <Label Text="CÓDIGO DE UNIÓN" FontFamily="InterRegular" FontSize="10" TextColor="#A1A1AA" CharacterSpacing="2.5" />
-                    <Label x:Name="CodigoLabel" Text="······" FontFamily="InterLight" FontSize="40" TextColor="White" CharacterSpacing="5" LineHeight="1" />
-                </VerticalStackLayout>
-                <Border Grid.Column="1" BackgroundColor="#1AFFFFFF" StrokeThickness="0" StrokeShape="RoundRectangle 14" Padding="14,6" VerticalOptions="Center">
-                    <VerticalStackLayout Spacing="0">
-                        <Label x:Name="ConectadosLabel" Text="0" FontFamily="InterMedium" FontSize="22" TextColor="White" HorizontalTextAlignment="Center" />
-                        <Label Text="conectados" FontFamily="InterRegular" FontSize="11" TextColor="#A1A1AA" HorizontalTextAlignment="Center" />
-                    </VerticalStackLayout>
-                </Border>
-            </Grid>
+            <VerticalStackLayout VerticalOptions="Center" Spacing="2">
+                <Label Text="CÓDIGO DE UNIÓN  ·  TOCA PARA AMPLIAR" FontFamily="InterRegular" FontSize="10" TextColor="#A1A1AA" CharacterSpacing="2" />
+                <Label x:Name="CodigoLabel" Text="······" FontFamily="InterLight" FontSize="40" TextColor="White" CharacterSpacing="5" LineHeight="1" />
+            </VerticalStackLayout>
         </Border>
 
         <!-- Lección en curso · glass chrome sobre la proyección: título, estado de la conexión y participantes -->
         <Border Grid.Row="0" Grid.Column="1" Padding="22,0,12,0" BackgroundColor="#B3FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 22">
             <Border.Shadow><Shadow Brush="#18181B" Offset="0,4" Radius="16" Opacity="0.08" /></Border.Shadow>
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="14">
                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="1">
                     <Label x:Name="LeccionLabel" Text="Clase" FontFamily="InterMedium" FontSize="20" TextColor="#18181B" LineBreakMode="TailTruncation" />
                     <Label x:Name="CursoLabel" Text="" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="TailTruncation" />
                 </VerticalStackLayout>
+                <!-- UXR-003: la conexión con el aula tiene tres valores y nada más: Conectado · Reconectando · Trabajando en el dispositivo -->
                 <Border x:Name="ConexionChip" Grid.Column="1" BackgroundColor="#FEF9E6" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="14,8" VerticalOptions="Center">
                     <HorizontalStackLayout Spacing="8">
                         <Ellipse x:Name="ConexionPunto" WidthRequest="10" HeightRequest="10" Fill="#F3C701" VerticalOptions="Center" />
                         <Label x:Name="ConexionLabel" Text="Conectando…" FontFamily="InterMedium" FontSize="13" TextColor="#3F3F46" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                 </Border>
+                <!-- 007-11 (capacidad) y 007-13 (manos levantadas): avisos que informan sin alarmar; sólo aparecen cuando hay algo que decir -->
+                <HorizontalStackLayout x:Name="AvisosDeEstado" Grid.Column="2" Spacing="8" VerticalOptions="Center" />
                 <!-- El botón se fabrica en código con el kit (Ds.Boton + Ds.Capsula): mismo relieve que la barra de controles -->
-                <ContentView x:Name="ParticipantesSlot" Grid.Column="2" VerticalOptions="Center" />
+                <ContentView x:Name="ParticipantesSlot" Grid.Column="3" VerticalOptions="Center" />
+                <!-- El recuadro verde: cuántos estudiantes están conectados a la sesión AHORA, en la esquina superior derecha.
+                     Lo mueve el canal en tiempo real (mensajes «conteo»); no espera al sondeo. -->
+                <Border x:Name="ConteoBox" Grid.Column="4" BackgroundColor="#019D60" StrokeThickness="0" StrokeShape="RoundRectangle 18"
+                        Padding="20,6" MinimumWidthRequest="112" VerticalOptions="Center"
+                        SemanticProperties.Description="0 estudiantes conectados">
+                    <Border.Shadow><Shadow Brush="#019D60" Offset="0,4" Radius="14" Opacity="0.28" /></Border.Shadow>
+                    <VerticalStackLayout Spacing="0" VerticalOptions="Center">
+                        <Label x:Name="ConectadosLabel" Text="0" FontFamily="InterMedium" FontSize="32" TextColor="White" HorizontalTextAlignment="Center" LineHeight="1" />
+                        <Label x:Name="ConectadosRotulo" Text="conectados" FontFamily="InterRegular" FontSize="12" TextColor="#D7F3E6" HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+                </Border>
             </Grid>
         </Border>
 
@@ -58,6 +67,23 @@
         <!-- Centro · proyección -->
         <Grid Grid.Row="1" Grid.Column="1">
             <ui:AulaContenidoView x:Name="Proyeccion" />
+            <!-- 007-05 · PAN-004: el avance vivo del grupo en la actividad lanzada. Se abre desde la tarjeta de la actividad. -->
+            <Grid x:Name="ResultadosHost" IsVisible="False">
+                <ctl:ResultadosActividadPanel x:Name="ResultadosPanel" />
+                <ContentView x:Name="ResultadosCerrarSlot" HorizontalOptions="End" VerticalOptions="Start" Margin="0,14,14,0" />
+            </Grid>
+            <!-- 007-02 · PAN-006: la clase quedó interrumpida (corte de luz, reinicio del equipo). Sereno, sin cuenta atrás de
+                 fracaso: dice dónde iba, cuántos alumnos ya volvieron y se reanuda con un solo toque. -->
+            <Border x:Name="ReanudarPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="Center" MaximumWidthRequest="640"
+                    Padding="28" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 26">
+                <Border.Shadow><Shadow Brush="#18181B" Offset="0,14" Radius="34" Opacity="0.22" /></Border.Shadow>
+                <VerticalStackLayout Spacing="10">
+                    <Label x:Name="ReanudarTitulo" Text="Clase recuperada" FontFamily="InterMedium" FontSize="26" TextColor="#18181B" />
+                    <Label x:Name="ReanudarTexto" FontFamily="InterLight" FontSize="19" TextColor="#3F3F46" />
+                    <Label x:Name="ReanudarProgreso" FontFamily="InterRegular" FontSize="16" TextColor="#52525B" />
+                    <ContentView x:Name="ReanudarSlot" Margin="0,8,0,0" HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </Border>
             <!-- Panel de participantes (superpuesto a la derecha) -->
             <Border x:Name="ParticipantesPanel" IsVisible="False" WidthRequest="420" HorizontalOptions="End" VerticalOptions="Fill" Padding="18" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
                 <Grid RowDefinitions="Auto,*">
@@ -71,15 +97,46 @@
             <!-- Hoja de avisos (frases prehechas, sin teclado) -->
             <Border x:Name="AvisoPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,12" Padding="18" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Enviar un aviso al grupo" FontFamily="InterMedium" FontSize="18" />
+                    <Label x:Name="AvisoTitulo" Text="Enviar un aviso al grupo" FontFamily="InterMedium" FontSize="18" />
                     <FlexLayout x:Name="FrasesHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Center" />
                 </VerticalStackLayout>
             </Border>
         </Grid>
 
-        <!-- Barra de controles · dark glass, a lo ancho. El único Destructive va detrás de una confirmación. -->
-        <Border Grid.Row="2" Grid.ColumnSpan="2" Padding="16,10" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
-            <HorizontalStackLayout x:Name="ControlesHost" Spacing="16" HorizontalOptions="Center" />
-        </Border>
+        <!-- Barra de controles · dark glass, a lo ancho, colapsable. El único Destructive va detrás de una confirmación. -->
+        <Grid Grid.Row="2" Grid.ColumnSpan="2" RowDefinitions="Auto,Auto" RowSpacing="6">
+            <Button x:Name="ControlesAsa" Grid.Row="0" Text="︿" Clicked="OnAlternarControles"
+                    WidthRequest="56" HeightRequest="20" MinimumHeightRequest="20" Padding="0" FontSize="11"
+                    BackgroundColor="#D1141417" TextColor="#A1A1AA" BorderWidth="0" CornerRadius="10"
+                    HorizontalOptions="Center" />
+            <Border x:Name="ControlesBarra" Grid.Row="1" Padding="14,8" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 20">
+                <HorizontalStackLayout x:Name="ControlesHost" Spacing="10" HorizontalOptions="Center" />
+            </Border>
+        </Grid>
+
+        <!-- 007-12 · PAN-002 · el código en grande, legible a cuatro metros (≥ 96 pt), con el recuadro verde de conectados y los
+             botones de siempre a tamaño de pantalla interactiva (≥ 60). Se abre tocando el código; se cierra con «Volver a la clase».
+             Con la clase suspendida el grupo ve el aviso sereno de PAN-007. -->
+        <Grid x:Name="CodigoGrande" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="2" IsVisible="False"
+              Margin="-24,-16,-24,-20" BackgroundColor="#141417">
+            <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="18">
+                <Label Text="CÓDIGO DE UNIÓN" FontFamily="InterRegular" FontSize="26" TextColor="#A1A1AA" CharacterSpacing="6" HorizontalTextAlignment="Center" />
+                <Label x:Name="CodigoGrandeLabel" Text="······" FontFamily="InterLight" FontSize="132" TextColor="White" CharacterSpacing="8" LineHeight="1" HorizontalTextAlignment="Center" />
+                <Label Text="Abre AVACOM en tu tableta y escribe este código" FontFamily="InterLight" FontSize="30" TextColor="#D4D4D8" HorizontalTextAlignment="Center" />
+                <Border BackgroundColor="#019D60" StrokeThickness="0" StrokeShape="RoundRectangle 28" Padding="44,14" HorizontalOptions="Center" Margin="0,10,0,0">
+                    <HorizontalStackLayout Spacing="18" VerticalOptions="Center">
+                        <Label x:Name="ConectadosGrandeLabel" Text="0" FontFamily="InterMedium" FontSize="72" TextColor="White" VerticalOptions="Center" LineHeight="1" />
+                        <Label Text="conectados" FontFamily="InterRegular" FontSize="30" TextColor="#D7F3E6" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
+                <Label x:Name="CodigoGrandeAviso" IsVisible="False" FontFamily="InterLight" FontSize="28" TextColor="#FDE68A" HorizontalTextAlignment="Center" MaximumWidthRequest="1100" />
+                <HorizontalStackLayout x:Name="CodigoGrandeAcciones" Spacing="18" HorizontalOptions="Center" Margin="0,16,0,0" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <!-- 007-06 · PAN-050: a quién, cuánto tiempo y cuántos intentos, sin teclado. Cubre toda la pantalla, por encima del resto. -->
+        <ctl:LanzarActividadPanel x:Name="LanzarPanel" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="2" IsVisible="False" Margin="-24,-16,-24,-20" />
+        <!-- 007-08 · JRN-011: al terminar con alumnos respondiendo, el cierre espera 60 s y entrega lo capturado. -->
+        <ctl:EsperaDeCierrePanel x:Name="EsperaPanel" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="2" IsVisible="False" Margin="-24,-16,-24,-20" />
     </Grid>
 </ContentPage>

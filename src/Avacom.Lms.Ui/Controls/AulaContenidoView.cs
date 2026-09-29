@@ -681,9 +681,25 @@ public sealed class AulaContenidoView : ContentView
             if (uri.Scheme is "about" or "data" or "blob") return;
             if (!string.Equals(uri.GetLeftPart(UriPartial.Authority), _hostPermitido, StringComparison.OrdinalIgnoreCase)) e.Cancel = true;
         };
+        // Un objeto HTML (reproductor propio o laboratorio/simulación externa) puede llegar más alto que el
+        // recuadro que le da MAUI: sin esto, lo que sobra por abajo (vídeo con controles extra, panel largo de
+        // un laboratorio) queda recortado y sin forma de bajar. Se inyecta tras cada navegación lograda, sobre
+        // cualquier documento, sea nuestro o de un paquete externo, para no depender de que su propio CSS lo declare.
+        web.Navigated += (_, e) =>
+        {
+            if (e.Result == WebNavigationResult.Success) _ = web.EvaluateJavaScriptAsync(InyeccionDesplazamiento);
+        };
         _webs.Add(web);
         return web;
     }
+
+    // Sólo desbloquea el desplazamiento vertical; no toca height/flex de la página cargada, para no romper el
+    // vídeo a pantalla completa (flex:1 sobre body{height:100%}) ni el resto de los reproductores propios.
+    private const string InyeccionDesplazamiento =
+        "(function(){try{var s=document.createElement('style');" +
+        "s.textContent='html,body{overflow-y:auto!important;overflow-x:hidden!important;" +
+        "-webkit-overflow-scrolling:touch!important}';" +
+        "document.head?document.head.appendChild(s):document.documentElement.appendChild(s);}catch(e){}})();";
 
     private void LimpiarWeb()
     {

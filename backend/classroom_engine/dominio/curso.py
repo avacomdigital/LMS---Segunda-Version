@@ -12,6 +12,7 @@ Reglas:
 """
 from __future__ import annotations
 
+import random
 import re
 import unicodedata
 from collections.abc import Callable
@@ -312,8 +313,23 @@ def _item(i: dict, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
     return _con_imagen({"ref": str(i.get("id", "")), "texto": i.get("text", ""), "tramos": tramos(i.get("text"))}, i, medios, url_medio)
 
 
-def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
-    """Sólo lo que hace falta para PREGUNTAR. Nunca lo que hace falta para corregir."""
+def _barajadas(elementos: list[dict], semilla: str) -> list[dict]:
+    """Los mismos elementos en un orden que ya no es el de la fuente, siempre el mismo para la misma pregunta (determinista).
+
+    En «ordenar» la fuente trae los ítems en el orden correcto y en «relacionar» la columna derecha alineada con la izquierda: mandarlas
+    tal cual a un alumno sería mandarle la respuesta. Nunca devuelve el orden original (con dos o más elementos)."""
+    if len(elementos) < 2:
+        return list(elementos)
+    orden = list(elementos)
+    random.Random(semilla).shuffle(orden)
+    if [e["ref"] for e in orden] == [e["ref"] for e in elementos]:
+        orden = orden[1:] + orden[:1]
+    return orden
+
+
+def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio, rol: str = "docente") -> dict:
+    """Sólo lo que hace falta para PREGUNTAR. Nunca lo que hace falta para corregir (ni siquiera el orden de la fuente: al alumno,
+    «ordenar» y la columna derecha de «relacionar» le llegan barajados)."""
     tipo = str(p.get("type", ""))
     salida: dict[str, Any] = {
         "pregunta_ref": str(p.get("id", "")),
@@ -348,8 +364,12 @@ def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
     elif tipo == "matching":
         salida["izquierda"] = [_item(i, medios, url_medio) for i in (p.get("left") or []) if isinstance(i, dict)]
         salida["derecha"] = [_item(i, medios, url_medio) for i in (p.get("right") or []) if isinstance(i, dict)]
+        if rol != "docente":
+            salida["derecha"] = _barajadas(salida["derecha"], f"aula|derecha|{salida['pregunta_ref']}")
     elif tipo == "ordering":
         salida["elementos"] = [_item(i, medios, url_medio) for i in (p.get("items") or []) if isinstance(i, dict)]
+        if rol != "docente":
+            salida["elementos"] = _barajadas(salida["elementos"], f"aula|elementos|{salida['pregunta_ref']}")
     elif tipo == "open":
         salida["formato_respuesta"] = p.get("responseFormat", "text")
         salida["longitud_maxima"] = p.get("maxLength")
@@ -410,7 +430,7 @@ def _objeto(o: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> 
         )
     elif tipo == "activity":
         ajustes = o.get("settings") or {}
-        preguntas = [_pregunta(p, medios, url_medio) for p in (o.get("questions") or []) if isinstance(p, dict)]
+        preguntas = [_pregunta(p, medios, url_medio, rol) for p in (o.get("questions") or []) if isinstance(p, dict)]
         salida.update(
             instrucciones=o.get("instructions"),
             instrucciones_tramos=tramos(o.get("instructions")),

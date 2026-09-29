@@ -45,6 +45,9 @@ class Dispositivo(models.Model):
     bloqueado = models.BooleanField(default=False)
     registrado_en = models.BigIntegerField(default=ahora_ms)
     ultimo_latido_en = models.BigIntegerField(default=ahora_ms)
+    # Última lectura que la tableta declaró con su latido (009-04). El historial va por el evento de inventario.
+    espacio_libre_mb = models.IntegerField(null=True, blank=True)
+    bateria_pct = models.SmallIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = "m09_dispositivo"

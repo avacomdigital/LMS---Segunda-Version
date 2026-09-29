@@ -280,18 +280,18 @@ public static class Ds
         };
     }
 
-    /// <summary>Interruptor grande tocable para la barra de controles (dark glass): dos estados con color semántico.</summary>
-    public static Button Interruptor(string texto, bool activo, Color activoColor, EventHandler alPulsar)
+    /// <summary>Interruptor tocable para la barra de controles (dark glass): dos estados con color semántico. 64 px por defecto; en barras densas se puede pedir más bajo.</summary>
+    public static Button Interruptor(string texto, bool activo, Color activoColor, EventHandler alPulsar, double alto = 64)
     {
         var b = new Button
         {
             Text = texto,
-            HeightRequest = 64,
-            MinimumHeightRequest = 64,
+            HeightRequest = alto,
+            MinimumHeightRequest = alto,
             CornerRadius = RadioBoton,
-            FontSize = 18,
+            FontSize = alto >= 64 ? 18 : 15,
             FontFamily = FuenteMedia,
-            Padding = new Thickness(18, 0),
+            Padding = new Thickness(alto >= 64 ? 18 : 14, 0),
             BorderWidth = 0,
         };
         PintarInterruptor(b, activo, activoColor);
@@ -303,6 +303,34 @@ public static class Ds
     /// <summary>Activo: degradado del color semántico y sombra teñida. En reposo: blanco al 20 % sobre el dark glass.</summary>
     public static void PintarInterruptor(Button b, bool activo, Color activoColor) =>
         PintarRelieve(b, activo ? activoColor : Fantasma, activo ? TintaSobre(activoColor) : Colors.White);
+
+    /// <summary>
+    /// Botón redondo, sólo glifo, para una acción secundaria de la barra de controles que no necesita etiqueta
+    /// (bloquear pantallas, aviso). Mismo relieve y hundimiento que <see cref="Interruptor"/>, sin texto: ahorra
+    /// espacio en la barra dark glass cuando varias acciones compiten por sitio. Añade su propia descripción
+    /// semántica porque, a diferencia de <see cref="Boton"/>, no hay etiqueta visible que la sustituya.
+    /// </summary>
+    public static Button BotonIcono(string glifo, bool activo, Color activoColor, EventHandler alPulsar, string descripcion, double lado = 44)
+    {
+        var b = new Button
+        {
+            Text = glifo,
+            WidthRequest = lado,
+            HeightRequest = lado,
+            MinimumWidthRequest = lado,
+            MinimumHeightRequest = lado,
+            CornerRadius = (int)(lado / 2),
+            FontSize = lado * 0.42,
+            FontFamily = FuenteMedia,
+            Padding = 0,
+            BorderWidth = 0,
+        };
+        SemanticProperties.SetDescription(b, descripcion);
+        PintarInterruptor(b, activo, activoColor);
+        Hundir(b);
+        b.Clicked += alPulsar;
+        return b;
+    }
 
     // ----------------------------------------------------------------- textos
     public static Label Titulo(string texto, double tamano = 26, Color? color = null) => new()

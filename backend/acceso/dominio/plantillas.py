@@ -46,6 +46,18 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("identity.group.member.manage", "acceso", "Añadir y quitar miembros de grupos", O, False),
     ("identity.policy.manage", "acceso", "Configurar la política de credenciales (BR-023)", O, True),
     ("identity.device.manage", "acceso", "Registrar y dar de baja dispositivos", O, False),
+    # --- MOD-007 · Classroom Engine (sección J de su ficha). Los evalúa `classroom_engine.infraestructura.repositorios.AutorizacionAula`.
+    ("classroom.start", "aula", "Abrir una sesión de aula sobre un grupo propio y generar su código de unión (FUN-064)", O, False),
+    ("classroom.code.rotate", "aula", "Rotar el código de unión de una sesión activa (FUN-066)", O, False),
+    ("classroom.device.admit", "aula", "Admitir o rechazar un dispositivo en la sesión (FUN-067, FUN-068)", O, False),
+    ("classroom.device.remove", "aula", "Expulsar a un dispositivo de la sesión (FUN-078)", O, False),
+    ("classroom.device.lock", "aula", "Bloquear las pantallas del grupo y fijar el seguimiento (FUN-074, BR-050)", O, False),
+    ("classroom.present", "aula", "Proyectar un recurso y declarar el selector de la clase (FUN-069, BR-049)", O, False),
+    ("classroom.activity.launch", "aula", "Lanzar una actividad a los dispositivos del grupo (FUN-070)", O, False),
+    ("classroom.activity.close", "aula", "Cerrar la recepción de respuestas de la actividad en curso (FUN-071)", O, False),
+    ("classroom.results.view", "aula", "Ver el panel de resultados agregados de la clase (FUN-072)", O, False),
+    ("classroom.message.send", "aula", "Enviar un aviso a un dispositivo o al grupo (FUN-075)", O, False),
+    ("classroom.end", "aula", "Finalizar la sesión de clase y consolidar su registro (FUN-079)", O, False),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
@@ -90,6 +102,10 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "identity.password.reset": G, "identity.password.change_own": S, "identity.exam_access.grant": G,
         "identity.session.read": G, "identity.session.revoke": G, "identity.session.revoke_own": S,
         "identity.group.read": G, "identity.group.member.manage": G, "identity.role.read": O,
+        # La clase la opera su profesor titular sobre sus grupos; la titularidad la comprueba el aula sesión por sesión.
+        "classroom.start": G, "classroom.code.rotate": G, "classroom.device.admit": G, "classroom.device.remove": G,
+        "classroom.device.lock": G, "classroom.present": G, "classroom.activity.launch": G, "classroom.activity.close": G,
+        "classroom.results.view": G, "classroom.message.send": G, "classroom.end": G,
     }),
     "ADMIN": ("Administrador", Menu.ADMIN, 3, {
         # Todo salvo lo que el Maestro le niega: calificar directamente, el modo de estudio y el intento del alumno.

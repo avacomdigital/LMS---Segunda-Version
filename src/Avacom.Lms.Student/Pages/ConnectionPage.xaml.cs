@@ -1,22 +1,203 @@
+using System.Text.Json;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 namespace Avacom.Lms.Student.Pages;
 public partial class ConnectionPage : ContentPage
 {
+    private const string DescripcionPrototipo = "Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor.";
+    private const string DescripcionConSesion = "Escribe tu código, tu clave y la dirección que aparece en la pantalla principal del profesor.";
+    private const string Verde = "#019D60", VerdeSuave = "#E6F5EE", Rojo = "#E5262B", RojoSuave = "#FDECEC", Azul = "#01A4E1", AzulSuave = "#E6F6FC";
+
     private readonly ILmsApiClient apiClient = new LmsApiClient(new HttpClient { Timeout = TimeSpan.FromSeconds(3) });
     private string? claveAplicada;
-    public ConnectionPage() => InitializeComponent();
+    private Uri? direccionConsultada;   // el aula cuya configuración se leyó por última vez con éxito
+    private bool exigeSesion;           // el aula pide identificarse con código y clave (007-10, PAN-101)
+    private bool entrando;
+    public ConnectionPage()
+    {
+        InitializeComponent();
+        CodigoEntry.Completed += (_, _) => ClaveEntry.Focus();   // «siguiente» del teclado pasa de «Tu código» a «Tu clave»
+    }
+
+    /// <summary>
+    /// Esta página vive mientras la app: al volver aquí («Salir» del menú, sesión terminada) no puede quedar nada de quien estuvo antes,
+    /// porque la tableta es compartida (BR-053, JRN-022). La clave nunca se conserva; el código sólo cuando la misma persona vuelve a
+    /// identificarse tras un aviso de sesión terminada; y el nombre del modo prototipo vuelve al valor por defecto si «Salir» lo borró.
+    /// </summary>
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        ClaveEntry.Text = string.Empty;
+        if (!Sesion.RecordarCodigo) CodigoEntry.Text = string.Empty;
+        Sesion.RecordarCodigo = false;
+        if (!Preferences.Default.ContainsKey("student_name")) NameEntry.Text = ConnectionOptions.Default.StudentName;
+    }
+
     private async void OnCheck(object? sender, EventArgs e)
     {
-        CheckButton.IsEnabled = false; StatusLabel.Text = "●  Buscando el aula…";
-        try { var ok = await apiClient.CheckHealthAsync(ConnectionOptions.Normalize(ServerEntry.Text ?? string.Empty)); StatusCard.BackgroundColor = Color.FromArgb(ok ? "#E6F5EE" : "#FDECEC"); StatusLabel.TextColor = Color.FromArgb(ok ? "#019D60" : "#E5262B"); StatusLabel.Text = ok ? "●  Conectado al aula correctamente" : "●  No encontramos el aula · revisa la dirección"; }
+        CheckButton.IsEnabled = false; Estado("●  Buscando el aula…", AzulSuave, Azul);
+        try
+        {
+            var uri = ConnectionOptions.Normalize(ServerEntry.Text ?? string.Empty);
+            var ok = await apiClient.CheckHealthAsync(uri);
+            // Con el aula a la vista se lee lo que dice de sí misma: si exige sesión, el formulario pide código y clave.
+            var config = ok ? await LeerConfiguracionAsync(uri, TimeSpan.FromSeconds(3)) : null;
+            if (ok) Estado("●  Conectado al aula correctamente" + (config?.SesionObligatoria == true ? " · escribe tu código y tu clave" : string.Empty), VerdeSuave, Verde);
+            else Estado("●  No encontramos el aula · revisa la dirección", RojoSuave, Rojo);
+        }
         catch (ArgumentException ex) { StatusLabel.Text = ex.Message; }
         finally { CheckButton.IsEnabled = true; }
     }
+
+    private void Estado(string texto, string fondo, string tinta)
+    {
+        StatusCard.BackgroundColor = Color.FromArgb(fondo); StatusLabel.TextColor = Color.FromArgb(tinta); StatusLabel.Text = texto;
+    }
+
+    /// <summary>
+    /// Guarda la dirección (el cliente de acceso sale de ella), lee <c>/api/acceso/configuracion/</c> y ajusta el formulario. Nulo si el
+    /// aula no contestó a tiempo: entonces todo sigue como siempre (modo prototipo / demo sin conexión).
+    /// </summary>
+    private async Task<ConfiguracionAcceso?> LeerConfiguracionAsync(Uri uri, TimeSpan espera)
+    {
+        Preferences.Default.Set("student_server", ServerEntry.Text ?? ConnectionOptions.Default.ServerAddress);
+        try
+        {
+            using var tope = new CancellationTokenSource(espera);
+            var config = await Sesion.Acceso.ConfiguracionAsync(tope.Token);
+            if (config is null) return null;
+            direccionConsultada = uri;
+            AplicarConfiguracion(config);
+            return config;
+        }
+        catch (OperationCanceledException) { return null; }
+    }
+
+    private void AplicarConfiguracion(ConfiguracionAcceso config)
+    {
+        exigeSesion = config.SesionObligatoria;
+        Sesion.SesionObligatoria = exigeSesion;
+        // Perfiles.student.tipo_secreto == "PIN": la clave del alumno son sólo números, así que el teclado es el numérico.
+        var esPin = config.Perfiles is { ValueKind: JsonValueKind.Object } perfiles
+                    && perfiles.TryGetProperty("student", out var alumno) && alumno.ValueKind == JsonValueKind.Object
+                    && alumno.TryGetProperty("tipo_secreto", out var tipo) && tipo.ValueKind == JsonValueKind.String && tipo.GetString() == "PIN";
+        ClaveEntry.Keyboard = esPin ? Keyboard.Numeric : Keyboard.Default;
+        MostrarAcceso(exigeSesion);
+    }
+
+    /// <summary>Con sesión obligatoria el nombre libre se cambia por «Tu código» y «Tu clave» (no hay modo demo). La composición de la tarjeta no cambia.</summary>
+    private void MostrarAcceso(bool conSesion)
+    {
+        NombreBox.IsVisible = !conSesion; CodigoBox.IsVisible = conSesion; ClaveBox.IsVisible = conSesion; NotaDemo.IsVisible = !conSesion;
+        Descripcion.Text = conSesion ? DescripcionConSesion : DescripcionPrototipo;
+    }
+
+    private static bool TryNormalizar(string texto, out Uri uri)
+    {
+        try { uri = ConnectionOptions.Normalize(texto); return true; }
+        catch (ArgumentException) { uri = null!; return false; }
+    }
+
     private async void OnEnter(object? sender, EventArgs e)
     {
+        if (entrando) return;
+        entrando = true; EntrarButton.IsEnabled = false;
+        try { await EntrarAsync(); }
+        catch (Exception ex)
+        {
+            RegistroDeFallos.Escribir("student", "ConnectionPage.Entrar", ex);
+            Estado("●  No pudimos entrar ahora · prueba otra vez en un momento", RojoSuave, Rojo);
+        }
+        finally { entrando = false; EntrarButton.IsEnabled = true; }
+    }
+
+    private async Task EntrarAsync()
+    {
+        var direccion = ServerEntry.Text ?? ConnectionOptions.Default.ServerAddress;
+        // ¿El aula pide sesión? Se sabe al comprobar la conexión; si no se comprobó (o cambió la dirección) se pregunta ahora, con poca espera.
+        // Si el aula no contesta, todo sigue como siempre: modo prototipo con el nombre escrito, o demo sin conexión.
+        if (TryNormalizar(direccion, out var uri) && uri != direccionConsultada && await LeerConfiguracionAsync(uri, TimeSpan.FromSeconds(3)) is null)
+        {
+            exigeSesion = false; Sesion.SesionObligatoria = false; MostrarAcceso(false);
+        }
+        if (exigeSesion) await EntrarConSesionAsync(direccion); else await EntrarSinSesionAsync(direccion);
+    }
+
+    /// <summary>Modo prototipo (Q-04, el aula no exige sesión): como siempre, sólo se pide el nombre.</summary>
+    private async Task EntrarSinSesionAsync(string direccion)
+    {
         if (string.IsNullOrWhiteSpace(NameEntry.Text)) { await DisplayAlertAsync("Falta tu nombre", "Escribe tu nombre para continuar.", "Entendido"); return; }
-        Preferences.Default.Set("student_name", NameEntry.Text); Preferences.Default.Set("student_server", ServerEntry.Text ?? ConnectionOptions.Default.ServerAddress); await Shell.Current.GoToAsync("menu");
+        ClienteJson.Token = null; Sesion.Usuario = null;   // por si quedaba el pase de una sesión anterior
+        Preferences.Default.Set("student_name", NameEntry.Text); Preferences.Default.Set("student_server", direccion); await Shell.Current.GoToAsync("menu");
+    }
+
+    /// <summary>
+    /// El aula exige sesión (007-10, PAN-101): se entra con el código y la clave de MOD-001. El pase (JWT) queda en <c>ClienteJson.Token</c>
+    /// y viaja en todas las peticiones; el nombre que se ve en el menú es el alias del usuario.
+    /// </summary>
+    private async Task EntrarConSesionAsync(string direccion)
+    {
+        var codigo = (CodigoEntry.Text ?? string.Empty).Trim();
+        var clave = ClaveEntry.Text ?? string.Empty;
+        if (codigo.Length == 0 || clave.Length == 0)
+        {
+            Estado("●  Este aula pide tu código y tu clave para entrar", AzulSuave, Azul);
+            (codigo.Length == 0 ? CodigoEntry : ClaveEntry).Focus();
+            return;
+        }
+
+        Estado("●  Abriendo tu sesión…", AzulSuave, Azul);
+        Preferences.Default.Set("student_server", direccion);
+        var acceso = Sesion.Acceso;
+        var sesion = await acceso.IniciarSesionAsync(codigo, clave, Sesion.Dispositivo);
+        if (sesion is null)
+        {
+            ClaveEntry.Text = string.Empty;
+            Estado("●  " + MensajeDeAcceso(acceso.UltimoError), RojoSuave, Rojo);
+            if (acceso.UltimoError is { Codigo: "credenciales_invalidas" }) ClaveEntry.Focus();
+            return;
+        }
+
+        Sesion.Usuario = sesion.Usuario; Sesion.SesionObligatoria = true;
+        // El nombre visible es el alias; sin alias se usa el código para no mostrar el nombre por defecto de otra persona.
+        if (string.IsNullOrWhiteSpace(sesion.Usuario.Alias)) Preferences.Default.Set("student_name", codigo); else Preferences.Default.Remove("student_name");
+        ClaveEntry.Text = string.Empty;
+        Estado("●  Conectado al aula correctamente", VerdeSuave, Verde);
+        var aviso = AvisoDeSesionAnterior(sesion);
+        await Shell.Current.GoToAsync("menu");
+        // MSG-020: sin pedir ninguna confirmación que retrase el ingreso; un aviso tranquilizador que se va solo.
+        if (aviso is not null) Avisos.Mostrar(aviso);
+    }
+
+    /// <summary>MSG-020 · PAN-103: la sesión anterior de esta persona se cerró en otra tableta. Nada que hacer: todo su trabajo está a salvo.</summary>
+    private static string? AvisoDeSesionAnterior(SesionAcceso sesion)
+    {
+        if (sesion.SesionAnterior is not { } anterior) return null;
+        var donde = anterior.Dispositivo;
+        // Si la sesión anterior era de esta misma tableta (la app se cerró sin «Salir») no hay nada que contar.
+        if (!string.IsNullOrWhiteSpace(donde) && (string.Equals(donde, Sesion.Dispositivo, StringComparison.OrdinalIgnoreCase) || string.Equals(donde, DeviceInfo.Current.Name, StringComparison.OrdinalIgnoreCase))) return null;
+        return $"Tenías tu sesión abierta en {(string.IsNullOrWhiteSpace(donde) ? "otra tableta" : donde)}. Se cerró allí y todo tu trabajo está a salvo. Continúa aquí.";
+    }
+
+    /// <summary>MSG-022 y compañía, sin códigos ni la palabra «error»: qué pasó y qué sigue.</summary>
+    private static string MensajeDeAcceso(ErrorAula? error)
+    {
+        if (error is null || error.Estado == 0) return "No encontramos el aula · revisa la dirección";
+        switch (error.Codigo)
+        {
+            case "credenciales_invalidas":
+                var texto = "Ese código o esa clave no coinciden. Prueba otra vez o pide ayuda a tu profesor.";
+                return error.Numero("intentos_restantes") is { } restantes and > 0 ? texto + (restantes == 1 ? " Te queda 1 intento." : $" Te quedan {restantes} intentos.") : texto;
+            case "usuario_bloqueado":
+                return error.Numero("reintentar_en_seg") is { } segundos and > 0
+                    ? $"Demasiados intentos. Espera {Math.Max(1, (int)Math.Ceiling(segundos / 60.0))} min o pide a tu profesor que te ayude."
+                    : "Demasiados intentos. Pide a tu profesor que te ayude.";
+            case "dispositivo_bloqueado" or "dispositivo_inactivo":
+                // UXR-007: la tableta nunca aparece bloqueada ni ocupada ante el alumno.
+                return "No pudimos abrir tu sesión en esta tableta. Avisa a tu profesor; tu trabajo está a salvo.";
+            default:
+                return "No pudimos abrir tu sesión ahora mismo. Prueba otra vez en un momento o pide ayuda a tu profesor.";
+        }
     }
 
     private void OnPageSizeChanged(object? sender, EventArgs e) => AjustarComposicion();

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="Avacom.Lms.Ops.Controls.EsperaDeCierrePanel"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    IsVisible="False">
+    <!-- Espera antes de cerrar la clase (007-08 · JRN-011 · MSG-016). Se muestra cuando el profesor pulsa «Terminar clase» y todavía hay
+         alumnos con un intento abierto: dice cuántos siguen respondiendo, quiénes son, cuánto falta para cerrar (60 s por defecto) y da dos
+         botones grandes. Sin teclado. Un toque fuera NO hace nada: cerrar una clase sólo se decide con los botones. -->
+    <Grid x:Name="Raiz" SizeChanged="OnRaizSizeChanged">
+        <Border x:Name="Velo" BackgroundColor="#73141417" StrokeThickness="0" />
+
+        <Border x:Name="Tarjeta" HorizontalOptions="Center" VerticalOptions="Center" Padding="34,30,34,28" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 24">
+            <Border.Shadow><Shadow Brush="#18181B" Offset="0,12" Radius="32" Opacity="0.28" /></Border.Shadow>
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="20">
+
+                <!-- Qué pasa y qué se conserva -->
+                <VerticalStackLayout Grid.Row="0" Spacing="6">
+                    <Label Text="TERMINAR CLASE" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                    <Label x:Name="TituloLabel" FontFamily="InterMedium" FontSize="32" TextColor="#18181B" />
+                    <Label x:Name="CuerpoLabel" FontFamily="InterLight" FontSize="20" TextColor="#3F3F46" />
+                </VerticalStackLayout>
+
+                <!-- Quiénes siguen (el cuerpo se desplaza si son muchos) -->
+                <ScrollView x:Name="Cuerpo" Grid.Row="1">
+                    <VerticalStackLayout Spacing="18" Padding="0,0,4,0">
+                        <VerticalStackLayout x:Name="RespondiendoSeccion" IsVisible="False" Spacing="8">
+                            <Label x:Name="RespondiendoTitulo" FontFamily="InterMedium" FontSize="17" TextColor="#3F3F46" />
+                            <FlexLayout x:Name="RespondiendoHost" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout x:Name="SinEmpezarSeccion" IsVisible="False" Spacing="8">
+                            <Label x:Name="SinEmpezarTitulo" FontFamily="InterMedium" FontSize="17" TextColor="#3F3F46" />
+                            <FlexLayout x:Name="SinEmpezarHost" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <!-- Cuenta atrás visible: texto grande y una barra que se acorta (sin color de alarma ni animación) -->
+                <VerticalStackLayout Grid.Row="2" Spacing="10">
+                    <Label x:Name="CuentaLabel" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" />
+                    <Border x:Name="CuentaPista" HeightRequest="14" BackgroundColor="#E4E4E7" StrokeThickness="0" StrokeShape="RoundRectangle 7">
+                        <Grid x:Name="CuentaProporcion">
+                            <Grid x:Name="CuentaRelleno" BackgroundColor="#52525B" />
+                        </Grid>
+                    </Border>
+                    <Label x:Name="AvisoLabel" IsVisible="False" FontFamily="InterRegular" FontSize="14" TextColor="#52525B" />
+                </VerticalStackLayout>
+
+                <!-- Los dos botones grandes: quedarse (lo seguro) a la izquierda, cerrar a la derecha -->
+                <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <ContentView x:Name="SeguirSlot" Grid.Column="0" />
+                    <ContentView x:Name="CerrarSlot" Grid.Column="2" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

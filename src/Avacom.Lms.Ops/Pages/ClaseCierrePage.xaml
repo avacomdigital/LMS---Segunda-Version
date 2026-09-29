@@ -15,6 +15,8 @@
             </VerticalStackLayout>
             <VerticalStackLayout x:Name="AvisoHost" Spacing="10" />
             <FlexLayout x:Name="ResumenHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Start" />
+            <!-- 007-09 · lo que trae el detalle del resumen y el anclaje: participación, pendientes, tarea de estudio y tema de la clase. -->
+            <VerticalStackLayout x:Name="SeccionesHost" Spacing="18" />
             <VerticalStackLayout x:Name="AccionesHost" Spacing="12" HorizontalOptions="Center" Margin="0,12,0,0" />
         </VerticalStackLayout>
     </ScrollView>

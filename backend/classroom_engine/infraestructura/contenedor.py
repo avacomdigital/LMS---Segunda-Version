@@ -10,10 +10,12 @@ from urllib.parse import quote
 from django.conf import settings
 
 from ..aplicacion.casos_uso import Servicios
+from ..aplicacion.configuracion import ConfigAula
 from ..dominio.errores import DatosInvalidos
 from .fuente_biblioteca import FuenteBiblioteca
 from .fuente_ejemplo import ALIAS, FuenteEjemplo
-from .repositorios import AutorizacionPrototipo
+from .limitador import LimitadorEnMemoria
+from .repositorios import AutorizacionAula
 from .unidad_trabajo import FabricaUoWAula
 
 FUENTES = ("biblioteca", "ejemplo")
@@ -60,11 +62,38 @@ def url_medio(nombre_fuente: str, curso_ref: str, media_ref: str, ruta: str | No
     return f"{base}?fuente={nombre_fuente}"
 
 
+def configuracion() -> ConfigAula:
+    """Los tiempos y la capacidad del aula salen de `settings` (variables AVACOM_AULA_*)."""
+    return ConfigAula(
+        latido_vencido_ms=int(settings.AVACOM_AULA_LATIDO_VENCIDO_MS),
+        ausencia_ms=int(settings.AVACOM_AULA_AUSENCIA_MS),
+        inactividad_ms=int(settings.AVACOM_AULA_INACTIVIDAD_MS),
+        dispositivos_normal=int(settings.AVACOM_AULA_DISPOSITIVOS_NORMAL),
+        dispositivos_pico=int(settings.AVACOM_AULA_DISPOSITIVOS_PICO),
+        unirse_intentos=int(settings.AVACOM_AULA_UNIRSE_INTENTOS),
+        unirse_ventana_ms=int(settings.AVACOM_AULA_UNIRSE_VENTANA_MS),
+    )
+
+
+_limitador: LimitadorEnMemoria | None = None
+
+
+def limitador() -> LimitadorEnMemoria:
+    """Un solo limitador por proceso (el nodo es un proceso). Se recrea si cambia la configuración."""
+    global _limitador
+    c = configuracion()
+    if _limitador is None or (_limitador.maximo, _limitador.ventana_ms) != (c.unirse_intentos, c.unirse_ventana_ms):
+        _limitador = LimitadorEnMemoria(c.unirse_intentos, c.unirse_ventana_ms)
+    return _limitador
+
+
 def servicios() -> Servicios:
     return Servicios(
         uow=FabricaUoWAula(),
         fuente=fuente,
         reloj=RelojNodo(),
-        autorizacion=AutorizacionPrototipo(),
+        autorizacion=AutorizacionAula(),
         url_medio=url_medio,
+        config=configuracion(),
+        limitador=limitador(),
     )

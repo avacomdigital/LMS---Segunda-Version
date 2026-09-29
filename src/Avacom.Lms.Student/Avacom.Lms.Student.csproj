@@ -59,6 +59,11 @@
 		     marca sin copias divergentes. Logotipo apilado del kit LMS (símbolo + «AVACOM») para la tarjeta de acceso:
 		     el viewBox es 792x612; 155x120 conserva la proporción y cubre la altura a la que se muestra. -->
 		<MauiImage Include="..\..\assets\avacom-lms-kit-logo.svg" Link="Resources\Images\avacom_lms_kit_logo.svg" BaseSize="155,120" />
+		<!-- Menú principal, igual que el de OPS: aro de color que va detrás de las teselas (587x654), logotipo completo (símbolo +
+		     «AVACOM», 71x19; 209x56 conserva la proporción y es la altura máxima de la cabecera) y símbolo de AVACOM para el dock. -->
+		<MauiImage Include="..\..\assets\main\ColorHexagon.svg" Link="Resources\Images\colorhexagon.svg" />
+		<MauiImage Include="..\..\assets\avacom-logo.svg" Link="Resources\Images\avacom_logo.svg" BaseSize="209,56" />
+		<MauiImage Include="..\..\assets\avacom-symbol.svg" Link="Resources\Images\avacom_mark.svg" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />

@@ -91,12 +91,18 @@ def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: st
     return dispositivo, True
 
 
-def latido(uow: UnidadDeTrabajo, ahora: int, dispositivo_id: str, plataforma: str = "", version_app: str = "") -> dict | None:
-    """La tableta dio señal de vida (el sondeo del aula, la presencia, el propio latido)."""
+def latido(uow: UnidadDeTrabajo, ahora: int, dispositivo_id: str, plataforma: str = "", version_app: str = "",
+           espacio_libre_mb: int | None = None, bateria_pct: int | None = None) -> dict | None:
+    """La tableta dio señal de vida (el sondeo del aula, la presencia, el propio latido), y opcionalmente cuánto
+    espacio y batería le quedan (lo lee el profesor antes de distribuir un paquete: MSG-045)."""
     actual = uow.dispositivos.por_id(dispositivo_id)
     if not actual:
         return None
     campos: dict = {"ultimo_latido_en": ahora}
+    if espacio_libre_mb is not None:
+        campos["espacio_libre_mb"] = max(0, int(espacio_libre_mb))
+    if bateria_pct is not None:
+        campos["bateria_pct"] = max(0, min(100, int(bateria_pct)))
     if plataforma:
         campos["plataforma"] = dom.validar_plataforma(plataforma)
     if version_app:

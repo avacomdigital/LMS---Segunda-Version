@@ -92,6 +92,48 @@ class CodigoInvalido(NoEncontrado):
     codigo = "codigo_invalido"
 
 
+class DemasiadosIntentos(ErrorAula):
+    """Demasiados intentos de unirse con un código equivocado desde la misma tableta: hay que esperar."""
+    codigo = "demasiados_intentos"
+    http = 429
+
+
+class AulaLlena(ErrorAula):
+    """El aula alcanzó su capacidad máxima (BR-063): las conexiones nuevas esperan; las conectadas no se tocan."""
+    codigo = "aula_llena"
+    http = 409
+
+
+class NoEsElTitular(SinPermiso):
+    """La clase la opera su profesor titular (o la administración), no cualquier persona del personal."""
+    codigo = "no_es_el_titular"
+
+
+class PersonaAjena(SinPermiso):
+    """Una tableta con sesión de una persona habló por el participante de OTRA (tableta compartida, INV-011). Es un 403 que NO es
+    definitivo para lo que la otra persona dejó en la cola del dispositivo: esa cola sólo puede vaciarla su dueña, y por eso la
+    tableta distingue este código y conserva el paquete en vez de descartarlo."""
+    codigo = "persona_ajena"
+
+
+class DistribucionCerrada(ErrorAula):
+    """La actividad ya se cerró y lo enviado quedó fuera de la ventana de gracia (DEC-019)."""
+    codigo = "distribucion_cerrada"
+    http = 409
+
+
+class IntentoEntregado(ErrorAula):
+    """Ese intento ya se entregó (o se descartó) y no admite respuestas nuevas."""
+    codigo = "intento_entregado"
+    http = 409
+
+
+class IntentosAgotados(ErrorAula):
+    """La actividad admite un número de intentos y ya se usaron todos."""
+    codigo = "intentos_agotados"
+    http = 409
+
+
 # ------------------------------------------------------------- dispositivos (MOD-009)
 
 class DispositivoBloqueado(ErrorAula):

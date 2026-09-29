@@ -4,6 +4,7 @@ con serializers, llaman al caso de uso y convierten errores de dominio en códig
 """
 from __future__ import annotations
 
+from django.conf import settings
 from rest_framework import exceptions, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -73,7 +74,10 @@ def _exigir_principal(request):
 
 class ConfiguracionView(VistaPublica):
     def get(self, request):
-        return Response(cu.ConsultarConfiguracion(self.s).ejecutar())
+        cuerpo = cu.ConsultarConfiguracion(self.s).ejecutar()
+        # Q-34: si el nodo exige sesión, OPS y Student muestran su pantalla de acceso con credenciales; si no, entran como hasta ahora.
+        cuerpo["sesion_obligatoria"] = bool(settings.AVACOM_LMS_EXIGIR_SESION)
+        return Response(cuerpo)
 
 
 class InstalacionView(VistaPublica):

@@ -87,7 +87,19 @@ public partial class ClaseHoyPage : ContentPage
             {
                 var sesion = await aula.SesionAsync(abierta);
                 if (sesion is { Activa: true }) AvisoHost.Add(TarjetaContinuar(sesion));
+                else if (sesion is { Cerrada: true } && (sesion.OrigenCierre ?? sesion.Resumen?.OrigenCierre) == "inactividad")
+                {
+                    // 007-03 · MSG-025: la clase se cerró sola a los 120 min sin actividad. Se cuenta una sola vez y se suelta: ya no se reabre.
+                    Sesion.ClaseAbiertaId = null;
+                    AvisoHost.Add(AvisoInactividad(sesion));
+                }
                 else if (sesion is not null) Sesion.ClaseAbiertaId = null;
+                else if (Sesion.MensajeDePermiso(aula.UltimoError) is { } permiso)
+                {
+                    // La clase guardada es de otra persona: no se puede continuar desde aquí, y no se vuelve a ofrecer.
+                    Sesion.ClaseAbiertaId = null;
+                    AvisoHost.Add(Glass.Alerta("Esa clase no se puede continuar desde aquí", permiso, Glass.Tono.Info));
+                }
             }
 
             var catalogo = await aula.CursosAsync();
@@ -95,11 +107,15 @@ public partial class ClaseHoyPage : ContentPage
             {
                 var error = aula.UltimoError;
                 var sinBiblioteca = aula.Fuente == Sesion.FuenteBiblioteca && error?.Codigo == "fuente_no_disponible";
-                PintarFuente(false, sinBiblioteca ? "sin_biblioteca" : aula.UltimoMotivo);
+                // 007-10: el nodo contestó pero este perfil no puede ver las materias: se dice con palabras de aula, no con el detalle técnico.
+                var sinPermiso = error?.Codigo == "sin_permiso";
+                PintarFuente(sinPermiso, sinBiblioteca ? "sin_biblioteca" : sinPermiso ? aula.Fuente : aula.UltimoMotivo);
                 var pila = new VerticalStackLayout { Spacing = 12 };
-                pila.Add(Glass.Alerta(sinBiblioteca ? "AVACOM Biblioteca no está encendida en este equipo" : "No se pudieron leer las materias",
-                    string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))),
-                    sinBiblioteca ? Glass.Tono.Alerta : Glass.Tono.Peligro));
+                pila.Add(sinPermiso
+                    ? Glass.Alerta("Tu perfil no puede ver las materias de este aula", "No se cambió nada. Pide a la administración que te asigne una materia y vuelve a intentarlo.", Glass.Tono.Info)
+                    : Glass.Alerta(sinBiblioteca ? "AVACOM Biblioteca no está encendida en este equipo" : "No se pudieron leer las materias",
+                        string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))),
+                        sinBiblioteca ? Glass.Tono.Alerta : Glass.Tono.Peligro));
                 var botones = new HorizontalStackLayout { Spacing = 16 };
                 botones.Add(Glass.Boton("Reintentar", async (_, _) => await CargarAsync(), 64, 220));
                 if (sinBiblioteca)
@@ -263,7 +279,7 @@ public partial class ClaseHoyPage : ContentPage
             // al tocarlo, explica qué hacer en vez de abrir una clase que fallaría.
             tarjeta.Opacity = 0.55;
             tarjeta.AccentColor = Ds.Alerta;
-            tarjeta.Abrir += async (_, _) => await DisplayAlert("Curso no disponible",
+            tarjeta.Abrir += async (_, _) => await DisplayAlertAsync("Curso no disponible",
                 motivo.Sugerencia ?? motivo.Detalle ?? "El paquete instalado no pasa la verificación de AVACOM Contenido.", "Entendido");
             return tarjeta;
         }
@@ -275,23 +291,77 @@ public partial class ClaseHoyPage : ContentPage
     {
         var grid = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 16 };
         var textos = new VerticalStackLayout { Spacing = 6, VerticalOptions = LayoutOptions.Center };
-        var suspendida = sesion.Estado == "suspendida";
+        var suspendida = sesion.Suspendida;
         var estado = Glass.Pildora(suspendida ? "Clase suspendida · mismo código" : "Clase abierta", suspendida ? Ds.Alerta : Glass.AcentoRosa);
         estado.HorizontalOptions = LayoutOptions.Start;
         textos.Add(estado);
         textos.Add(Glass.Titulo(sesion.LeccionRotulo ?? sesion.CursoRotulo ?? "Clase libre", 22));
-        textos.Add(Glass.Cuerpo($"Código {sesion.CodigoUnion} · {sesion.Conteo?.Conectados ?? 0} conectados", 15));
+        // Suspendida (007-02): se dice dónde iba la clase y que el código sigue siendo el mismo; abierta: el conteo de siempre.
+        textos.Add(Glass.Cuerpo(suspendida ? $"Código {sesion.CodigoUnion}" : $"Código {sesion.CodigoUnion} · {sesion.Conteo?.Conectados ?? 0} conectados", 15));
+        if (suspendida)
+            textos.Add(Glass.Cuerpo(string.Join(" ", new[] { sesion.Recuperacion?.Texto, "Puedes continuar cuando quieras." }.Where(x => !string.IsNullOrWhiteSpace(x))), 15));
         grid.Add(textos, 0, 0);
-        // El único Primary de la pantalla.
-        var continuar = Ds.Boton("Continuar la clase", Ds.Rango.Primary, async (_, _) => await Shell.Current.GoToAsync($"clase-sesion?sesion={Uri.EscapeDataString(sesion.Id)}"), 64, 240);
-        continuar.VerticalOptions = LayoutOptions.Center;
-        grid.Add(continuar, 1, 0);
+        // El único Primary de la pantalla: continuar la clase abierta o reanudar la suspendida.
+        var mensajes = new VerticalStackLayout { Spacing = 8 };
+        Button accion = null!;
+        accion = suspendida
+            ? Ds.Boton("Reanudar clase", Ds.Rango.Primary, async (_, _) => await ReanudarAsync(sesion, accion, mensajes), 64, 240)
+            : Ds.Boton("Continuar la clase", Ds.Rango.Primary, async (_, _) => await Shell.Current.GoToAsync($"clase-sesion?sesion={Uri.EscapeDataString(sesion.Id)}"), 64, 240);
+        accion.VerticalOptions = LayoutOptions.Center;
+        grid.Add(accion, 1, 0);
         // Tinte violeta (el VioletaSuave del kit, en vidrio) que la distingue del resto de láminas: es la tarjeta que manda.
-        return new LiquidGlassPanel
+        var tarjeta = new LiquidGlassPanel
         {
             CornerRadius = Ds.RadioTarjeta, TintColor = Glass.Violeta, TintOpacity = 0.18, BlurRadius = 10,
             ContentPadding = new Thickness(22, 18), ShadowOpacity = 0.14, Content = grid,
         };
+        var pila = new VerticalStackLayout { Spacing = 12 };
+        pila.Add(tarjeta);
+        pila.Add(mensajes);
+        return pila;
+    }
+
+    /// <summary>
+    /// «Reanudar clase» (007-02): la sesión suspendida vuelve a abierta con el mismo código y el profesor entra a ella. Si no se puede,
+    /// la clase sigue guardada tal cual y se dice qué hacer (nunca el detalle técnico).
+    /// </summary>
+    private async Task ReanudarAsync(SesionDeClase sesion, Button boton, VerticalStackLayout mensajes)
+    {
+        mensajes.Clear();
+        Ds.Habilitar(boton, false);
+        try
+        {
+            var aula = Sesion.Aula;
+            if (await aula.ReanudarAsync(sesion.Id, Sesion.ProfesorId) is not null)
+            {
+                Sesion.ClaseAbiertaId = sesion.Id;
+                await Shell.Current.GoToAsync($"clase-sesion?sesion={Uri.EscapeDataString(sesion.Id)}");
+                return;
+            }
+            var error = aula.UltimoError;
+            var texto = Sesion.MensajeDePermiso(error, sesion.ProfesorRotulo)
+                ?? (error?.Estado == 0
+                    ? "No hay conexión con el aula. La clase sigue suspendida con el mismo código; revisa la red e inténtalo de nuevo."
+                    : "No pudimos reanudar la clase ahora. Sigue guardada con el mismo código; inténtalo de nuevo en un momento.");
+            mensajes.Add(Glass.Alerta("La clase todavía no se reanudó", texto, Glass.Tono.Alerta));
+        }
+        finally { Ds.Habilitar(boton, true); }
+    }
+
+    /// <summary>
+    /// MSG-025 (007-03): «Cerramos tu clase por inactividad y guardamos todo lo del día.» Informativo y de una sola vez: «Entendido» lo quita
+    /// y «Ver resumen» abre el cierre de esa clase, donde aún se puede anclar el tema y dejar tareas de estudio.
+    /// </summary>
+    private View AvisoInactividad(SesionDeClase sesion)
+    {
+        var raiz = new VerticalStackLayout { Spacing = 10 };
+        raiz.Add(Glass.Alerta("Cerramos tu clase por inactividad y guardamos todo lo del día.",
+            "No se perdió nada: el resumen de la clase quedó guardado. Puedes revisarlo o empezar otra clase desde aquí.", Glass.Tono.Info));
+        var acciones = new HorizontalStackLayout { Spacing = 12, HorizontalOptions = LayoutOptions.End };
+        acciones.Add(Glass.Boton("Ver resumen", async (_, _) => await Shell.Current.GoToAsync($"clase-cierre?sesion={Uri.EscapeDataString(sesion.Id)}"), 48, 170));
+        acciones.Add(Ds.Boton("Entendido", Ds.Rango.Quiet, (_, _) => AvisoHost.Remove(raiz), 48, 140));
+        raiz.Add(acciones);
+        return raiz;
     }
 
     private void PintarFuente(bool ok, string? detalle)
@@ -324,7 +394,12 @@ public partial class ClaseHoyPage : ContentPage
     private async void OnConfiguracion(object? sender, EventArgs e) =>
         await DisplayAlertAsync("Configuración", "La configuración del nodo del aula está representada en este prototipo y lista para conectar su flujo.", "Entendido");
 
-    private async void OnCerrarSesion(object? sender, EventArgs e) => await Shell.Current.GoToAsync("//login");
+    /// <summary>Cierra la sesión de usuario (si el nodo exige una) y vuelve al acceso; la clase abierta sigue guardada.</summary>
+    private async void OnCerrarSesion(object? sender, EventArgs e)
+    {
+        await Sesion.CerrarSesionDeUsuarioAsync();
+        await Shell.Current.GoToAsync("//login");
+    }
 
     /// <summary>Menú fijo de 216 px en pantallas grandes, 196 en anchos intermedios y raíl de iconos si no cabe; nunca una barra horizontal.</summary>
     private void OnPageSizeChanged(object? sender, EventArgs e)

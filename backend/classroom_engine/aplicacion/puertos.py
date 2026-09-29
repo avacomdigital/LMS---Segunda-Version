@@ -70,7 +70,8 @@ class Dispositivos(Protocol):
                  momento: int | None = None) -> dict | None:
         """Reconoce (o registra la primera vez) la tableta que se presenta. None si no hay huella o nodo."""
     def por_id(self, dispositivo_id: str) -> dict | None: ...
-    def latido(self, dispositivo_id: str, momento: int) -> None: ...
+    def latido(self, dispositivo_id: str, momento: int, telemetria: dict | None = None) -> None:
+        """Señal de vida de la tableta; `telemetria` puede traer espacio_libre_mb y bateria_pct."""
     def bloqueados_entre(self, dispositivo_ids: list[str]) -> set[str]:
         """Los que no deben recibir lanzamientos: bloqueados o retirados."""
     def abrir_sesion_alumno(self, alumno_id: str, dispositivo_id: str, momento: int, actor: str = "") -> dict:
@@ -114,11 +115,34 @@ class Actor:
     autenticado: bool = False
     dispositivo: str = ""
     sesion_usuario_id: str = ""
+    principal: Any = None     # el Principal de MOD-001 cuando hay sesión JWT (lo evalúa el adaptador, nunca el dominio)
 
 
 class Autorizacion(Protocol):
-    def exigir(self, actor: Actor, permiso: str) -> None:
-        """Lanza SinPermiso si el actor no puede ejecutar la función que exige `permiso` (classroom.*)."""
+    def exigir(self, actor: Actor, permiso: str, sesion: dict | None = None) -> None:
+        """Lanza SinPermiso si el actor no puede ejecutar la función que exige `permiso` (classroom.*).
+        Con `sesion` comprueba además que el actor sea su profesor titular o la administración (007-10)."""
+
+
+# ---------------------------------------------------------- tiempo real (Django Channels)
+
+class TiempoReal(Protocol):
+    """Avisa a las pantallas conectadas de que algo cambió en la sesión. NUNCA lleva contenido académico: sólo
+    qué cambió; el cliente pide el estado por HTTP. Se emite cuando la transacción del caso de uso se confirma,
+    no antes: quien recibe el aviso ya puede leer el hecho."""
+
+    def cambio(self, sesion_id: str, que: str, carga: dict | None = None, *, conteo: bool = False) -> None:
+        """`que`: selector · controles · distribucion · aviso · presencia · codigo · sesion · resultados · entregas · ayuda.
+        Con `conteo` reenvía además el número de conectados a la pantalla del profesor."""
+
+
+class Limitador(Protocol):
+    """Freno a los intentos repetidos de unirse con un código equivocado (007-10)."""
+
+    def registrar_fallo(self, clave: str, ahora: int) -> None: ...
+    def bloqueado(self, clave: str, ahora: int) -> int:
+        """Milisegundos que faltan para poder reintentar; 0 si no está bloqueado."""
+    def olvidar(self, clave: str) -> None: ...
 
 
 # ------------------------------------------------------------------------ repositorio
@@ -131,6 +155,9 @@ class RepositorioSesiones(Protocol):
     def sesion(self, sesion_id: str) -> dict | None: ...
     def sesion_por_codigo(self, codigo: str) -> dict | None: ...
     def sesiones(self, estado: str | None = None, grupo_id: str | None = None, profesor_id: str | None = None) -> list[dict]: ...
+    def sesiones_en_estado(self, *estados: str) -> list[dict]: ...
+    def ultima_actividad(self, sesion_id: str) -> int:
+        """El instante más reciente de cualquier cosa que ocurrió en la sesión (acción del profesor, latido o entrega)."""
     def sesion_abierta_de(self, profesor_id: str) -> dict | None: ...
     def sesion_activa_del_grupo(self, grupo_id: str) -> dict | None: ...
     def codigo_ocupado(self, codigo: str) -> bool: ...
@@ -144,6 +171,8 @@ class RepositorioSesiones(Protocol):
     def actualizar_participante(self, participante_id: str, **campos) -> dict: ...
     def registrar_presencia(self, participante_id: str, estado: str, momento: int, dispositivo: str = "", detalle: str = "") -> None: ...
     def conectados_maximo(self, sesion_id: str) -> int: ...
+    def conteo_participantes(self, sesion_id: str) -> dict:
+        """{total, conectados, reconectando, esperando, salieron} por estado."""
     # selector
     def selector_vigente(self, sesion_id: str) -> dict | None: ...
     def declarar_selector(self, sesion_id: str, datos: dict, momento: int) -> dict: ...
@@ -159,6 +188,15 @@ class RepositorioSesiones(Protocol):
     def crear_distribucion(self, datos: dict, participantes: list[str]) -> dict: ...
     def confirmar_entrega(self, distribucion_id: str, participante_id: str, momento: int, estado: str) -> dict: ...
     def cerrar_distribucion(self, distribucion_id: str, momento: int) -> dict: ...
+    def actualizar_distribucion(self, distribucion_id: str, **campos) -> dict: ...
+    def sumar_pausa(self, sesion_id: str, pausa_ms: int) -> int:
+        """Suma `pausa_ms` a `pausada_ms` de las distribuciones abiertas (el cronómetro estuvo congelado)."""
+    # intentos (provisional en MOD-007 hasta que MOD-010 tenga dueño)
+    def intentos(self, distribucion_id: str, participante_id: str | None = None) -> list[dict]: ...
+    def intentos_de_sesion(self, sesion_id: str, estado: str | None = None) -> list[dict]: ...
+    def intento(self, intento_id: str) -> dict | None: ...
+    def crear_intento(self, datos: dict) -> dict: ...
+    def actualizar_intento(self, intento_id: str, **campos) -> dict: ...
     def entregas_pendientes_de(self, sesion_id: str, participante_id: str) -> list[dict]: ...
     # avisos y resumen
     def crear_aviso(self, datos: dict) -> dict: ...
@@ -171,6 +209,7 @@ class UnidadDeTrabajo(Protocol):
     """Una transacción por caso de uso: el hecho, su auditoría y su evento se confirman juntos."""
 
     sesiones: RepositorioSesiones
+    tiempo_real: TiempoReal
     outbox: Outbox
     auditoria: Auditoria
     identidad: Identidad

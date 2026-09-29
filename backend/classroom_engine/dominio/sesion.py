@@ -28,6 +28,9 @@ TRANSICIONES: dict[str, frozenset[str]] = {
     ARCHIVADA: frozenset(),
 }
 ARCHIVO_TRAS_MS = 24 * 60 * 60 * 1000   # cerrada → archivada a las veinticuatro horas
+VENTANA_REANUDACION_MS = 3 * 60 * 1000  # BR-051: el aula se recupera y reanuda en tres minutos
+GRACIA_ENTREGA_MS = 15 * 60 * 1000      # DEC-019: ventana de gracia para envíos capturados antes del cierre
+CAPACIDAD_NORMAL, CAPACIDAD_PICO = 50, 100   # BR-063: valores por defecto; la configuración manda
 
 
 def comprobar_transicion(actual: str, nuevo: str) -> None:
@@ -71,6 +74,15 @@ ESTADOS_ENTREGA = (PENDIENTE, ENTREGADO, FALLIDO)
 
 ORIGENES_CIERRE = ("profesor", "inactividad", "administrador", "sistema")
 CAUSAS_SUSPENSION = ("caida_nodo", "corte_electrico", "reinicio", "manual")
+SISTEMA = "sistema"   # el actor de lo que hace el programador del nodo (no es una persona)
+
+# ---------------------------------------------------------------------- intentos (actividades lanzadas)
+# Provisional en MOD-007 hasta que MOD-010 tenga dueño (misma deuda que `Distribucion`): la tabla `intento` del
+# modelo v2 cuelga del lanzamiento y aquí cuelga de la distribución.
+EN_CURSO, INTENTO_ENTREGADO, PENDIENTE_DECISION, DESCARTADO = "en_curso", "entregado", "pendiente_decision", "descartado"
+ESTADOS_INTENTO = (EN_CURSO, INTENTO_ENTREGADO, PENDIENTE_DECISION, DESCARTADO)
+ORIGENES_ENVIO = ("directo", "cola", "cierre")   # cómo llegó lo último: en línea, desde la cola de la tableta, o entregado al cerrar
+SIN_EMPEZAR, RESPONDIENDO = "sin_empezar", "respondiendo"   # estados de la fila de resultados (no se guardan)
 
 # ---------------------------------------------------------------------- eventos
 # Los dieciséis eventos que publica MOD-007 (sección L del Maestro).
@@ -90,12 +102,23 @@ EV_RESULTADOS_MOSTRADOS = "aula.resultados.mostrados.v1"
 EV_MENSAJE_ENVIADO = "aula.mensaje.enviado.v1"
 EV_SESION_REANUDADA = "aula.sesion.reanudada.v1"
 EV_SESION_FINALIZADA = "aula.sesion.finalizada.v1"
+# Eventos propios del proyecto: el Maestro no los lista, pero el aula los necesita. Los de intento son
+# provisionales: los publicará MOD-010 cuando exista (`evaluacion.respuesta_registrada.v1`, etc.).
+EV_SESION_SUSPENDIDA = "aula.sesion.suspendida.v1"
+EV_AYUDA_SOLICITADA = "aula.ayuda.solicitada.v1"
+EV_PROYECCION_ALUMNO = "aula.proyeccion.alumno.v1"
+EV_RESPUESTA_REGISTRADA = "aula.respuesta.registrada.v1"
+EV_RESPUESTA_DEDUPLICADA = "aula.respuesta.deduplicada.v1"
+EV_INTENTO_ENTREGADO = "aula.intento.entregado.v1"
+EVENTOS_PROPIOS = (EV_SESION_SUSPENDIDA, EV_AYUDA_SOLICITADA, EV_PROYECCION_ALUMNO, EV_RESPUESTA_REGISTRADA,
+                   EV_RESPUESTA_DEDUPLICADA, EV_INTENTO_ENTREGADO)
 EVENTOS = (
     EV_SESION_INICIADA, EV_CODIGO_GENERADO, EV_CODIGO_ROTADO, EV_DISPOSITIVO_ADMITIDO, EV_DISPOSITIVO_RECHAZADO,
     EV_DISPOSITIVO_READMITIDO, EV_DISPOSITIVO_EXPULSADO, EV_DISPOSITIVOS_BLOQUEADOS, EV_PRESENCIA_REGISTRADA,
     EV_RECURSO_PROYECTADO, EV_ACTIVIDAD_LANZADA, EV_ACTIVIDAD_CERRADA, EV_RESULTADOS_MOSTRADOS, EV_MENSAJE_ENVIADO,
     EV_SESION_REANUDADA, EV_SESION_FINALIZADA,
 )
+EVENTOS_ACEPTADOS = EVENTOS + EVENTOS_PROPIOS
 
 # --------------------------------------------------------------------- permisos
 # Los once permisos que exige MOD-007 (sección J). Los siembra MOD-001; aquí sólo se nombran.
@@ -163,6 +186,7 @@ class ResumenSesion:
     duracion_ms: int = 0
     origen_cierre: str = "profesor"
     consolidado_en: int = 0
+    detalle: dict = field(default_factory=dict)   # participación por alumno y pendientes (PAN-008)
 
     def como_dict(self) -> dict:
         return dict(self.__dict__)

@@ -15,6 +15,8 @@ urlpatterns = [
     # --- el endpoint de prueba: el manifiesto de ejemplo («Ciencias naturales») ---
     path("pruebas/cursos/", views.PruebasCursosView.as_view(), name="aula-pruebas-cursos"),
     path("pruebas/curso/", views.PruebasCursoView.as_view(), name="aula-pruebas-curso"),
+    # --- el canal en tiempo real: diagnóstico (los sockets viven en `websockets.py`, ruta ws/aula/sesiones/<id>/) ---
+    path("tiempo-real/", views.TiempoRealView.as_view(), name="aula-tiempo-real"),
     # --- la sesión de clase (lo único que MOD-007 escribe) ---
     path("sesiones/", views.SesionesView.as_view(), name="aula-sesiones"),
     path("sesiones/unirse/", views.UnirseView.as_view(), name="aula-unirse"),
@@ -23,8 +25,11 @@ urlpatterns = [
     path("sesiones/<str:sesion_id>/selector/", views.SelectorView.as_view(), name="aula-sesion-selector"),
     path("sesiones/<str:sesion_id>/controles/", views.ControlesView.as_view(), name="aula-sesion-controles"),
     path("sesiones/<str:sesion_id>/distribuciones/", views.DistribucionesView.as_view(), name="aula-sesion-distribuciones"),
+    path("sesiones/<str:sesion_id>/distribuciones/<str:distribucion_id>/envios/<str:intento_id>/<str:decision>/",
+         views.EnvioDecisionView.as_view(), name="aula-sesion-envio-decision"),
     path("sesiones/<str:sesion_id>/distribuciones/<str:distribucion_id>/<str:accion>/", views.DistribucionAccionView.as_view(),
          name="aula-sesion-distribucion-accion"),
+    path("sesiones/<str:sesion_id>/anclaje/", views.AnclajeView.as_view(), name="aula-sesion-anclaje"),
     path("sesiones/<str:sesion_id>/avisos/", views.AvisosView.as_view(), name="aula-sesion-avisos"),
     path("sesiones/<str:sesion_id>/codigo/rotar/", views.CodigoRotarView.as_view(), name="aula-sesion-codigo-rotar"),
     path("sesiones/<str:sesion_id>/participantes/<str:participante_id>/presencia/", views.PresenciaView.as_view(),

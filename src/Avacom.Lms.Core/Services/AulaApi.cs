@@ -49,6 +49,31 @@ public interface IAulaApi
     Task<EstadoTableta?> EstadoAsync(string sesionId, string participanteId, CancellationToken ct = default);
     Task<EstadoTableta?> PresenciaAsync(string sesionId, string participanteId, string? estado, string dispositivo, CancellationToken ct = default);
     Task<bool> ConfirmarEntregaAsync(string sesionId, string distribucionId, string participanteId, CancellationToken ct = default);
+
+    // ---- 007-02 · reanudar tras una caída
+    Task<SesionDeClase?> SuspenderAsync(string sesionId, string actor, string causa, CancellationToken ct = default);
+    Task<SesionDeClase?> ReanudarAsync(string sesionId, string actor, CancellationToken ct = default);
+
+    // ---- 007-12 · código de unión
+    /// <summary>Rota el código de unión; devuelve el nuevo (las tabletas ya unidas no se ven afectadas).</summary>
+    Task<string?> RotarCodigoAsync(string sesionId, string actor, CancellationToken ct = default);
+
+    // ---- 007-05 · resultados en vivo y respuestas del alumno
+    Task<ResultadosActividadAula?> ResultadosAsync(string sesionId, string actor, string distribucionId, CancellationToken ct = default);
+    /// <summary>La tableta envía respuestas (una o varias) y, si quiere, entrega el intento. Idempotente por secuencia.</summary>
+    Task<AcuseRespuestas?> EnviarRespuestasAsync(string sesionId, string distribucionId, EnvioRespuestas envio, CancellationToken ct = default);
+    /// <summary>DEC-019: el profesor acepta o descarta lo que llegó fuera de la ventana de gracia.</summary>
+    Task<bool> DecidirEnvioAsync(string sesionId, string actor, string distribucionId, string intentoId, string decision, CancellationToken ct = default);
+
+    // ---- 007-13 · la mano levantada y la proyección de una pantalla
+    Task<bool> AyudaAsync(string sesionId, string participanteId, bool activa, CancellationToken ct = default);
+    Task<bool> AtenderAyudaAsync(string sesionId, string actor, string participanteId, CancellationToken ct = default);
+    Task<bool> ProyeccionAsync(string sesionId, string actor, string participanteId, bool activa, CancellationToken ct = default);
+
+    // ---- 007-09 · cierre completo
+    Task<AnclajeAula?> AnclajeAsync(string sesionId, CancellationToken ct = default);
+    Task<AnclajeAula?> AnclarAsync(string sesionId, string actor, IReadOnlyList<NodoAnclaje> nodos, CancellationToken ct = default);
+    Task<DistribucionAula?> EstudioAsync(string sesionId, string actor, string distribucionId, bool disponible, long? hasta, CancellationToken ct = default);
 }
 
 public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null) : ClienteJson(http, baseUri), IAulaApi
@@ -122,6 +147,53 @@ public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null)
 
     public Task<EstadoTableta?> PresenciaAsync(string sesionId, string participanteId, string? estado, string dispositivo, CancellationToken ct = default) =>
         EnviarAsync<EstadoTableta>($"api/aula/sesiones/{sesionId}/participantes/{participanteId}/presencia/", new { estado, dispositivo }, ct);
+
+    // ------------------------------------------------------- tiempo real y cierre
+
+    public Task<SesionDeClase?> SuspenderAsync(string sesionId, string actor, string causa, CancellationToken ct = default) =>
+        EnviarAsync<SesionDeClase>($"api/aula/sesiones/{sesionId}/suspender/", new { causa, profesor_id = actor }, ct);
+
+    public Task<SesionDeClase?> ReanudarAsync(string sesionId, string actor, CancellationToken ct = default) =>
+        EnviarAsync<SesionDeClase>($"api/aula/sesiones/{sesionId}/reanudar/", new { profesor_id = actor }, ct);
+
+    public async Task<string?> RotarCodigoAsync(string sesionId, string actor, CancellationToken ct = default)
+    {
+        var respuesta = await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/codigo/rotar/", new { profesor_id = actor }, ct);
+        return respuesta is { ValueKind: JsonValueKind.Object } r && r.TryGetProperty("codigo_union", out var c) ? c.GetString() : null;
+    }
+
+    public Task<ResultadosActividadAula?> ResultadosAsync(string sesionId, string actor, string distribucionId, CancellationToken ct = default) =>
+        ObtenerAsync<ResultadosActividadAula>($"api/aula/sesiones/{sesionId}/distribuciones/{distribucionId}/resultados/?actor={Uri.EscapeDataString(actor)}", ct);
+
+    public Task<AcuseRespuestas?> EnviarRespuestasAsync(string sesionId, string distribucionId, EnvioRespuestas e, CancellationToken ct = default) =>
+        EnviarAsync<AcuseRespuestas>($"api/aula/sesiones/{sesionId}/distribuciones/{distribucionId}/respuestas/", new
+        {
+            participante_id = e.ParticipanteId, respuestas = e.Respuestas, entregar = e.Entregar, intento_numero = e.IntentoNumero, origen = e.Origen,
+        }, ct);
+
+    public async Task<bool> DecidirEnvioAsync(string sesionId, string actor, string distribucionId, string intentoId, string decision, CancellationToken ct = default) =>
+        await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/distribuciones/{distribucionId}/envios/{intentoId}/{decision}/", new { profesor_id = actor }, ct) is not null;
+
+    public async Task<bool> AyudaAsync(string sesionId, string participanteId, bool activa, CancellationToken ct = default) =>
+        await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/participantes/{participanteId}/ayuda/", new { activa }, ct) is not null;
+
+    public async Task<bool> AtenderAyudaAsync(string sesionId, string actor, string participanteId, CancellationToken ct = default) =>
+        await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/participantes/{participanteId}/atender/", new { profesor_id = actor }, ct) is not null;
+
+    public async Task<bool> ProyeccionAsync(string sesionId, string actor, string participanteId, bool activa, CancellationToken ct = default) =>
+        await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/participantes/{participanteId}/proyeccion/", new { activa, profesor_id = actor }, ct) is not null;
+
+    public Task<AnclajeAula?> AnclajeAsync(string sesionId, CancellationToken ct = default) =>
+        ObtenerAsync<AnclajeAula>($"api/aula/sesiones/{sesionId}/anclaje/", ct);
+
+    public Task<AnclajeAula?> AnclarAsync(string sesionId, string actor, IReadOnlyList<NodoAnclaje> nodos, CancellationToken ct = default) =>
+        EnviarAsync<AnclajeAula>($"api/aula/sesiones/{sesionId}/anclaje/", new
+        {
+            nodos = nodos.Select(n => new { @ref = n.Ref, rotulo = n.Rotulo }).ToList(), profesor_id = actor,
+        }, ct);
+
+    public Task<DistribucionAula?> EstudioAsync(string sesionId, string actor, string distribucionId, bool disponible, long? hasta, CancellationToken ct = default) =>
+        EnviarAsync<DistribucionAula>($"api/aula/sesiones/{sesionId}/distribuciones/{distribucionId}/estudio/", new { disponible, hasta, profesor_id = actor }, ct);
 
     public async Task<bool> ConfirmarEntregaAsync(string sesionId, string distribucionId, string participanteId, CancellationToken ct = default) =>
         await EnviarAsync<JsonElement?>($"api/aula/sesiones/{sesionId}/distribuciones/{distribucionId}/confirmar/", new { participante_id = participanteId }, ct) is not null;

@@ -13,6 +13,8 @@ public static class Sesion
     private static IBibliotecaDeContenido? _biblioteca;
     private static IAulaApi? _aula;
     private static IDispositivosApi? _dispositivos;
+    private static IAccesoApi? _acceso;
+    private static Uri? _baseAcceso;
     private static Uri? _baseActual;
     private static Uri? _baseAula;
     private static Uri? _baseDispositivos;
@@ -92,17 +94,70 @@ public static class Sesion
         }
     }
 
+    /// <summary>El cliente de <c>/api/acceso/</c> (MOD-001): sólo para identificarse cuando el nodo exige sesión (Q-34).</summary>
+    public static IAccesoApi Acceso
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_acceso is null || _baseAcceso != actual)
+            {
+                _acceso = new AccesoApi(Http, actual);
+                _baseAcceso = actual;
+            }
+            return _acceso;
+        }
+    }
+
     public static string Dispositivo => $"ops-{DeviceInfo.Current.Name}";
 
-    /// <summary>Identidad del docente mientras OPS no inicie sesión con MOD-001 (Q-04): estable por equipo.</summary>
-    public static string ProfesorRotulo => Preferences.Default.Get("ops_profesor_nombre", "Ms. Carter");
-    public static string ProfesorId => Preferences.Default.Get("ops_profesor_id", string.Empty) is { Length: > 0 } id ? id : $"docente-{Identidad.SlugDe(ProfesorRotulo)}";
+    /// <summary>
+    /// La persona que se identificó con MOD-001 (007-10). Vive sólo en memoria: el pase (JWT) no se guarda en disco y
+    /// cada arranque de OPS vuelve a pedirlo cuando el nodo exige sesión. Nulo en modo prototipo (nodo sin sesión obligatoria).
+    /// </summary>
+    public static UsuarioDeSesion? Usuario { get; set; }
+
+    /// <summary>Verdadero si el nodo exige sesión (<c>AVACOM_LMS_EXIGIR_SESION</c>). Se conoce al pulsar «Comprobar» en el acceso.</summary>
+    public static bool SesionObligatoria { get; set; }
+
+    /// <summary>Cierra la sesión de usuario de esta app: suelta el pase y la clase guardada, y avisa al nodo si contesta.</summary>
+    public static async Task CerrarSesionDeUsuarioAsync()
+    {
+        try { if (ClienteJson.Token is not null) await Acceso.CerrarSesionAsync(); } catch { /* aunque el nodo no conteste, esta app deja de presentarse */ }
+        ClienteJson.Token = null;
+        Usuario = null;
+    }
+
+    /// <summary>MSG-021: aviso que el tablero muestra una sola vez tras entrar, cuando este acceso cerró la clase que la misma persona tenía abierta en otro equipo.</summary>
+    public static string? AvisoAlEntrar { get; set; }
+
+    /// <summary>Mensaje suave que la pantalla de acceso muestra una sola vez al volver a ella (la sesión terminó, se abrió en otro equipo…).</summary>
+    public static string? AvisoDeAcceso { get; set; }
+
+    /// <summary>
+    /// 007-10: si el nodo negó la operación por permisos (<c>sin_permiso</c>, <c>no_es_el_titular</c>), la frase amable que sustituye
+    /// al detalle técnico; nulo en cualquier otro caso. <paramref name="profesor"/> es quien lleva la clase, si se sabe.
+    /// </summary>
+    public static string? MensajeDePermiso(ErrorAula? error, string? profesor = null) => error?.Codigo is "sin_permiso" or "no_es_el_titular"
+        ? $"Esta clase la lleva {(string.IsNullOrWhiteSpace(profesor) ? "otro profesor" : profesor)}. Sólo su profesor o la administración puede hacerlo."
+        : null;
+
+    /// <summary>Con sesión (MOD-001) el profesor es quien se identificó; sin ella, la identidad estable del equipo (Q-04).</summary>
+    public static string ProfesorRotulo => Usuario?.Alias is { Length: > 0 } alias ? alias : Preferences.Default.Get("ops_profesor_nombre", "Ms. Carter");
+    public static string ProfesorId => Usuario?.Id is { Length: > 0 } uid ? uid
+        : Preferences.Default.Get("ops_profesor_id", string.Empty) is { Length: > 0 } id ? id : $"docente-{Identidad.SlugDe(ProfesorRotulo)}";
+
+    /// <summary>
+    /// Dónde se guarda la clase abierta: con sesión de usuario, una por persona (si otra profesora entra en este equipo no ve ni
+    /// hereda la clase de la anterior, y la anterior la encuentra al volver); sin sesión, la de siempre.
+    /// </summary>
+    private static string ClaveClaseAbierta => Usuario?.Id is { Length: > 0 } uid ? $"aula_sesion_ops_{uid}" : "aula_sesion_ops";
 
     /// <summary>La clase que este equipo dejó abierta, para poder continuarla (BR-051) sin volver a elegir.</summary>
     public static string? ClaseAbiertaId
     {
-        get => Preferences.Default.Get<string?>("aula_sesion_ops", null);
-        set { if (value is null) Preferences.Default.Remove("aula_sesion_ops"); else Preferences.Default.Set("aula_sesion_ops", value); }
+        get => Preferences.Default.Get<string?>(ClaveClaseAbierta, null);
+        set { if (value is null) Preferences.Default.Remove(ClaveClaseAbierta); else Preferences.Default.Set(ClaveClaseAbierta, value); }
     }
 
     public static readonly string[] Paleta = ["#E5262B", "#F3C701", "#01A4E1", "#019D60", "#A81D81", "#52525B"];

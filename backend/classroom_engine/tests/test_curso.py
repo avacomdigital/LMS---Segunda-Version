@@ -126,7 +126,10 @@ class CursoDeEjemploTests(TestCase):
         self.assertEqual(fb["espacios"][0], {"espacio_ref": "b1", "modo_entrada": "select", "opciones": ["propio", "variable"]})
         self.assertEqual(len(ma["izquierda"]), 3)
         self.assertEqual(len(ma["derecha"]), 4)
-        self.assertEqual([e["ref"] for e in ord_["elementos"]], ["o-gas", "o-solid", "o-liquid"])
+        # Al alumno «ordenar» le llega barajado (la fuente trae los ítems en el orden que el autor los escribió, y ese puede ser el correcto)
+        self.assertCountEqual([e["ref"] for e in ord_["elementos"]], ["o-gas", "o-solid", "o-liquid"])
+        self.assertNotEqual([e["ref"] for e in ord_["elementos"]], ["o-gas", "o-solid", "o-liquid"])
+        self.assertEqual([e["ref"] for e in ord_["elementos"]], [e["ref"] for e in self.api.get("/api/aula/pruebas/curso/").json()["lecciones"][0]["objetos"][3]["preguntas"][4]["elementos"]])   # y siempre igual
         self.assertEqual((ab["formato_respuesta"], ab["longitud_maxima"]), ("text", 600))
         # Ninguna clave de corrección, ni en camelCase ni en español, en ningún nivel del payload.
         self.assertIsNone(cur.contiene_clave(v))

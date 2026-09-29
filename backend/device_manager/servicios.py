@@ -44,10 +44,11 @@ def listar(organizacion_id: str, solo_activos: bool = True) -> list[dict]:
     return Cajones().dispositivos.listar(organizacion_id, solo_activos)
 
 
-def latido(dispositivo_id: str, momento: int | None = None, plataforma: str = "", version_app: str = "") -> dict | None:
+def latido(dispositivo_id: str, momento: int | None = None, plataforma: str = "", version_app: str = "",
+           espacio_libre_mb: int | None = None, bateria_pct: int | None = None) -> dict | None:
     if not dispositivo_id:
         return None
-    return cu.latido(Cajones(), _ahora(momento), dispositivo_id, plataforma, version_app)
+    return cu.latido(Cajones(), _ahora(momento), dispositivo_id, plataforma, version_app, espacio_libre_mb, bateria_pct)
 
 
 def renombrar(dispositivo_id: str, nombre: str) -> dict | None:

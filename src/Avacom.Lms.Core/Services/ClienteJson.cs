@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -7,14 +8,31 @@ using Avacom.Lms.Core.Models;
 namespace Avacom.Lms.Core.Services;
 
 /// <summary>
-/// Lo que comparten los clientes del backend del LMS (aula, dispositivos): toda URL nace de
+/// Lo que comparten los clientes del backend del LMS (aula, dispositivos, acceso): toda URL nace de
 /// <see cref="BaseUri"/>, un error HTTP no es una excepción de negocio (devuelve null y deja el
 /// motivo en <see cref="UltimoMotivo"/> y el <c>codigo</c> del backend en <see cref="UltimoError"/>)
 /// y los cuerpos viajan con Content-Length (el servidor de desarrollo de Django no lee cuerpos troceados).
+///
+/// Con el nodo en modo «sesión obligatoria» (Q-34), <see cref="Token"/> es el JWT de MOD-001 de quien usa la app: se
+/// manda en cada petición. Es de todo el proceso porque cada app (OPS, Student) tiene una sola persona al frente. Si el
+/// backend responde 401 con un código <c>sesion_*</c> (caducó, se cerró por inactividad, se abrió en otro dispositivo…)
+/// se avisa por <see cref="SesionRechazada"/> y la pantalla decide qué mostrar.
 /// </summary>
 public abstract class ClienteJson(HttpClient http, Uri baseUri)
 {
     protected static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    private static volatile string? token;
+
+    /// <summary>El JWT de la sesión de usuario (<c>Authorization: Bearer</c>). Nulo mientras el nodo no exija sesión.</summary>
+    public static string? Token
+    {
+        get => token;
+        set => token = string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    /// <summary>El backend rechazó la sesión: <c>sesion_expirada</c>, <c>sesion_inactiva</c>, <c>sesion_cerrada_otro_dispositivo</c>…</summary>
+    public static event Action<ErrorAula>? SesionRechazada;
 
     public Uri BaseUri { get; } = baseUri;
     public string? UltimoMotivo { get; private set; }
@@ -22,11 +40,19 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
 
     public Uri Absoluta(string rutaRelativa) => new(BaseUri, rutaRelativa.TrimStart('/'));
 
+    private HttpRequestMessage Peticion(HttpMethod metodo, string ruta, HttpContent? contenido = null)
+    {
+        var mensaje = new HttpRequestMessage(metodo, Absoluta(ruta)) { Content = contenido };
+        if (Token is { } t) mensaje.Headers.Authorization = new AuthenticationHeaderValue("Bearer", t);
+        return mensaje;
+    }
+
     protected async Task<T?> ObtenerAsync<T>(string ruta, CancellationToken ct)
     {
         try
         {
-            using var respuesta = await http.GetAsync(Absoluta(ruta), ct);
+            using var peticion = Peticion(HttpMethod.Get, ruta);
+            using var respuesta = await http.SendAsync(peticion, ct);
             if (!respuesta.IsSuccessStatusCode)
             {
                 await RegistrarErrorAsync(respuesta, ct);
@@ -47,7 +73,8 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         try
         {
             var contenido = new StringContent(JsonSerializer.Serialize(cuerpo, Json), Encoding.UTF8, "application/json");
-            using var respuesta = await http.PostAsync(Absoluta(ruta), contenido, ct);
+            using var peticion = Peticion(HttpMethod.Post, ruta, contenido);
+            using var respuesta = await http.SendAsync(peticion, ct);
             if (!respuesta.IsSuccessStatusCode)
             {
                 await RegistrarErrorAsync(respuesta, ct);
@@ -60,6 +87,28 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         {
             SinRed();
             return default;
+        }
+    }
+
+    /// <summary>DELETE sin cuerpo de respuesta (cerrar la sesión de usuario). Verdadero si el backend contestó 2xx.</summary>
+    protected async Task<bool> EliminarAsync(string ruta, CancellationToken ct)
+    {
+        try
+        {
+            using var peticion = Peticion(HttpMethod.Delete, ruta);
+            using var respuesta = await http.SendAsync(peticion, ct);
+            if (!respuesta.IsSuccessStatusCode)
+            {
+                await RegistrarErrorAsync(respuesta, ct);
+                return false;
+            }
+            Limpiar();
+            return true;
+        }
+        catch (Exception ex) when (EsDeRed(ex))
+        {
+            SinRed();
+            return false;
         }
     }
 
@@ -105,6 +154,7 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         };
         UltimoMotivo = detalle;
         UltimoError = new ErrorAula(estado, codigo, detalle, sugerencia, extra);
+        if (UltimoError.SesionPerdida) SesionRechazada?.Invoke(UltimoError);
     }
 
     private static bool EsDeRed(Exception ex) =>
