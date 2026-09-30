@@ -30,9 +30,13 @@ INSTALLED_APPS = [
     "expediente",
     "classroom_engine",
     "modo_estudio",
+    "audit",
 ]
 
 MIDDLEWARE = [
+    # MOD-019: `corr` por petición (X-Avacom-Correlacion), aparato validado (X-Avacom-Dispositivo), línea por petición
+    # en backend-app.log y asiento de denegación en todo 403. Va primero para envolver a todo lo demás.
+    "audit.middleware.CorrelacionMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -140,6 +144,28 @@ AVACOM_AULA_UNIRSE_VENTANA_MS = int(os.environ.get("AVACOM_AULA_UNIRSE_VENTANA_M
 AVACOM_AULA_PROGRAMADOR = os.environ.get("AVACOM_AULA_PROGRAMADOR", "1") == "1"
 # "0" desactiva la suspensión de las clases abiertas al arrancar el nodo (BR-051).
 AVACOM_AULA_DETECTAR_CAIDA = os.environ.get("AVACOM_AULA_DETECTAR_CAIDA", "1") == "1"
+
+# ------------------------------------------------------------- Audit (MOD-019)
+# App `audit` (`/api/auditoria/`, `/api/logs/`, tablas m19_*). Sistema de logs en archivos JSON Lines (§2 del prompt):
+# la carpeta se decide UNA vez al arrancar (AVACOM_LMS_DIR_LOGS → instalado: %ProgramData%\AVACOM\OPS Master\Logs →
+# desarrollo: backend\logs → pruebas: carpeta temporal por corrida, jamás ProgramData).
+from audit import logging_setup as _logs  # noqa: E402 — puro: no importa Django ni modelos
+
+AVACOM_LMS_ENTORNO = _logs.entorno()
+_carpeta_logs, AVACOM_LMS_AVISO_LOGS = _logs.preparar_carpeta(_logs.carpeta_logs(BASE_DIR))
+AVACOM_LMS_DIR_LOGS_EFECTIVO = str(_carpeta_logs)
+LOGGING = _logs.configurar(_carpeta_logs, app="backend", cual_entorno=AVACOM_LMS_ENTORNO,
+                           nivel=os.environ.get("AVACOM_LMS_NIVEL_LOG", "INFO"), corrida=_carpeta_logs.name)
+TEST_RUNNER = "audit.pruebas.CorredorDePruebas"
+# Umbral de rotación de la bitácora por tamaño (FUN-201; §4.3): 100 MB por defecto.
+AVACOM_LMS_AUDITORIA_UMBRAL_MB = int(os.environ.get("AVACOM_LMS_AUDITORIA_UMBRAL_MB", "100"))
+# Cadencia del verificador de la cadena (segundos): cada hora fuera de clase, y al rotar. "0" lo desactiva.
+AVACOM_LMS_AUDITORIA_VERIFICAR_CADA_S = int(os.environ.get("AVACOM_LMS_AUDITORIA_VERIFICAR_CADA_S", "3600"))
+# En pruebas una acción fuera del catálogo falla; en producción se asienta `auditoria.accion_desconocida` (§3.5).
+AVACOM_LMS_AUDITORIA_ESTRICTA = os.environ.get("AVACOM_LMS_AUDITORIA_ESTRICTA", "1" if AVACOM_LMS_ENTORNO == "pruebas" else "0") == "1"
+# Tope de renglones por entrega y por minuto que acepta POST /api/logs/clientes/ de cada equipo (§4.2).
+AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES", "200"))
+AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO", "1000"))
 
 # ---------------------------------------------------------- Modo Estudio (MOD-008)
 # App `modo_estudio` (`/api/modo-estudio/`, tablas m08_*). Lee la lección en vivo por los casos de uso del aula, así que usa la misma
