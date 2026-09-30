@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "biblioteca",
     "expediente",
     "classroom_engine",
+    "modo_estudio",
 ]
 
 MIDDLEWARE = [
@@ -139,3 +140,14 @@ AVACOM_AULA_UNIRSE_VENTANA_MS = int(os.environ.get("AVACOM_AULA_UNIRSE_VENTANA_M
 AVACOM_AULA_PROGRAMADOR = os.environ.get("AVACOM_AULA_PROGRAMADOR", "1") == "1"
 # "0" desactiva la suspensión de las clases abiertas al arrancar el nodo (BR-051).
 AVACOM_AULA_DETECTAR_CAIDA = os.environ.get("AVACOM_AULA_DETECTAR_CAIDA", "1") == "1"
+
+# ---------------------------------------------------------- Modo Estudio (MOD-008)
+# App `modo_estudio` (`/api/modo-estudio/`, tablas m08_*). Lee la lección en vivo por los casos de uso del aula, así que usa la misma
+# fuente de cursos (AVACOM_AULA_FUENTE_CURSOS). D-8: cuánto dura en el aparato un paquete de una asignación SIN fecha límite; con
+# fecha, dura hasta la fecha límite más la gracia.
+AVACOM_ESTUDIO_VIGENCIA_DIAS = int(os.environ.get("AVACOM_ESTUDIO_VIGENCIA_DIAS", "14"))
+# DEC-019: minutos de gracia por defecto de una asignación nueva (el profesor puede cambiarlos por asignación).
+AVACOM_ESTUDIO_GRACIA_MIN = int(os.environ.get("AVACOM_ESTUDIO_GRACIA_MIN", "15"))
+# Tope de tamaño de UN medio al preparar un paquete: el nodo lo lee entero para medirlo y calcular su SHA-256, así que un medio
+# mayor se deja fuera del paquete (`no_incluidos`, `medio_demasiado_grande`) en vez de bloquear la petición.
+AVACOM_ESTUDIO_MEDIO_MAX_MB = int(os.environ.get("AVACOM_ESTUDIO_MEDIO_MAX_MB", "512"))

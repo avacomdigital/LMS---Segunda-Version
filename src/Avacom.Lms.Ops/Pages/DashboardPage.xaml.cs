@@ -77,6 +77,9 @@ public partial class DashboardPage : ContentPage
             case "Dispositivos":
                 await Shell.Current.GoToAsync("dispositivos");
                 break;
+            case "Modo de estudio":
+                await Shell.Current.GoToAsync("estudio");
+                break;
             default:
                 await DisplayAlertAsync(tile.Text, $"El módulo {tile.Text} está representado en este prototipo y listo para conectar su flujo.", "Entendido");
                 break;

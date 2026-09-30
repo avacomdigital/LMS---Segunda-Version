@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Una lección asignada, para leerla (MOD-008 · FUN-082/087/088). Misma composición que «Mis lecciones». Se recorre por actividades
+     («Actividad 4 de 7»); cada lámina o página vista queda guardada en la tableta; «Terminar lección» sólo se habilita cuando las
+     actividades obligatorias se atendieron. Los visores son los del aula (AulaContenidoView); aquí sólo se enmarcan. -->
+<ContentPage
+    x:Class="Avacom.Lms.Student.ModoEstudio.Views.StudyLessonPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    xmlns:vm="clr-namespace:Avacom.Lms.Student.ModoEstudio.ViewModels"
+    xmlns:views="clr-namespace:Avacom.Lms.Student.ModoEstudio.Views"
+    x:DataType="vm:StudyLessonViewModel"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#F1F1F1"
+    SizeChanged="OnPageSizeChanged">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Styles/StudyModeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid>
+        <GraphicsView InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <GraphicsView.Drawable>
+                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#26000000" StrokeWidth="1.25" />
+            </GraphicsView.Drawable>
+        </GraphicsView>
+        <BoxView Color="#8C000000" HorizontalOptions="Fill" VerticalOptions="Fill" />
+
+        <Grid x:Name="Modal" HorizontalOptions="Center" VerticalOptions="Center">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 34" BackgroundColor="#0B000000" Margin="-10,6,-10,-30" InputTransparent="True" />
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 30" BackgroundColor="#12000000" Margin="-4,4,-4,-16" InputTransparent="True" />
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 27" BackgroundColor="#1A000000" Margin="0,2,0,-5" InputTransparent="True" />
+
+            <Border Style="{StaticResource StudyModalCard}" SemanticProperties.Description="Lección">
+                <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="26,22,26,20" RowSpacing="14">
+
+                    <!-- cabecera: volver, la asignatura y la unidad, cerrar -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                        <Button Text="Mis lecciones" ImageSource="estudio_arrow_left.png" Style="{StaticResource StudyGhostButton}" Command="{Binding BackCommand}"
+                                AutomationId="leccion-atras" ContentLayout="Left,8" Padding="16,0"
+                                SemanticProperties.Description="Volver a Mis lecciones" />
+                        <FlexLayout Grid.Column="1" JustifyContent="Center" AlignItems="Center" Wrap="Wrap">
+                            <Label Text="{Binding Eyebrow}" Style="{StaticResource StudyEyebrow}" VerticalOptions="Center" Margin="0,0,10,0" />
+                            <Border IsVisible="{Binding IsOfflineContent}" Style="{StaticResource StudyChip}" BackgroundColor="{StaticResource StudyGreen}" Opacity="0.95" Padding="10,4"
+                                    SemanticProperties.Description="Estás leyendo la lección guardada en tu tableta, sin conexión">
+                                <HorizontalStackLayout Spacing="6">
+                                    <Image Source="estudio_wifi_off.png" WidthRequest="14" HeightRequest="14" VerticalOptions="Center" />
+                                    <Label Text="Desde tu tableta" Style="{StaticResource StudyChipLabel}" TextColor="White" />
+                                </HorizontalStackLayout>
+                            </Border>
+                        </FlexLayout>
+                        <Button Grid.Column="2" Style="{StaticResource StudyCloseButton}" ImageSource="estudio_close.png" Clicked="OnCerrar" AutomationId="leccion-cerrar"
+                                SemanticProperties.Description="Cerrar la lección" />
+                    </Grid>
+
+                    <!-- título y avance por actividades (no es una nota) -->
+                    <VerticalStackLayout Grid.Row="1" Spacing="10" IsVisible="{Binding ShowContent}">
+                        <Label Text="{Binding Title}" FontFamily="InterSemiBold" FontSize="24" TextColor="{StaticResource StudyInk}" LineBreakMode="TailTruncation" MaxLines="2"
+                               SemanticProperties.HeadingLevel="Level1" />
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                            <Label Text="{Binding PositionText}" Style="{StaticResource StudyPercent}" AutomationId="leccion-posicion" />
+                            <views:StudyProgressBar Grid.Column="1" Progress="{Binding Progress}" FillColor="#019D60" />
+                            <Label Grid.Column="2" Text="{Binding AttendedText}" Style="{StaticResource StudyMeta}" />
+                        </Grid>
+                        <Border IsVisible="{Binding HasNotice}" Style="{StaticResource StudyChip}" BackgroundColor="{StaticResource StudyBlueSoft}" HorizontalOptions="Start" Padding="14,8">
+                            <Label Text="{Binding Notice}" Style="{StaticResource StudyChipLabel}" TextColor="{StaticResource StudyBlueInk}" FontFamily="InterMedium" FontSize="13" LineBreakMode="WordWrap" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- el contenido de la actividad actual -->
+                    <Grid Grid.Row="2">
+                        <ui:AulaContenidoView x:Name="Contenido" IsVisible="{Binding IsContentBlock}" />
+
+                        <Border IsVisible="{Binding IsPracticeBlock}" Style="{StaticResource StudyInset}" Stroke="{StaticResource StudyBlueBorderBrush}" BackgroundColor="#F6FBFD"
+                                VerticalOptions="Center" HorizontalOptions="Center" Padding="32,30" MaximumWidthRequest="640">
+                            <VerticalStackLayout Spacing="14" HorizontalOptions="Center">
+                                <Border WidthRequest="64" HeightRequest="64" StrokeThickness="0" StrokeShape="RoundRectangle 32" BackgroundColor="{StaticResource StudyBlueSoft}" HorizontalOptions="Center">
+                                    <Image Source="estudio_sparkle_blue.png" WidthRequest="34" HeightRequest="34" HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
+                                <Label Text="PRÁCTICA" Style="{StaticResource StudyEyebrow}" TextColor="{StaticResource StudyBlueInk}" HorizontalOptions="Center" />
+                                <Label Text="{Binding BlockTitle}" FontFamily="InterSemiBold" FontSize="24" TextColor="{StaticResource StudyInk}" HorizontalTextAlignment="Center" />
+                                <Label Text="Responde con calma y mira al instante cómo vas. Puedes intentarlo nuevamente las veces que quieras." Style="{StaticResource StudyBody}"
+                                       FontSize="16" HorizontalTextAlignment="Center" />
+                                <Button Text="Practicar" ImageSource="estudio_arrow_white.png" Style="{StaticResource StudyPrimaryButton}" Command="{Binding OpenPracticeCommand}"
+                                        HorizontalOptions="Center" AutomationId="leccion-practicar" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <Border IsVisible="{Binding NeedsAula}" Style="{StaticResource StudyInset}" VerticalOptions="Center" HorizontalOptions="Center" Padding="32,30" MaximumWidthRequest="600">
+                            <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+                                <Image Source="estudio_lock.png" WidthRequest="34" HeightRequest="34" HorizontalOptions="Center" />
+                                <Label Text="Este laboratorio necesita conexión con el aula" FontFamily="InterSemiBold" FontSize="20" TextColor="{StaticResource StudyInk}" HorizontalTextAlignment="Center" />
+                                <Label Text="No se puede guardar en la tableta. Cuando estés en el aula podrás abrirlo; mientras tanto sigue con las demás actividades." Style="{StaticResource StudyBody}"
+                                       FontSize="15" HorizontalTextAlignment="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <VerticalStackLayout IsVisible="{Binding IsLoading}" HorizontalOptions="Center" VerticalOptions="Center" Spacing="12">
+                            <ActivityIndicator IsRunning="{Binding IsLoading}" WidthRequest="28" HeightRequest="28" Color="#02739E" />
+                            <Label Text="Abriendo tu lección…" Style="{StaticResource StudyBody}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout IsVisible="{Binding HasProblem}" HorizontalOptions="Center" VerticalOptions="Center" Spacing="12" Padding="24">
+                            <Label Text="{Binding ProblemTitle}" FontFamily="InterSemiBold" FontSize="22" HorizontalOptions="Center" HorizontalTextAlignment="Center" TextColor="{StaticResource StudyInk}" />
+                            <Label Text="{Binding ProblemMessage}" Style="{StaticResource StudyBody}" FontSize="16" HorizontalOptions="Center" HorizontalTextAlignment="Center" MaximumWidthRequest="460" />
+                            <Button Text="Volver a Mis lecciones" Style="{StaticResource StudyGhostButton}" Command="{Binding BackCommand}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <!-- navegación: anterior, las actividades como números, siguiente / terminar -->
+                    <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14" IsVisible="{Binding ShowContent}">
+                        <Button Text="Anterior" Style="{StaticResource StudyNavButton}" Command="{Binding PrevCommand}" IsEnabled="{Binding CanPrev}" AutomationId="leccion-anterior"
+                                SemanticProperties.Description="Actividad anterior" />
+                        <ScrollView Grid.Column="1" Orientation="Horizontal" HorizontalScrollBarVisibility="Never" HorizontalOptions="Center" VerticalOptions="Center">
+                            <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Chips}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StudyBlockChip">
+                                        <Border WidthRequest="36" HeightRequest="36" StrokeShape="RoundRectangle 18" BackgroundColor="{Binding FillColor}" Stroke="{Binding BorderColor}"
+                                                StrokeThickness="{Binding BorderWidth}" Padding="0" SemanticProperties.Description="{Binding Description}">
+                                            <Label Text="{Binding Glyph}" FontFamily="InterMedium" FontSize="14" TextColor="{Binding InkColor}" HorizontalOptions="Center" VerticalOptions="Center" />
+                                            <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding TapCommand}" /></Border.GestureRecognizers>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                        <HorizontalStackLayout Grid.Column="2" Spacing="12">
+                            <Button Text="Terminar lección" Style="{StaticResource StudyNavButton}" BackgroundColor="{StaticResource StudyGreen}" TextColor="White" BorderWidth="0"
+                                    IsVisible="{Binding ShowComplete}" IsEnabled="{Binding CanComplete}" Command="{Binding CompleteCommand}" AutomationId="leccion-terminar"
+                                    SemanticProperties.Description="Marcar la lección como completada" />
+                            <Button Text="Siguiente" ImageSource="estudio_arrow_white.png" Style="{StaticResource StudyPrimaryButton}" IsVisible="{Binding CanNext}"
+                                    Command="{Binding NextCommand}" AutomationId="leccion-siguiente" SemanticProperties.Description="Actividad siguiente" />
+                            <HorizontalStackLayout IsVisible="{Binding IsCompleted}" Spacing="8" VerticalOptions="Center">
+                                <Image Source="estudio_check_green.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                                <Label Text="Lección completada" Style="{StaticResource StudyMeta}" TextColor="{StaticResource StudyGreenInk}" FontFamily="InterSemiBold" />
+                            </HorizontalStackLayout>
+                        </HorizontalStackLayout>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

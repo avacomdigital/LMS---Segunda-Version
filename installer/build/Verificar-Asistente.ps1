@@ -11,7 +11,7 @@
         · que se le pregunta a /health/ por COM para distinguir nuestro backend
           de un programa ajeno,
         · que se detectan los procesos abiertos y la instalación previa,
-        · que se detecta AVACOM Biblioteca,
+        · que se detecta AVACOM Contenido (link.json),
         · que los controles de la página táctil se crean sin fallar.
 
     No instala nada y no necesita permisos de administrador: el propio
@@ -20,7 +20,7 @@
     Ojo con la lectura: en una sesión de desarrollo es NORMAL que salgan en
     rojo «permisos de administrador» (el arnés corre sin elevar) y «AVACOM OPS
     Master está abierto» (si lo tienes abierto). Lo que se verifica aquí es que
-    las nueve comprobaciones se ejecutan y dan un veredicto, no que este equipo
+    las diez comprobaciones se ejecutan y dan un veredicto, no que este equipo
     concreto esté listo para instalar.
 #>
 [CmdletBinding()]
@@ -71,13 +71,13 @@ Remove-Item $volcado -Force -ErrorAction SilentlyContinue
 # cadena es un error, y justamente el caso de cero comprobaciones es el que hay
 # que poder detectar.
 $comprobaciones = @($lineas | Where-Object { $_ -like 'check: *' })
-if ($comprobaciones.Count -ne 9) {
+if ($comprobaciones.Count -ne 10) {
     $lineas | ForEach-Object { Write-Host "  $_" }
-    throw "Se esperaban 9 comprobaciones y se ejecutaron $($comprobaciones.Count)."
+    throw "Se esperaban 10 comprobaciones y se ejecutaron $($comprobaciones.Count)."
 }
 if (-not ($lineas | Where-Object { $_ -like 'Resultado:*' })) {
     throw 'El asistente no emitio un veredicto.'
 }
 
 $comprobaciones | ForEach-Object { Write-Host "  $_" }
-Write-Host '  Las 9 comprobaciones del asistente se ejecutaron y dieron veredicto.'
+Write-Host '  Las 10 comprobaciones del asistente se ejecutaron y dieron veredicto.'

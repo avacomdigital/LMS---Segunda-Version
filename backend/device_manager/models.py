@@ -48,11 +48,23 @@ class Dispositivo(models.Model):
     # Última lectura que la tableta declaró con su latido (009-04). El historial va por el evento de inventario.
     espacio_libre_mb = models.IntegerField(null=True, blank=True)
     bateria_pct = models.SmallIntegerField(null=True, blank=True)
+    # 009-06 · 008-01: el equipo es del aula (`compartido`) o nominal de una persona (`asignado`). El modo de estudio sirve en cualquier equipo
+    # (D-15), pero sólo el dueño de un equipo asignado se lleva la descarga de paquetes (BR-054). `asignado_a_id` es la referencia lógica a
+    # `m01_usuario.id` (CV-08).
+    perfil = models.CharField(max_length=12, default=dom.COMPARTIDO)
+    asignado_a_id = models.CharField(max_length=64, null=True, blank=True)
+    asignado_en = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = "m09_dispositivo"
         constraints = [
             models.UniqueConstraint(fields=["organizacion", "identificador_hw"], name="uq_m09_dispositivo_identificador"),
+            # CV-07: ser «asignado» y tener dueño es lo mismo. Un equipo asignado sin dueño (o compartido con dueño) no existe.
+            models.CheckConstraint(
+                condition=(Q(perfil=dom.ASIGNADO) & Q(asignado_a_id__isnull=False))
+                | (~Q(perfil=dom.ASIGNADO) & Q(asignado_a_id__isnull=True)),
+                name="ck_m09_dispositivo_perfil_dueno"),
+            models.CheckConstraint(condition=Q(perfil__in=dom.PERFILES), name="ck_m09_dispositivo_perfil_valido"),
         ]
 
     def __str__(self) -> str:

@@ -28,3 +28,13 @@ class DispositivoCambios(serializers.Serializer):
 
 class BloqueoEntrada(serializers.Serializer):
     motivo = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+
+
+class AsignacionEntrada(serializers.Serializer):
+    """FUN-092: a quién se asigna el equipo. `actor` lo lee la vista (sin sesión lo declara el cliente, Q-34)."""
+
+    alumno_id = serializers.CharField(max_length=64)
+
+
+class LiberacionEntrada(serializers.Serializer):
+    """FUN-093: liberar no lleva datos propios (el `actor` lo lee la vista)."""

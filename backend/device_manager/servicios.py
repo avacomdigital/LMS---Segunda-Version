@@ -77,3 +77,20 @@ def cerrar_sesion_alumno(sesion_id: str, momento: int | None = None, motivo: str
 
 def sesion_abierta_de_alumno(alumno_id: str) -> dict | None:
     return Cajones().sesiones_alumno.abierta_de_alumno(alumno_id)
+
+
+def organizacion_id() -> str | None:
+    """La organización del nodo; None si aún no está instalado (quien pregunta decide cómo degradar)."""
+    return Cajones().organizaciones.unica_id()
+
+
+def asignado_a(dispositivo_id: str) -> str | None:
+    """A quién pertenece el equipo (perfil `asignado`); None si es compartido o no existe. El modo de estudio lo usa para saber quién
+    puede llevarse un paquete en él (BR-054): estudiar en línea sirve en cualquier equipo, aunque no sea suyo."""
+    fila = por_id(dispositivo_id)
+    return fila["asignado_a_id"] if fila and fila.get("perfil") == dom.ASIGNADO else None
+
+
+def asignados_a(alumno_ids: list[str]) -> dict[str, dict]:
+    """Por cada alumno, el equipo activo que tiene asignado (el más reciente si tuviera varios)."""
+    return Cajones().dispositivos.asignados_a(list(alumno_ids))

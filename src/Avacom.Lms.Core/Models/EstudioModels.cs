@@ -27,10 +27,29 @@ public sealed record EstadoEstudio(
     [property: JsonPropertyName("alumno")] AlumnoEstudio? Alumno,
     [property: JsonPropertyName("dispositivo")] DispositivoEstudio? Dispositivo,
     [property: JsonPropertyName("descarga_permitida")] bool DescargaPermitida,
-    [property: JsonPropertyName("servidor_en")] long ServidorEn)
+    [property: JsonPropertyName("servidor_en")] long ServidorEn,
+    [property: JsonPropertyName("dueno")] AlumnoEstudio? Dueno = null)
 {
     public static readonly EstadoEstudio NoDisponible = new(false, "sin_conexion", null, null, null, false, 0);
 }
+
+/// <summary>Un grupo de la pantalla «¿Quién eres?»: quienes tienen lecciones asignadas y, dentro, los nombres que se pueden elegir.</summary>
+public sealed record GrupoParaElegir(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("codigo")] string? Codigo,
+    [property: JsonPropertyName("nombre")] string? Nombre,
+    [property: JsonPropertyName("alumnos")] IReadOnlyList<AlumnoDeGrupo> Alumnos);
+
+/// <summary>
+/// <c>GET /estudiantes/</c>: los nombres entre los que el alumno se elige (D-15). El LMS es offline y no hay sistema central que verifique quién es
+/// quién: la persona dice su nombre y ya. <c>Dueno</c> es a quién está asignada la tableta, si lo está (se ofrece primero, pero no obliga).
+/// </summary>
+public sealed record EstudiantesEstudio(
+    [property: JsonPropertyName("disponible")] bool Disponible,
+    [property: JsonPropertyName("motivo")] string? Motivo,
+    [property: JsonPropertyName("grupos")] IReadOnlyList<GrupoParaElegir> Grupos,
+    [property: JsonPropertyName("dueno")] AlumnoEstudio? Dueno,
+    [property: JsonPropertyName("servidor_en")] long ServidorEn);
 
 public sealed record SesionEstudio(
     [property: JsonPropertyName("sesion_id")] string SesionId,
@@ -406,6 +425,15 @@ public sealed record DispositivoDeAlumno(
     [property: JsonPropertyName("nombre")] string? Nombre,
     [property: JsonPropertyName("perfil")] string? Perfil);
 
+/// <summary>Un envío que llegó fuera de la ventana de gracia y espera al profesor (BR-074): nunca se descarta en silencio.</summary>
+public sealed record DecisionPendiente(
+    [property: JsonPropertyName("emisor_id")] string EmisorId,
+    [property: JsonPropertyName("secuencia")] long Secuencia,
+    [property: JsonPropertyName("tipo")] string? Tipo,
+    [property: JsonPropertyName("motivo")] string? Motivo,
+    [property: JsonPropertyName("ocurrido_en")] long? OcurridoEn,
+    [property: JsonPropertyName("recibido_en")] long? RecibidoEn);
+
 /// <summary>Una fila de «quién completó» (CAP-051): un destinatario con o sin tarea.</summary>
 public sealed record FilaDeAlumno(
     [property: JsonPropertyName("alumno_id")] string AlumnoId,
@@ -421,7 +449,8 @@ public sealed record FilaDeAlumno(
     [property: JsonPropertyName("practica")] PracticaDeAlumno? Practica,
     [property: JsonPropertyName("paquete")] PaqueteDeAlumno? Paquete,
     [property: JsonPropertyName("dispositivo")] DispositivoDeAlumno? Dispositivo,
-    [property: JsonPropertyName("pendientes_decision")] int PendientesDecision);
+    [property: JsonPropertyName("pendientes_decision")] int PendientesDecision,
+    [property: JsonPropertyName("decisiones")] IReadOnlyList<DecisionPendiente>? Decisiones = null);
 
 /// <summary>Una asignación vista por el profesor, con sus totales (lista) y, en el detalle, la tabla de alumnos.</summary>
 public sealed record AsignacionDocente(

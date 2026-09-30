@@ -13,11 +13,13 @@ public static class Sesion
     private static IBibliotecaDeContenido? _biblioteca;
     private static IAulaApi? _aula;
     private static IDispositivosApi? _dispositivos;
+    private static IEstudioApi? _estudio;
     private static IAccesoApi? _acceso;
     private static Uri? _baseAcceso;
     private static Uri? _baseActual;
     private static Uri? _baseAula;
     private static Uri? _baseDispositivos;
+    private static Uri? _baseEstudio;
     private static string? _fuenteAula;
 
     public const string DireccionPorDefecto = "http://127.0.0.1:8000";
@@ -91,6 +93,21 @@ public static class Sesion
                 _baseDispositivos = actual;
             }
             return _dispositivos;
+        }
+    }
+
+    /// <summary>El cliente de <c>/api/modo-estudio/</c> (MOD-008): asignar lecciones a los alumnos y ver quién las completó, una instancia por dirección.</summary>
+    public static IEstudioApi Estudio
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_estudio is null || _baseEstudio != actual)
+            {
+                _estudio = new EstudioApi(Http, actual);
+                _baseEstudio = actual;
+            }
+            return _estudio;
         }
     }
 

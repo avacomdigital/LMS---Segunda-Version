@@ -3,8 +3,10 @@ Casos de uso de MOD-009 · Device Manager.
 
 Dos familias:
   1. El inventario (RegistrarDispositivo, ListarDispositivos, VerDispositivo, ActualizarDispositivo,
-     BloquearDispositivo, DesbloquearDispositivo, RegistrarLatido): lo que opera el técnico, el
-     administrador o el profesor desde OPS, y lo que la tableta declara de sí misma.
+     BloquearDispositivo, DesbloquearDispositivo, RegistrarLatido, AsignarDispositivo, LiberarDispositivo):
+     lo que opera el técnico, el administrador o el profesor desde OPS, y lo que la tableta declara de sí misma.
+     Asignar y liberar (FUN-092, FUN-093) cambian el perfil del equipo: `compartido` (del aula) o `asignado` a una persona,
+     condición de la descarga de paquetes del modo de estudio (008-01, BR-054).
   2. La sesión de alumno en el dispositivo (abrir_sesion_alumno, cerrar_sesion_alumno): la usa el
      aula (MOD-007) al unirse y al salir; se expone también como caso de uso para pruebas.
 
@@ -19,7 +21,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from ..dominio import dispositivo as dom
-from ..dominio.errores import DispositivoBloqueado, DispositivoInactivo, NoEncontrado, NodoNoInstalado
+from ..dominio.errores import (
+    DispositivoBloqueado,
+    DispositivoInactivo,
+    DispositivoYaAsignado,
+    NoEncontrado,
+    NodoNoInstalado,
+    PaqueteSinIntegrar,
+)
 from .puertos import Actor, Autorizacion, Reloj, UnidadDeTrabajo
 
 
@@ -36,12 +45,16 @@ def _id() -> str:
 
 # =================================================================== reglas puras
 
-def dto(dispositivo: dict, ahora: int, sesion_abierta: dict | None = None) -> dict:
+def dto(dispositivo: dict, ahora: int, sesion_abierta: dict | None = None, rotulo_asignado: str = "") -> dict:
     """Lo que ven OPS y la tableta. `identificador` se conserva junto a `identificador_hw` porque el
-    registro de la tableta (CAP-053) lo envía con ese nombre desde el contrato de acceso."""
+    registro de la tableta (CAP-053) lo envía con ese nombre desde el contrato de acceso. `perfil` y `asignado_a`
+    (009-06) dicen si el equipo es del aula o de una persona, y de quién."""
+    dueno = dispositivo.get("asignado_a_id")
     return {
         **dispositivo,
         "identificador": dispositivo["identificador_hw"],
+        "perfil": dispositivo.get("perfil") or dom.COMPARTIDO,
+        "asignado_a": {"id": dueno, "rotulo": rotulo_asignado} if dueno else None,
         "en_linea": dom.en_linea(dispositivo.get("ultimo_latido_en"), ahora),
         "sesion_abierta": ({"id": sesion_abierta["id"], "alumno_id": sesion_abierta["alumno_id"],
                             "iniciada_en": sesion_abierta["iniciada_en"]} if sesion_abierta else None),
@@ -186,7 +199,9 @@ class _CasoDeUso:
         return dispositivo
 
     def _dto(self, uow: UnidadDeTrabajo, dispositivo: dict, ahora: int) -> dict:
-        return dto(dispositivo, ahora, uow.sesiones_alumno.abierta_en_dispositivo(dispositivo["id"]))
+        dueno = dispositivo.get("asignado_a_id")
+        rotulo = uow.alumnos.rotulos([dueno]).get(dueno, "") if dueno else ""
+        return dto(dispositivo, ahora, uow.sesiones_alumno.abierta_en_dispositivo(dispositivo["id"]), rotulo)
 
 
 class RegistrarDispositivo(_CasoDeUso):
@@ -225,7 +240,8 @@ class ListarDispositivos(_CasoDeUso):
             org = organizacion_de(uow)
             filas = uow.dispositivos.listar(org, solo_activos)
             abiertas = uow.sesiones_alumno.abiertas_por_dispositivo([d["id"] for d in filas])
-            return [dto(d, ahora, abiertas.get(d["id"])) for d in filas]
+            rotulos = uow.alumnos.rotulos([d["asignado_a_id"] for d in filas if d.get("asignado_a_id")])
+            return [dto(d, ahora, abiertas.get(d["id"]), rotulos.get(d.get("asignado_a_id") or "", "")) for d in filas]
 
 
 class VerDispositivo(_CasoDeUso):
@@ -284,6 +300,68 @@ class DesbloquearDispositivo(_CasoDeUso):
         ahora = self.s.reloj.ahora_ms()
         with self.s.uow() as uow:
             return self._dto(uow, cambiar_bloqueo(uow, ahora, dispositivo_id, False, actor.id, str(motivo or "")[:200]), ahora)
+
+
+class AsignarDispositivo(_CasoDeUso):
+    """FUN-092 · 008-01: el equipo pasa a ser nominal de una persona (perfil `asignado`). Sólo su dueño se lleva en él los paquetes
+    del modo de estudio (BR-054); estudiar en línea sirve en cualquier equipo. Un equipo que ya es de OTRA persona no se reasigna:
+    primero se libera (409). Asignar a la misma persona es idempotente. Cualquier alumno que tuviera abierta una sesión en el
+    equipo compartido queda fuera: el equipo deja de ser del aula."""
+
+    def ejecutar(self, actor: Actor, dispositivo_id: str, alumno_id: str) -> dict:
+        self.s.autorizacion.exigir(actor, dom.P_ASSIGN)
+        alumno_id = dom.normalizar_alumno(alumno_id)
+        ahora = self.s.reloj.ahora_ms()
+        with self.s.uow() as uow:
+            dispositivo = self._dispositivo(uow, dispositivo_id)
+            if not dispositivo["activo"]:
+                raise DispositivoInactivo(dispositivo_id=dispositivo_id, nombre=dispositivo["nombre"])
+            if uow.alumnos.existe(alumno_id) is False:
+                raise NoEncontrado("No existe esa persona en el padrón: no se le puede asignar un equipo.", alumno_id=alumno_id)
+            if dispositivo["perfil"] == dom.ASIGNADO:
+                if dispositivo["asignado_a_id"] == alumno_id:
+                    return self._dto(uow, dispositivo, ahora)
+                raise DispositivoYaAsignado(
+                    "El equipo ya está asignado a otra persona: libéralo antes de asignarlo de nuevo.",
+                    dispositivo_id=dispositivo_id, asignado_a_id=dispositivo["asignado_a_id"])
+            abierta = uow.sesiones_alumno.abierta_en_dispositivo(dispositivo_id)
+            if abierta and abierta["alumno_id"] != alumno_id:
+                _cerrar(uow, ahora, abierta, dom.SISTEMA, actor.id)
+            dispositivo = uow.dispositivos.actualizar(dispositivo_id, perfil=dom.ASIGNADO, asignado_a_id=alumno_id, asignado_en=ahora)
+            uow.outbox.publicar("Dispositivo", dispositivo_id, dom.EV_ASIGNADO, {
+                "dispositivo_id": dispositivo_id, "alumno_id": alumno_id, "instante": ahora})
+            uow.auditoria.registrar(actor.id, "dispositivos.asignado", "m09_dispositivo", dispositivo_id,
+                                    anterior={"perfil": dom.COMPARTIDO}, nuevo={"perfil": dom.ASIGNADO, "asignado_a_id": alumno_id})
+            return self._dto(uow, dispositivo, ahora)
+
+
+class LiberarDispositivo(_CasoDeUso):
+    """FUN-093: el equipo vuelve a ser del aula (perfil `compartido`). Exige que no conserve un paquete de estudio activo
+    (`solicitado`, `descargandose` o `disponible`): liberarlo así dejaría el material a la vista del siguiente alumno (409
+    `paquete_sin_integrar`); el alumno, o quien lo administre, lo retira primero. Liberar un equipo compartido no hace nada."""
+
+    def ejecutar(self, actor: Actor, dispositivo_id: str) -> dict:
+        self.s.autorizacion.exigir(actor, dom.P_RELEASE)
+        ahora = self.s.reloj.ahora_ms()
+        with self.s.uow() as uow:
+            dispositivo = self._dispositivo(uow, dispositivo_id)
+            if dispositivo["perfil"] != dom.ASIGNADO:
+                return self._dto(uow, dispositivo, ahora)
+            activos = uow.paquetes_estudio.activos_en(dispositivo_id)
+            if activos:
+                raise PaqueteSinIntegrar(
+                    f"El equipo conserva {activos} paquete(s) de estudio: deben retirarse antes de liberarlo.",
+                    dispositivo_id=dispositivo_id, paquetes=activos)
+            dueno = dispositivo["asignado_a_id"]
+            abierta = uow.sesiones_alumno.abierta_en_dispositivo(dispositivo_id)
+            if abierta:
+                _cerrar(uow, ahora, abierta, dom.SISTEMA, actor.id)
+            dispositivo = uow.dispositivos.actualizar(dispositivo_id, perfil=dom.COMPARTIDO, asignado_a_id=None, asignado_en=None)
+            uow.outbox.publicar("Dispositivo", dispositivo_id, dom.EV_LIBERADO, {
+                "dispositivo_id": dispositivo_id, "alumno_id": dueno, "instante": ahora})
+            uow.auditoria.registrar(actor.id, "dispositivos.liberado", "m09_dispositivo", dispositivo_id,
+                                    anterior={"perfil": dom.ASIGNADO, "asignado_a_id": dueno}, nuevo={"perfil": dom.COMPARTIDO})
+            return self._dto(uow, dispositivo, ahora)
 
 
 class AbrirSesionAlumno(_CasoDeUso):

@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.WebSockets;
+using System.Text.Json;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
@@ -20,6 +22,66 @@ internal static class Salud
     public static string UrlSalud(int puerto) => $"http://127.0.0.1:{puerto}/health/";
 
     public sealed record Resultado(bool Correcto, string Detalle);
+
+    /// <summary>Lo que /health/ dice del nodo: si tiene organizacion y si las claves son las derivadas.</summary>
+    public sealed record EstadoDelNodo(bool? Instalado, bool? ClavesDerivadas);
+
+    /// <summary>
+    /// Pregunta a /health/ por el estado del modulo de acceso. Sin organizacion
+    /// el login responde 409 no_instalado: la pantalla final del instalador lo
+    /// avisa, porque crearla es una tarea de la aplicacion y no del asistente.
+    /// </summary>
+    public static async Task<EstadoDelNodo> EstadoAsync(int puerto)
+    {
+        try
+        {
+            using var cliente = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            var cuerpo = await cliente.GetStringAsync(UrlSalud(puerto)).ConfigureAwait(false);
+            using var documento = JsonDocument.Parse(cuerpo);
+            if (!documento.RootElement.TryGetProperty("acceso", out var acceso)) return new EstadoDelNodo(null, null);
+            return new EstadoDelNodo(Booleano(acceso, "instalado"), Booleano(acceso, "claves_derivadas"));
+        }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return new EstadoDelNodo(null, null);
+        }
+    }
+
+    private static bool? Booleano(JsonElement objeto, string nombre) =>
+        objeto.TryGetProperty(nombre, out var valor) && valor.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? valor.GetBoolean()
+            : null;
+
+    /// <summary>
+    /// ¿El canal en tiempo real acepta conexiones? Se hace el saludo WebSocket
+    /// contra una sesion que no existe: el consumidor del aula acepta la
+    /// conexion y la cierra con su propio codigo, y aceptarla (HTTP 101) es
+    /// justo lo que prueba que Daphne y Channels estan sirviendo el WebSocket.
+    /// Con Waitress esto respondia 404.
+    /// </summary>
+    public static async Task<Resultado> ProbarWebSocketAsync(int puerto)
+    {
+        using var socket = new ClientWebSocket();
+        using var limite = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        try
+        {
+            var uri = new Uri($"ws://127.0.0.1:{puerto}/ws/aula/sesiones/validacion-del-instalador/?rol=docente");
+            await socket.ConnectAsync(uri, limite.Token).ConfigureAwait(false);
+            try
+            {
+                await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "validacion", limite.Token).ConfigureAwait(false);
+            }
+            catch (Exception error) when (error is WebSocketException or OperationCanceledException or ObjectDisposedException)
+            {
+                // El servidor ya lo cerro con su codigo: la conexion se habia aceptado.
+            }
+            return new Resultado(true, "el canal en tiempo real acepta conexiones");
+        }
+        catch (Exception error) when (error is WebSocketException or OperationCanceledException or HttpRequestException)
+        {
+            return new Resultado(false, $"el canal en tiempo real no acepta conexiones ({error.Message})");
+        }
+    }
 
     /// <summary>Espera hasta <paramref name="segundos"/> a que el backend conteste.</summary>
     public static async Task<Resultado> EsperarAsync(int puerto, int segundos, CancellationToken cancelacion = default)
@@ -66,7 +128,7 @@ internal static class Salud
 
         // Escuchar en la lista de puertos no basta: un socket exclusivo puede
         // impedir el bind sin figurar. Se comprueba haciendo el mismo bind que
-        // hara Waitress.
+        // hara Daphne.
         try
         {
             using var prueba = new TcpListener(IPAddress.Any, puerto);

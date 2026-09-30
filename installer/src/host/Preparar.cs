@@ -11,13 +11,34 @@ namespace Avacom.Ops.Host;
 /// un comando. Las dependencias ya vienen dentro del paquete, asi que este
 /// paso no necesita internet ni pip.
 ///
-/// Es idempotente: se puede repetir en una actualizacion sin perder el
-/// expediente ni regenerar la clave del nodo.
+/// Es idempotente: se puede repetir en una actualizacion sin perder la base ni
+/// regenerar las claves del nodo.
 /// </summary>
 internal static class Preparar
 {
     /// <summary>Lo que la pantalla del instalador lee para decir como fue.</summary>
     public static string ArchivoEstado => Path.Combine(Rutas.CarpetaLogs, "preparacion-estado.txt");
+
+    /// <summary>Avisos que no son fallos (base reemplazada, claves conservadas): la pantalla final los muestra.</summary>
+    public static string ArchivoAviso => Path.Combine(Rutas.CarpetaLogs, "preparacion-aviso.txt");
+
+    private const string ImportacionesDelRuntime =
+        "import django, rest_framework, channels, daphne, twisted, autobahn, zoneinfo, sqlite3; print(django.get_version())";
+
+    // Cuenta las personas guardadas sin abrir Django: solo lee la tabla si existe.
+    private const string ContarPersonas =
+        "import os, sqlite3\n" +
+        "p = os.environ.get('AVACOM_LMS_DB', '')\n" +
+        "if not p or not os.path.exists(p):\n" +
+        "    print(0)\n" +
+        "else:\n" +
+        "    c = sqlite3.connect(p, timeout=5)\n" +
+        "    try:\n" +
+        "        print(c.execute('select count(*) from m01_persona').fetchone()[0])\n" +
+        "    except sqlite3.Error:\n" +
+        "        print(0)\n" +
+        "    finally:\n" +
+        "        c.close()\n";
 
     public static int Ejecutar()
     {
@@ -29,6 +50,12 @@ internal static class Preparar
         try
         {
             Rutas.AsegurarCarpetasDeEstado();
+            File.Delete(ArchivoEstado);
+            File.Delete(ArchivoAviso);
+            var avisos = new List<string>();
+
+            var politica = Manifiesto.PoliticaDeDatos();
+            registro.Escribir($"Politica de datos de esta version: {politica}.");
             var nueva = Configuracion.CrearSiFalta(registro);
 
             if (!File.Exists(Rutas.PythonExe))
@@ -41,15 +68,19 @@ internal static class Preparar
             }
 
             // 1. El runtime distribuido puede importar lo que el backend necesita.
-            var comprobacion = Python(registro,
-                ["-c", "import django, rest_framework, waitress, zoneinfo, sqlite3; print(django.get_version())"]);
+            var comprobacion = Python(registro, ["-c", ImportacionesDelRuntime]);
             if (comprobacion.Codigo != 0)
             {
                 return Terminar(registro, 4, "El runtime del backend no esta completo.");
             }
             registro.Escribir($"Runtime verificado. Django {comprobacion.Salida.Trim()}.");
 
-            // 2. Configuracion valida antes de tocar la base de datos: si algo
+            // 2. Claves de acceso. Una configuracion de la version 2.0.0 solo
+            //    tiene AVACOM_LMS_SECRET: se completa unicamente si la base no
+            //    guarda personas (ver Configuracion.CompletarClavesDeAcceso).
+            AnotarAviso(avisos, Configuracion.CompletarClavesDeAcceso(registro, HayPersonas(registro)));
+
+            // 3. Configuracion valida antes de tocar la base de datos: si algo
             //    esta mal en el .env generado, se ve aqui y no a mitad de migrar.
             var revision = Python(registro, [Rutas.ManagePy, "check"]);
             if (revision.Codigo != 0)
@@ -58,16 +89,37 @@ internal static class Preparar
             }
             registro.Escribir("Revision de configuracion de Django correcta.");
 
-            // 3. Base de datos del expediente. Crea el archivo si no existe y
-            //    aplica solo lo que falte si ya venia de una version anterior.
+            // 4. Base de datos. Crea el archivo si no existe y aplica solo lo que
+            //    falte si ya venia de una version anterior. Si no migra:
+            //      protegidos     -> se detiene; el asistente restaura la copia.
+            //      reemplazables  -> ya hay copia: se retira la base y se crea otra.
             var migracion = Python(registro, [Rutas.ManagePy, "migrate", "--noinput"]);
             if (migracion.Codigo != 0)
             {
-                return Terminar(registro, 6, "No se pudieron aplicar las migraciones de la base de datos.");
-            }
-            registro.Escribir("Base de datos del expediente al dia.");
+                var respaldo = Datos.UltimoRespaldo();
+                if (politica != Manifiesto.Reemplazables || respaldo is null || !File.Exists(Rutas.BaseDeDatos))
+                {
+                    return Terminar(registro, 6,
+                        "No se pudieron aplicar las migraciones de la base de datos" +
+                        (respaldo is null ? "." : "; se conserva la copia de seguridad."));
+                }
 
-            // 4. Archivos estaticos: solo si el backend declara donde recogerlos.
+                registro.Escribir("La base anterior no migra limpia y la politica la declara reemplazable: se crea una nueva.");
+                Datos.VaciarBase(registro);
+                AnotarAviso(avisos, Configuracion.CompletarClavesDeAcceso(registro, false));
+                migracion = Python(registro, [Rutas.ManagePy, "migrate", "--noinput"]);
+                if (migracion.Codigo != 0)
+                {
+                    return Terminar(registro, 6, "No se pudieron aplicar las migraciones ni sobre una base nueva.");
+                }
+                AnotarAviso(avisos,
+                    "La base de datos de la version anterior no era compatible y se empezo con una nueva: " +
+                    "hay que volver a instalar la organizacion, importar el padron y registrar las tabletas. " +
+                    $"La copia de la anterior esta en {respaldo}.");
+            }
+            registro.Escribir("Base de datos al dia.");
+
+            // 5. Archivos estaticos: solo si el backend declara donde recogerlos.
             //    Este backend sirve JSON y no define STATIC_ROOT, asi que no hay
             //    nada que recoger. Se comprueba en vez de suponerlo, porque si
             //    una version futura lo define, la instalacion debe cubrirlo.
@@ -87,7 +139,7 @@ internal static class Preparar
                 registro.Escribir("El backend no publica archivos estaticos: nada que recoger.");
             }
 
-            // 5. Validacion de ejecucion: el puerto que va a usar el servicio.
+            // 6. Validacion de ejecucion: el puerto que va a usar el servicio.
             var puerto = Configuracion.PuertoConfigurado();
             if (!Salud.PuertoLibre(puerto))
             {
@@ -103,9 +155,14 @@ internal static class Preparar
                 }
             }
 
+            if (avisos.Count > 0)
+            {
+                File.WriteAllText(ArchivoAviso, string.Join(Environment.NewLine + Environment.NewLine, avisos), new UTF8Encoding(false));
+            }
+
             var resumen = nueva
                 ? "Backend configurado: configuracion del nodo creada y base de datos inicializada."
-                : "Backend configurado: se conservo la configuracion y el expediente existentes.";
+                : "Backend configurado: se conservo la configuracion y la base de datos existentes.";
             return Terminar(registro, 0, resumen);
         }
         catch (Exception error)
@@ -113,6 +170,20 @@ internal static class Preparar
             registro.Escribir("Fallo inesperado en la preparacion", error);
             return Terminar(registro, 1, "La preparacion del backend no se pudo completar.");
         }
+    }
+
+    private static void AnotarAviso(List<string> avisos, string? texto)
+    {
+        if (!string.IsNullOrWhiteSpace(texto)) avisos.Add(texto);
+    }
+
+    /// <summary>true/false segun la base guarde o no personas; null si no se pudo saber.</summary>
+    private static bool? HayPersonas(Registro registro)
+    {
+        var resultado = Python(registro, ["-c", ContarPersonas]);
+        if (resultado.Codigo != 0 || !long.TryParse(resultado.Salida.Trim(), out var cuantas)) return null;
+        registro.Escribir($"Personas guardadas en la base: {cuantas}.");
+        return cuantas > 0;
     }
 
     private static int Terminar(Registro registro, int codigo, string mensaje)

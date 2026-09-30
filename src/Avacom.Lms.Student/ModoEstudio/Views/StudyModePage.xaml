@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- «Modo estudio · Mis lecciones» (MOD-008 · PAN-124/130). XAML + MVVM: la página sólo pinta; la lógica vive en StudyModeViewModel.
+     Composición: la retícula de hexágonos del menú de fondo, oscurecida (MAUI no desenfoca el fondo en WinUI/Android sin código de
+     plataforma), y encima el modal blanco centrado (min(1050, 88 % del ancho) × ~80 % del alto), con capas de sombra propias porque la
+     sombra de VisualElement en WinUI sale rectangular bajo una esquina redonda. Filas: cabecera · filtros · lista (única que se
+     desplaza) · descargas globales, guardado y espacio. -->
+<ContentPage
+    x:Class="Avacom.Lms.Student.ModoEstudio.Views.StudyModePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui"
+    xmlns:conv="clr-namespace:Avacom.Lms.Student.ModoEstudio.Converters"
+    xmlns:models="clr-namespace:Avacom.Lms.Student.ModoEstudio.Models"
+    xmlns:vm="clr-namespace:Avacom.Lms.Student.ModoEstudio.ViewModels"
+    xmlns:views="clr-namespace:Avacom.Lms.Student.ModoEstudio.Views"
+    x:DataType="vm:StudyModeViewModel"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#F1F1F1"
+    SizeChanged="OnPageSizeChanged">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Styles/StudyModeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <conv:LessonStateToColorConverter x:Key="StateColor" />
+            <conv:SyncStateToColorConverter x:Key="SyncColor" />
+            <conv:DownloadStateToTextConverter x:Key="DownloadText" />
+            <conv:InvertedBoolConverter x:Key="Not" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid x:Name="Raiz">
+
+        <!-- ===================================================================== fondo: el menú, oscurecido -->
+        <GraphicsView InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <GraphicsView.Drawable>
+                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#26000000" StrokeWidth="1.25" />
+            </GraphicsView.Drawable>
+        </GraphicsView>
+        <Image x:Name="Aro" Source="colorhexagon.png" Aspect="AspectFit" Opacity="0.55" InputTransparent="True" HorizontalOptions="Center" VerticalOptions="Center" />
+        <BoxView Color="#8C000000" InputTransparent="False" HorizontalOptions="Fill" VerticalOptions="Fill" />
+
+        <!-- ================================================================================== el modal -->
+        <Grid x:Name="Modal" HorizontalOptions="Center" VerticalOptions="Center">
+            <!-- Sombra suave en tres capas con la misma silueta que la tarjeta. -->
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 34" BackgroundColor="#0B000000" Margin="-10,6,-10,-30" InputTransparent="True" />
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 30" BackgroundColor="#12000000" Margin="-4,4,-4,-16" InputTransparent="True" />
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 27" BackgroundColor="#1A000000" Margin="0,2,0,-5" InputTransparent="True" />
+
+            <Border Style="{StaticResource StudyModalCard}" SemanticProperties.Description="Modo estudio. Mis lecciones.">
+                <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+                    <!-- ============================================================================ cabecera -->
+                    <Grid Grid.Row="0" Padding="30,26,26,6" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <VerticalStackLayout Spacing="5" VerticalOptions="Center">
+                            <FlexLayout Wrap="Wrap" AlignItems="Center" JustifyContent="Start">
+                                <Label Text="{Binding Title}" Style="{StaticResource StudyModalTitle}" SemanticProperties.HeadingLevel="Level1" Margin="0,0,14,0" />
+                                <!-- ● Sin conexión: discreto; no bloquea nada de lo descargado. -->
+                                <Border IsVisible="{Binding IsOffline}" Style="{StaticResource StudyChip}" BackgroundColor="{StaticResource StudyAmberSoft}" Margin="0,0,10,0"
+                                        SemanticProperties.Description="Sin conexión con el aula. Lo descargado sigue disponible.">
+                                    <HorizontalStackLayout Spacing="7">
+                                        <Image Source="estudio_wifi_off.png" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" />
+                                        <Label Text="{Binding OfflineText}" Style="{StaticResource StudyChipLabel}" TextColor="{StaticResource StudyAmberInk}" VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                                <Border IsVisible="{Binding IsDemo}" Style="{StaticResource StudyChip}" BackgroundColor="{StaticResource StudySoft}">
+                                    <Label Text="DEMOSTRACIÓN" Style="{StaticResource StudyChipLabel}" TextColor="{StaticResource StudyMuted}" />
+                                </Border>
+                            </FlexLayout>
+                            <Label Text="{Binding Subtitle}" Style="{StaticResource StudyModalSubtitle}" />
+                            <!-- Quién estudia (D-15): sin código ni contraseña, la persona dijo su nombre; desde aquí puede cambiarlo. -->
+                            <Button IsVisible="{Binding HasCurrentStudent}" Text="{Binding StudyingAsText}" Style="{StaticResource StudyPill}" HorizontalOptions="Start"
+                                    Margin="0,8,0,0" Padding="16,0" HeightRequest="38" FontSize="13.5"
+                                    Command="{Binding ChangeStudentCommand}" AutomationId="estudio-cambiar-estudiante"
+                                    SemanticProperties.Description="Cambiar de estudiante: tocar para elegir otro nombre" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="1" Style="{StaticResource StudyCloseButton}" ImageSource="estudio_close.png"
+                                Command="{Binding CloseStudyModeCommand}" AutomationId="estudio-cerrar"
+                                SemanticProperties.Description="Cerrar el modo estudio" />
+                    </Grid>
+
+                    <!-- ===================================================================== filtros (segmentos) -->
+                    <FlexLayout Grid.Row="1" Wrap="Wrap" Padding="30,14,30,6" Direction="Row" AlignItems="Center" IsVisible="{Binding IsStudyView}">
+                        <Button Text="{Binding PendingLabel}" Style="{StaticResource StudyPill}" Margin="0,0,10,8"
+                                Command="{Binding FilterLessonsCommand}" CommandParameter="Pending" AutomationId="estudio-filtro-pendientes"
+                                SemanticProperties.Description="Ver lecciones pendientes">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsPendingFilter}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource StudyInk}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Text="{Binding DownloadedLabel}" Style="{StaticResource StudyPill}" Margin="0,0,10,8"
+                                Command="{Binding FilterLessonsCommand}" CommandParameter="Downloaded" AutomationId="estudio-filtro-descargadas"
+                                SemanticProperties.Description="Ver lecciones descargadas">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsDownloadedFilter}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource StudyInk}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Text="{Binding CompletedLabel}" Style="{StaticResource StudyPill}" Margin="0,0,10,8"
+                                Command="{Binding FilterLessonsCommand}" CommandParameter="Completed" AutomationId="estudio-filtro-completadas"
+                                SemanticProperties.Description="Ver lecciones completadas">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsCompletedFilter}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource StudyInk}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </FlexLayout>
+
+                    <!-- Aviso amable y pasajero (nunca un error técnico). -->
+                    <Border Grid.Row="2" IsVisible="{Binding HasNotice}" Style="{StaticResource StudyChip}" BackgroundColor="{StaticResource StudyBlueSoft}"
+                            HorizontalOptions="Start" Margin="30,2,30,6" Padding="14,8">
+                        <Label Text="{Binding Notice}" Style="{StaticResource StudyChipLabel}" TextColor="{StaticResource StudyBlueInk}" FontFamily="InterMedium" FontSize="13" LineBreakMode="WordWrap" />
+                    </Border>
+
+                    <!-- ======================================================================= ¿quién eres? (D-15)
+                         «Modo estudio» no pide código: las lecciones son de un grupo, así que aquí cada quien elige su propio nombre. En un LMS
+                         offline nada lo verifica; el profesor verá el avance con el nombre que se elija. -->
+                    <ScrollView Grid.Row="1" Grid.RowSpan="3" IsVisible="{Binding IsChoosingStudent}" VerticalScrollBarVisibility="Default" AutomationId="estudio-quien">
+                        <VerticalStackLayout Padding="30,14,30,26" Spacing="22">
+                            <Label IsVisible="{Binding IsLoadingRoster}" Text="Buscando a tus compañeros…" Style="{StaticResource StudyBody}" />
+
+                            <Border IsVisible="{Binding HasRosterNotice}" Style="{StaticResource StudyChip}" BackgroundColor="{StaticResource StudyAmberSoft}"
+                                    HorizontalOptions="Start" Padding="16,10">
+                                <Label Text="{Binding RosterNotice}" Style="{StaticResource StudyChipLabel}" TextColor="{StaticResource StudyAmberInk}"
+                                       LineBreakMode="WordWrap" FontSize="14" />
+                            </Border>
+
+                            <!-- Seguir como la última persona que estudió aquí (o a quien está asignada la tableta): un solo toque. -->
+                            <Border IsVisible="{Binding HasSuggestion}" Style="{StaticResource StudyInset}" BackgroundColor="{StaticResource StudyBlueSoft}" Padding="22,18">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+                                    <VerticalStackLayout Spacing="3" VerticalOptions="Center">
+                                        <Label Text="{Binding SuggestionEyebrow}" Style="{StaticResource StudyEyebrow}" TextColor="{StaticResource StudyBlueInk}" />
+                                        <Label Text="{Binding SuggestionName}" FontFamily="InterSemiBold" FontSize="21" TextColor="{StaticResource StudyInk}" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1" Text="{Binding SuggestionButtonText}" Style="{StaticResource StudyPrimaryButton}" VerticalOptions="Center"
+                                            Command="{Binding ContinueAsSuggestedCommand}" AutomationId="estudio-continuar-sugerido" />
+                                </Grid>
+                            </Border>
+
+                            <VerticalStackLayout IsVisible="{Binding ShowRosterGroups}" Spacing="10">
+                                <Label Text="TU GRUPO" Style="{StaticResource StudyEyebrow}" />
+                                <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center" BindableLayout.ItemsSource="{Binding RosterGroups}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:StudyRosterGroupItem">
+                                            <Button Text="{Binding DisplayLabel}" Style="{StaticResource StudyPill}" Margin="0,0,10,10"
+                                                    Command="{Binding SelectCommand}" AutomationId="{Binding AutomationName}">
+                                                <Button.Triggers>
+                                                    <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="{StaticResource StudyInk}" />
+                                                        <Setter Property="TextColor" Value="White" />
+                                                    </DataTrigger>
+                                                </Button.Triggers>
+                                            </Button>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout IsVisible="{Binding HasRosterStudents}" Spacing="10">
+                                <Label Text="ELIGE TU NOMBRE" Style="{StaticResource StudyEyebrow}" />
+                                <Label Text="Tu profesor verá tu avance con el nombre que elijas." Style="{StaticResource StudyMeta}" />
+                                <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Center" BindableLayout.ItemsSource="{Binding RosterStudents}">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:StudyStudentItem">
+                                            <Button Text="{Binding DisplayName}" Style="{StaticResource StudyPill}" Margin="0,0,10,10" HeightRequest="52" Padding="22,0" FontSize="16"
+                                                    Command="{Binding SelectCommand}" AutomationId="{Binding AutomationName}" SemanticProperties.Description="{Binding Description}">
+                                                <Button.Triggers>
+                                                    <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="BackgroundColor" Value="{StaticResource StudyInk}" />
+                                                        <Setter Property="TextColor" Value="White" />
+                                                    </DataTrigger>
+                                                </Button.Triggers>
+                                            </Button>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </FlexLayout>
+                            </VerticalStackLayout>
+
+                            <Button IsVisible="{Binding HasRosterStudents}" Text="{Binding ConfirmStudentText}" IsEnabled="{Binding CanConfirmStudent}" HorizontalOptions="Start"
+                                    Style="{StaticResource StudyPrimaryButton}" Command="{Binding ConfirmStudentCommand}" AutomationId="estudio-confirmar-estudiante" />
+                            <Button IsVisible="{Binding ShowRetryRoster}" Text="Reintentar" HorizontalOptions="Start" Style="{StaticResource StudyGhostButton}"
+                                    Command="{Binding RetryRosterCommand}" AutomationId="estudio-reintentar-nombres" />
+                        </VerticalStackLayout>
+                    </ScrollView>
+
+                    <!-- ================================================== lista (lo único que se desplaza) -->
+                    <Grid Grid.Row="3" IsVisible="{Binding IsStudyView}">
+                        <CollectionView x:Name="Lista" ItemsSource="{Binding VisibleLessons}" SelectionMode="None" IsVisible="{Binding ShowList}"
+                                        VerticalScrollBarVisibility="Default" Margin="0" AutomationId="estudio-lista">
+                            <CollectionView.Header><BoxView HeightRequest="8" Color="Transparent" /></CollectionView.Header>
+                            <CollectionView.Footer><BoxView HeightRequest="14" Color="Transparent" /></CollectionView.Footer>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:StudyLessonItem">
+                                    <Border Style="{StaticResource StudyLessonCard}" Margin="30,0,30,14"
+                                            SemanticProperties.Description="{Binding CardDescription}">
+                                        <Border.Behaviors><views:FadeInBehavior /></Border.Behaviors>
+                                        <VerticalStackLayout Spacing="13">
+
+                                            <!-- eyebrow y estado -->
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                <Label Text="{Binding EyebrowText}" Style="{StaticResource StudyEyebrow}" VerticalOptions="Center" />
+                                                <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                                                    <Border IsVisible="{Binding HasDueChip}" Style="{StaticResource StudyChip}" BackgroundColor="#FFEFDC">
+                                                        <Label Text="{Binding DueChipText}" Style="{StaticResource StudyChipLabel}" TextColor="#8A4B00" />
+                                                    </Border>
+                                                    <Border Style="{StaticResource StudyChip}" BackgroundColor="{Binding State, Converter={StaticResource StateColor}, ConverterParameter=bg}">
+                                                        <Label Text="{Binding StateChipLabel}" Style="{StaticResource StudyChipLabel}"
+                                                               TextColor="{Binding State, Converter={StaticResource StateColor}, ConverterParameter=fg}" />
+                                                    </Border>
+                                                </HorizontalStackLayout>
+                                            </Grid>
+
+                                            <!-- título y dónde se quedó -->
+                                            <VerticalStackLayout Spacing="4">
+                                                <Label Text="{Binding Title}" Style="{StaticResource StudyCardTitle}" SemanticProperties.HeadingLevel="Level2" />
+                                                <Label IsVisible="{Binding HasSubtitle}" Text="{Binding SubtitleText}" Style="{StaticResource StudyBody}" />
+                                            </VerticalStackLayout>
+
+                                            <!-- progreso de la lección (bloques obligatorios atendidos; no es una nota) -->
+                                            <Grid IsVisible="{Binding ShowProgress}" ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                                                <views:StudyProgressBar Progress="{Binding Progress}" FillColor="#019D60" />
+                                                <Label Grid.Column="1" Text="{Binding ProgressText}" Style="{StaticResource StudyPercent}" />
+                                            </Grid>
+
+                                            <!-- fecha, guardado y acción principal -->
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                                <VerticalStackLayout Spacing="7" VerticalOptions="Center">
+                                                    <HorizontalStackLayout IsVisible="{Binding HasDue}" Spacing="8">
+                                                        <Image Source="estudio_clock.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                                                        <Label Text="{Binding DueText}" Style="{StaticResource StudyMeta}" />
+                                                    </HorizontalStackLayout>
+                                                    <HorizontalStackLayout IsVisible="{Binding IsCompleted}" Spacing="8">
+                                                        <Image Source="estudio_check_green.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                                                        <Label Text="Lección completada" Style="{StaticResource StudyMeta}" TextColor="{StaticResource StudyGreenInk}" />
+                                                    </HorizontalStackLayout>
+                                                    <HorizontalStackLayout IsVisible="{Binding IsPendingSync}" Spacing="8">
+                                                        <Image Source="estudio_cloud_up_amber.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                                                        <Label Text="Pendiente de sincronización" Style="{StaticResource StudyMeta}" TextColor="{StaticResource StudyAmberInk}" />
+                                                    </HorizontalStackLayout>
+                                                    <Label IsVisible="{Binding HasOfflineHint}" Text="{Binding OfflineHint}" Style="{StaticResource StudyMeta}" FontSize="12.5" />
+                                                </VerticalStackLayout>
+                                                <Button Grid.Column="1" Text="{Binding PrimaryCtaText}" ImageSource="estudio_arrow_white.png" Style="{StaticResource StudyPrimaryButton}"
+                                                        Command="{Binding OpenCommand}" IsEnabled="{Binding CanOpen}" HorizontalOptions="End"
+                                                        SemanticProperties.Description="{Binding PrimaryCtaText}" />
+                                            </Grid>
+
+                                            <BoxView Style="{StaticResource StudyDivider}" IsVisible="{Binding IsDownloadNone}" />
+
+                                            <!-- ============================================== descarga: un bloque por estado -->
+                                            <!-- No descargada: [↓ Descargar] · 84 MB -->
+                                            <Grid IsVisible="{Binding IsDownloadNone}" ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                                                <Button Text="Descargar" ImageSource="estudio_download.png" Style="{StaticResource StudySecondaryButton}"
+                                                        Command="{Binding DownloadCommand}" IsEnabled="{Binding CanStartDownload}"
+                                                        SemanticProperties.Description="{Binding DownloadDescription}" />
+                                                <Label Grid.Column="1" Text="{Binding DownloadSizeText}" Style="{StaticResource StudyMeta}" />
+                                            </Grid>
+
+                                            <!-- Solicitada -->
+                                            <HorizontalStackLayout IsVisible="{Binding IsDownloadRequested}" Spacing="10">
+                                                <ActivityIndicator IsRunning="{Binding IsDownloadRequested}" WidthRequest="18" HeightRequest="18" Color="#02739E" VerticalOptions="Center" />
+                                                <Label Text="{Binding DownloadStatusText}" Style="{StaticResource StudyMeta}" />
+                                            </HorizontalStackLayout>
+
+                                            <!-- Descargando: barra determinada, porcentaje, bytes y [Pausar] -->
+                                            <VerticalStackLayout IsVisible="{Binding IsDownloading}" Spacing="9" SemanticProperties.Description="{Binding DownloadDescription}">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+                                                    <Image Source="estudio_download_blue.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                                                    <Label Grid.Column="1" Text="{Binding DownloadStatusText}" Style="{StaticResource StudyMeta}" TextColor="{StaticResource StudyBlueInk}" />
+                                                    <Label Grid.Column="2" Text="{Binding DownloadPercentText}" Style="{StaticResource StudyPercent}" />
+                                                </Grid>
+                                                <views:StudyProgressBar Progress="{Binding DownloadProgress}" FillColor="#01A4E1" />
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                                                    <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                                        <Label Text="{Binding DownloadedOfTotalText}" Style="{StaticResource StudyMeta}" />
+                                                        <Label IsVisible="{Binding HasDownloadRemaining}" Text="{Binding DownloadRemainingText}" Style="{StaticResource StudyMeta}" FontSize="12.5" />
+                                                    </VerticalStackLayout>
+                                                    <Button Grid.Column="1" Text="Pausar" ImageSource="estudio_pause.png" Style="{StaticResource StudySecondaryButton}"
+                                                            Command="{Binding PauseCommand}" SemanticProperties.Description="Pausar la descarga" />
+                                                </Grid>
+                                            </VerticalStackLayout>
+
+                                            <!-- Pausada: «Descarga pausada · 64 %» + [Continuar descarga] -->
+                                            <Grid IsVisible="{Binding IsDownloadPaused}" ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                                                <VerticalStackLayout Spacing="8" VerticalOptions="Center">
+                                                    <Label Text="{Binding DownloadStatusText}" Style="{StaticResource StudyMeta}" />
+                                                    <views:StudyProgressBar Progress="{Binding DownloadProgress}" FillColor="#8E8E93" />
+                                                </VerticalStackLayout>
+                                                <Button Grid.Column="1" Text="Continuar descarga" ImageSource="estudio_play.png" Style="{StaticResource StudySecondaryButton}"
+                                                        Command="{Binding ResumeDownloadCommand}" IsEnabled="{Binding CanStartDownload}" />
+                                            </Grid>
+
+                                            <!-- Disponible: ✓ Disponible sin conexión + [⋯] -->
+                                            <Grid IsVisible="{Binding IsDownloadAvailable}" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" SemanticProperties.Description="{Binding DownloadDescription}">
+                                                <Image Source="estudio_check_green.png" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                                                <Label Grid.Column="1" Text="{Binding DownloadState, Converter={StaticResource DownloadText}}" Style="{StaticResource StudyMeta}"
+                                                       TextColor="{StaticResource StudyGreenInk}" FontFamily="InterSemiBold" />
+                                                <Button Grid.Column="2" ImageSource="estudio_more.png" Style="{StaticResource StudyIconButton}"
+                                                        Command="{Binding DownloadMenuCommand}" SemanticProperties.Description="Más opciones de la descarga" />
+                                            </Grid>
+
+                                            <!-- Vencida: «El contenido descargado venció.» + [Actualizar descarga] -->
+                                            <Grid IsVisible="{Binding IsDownloadExpired}" ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                                                <Label Text="{Binding DownloadState, Converter={StaticResource DownloadText}}" Style="{StaticResource StudyMeta}" VerticalOptions="Center" />
+                                                <Button Grid.Column="1" Text="Actualizar descarga" ImageSource="estudio_download.png" Style="{StaticResource StudySecondaryButton}"
+                                                        Command="{Binding DownloadCommand}" IsEnabled="{Binding CanStartDownload}" />
+                                            </Grid>
+
+                                            <!-- Denegada: sólo el texto, sin botón de descargar -->
+                                            <HorizontalStackLayout IsVisible="{Binding IsDownloadDenied}" Spacing="10">
+                                                <Image Source="estudio_lock.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Start" Margin="0,1,0,0" />
+                                                <Label Text="{Binding DownloadStatusText}" Style="{StaticResource StudyMeta}" MaximumWidthRequest="560" />
+                                            </HorizontalStackLayout>
+
+                                            <!-- ====================================================================== PRÁCTICA -->
+                                            <Border IsVisible="{Binding HasPractice}" Style="{StaticResource StudyInset}" Stroke="{StaticResource StudyBlueBorderBrush}"
+                                                    BackgroundColor="#F6FBFD" SemanticProperties.Description="{Binding PracticeDescription}">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                                    <Border WidthRequest="40" HeightRequest="40" StrokeThickness="0" StrokeShape="RoundRectangle 20" BackgroundColor="{StaticResource StudyBlueSoft}"
+                                                            VerticalOptions="Start">
+                                                        <Image Source="estudio_sparkle_blue.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    </Border>
+                                                    <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                                        <Label Text="PRÁCTICA" Style="{StaticResource StudyEyebrow}" TextColor="{StaticResource StudyBlueInk}" />
+                                                        <Label Text="{Binding PracticeTitle}" FontFamily="InterSemiBold" FontSize="16" TextColor="{StaticResource StudyInk}" />
+                                                        <Label Text="{Binding PracticeCaption}" Style="{StaticResource StudyMeta}" />
+                                                        <Label Text="{Binding PracticeBestText}" Style="{StaticResource StudyMeta}" FontSize="12.5" />
+                                                    </VerticalStackLayout>
+                                                    <Button Grid.Column="2" Text="{Binding PracticeCtaText}" ImageSource="estudio_arrow_ink.png" Style="{StaticResource StudyPracticeButton}"
+                                                            Command="{Binding PracticeCommand}" IsEnabled="{Binding CanUsePractice}" VerticalOptions="Center" />
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- ============================== EVALUACIÓN formal: aparte, sin botón de practicar -->
+                                            <Border IsVisible="{Binding HasExam}" Style="{StaticResource StudyInset}" BackgroundColor="{StaticResource StudySoft}" Stroke="{StaticResource StudyTransparentBrush}"
+                                                    SemanticProperties.Description="Evaluación formal. Sólo información.">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                                    <Border WidthRequest="40" HeightRequest="40" StrokeThickness="0" StrokeShape="RoundRectangle 20" BackgroundColor="White" VerticalOptions="Start">
+                                                        <Image Source="estudio_exam.png" WidthRequest="22" HeightRequest="22" HorizontalOptions="Center" VerticalOptions="Center" />
+                                                    </Border>
+                                                    <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                                        <Label Text="EVALUACIÓN" Style="{StaticResource StudyEyebrow}" />
+                                                        <Label Text="{Binding ExamTitle}" FontFamily="InterSemiBold" FontSize="16" TextColor="{StaticResource StudyInk}" />
+                                                        <Label Text="{Binding ExamAvailability}" Style="{StaticResource StudyMeta}" />
+                                                    </VerticalStackLayout>
+                                                    <Button Grid.Column="2" Text="Ver información" Style="{StaticResource StudyGhostButton}" BackgroundColor="White"
+                                                            Command="{Binding ExamInfoCommand}" VerticalOptions="Center" />
+                                                </Grid>
+                                            </Border>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <!-- Esqueleto de carga: tres filas con la forma de una tarjeta (no un spinner gigante). -->
+                        <ScrollView x:Name="Esqueleto" IsVisible="{Binding IsLoading}" InputTransparent="True" VerticalScrollBarVisibility="Never">
+                            <VerticalStackLayout Padding="30,8,30,14" Spacing="14" BindableLayout.ItemsSource="{Binding SkeletonRows}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource StudyLessonCard}">
+                                            <VerticalStackLayout Spacing="14">
+                                                <Border HeightRequest="11" WidthRequest="200" HorizontalOptions="Start" BackgroundColor="#EDEDF0" StrokeThickness="0" StrokeShape="RoundRectangle 6" />
+                                                <Border HeightRequest="20" WidthRequest="420" HorizontalOptions="Start" BackgroundColor="#E9E9EC" StrokeThickness="0" StrokeShape="RoundRectangle 8" />
+                                                <Border HeightRequest="13" WidthRequest="300" HorizontalOptions="Start" BackgroundColor="#EDEDF0" StrokeThickness="0" StrokeShape="RoundRectangle 6" />
+                                                <Border HeightRequest="8" HorizontalOptions="Fill" BackgroundColor="#EDEDF0" StrokeThickness="0" StrokeShape="RoundRectangle 4" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </ScrollView>
+
+                        <!-- Estado vacío: amable, con una salida; nunca una pantalla en blanco. -->
+                        <VerticalStackLayout IsVisible="{Binding ShowEmpty}" Spacing="10" HorizontalOptions="Center" VerticalOptions="Center" Padding="30,20">
+                            <Image Source="estudio_book_check.png" WidthRequest="96" HeightRequest="96" HorizontalOptions="Center" />
+                            <Label Text="{Binding EmptyTitle}" FontFamily="InterSemiBold" FontSize="24" TextColor="{StaticResource StudyInk}" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                            <Label Text="{Binding EmptyMessage}" Style="{StaticResource StudyBody}" FontSize="15" HorizontalOptions="Center" HorizontalTextAlignment="Center" MaximumWidthRequest="420" />
+                            <Button IsVisible="{Binding ShowEmptyAction}" Text="Ver lecciones completadas" Style="{StaticResource StudyGhostButton}" HorizontalOptions="Center" Margin="0,8,0,0"
+                                    Command="{Binding GoToCompletedCommand}" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <!-- ================================ pie: descargas activas, guardado y espacio -->
+                    <VerticalStackLayout Grid.Row="4" Spacing="10" Padding="30,12,30,16" BackgroundColor="{StaticResource StudySurface}" IsVisible="{Binding IsStudyView}">
+                        <!-- Descargas activas: discreta, siempre a la vista, no bloquea nada. -->
+                        <Border IsVisible="{Binding HasActiveDownloads}" Style="{StaticResource StudyInset}" BackgroundColor="White" Padding="16,12"
+                                SemanticProperties.Description="{Binding ActiveDownloadsText}">
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9">
+                                    <Image Source="estudio_download_blue.png" WidthRequest="18" HeightRequest="18" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding ActiveDownloadsText}" Style="{StaticResource StudyMeta}" TextColor="{StaticResource StudyInk}" />
+                                    <Label Grid.Column="2" Text="{Binding GlobalDownloadPercentText}" Style="{StaticResource StudyPercent}" />
+                                </Grid>
+                                <views:StudyProgressBar Progress="{Binding GlobalDownloadProgress}" FillColor="#01A4E1" BarHeight="6" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <!-- Guardado · pendiente · sincronizando  +  espacio -->
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                            <HorizontalStackLayout Spacing="8" VerticalOptions="Center" SemanticProperties.Description="{Binding SyncText}">
+                                <Image Source="{Binding SyncIcon}" WidthRequest="20" HeightRequest="20" VerticalOptions="Center" />
+                                <Label Text="{Binding SyncText}" Style="{StaticResource StudyMeta}" TextColor="{Binding SyncState, Converter={StaticResource SyncColor}}" FontFamily="InterSemiBold" />
+                            </HorizontalStackLayout>
+                            <HorizontalStackLayout Grid.Column="1" Spacing="8" HorizontalOptions="End" VerticalOptions="Center">
+                                <Image Source="estudio_storage.png" WidthRequest="16" HeightRequest="16" VerticalOptions="Center" />
+                                <Label Text="{Binding StorageText}" Style="{StaticResource StudyMeta}" FontSize="12.5" />
+                            </HorizontalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

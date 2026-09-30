@@ -1,7 +1,7 @@
 ﻿// Logica del asistente de AVACOM OPS Master.
 //
 // Vive en su propio archivo para que build\PruebaAsistente.iss pueda
-// ejecutarla tal cual, sin instalar nada, y comprobar que las nueve
+// ejecutarla tal cual, sin instalar nada, y comprobar que las diez
 // comprobaciones del equipo funcionan de verdad en un Windows real.
 //
 // Se incluye desde la seccion [Code]; aqui no va ninguna cabecera de seccion.
@@ -9,19 +9,46 @@
 
 const
   PuertoApi = {#PuertoBackend};
+  NumeroChecks = 10;
   ClaveDesinstalar =
     'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{B6D1F0A4-3C57-4E2B-9A18-7F5C2E8D4A31}_is1';
 
 var
   PaginaValidacion: TWizardPage;
-  EtiquetaCheck: array[0..8] of TNewStaticText;
+  PaginaDatos: TInputOptionWizardPage;
+  EtiquetaCheck: array[0..9] of TNewStaticText;
   ResumenValidacion: TNewStaticText;
   BotonRevalidar: TNewButton;
   BotonRutaRecomendada: TNewButton;
   ValidacionSuperada: Boolean;
   AvisoConfiguracion: String;
+  AvisoInformativo: String;
+  { La actualizacion aparta el programa anterior a {app}\Anterior mientras la
+    nueva se copia y se valida; si algo falla se vuelve a poner en su sitio. }
+  VersionAnterior: String;
+  HayProgramaApartado: Boolean;
+  SeHizoRespaldo: Boolean;
+  ActualizacionRevertida: Boolean;
 
 { ------------------------------------------------------------------ Utiles }
+
+function PoliticaReemplazable: Boolean;
+begin
+  { La politica de datos es un dato de cada version (ver manifiesto.json), no
+    logica cableada: Build-Installer.ps1 -PoliticaDatos la fija al compilar. }
+  Result := CompareText('{#PoliticaDatos}', 'reemplazables') = 0;
+end;
+
+function CarpetaDeEstado: String;
+begin
+  Result := ExpandConstant('{commonappdata}\AVACOM\{#NombreCorto}');
+end;
+
+function HayDatosPrevios: Boolean;
+begin
+  Result := FileExists(CarpetaDeEstado + '\Data\ops-master.sqlite3')
+         or FileExists(CarpetaDeEstado + '\Config\backend.env');
+end;
 
 function EjecutarYLeer(const Orden: String): String;
 var
@@ -120,17 +147,53 @@ begin
                  '', SW_HIDE, ewWaitUntilTerminated, Codigo) and (Codigo = 0);
 end;
 
-function BibliotecaPresente: Boolean;
+{ AVACOM Contenido (la biblioteca de cursos) publica su nota de enlace en
+  %ProgramData%\AVACOM\content\link.json. La comprobacion es informativa: sin
+  biblioteca el producto instala y arranca, pero el aula no tendra cursos. }
+function ContenidoPresente: Boolean;
 begin
-  Result := FileExists(ExpandConstant('{commonappdata}\AVACOM\contenido\enlace.json'))
-         or DirExists(ExpandConstant('{autopf}\AVACOM\Biblioteca'))
-         or ServicioRegistrado('AVACOMBiblioteca');
+  Result := FileExists(ExpandConstant('{commonappdata}\AVACOM\content\link.json'))
+         or DirExists(ExpandConstant('{autopf}\AVACOM\Contenido'));
 end;
 
 function VersionInstalada: String;
 begin
   if not RegQueryStringValue(HKEY_LOCAL_MACHINE, ClaveDesinstalar, 'DisplayVersion', Result) then
     Result := '';
+end;
+
+{ Cuantas de las redes conectadas Windows las clasifica como publicas. La
+  regla de firewall de la API solo abre los perfiles privado y de dominio: en
+  una red publica las tabletas no llegarian. -1 si no se pudo saber. }
+function RedesPublicasConectadas: Integer;
+var
+  Salida: String;
+begin
+  Result := -1;
+  Salida := Trim(EjecutarYLeer(
+    'powershell -NoProfile -NonInteractive -Command "@(Get-NetConnectionProfile | ' +
+    'Where-Object { $_.NetworkCategory -eq ''Public'' }).Count"'));
+  if Salida <> '' then
+    Result := StrToIntDef(Salida, -1);
+end;
+
+{ Cierra la aplicacion del profesor, y solo esa: el asistente no toca procesos
+  ajenos. Primero se le pide que cierre; si no lo hace, se fuerza. }
+procedure CerrarAplicacionPropia;
+var
+  Codigo, Intento: Integer;
+begin
+  if not ProcesoActivo('{#EjecutableApp}') then Exit;
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/IM {#EjecutableApp}', '', SW_HIDE,
+       ewWaitUntilTerminated, Codigo);
+  for Intento := 1 to 8 do
+  begin
+    if not ProcesoActivo('{#EjecutableApp}') then Exit;
+    Sleep(500);
+  end;
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM {#EjecutableApp}', '', SW_HIDE,
+       ewWaitUntilTerminated, Codigo);
+  Sleep(1000);
 end;
 
 { ----------------------------------------------- Asistente para pantalla tactil }
@@ -228,10 +291,10 @@ var
   Libres, Total: Int64;
   Bloqueo: String;
   Anterior, Ocupante: String;
-  RequeridoMb: Integer;
+  RequeridoMb, Publicas: Integer;
 begin
   Bloqueo := '';
-  RequeridoMb := 1200;
+  RequeridoMb := 1500;
 
   { 1. Version de Windows }
   GetWindowsVersionEx(Version);
@@ -257,7 +320,8 @@ begin
     if Bloqueo = '' then Bloqueo := 'La arquitectura de este equipo no es compatible.';
   end;
 
-  { 3. Espacio en disco }
+  { 3. Espacio en disco. Una actualizacion necesita sitio para la version
+    nueva y para la anterior apartada, por si hay que volver atras. }
   if GetSpaceOnDisk64(ExtractFileDrive(WizardDirValue), Libres, Total) then
   begin
     if Libres >= Int64(RequeridoMb) * 1048576 then
@@ -281,13 +345,13 @@ begin
     if Bloqueo = '' then Bloqueo := 'Vuelve a abrir la instalación como administrador.';
   end;
 
-  { 5. Puerto de la API local }
+  { 5. Puerto de la API local (HTTP y tiempo real usan el mismo) }
   Ocupante := QuienEscuchaEnPuerto(PuertoApi);
   if Ocupante = '' then
     PonerCheck(4, True, True, 'Puerto ' + IntToStr(PuertoApi) + ' libre para la API local')
   else if RespondeNuestroBackend(PuertoApi) then
     PonerCheck(4, True, False, 'Puerto ' + IntToStr(PuertoApi) +
-                               ' en uso por un backend de AVACOM OPS ya instalado; se reemplazará')
+                               ' en uso por un backend de AVACOM OPS ya instalado; se detendrá y se reemplazará')
   else
   begin
     PonerCheck(4, False, True, 'Puerto ' + IntToStr(PuertoApi) + ' ocupado por otro programa');
@@ -302,31 +366,39 @@ begin
   Anterior := VersionInstalada;
   if Anterior = '' then
     PonerCheck(5, True, True, 'Primera instalación de AVACOM OPS Master en este equipo')
+  else if PoliticaReemplazable then
+    PonerCheck(5, True, False, 'Ya está instalada la versión ' + Anterior +
+                               '; se actualizará y se hará una copia de seguridad de los datos')
   else
     PonerCheck(5, True, False, 'Ya está instalada la versión ' + Anterior +
-                               '; se actualizará conservando el expediente');
+                               '; se actualizará. Los datos están protegidos y se conservan siempre');
 
-  { 7. Procesos activos }
+  { 7. Aplicacion abierta: ya no bloquea; el asistente cierra solo la propia }
   if ProcesoActivo('{#EjecutableApp}') then
-  begin
-    PonerCheck(6, False, True, 'AVACOM OPS Master está abierto en este equipo');
-    if Bloqueo = '' then
-      Bloqueo := 'Cierra AVACOM OPS Master y toca «Volver a comprobar».';
-  end
+    PonerCheck(6, True, False, 'AVACOM OPS Master está abierto; el asistente lo cerrará al instalar')
   else
     PonerCheck(6, True, True, 'Ninguna ventana de AVACOM OPS Master está abierta');
 
   { 8. Dependencias criticas: van dentro del paquete, no se instalan aparte }
   if FileExists(ExpandConstant('{sys}\sc.exe')) and FileExists(ExpandConstant('{sys}\netsh.exe')) then
-    PonerCheck(7, True, True, 'Dependencias del backend incluidas en el paquete (no requiere internet)')
+    PonerCheck(7, True, True, 'Python, .NET y la API van dentro del instalador (no requiere internet)')
   else
     PonerCheck(7, False, False, 'No se encontraron herramientas del sistema para registrar el servicio');
 
-  { 9. Convivencia con AVACOM Biblioteca }
-  if BibliotecaPresente then
-    PonerCheck(8, True, True, 'AVACOM Biblioteca detectada: se instalará junto a ella sin modificarla')
+  { 9. Convivencia con AVACOM Contenido }
+  if ContenidoPresente then
+    PonerCheck(8, True, True, 'AVACOM Contenido detectado: se instalará junto a él sin modificarlo')
   else
-    PonerCheck(8, True, False, 'AVACOM Biblioteca no está en este equipo; los cursos no se verán hasta instalarla');
+    PonerCheck(8, True, False, 'AVACOM Contenido no está en este equipo; el aula no tendrá cursos hasta instalarlo');
+
+  { 10. Red del aula. Informativa: la regla de firewall abre solo redes privadas }
+  Publicas := RedesPublicasConectadas;
+  if Publicas = 0 then
+    PonerCheck(9, True, True, 'Las redes conectadas no son públicas: las tabletas podrán llegar')
+  else if Publicas > 0 then
+    PonerCheck(9, True, False, 'Windows clasifica una red conectada como pública; si las tabletas no llegan, cámbiala a privada')
+  else
+    PonerCheck(9, True, False, 'No se pudo comprobar si la red del aula es privada');
 
   ValidacionSuperada := (Bloqueo = '');
   if ValidacionSuperada then
@@ -367,8 +439,8 @@ begin
   Titulo.Font.Size := 10;
   Titulo.Caption := 'Resultado de la comprobación:';
 
-  y := ScaleY(30);
-  for i := 0 to 8 do
+  y := ScaleY(26);
+  for i := 0 to NumeroChecks - 1 do
   begin
     EtiquetaCheck[i] := TNewStaticText.Create(PaginaValidacion);
     EtiquetaCheck[i].Parent := PaginaValidacion.Surface;
@@ -376,19 +448,19 @@ begin
     EtiquetaCheck[i].Top := y;
     EtiquetaCheck[i].Width := PaginaValidacion.SurfaceWidth;
     EtiquetaCheck[i].AutoSize := False;
-    EtiquetaCheck[i].Height := ScaleY(24);
+    EtiquetaCheck[i].Height := ScaleY(22);
     EtiquetaCheck[i].Font.Size := 10;
     EtiquetaCheck[i].Caption := '';
-    y := y + ScaleY(26);
+    y := y + ScaleY(24);
   end;
 
   ResumenValidacion := TNewStaticText.Create(PaginaValidacion);
   ResumenValidacion.Parent := PaginaValidacion.Surface;
   ResumenValidacion.Left := 0;
-  ResumenValidacion.Top := y + ScaleY(14);
+  ResumenValidacion.Top := y + ScaleY(10);
   ResumenValidacion.Width := PaginaValidacion.SurfaceWidth;
   ResumenValidacion.AutoSize := False;
-  ResumenValidacion.Height := ScaleY(86);
+  ResumenValidacion.Height := ScaleY(76);
   ResumenValidacion.WordWrap := True;
   ResumenValidacion.Font.Size := 10;
   ResumenValidacion.Font.Style := [fsBold];
@@ -397,7 +469,7 @@ begin
   BotonRevalidar := TNewButton.Create(PaginaValidacion);
   BotonRevalidar.Parent := PaginaValidacion.Surface;
   BotonRevalidar.Left := 0;
-  BotonRevalidar.Top := ResumenValidacion.Top + ResumenValidacion.Height + ScaleY(8);
+  BotonRevalidar.Top := ResumenValidacion.Top + ResumenValidacion.Height + ScaleY(6);
   BotonRevalidar.Width := ScaleX(240);
   BotonRevalidar.Height := ScaleY(44);
   BotonRevalidar.Font.Size := 11;
@@ -405,7 +477,31 @@ begin
   BotonRevalidar.OnClick := @RevalidarClick;
 end;
 
-{ ------------------------------------------------------------ Ciclo de vida }
+{ ------------------------------------------- Pantalla «Datos del aula» (tactil) }
+
+{ Solo aparece si ya hay datos de una instalacion anterior Y la politica de esta
+  version deja elegir (datos reemplazables). Cuando llegue el modulo de progreso
+  y calificaciones y la politica pase a protegidos, la pantalla desaparece sola
+  y los datos se conservan siempre. Son dos opciones grandes, sin escribir. }
+procedure CrearPaginaDatos;
+begin
+  PaginaDatos := CreateInputOptionPage(PaginaValidacion.ID,
+    'Datos del aula',
+    'Este equipo ya guarda la organización, las personas, las tabletas y las clases del aula.',
+    'Elige qué hacer con esos datos. Se hace una copia de seguridad antes de cualquier cambio.',
+    True, False);
+  PaginaDatos.Add('Conservar los datos (recomendado)');
+  PaginaDatos.Add('Empezar de cero: hay que volver a crear la organización, importar el padrón y registrar las tabletas');
+  PaginaDatos.SelectedValueIndex := 0;
+  PaginaDatos.CheckListBox.Font.Size := 12;
+  PaginaDatos.CheckListBox.MinItemHeight := ScaleY(64);
+end;
+
+function EligioEmpezarDeCero: Boolean;
+begin
+  Result := (PaginaDatos <> nil) and PoliticaReemplazable and HayDatosPrevios
+            and (PaginaDatos.SelectedValueIndex = 1);
+end;
 
 { ------------------------------------------------------------- Diagnostico }
 
@@ -414,7 +510,7 @@ end;
 
     * que soporte pueda saber si un equipo del aula esta listo sin tocarlo;
     * que la compilacion pueda probar esta logica en un Windows de verdad
-      (installeruild\PruebaAsistente.iss).
+      (installer\build\PruebaAsistente.iss).
 
   Combinalo con /VERYSILENT para que no aparezca ninguna ventana. }
 function RutaVolcado: String;
@@ -441,14 +537,20 @@ var
 begin
   EjecutarValidaciones;
 
-  SetArrayLength(Lineas, 12);
+  SetArrayLength(Lineas, NumeroChecks + 6);
   Lineas[0] := 'Diagnostico de AVACOM OPS Master ' + '{#VersionProducto}';
   Lineas[1] := 'Carpeta prevista: ' + WizardDirValue;
-  for i := 0 to 8 do
+  for i := 0 to NumeroChecks - 1 do
     { El prefijo es ASCII a proposito: quien lea este archivo no deberia
       depender de acertar con la codificacion de una marca de verificacion. }
     Lineas[2 + i] := 'check: ' + EtiquetaCheck[i].Caption;
-  Lineas[11] := 'Resultado: ' + ResumenValidacion.Caption;
+  Lineas[NumeroChecks + 2] := 'Politica de datos: {#PoliticaDatos}';
+  Lineas[NumeroChecks + 3] := 'Version instalada: ' + VersionInstalada;
+  if HayDatosPrevios then
+    Lineas[NumeroChecks + 4] := 'Datos previos: si'
+  else
+    Lineas[NumeroChecks + 4] := 'Datos previos: no';
+  Lineas[NumeroChecks + 5] := 'Resultado: ' + ResumenValidacion.Caption;
 
   SaveStringsToUTF8File(Archivo, Lineas, False);
 end;
@@ -458,9 +560,88 @@ begin
   AjustarParaPantallaTactil;
   CrearBotonRutaRecomendada;
   CrearPaginaValidacion;
+  CrearPaginaDatos;
 
   if RutaVolcado <> '' then
     VolcarDiagnostico(RutaVolcado);
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if (PaginaDatos <> nil) and (PageID = PaginaDatos.ID) then
+    Result := (not PoliticaReemplazable) or (not HayDatosPrevios);
+end;
+
+{ ------------------------------------------------------ Pantalla final (datos) }
+
+function LeerArchivo(const Ruta: String): String;
+var
+  Contenido: AnsiString;
+begin
+  Result := '';
+  if LoadStringFromFile(Ruta, Contenido) then
+    Result := Trim(String(Contenido));
+end;
+
+{ Lee la linea "clave=valor" del resumen que deja el host tras validar. Devuelve
+  todas las coincidencias, una por linea, para "direccion". }
+function ValoresDelResumen(const Resumen, Clave: String): String;
+var
+  Lineas: TArrayOfString;
+  i: Integer;
+  Prefijo: String;
+begin
+  Result := '';
+  Prefijo := Clave + '=';
+  Lineas := StringSplitEx(Resumen, [#10], #0, stExcludeEmpty);
+  for i := 0 to GetArrayLength(Lineas) - 1 do
+    if Copy(Trim(Lineas[i]), 1, Length(Prefijo)) = Prefijo then
+    begin
+      if Result <> '' then Result := Result + #13#10;
+      Result := Result + Copy(Trim(Lineas[i]), Length(Prefijo) + 1, 500);
+    end;
+end;
+
+procedure ComponerPantallaFinal;
+var
+  Resumen, Direcciones, Organizacion, Texto: String;
+begin
+  Resumen := LeerArchivo(CarpetaDeEstado + '\Logs\resumen-nodo.txt');
+  Direcciones := ValoresDelResumen(Resumen, 'direccion');
+  Organizacion := ValoresDelResumen(Resumen, 'organizacion');
+
+  if AvisoConfiguracion <> '' then
+  begin
+    if ActualizacionRevertida then
+      Texto := AvisoConfiguracion
+    else
+      Texto := 'AVACOM OPS Master quedó instalado, pero la configuración de la API local no terminó:'
+               + #13#10 + #13#10 + AvisoConfiguracion
+               + #13#10 + #13#10 + 'El detalle está en la carpeta de registros del producto.';
+    WizardForm.FinishedLabel.Caption := Texto;
+    WizardForm.FinishedLabel.Font.Color := clMaroon;
+    Exit;
+  end;
+
+  Texto := 'AVACOM OPS Master quedó instalado y la API local responde. Arranca sola con Windows.';
+
+  if Direcciones <> '' then
+    Texto := Texto + #13#10 + #13#10 + 'En las tabletas de los estudiantes, escribe esta dirección del aula:'
+             + #13#10 + Direcciones
+  else
+    Texto := Texto + #13#10 + #13#10 +
+             'No se encontró una dirección de red para las tabletas. Conecta este equipo a la red del aula.';
+
+  if Organizacion = 'no' then
+    Texto := Texto + #13#10 + #13#10 +
+             'Falta crear la organización y el primer administrador. Ábrelos desde AVACOM OPS Master la primera vez.';
+
+  if AvisoInformativo <> '' then
+    Texto := Texto + #13#10 + #13#10 + AvisoInformativo;
+
+  WizardForm.FinishedLabel.Caption := Texto;
+  WizardForm.FinishedLabel.Font.Size := 11;
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -470,17 +651,11 @@ begin
   else
     WizardForm.NextButton.Enabled := True;
 
-  { Si la configuracion del backend no salio, se dice en la propia pantalla
-    final: dejar un producto instalado que no funciona sin explicacion es
-    peor que cualquier mensaje. }
-  if (CurPageID = wpFinished) and (AvisoConfiguracion <> '') then
-  begin
-    WizardForm.FinishedLabel.Caption :=
-      'AVACOM OPS Master quedó instalado, pero la configuración de la API local no terminó:'
-      + #13#10 + #13#10 + AvisoConfiguracion
-      + #13#10 + #13#10 + 'El detalle está en la carpeta de registros del producto.';
-    WizardForm.FinishedLabel.Font.Color := clMaroon;
-  end;
+  { Si la configuracion del backend no salio, o la actualizacion se revirtio,
+    se dice en la propia pantalla final: dejar un producto instalado que no
+    funciona sin explicacion es peor que cualquier mensaje. }
+  if CurPageID = wpFinished then
+    ComponerPantallaFinal;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -496,31 +671,196 @@ begin
   Result :=
     'Se va a instalar en este equipo:' + NewLine +
     Space + 'AVACOM OPS Master (interfaz del profesor)' + NewLine +
-    Space + 'AVACOM OPS Backend (API local del aula, puerto ' + IntToStr(PuertoApi) + ')' + NewLine +
+    Space + 'AVACOM OPS Backend (API local del aula y tiempo real, puerto ' + IntToStr(PuertoApi) + ')' + NewLine +
     NewLine +
     MemoDirInfo + NewLine + NewLine +
     'Configuración que hará el asistente, sin intervención:' + NewLine +
-    Space + 'Configuración local del nodo y base de datos del expediente' + NewLine +
+    Space + 'Configuración local del nodo y base de datos' + NewLine +
     Space + 'Servicio de Windows «{#NombreServicio}», con inicio automático' + NewLine +
     Space + 'Regla de Windows Defender Firewall para TCP ' + IntToStr(PuertoApi) +
             ' en redes privadas' + NewLine +
+    Space + 'Icono de AVACOM OPS Master en el escritorio y en el menú Inicio' + NewLine +
     NewLine;
 
-  if MemoTasksInfo <> '' then
-    Result := Result + MemoTasksInfo + NewLine + NewLine;
+  if VersionInstalada <> '' then
+  begin
+    Result := Result + 'Actualización de la versión ' + VersionInstalada + ':' + NewLine;
+    if EligioEmpezarDeCero then
+      Result := Result + Space + 'Los datos actuales se guardan en una copia de seguridad y se empieza de cero.' + NewLine
+    else if PoliticaReemplazable then
+      Result := Result + Space + 'Se hace una copia de seguridad y se conservan los datos.' + NewLine
+    else
+      Result := Result + Space + 'Se hace una copia de seguridad y los datos se conservan siempre.' + NewLine;
+    Result := Result + Space + 'Si algo falla, se vuelve a la versión anterior sin perder nada.' + NewLine + NewLine;
+  end;
 
-  Result := Result +
-    'No se modificará AVACOM Biblioteca ni ningún dato suyo.';
+  Result := Result + 'No se modificará AVACOM Contenido ni ningún dato suyo.';
 end;
 
-{ Antes de copiar archivos: si ya habia una instalacion, su servicio tiene
-  abiertos los archivos que vamos a reemplazar. }
-function PrepareToInstall(var NeedsRestart: Boolean): String;
+{ -------------------------------------- Actualizar sin dejar restos ni a medias }
+
+function EjecutarHostEn(const Carpeta, Parametros: String; Oculto: Boolean): Integer;
+var
+  Codigo: Integer;
+  Modo: Integer;
+begin
+  if Oculto then Modo := SW_HIDE else Modo := SW_SHOWNORMAL;
+  if not Exec(Carpeta + '\Runtime\{#EjecutableHost}', Parametros, '', Modo,
+              ewWaitUntilTerminated, Codigo) then
+    Codigo := -1;
+  Result := Codigo;
+end;
+
+function EjecutarHost(const Parametros: String): Integer;
+begin
+  Result := EjecutarHostEn(ExpandConstant('{app}'), Parametros, True);
+end;
+
+function MoverCarpeta(const Origen, Destino: String): Boolean;
+var
+  Codigo, Intento: Integer;
+begin
+  Result := False;
+  { Tras parar el servicio, Windows tarda un instante en soltar los archivos. }
+  for Intento := 1 to 8 do
+  begin
+    Exec(ExpandConstant('{cmd}'), '/C move /Y "' + Origen + '" "' + Destino + '"', '',
+         SW_HIDE, ewWaitUntilTerminated, Codigo);
+    if (not DirExists(Origen)) and DirExists(Destino) then
+    begin
+      Result := True;
+      Exit;
+    end;
+    Sleep(1500);
+  end;
+end;
+
+procedure DetenerServicioPropio;
 var
   Codigo: Integer;
 begin
+  if not ServicioRegistrado('{#NombreServicio}') then Exit;
+  { El host detiene el servicio y ESPERA a que pare (el backend cierra el
+    expediente antes de salir). Sin host, sc stop y una espera fija. }
+  if FileExists(ExpandConstant('{app}\Runtime\{#EjecutableHost}')) then
+    EjecutarHost('detener-servicio')
+  else
+  begin
+    Exec(ExpandConstant('{sys}\sc.exe'), 'stop "{#NombreServicio}"', '', SW_HIDE,
+         ewWaitUntilTerminated, Codigo);
+    Sleep(8000);
+  end;
+end;
+
+{ Aparta la version anterior (App, Backend, Runtime) a {app}\Anterior. Asi la
+  nueva se copia sobre carpetas vacias -nada de mezclar runtimes, ni
+  migraciones viejas, ni cachés- y, si falla, la anterior se puede volver a
+  poner. Los datos no se tocan: viven en ProgramData. Devuelve '' si todo bien. }
+function ApartarProgramaAnterior: String;
+var
+  Raiz, Aparte: String;
+  Nombres: array[0..2] of String;
+  i, j: Integer;
+begin
+  Result := '';
+  HayProgramaApartado := False;
+  Raiz := ExpandConstant('{app}');
+  Aparte := Raiz + '\Anterior';
+  Nombres[0] := 'App';
+  Nombres[1] := 'Backend';
+  Nombres[2] := 'Runtime';
+
+  if not (DirExists(Raiz + '\App') or DirExists(Raiz + '\Backend') or DirExists(Raiz + '\Runtime')) then
+  begin
+    { Sin programa previo, pero puede haber restos de un intento fallido. }
+    if DirExists(Aparte) then DelTree(Aparte, True, True, True);
+    Exit;
+  end;
+
+  if DirExists(Aparte) then DelTree(Aparte, True, True, True);
+  ForceDirectories(Aparte);
+
+  for i := 0 to 2 do
+  begin
+    if DirExists(Raiz + '\' + Nombres[i]) then
+    begin
+      if not MoverCarpeta(Raiz + '\' + Nombres[i], Aparte + '\' + Nombres[i]) then
+      begin
+        { Se deshace lo ya apartado: la instalacion no puede quedar a medias. }
+        for j := 0 to i - 1 do
+          if DirExists(Aparte + '\' + Nombres[j]) then
+            MoverCarpeta(Aparte + '\' + Nombres[j], Raiz + '\' + Nombres[j]);
+        Result := 'No se pudo apartar la versión anterior (' + Nombres[i] + '): hay archivos en uso. ' +
+                  'Cierra AVACOM OPS Master, espera un momento y vuelve a intentarlo.';
+        Exit;
+      end;
+    end;
+  end;
+  HayProgramaApartado := True;
+end;
+
+{ Deja el equipo con la version anterior funcionando: datos restaurados desde
+  la copia, programa devuelto a su sitio, servicio registrado de nuevo. }
+procedure RevertirActualizacion(const Motivo: String);
+var
+  Raiz, Aparte: String;
+  Nombres: array[0..2] of String;
+  i, Codigo: Integer;
+  Restaurado: Boolean;
+begin
+  Raiz := ExpandConstant('{app}');
+  Aparte := Raiz + '\Anterior';
+  Nombres[0] := 'App';
+  Nombres[1] := 'Backend';
+  Nombres[2] := 'Runtime';
+
+  { 1. Parar lo nuevo (con el host nuevo, que todavia esta) y devolver los datos. }
+  EjecutarHost('detener-servicio');
+  Restaurado := True;
+  if SeHizoRespaldo then
+    Restaurado := (EjecutarHost('restaurar-datos') = 0);
+
+  { 2. Retirar la version nueva y volver a poner la anterior. }
+  for i := 0 to 2 do
+  begin
+    if DirExists(Raiz + '\' + Nombres[i]) then
+      DelTree(Raiz + '\' + Nombres[i], True, True, True);
+    if DirExists(Aparte + '\' + Nombres[i]) then
+      MoverCarpeta(Aparte + '\' + Nombres[i], Raiz + '\' + Nombres[i]);
+  end;
+  DelTree(Aparte, True, True, True);
+
+  { 3. Volver a registrar y arrancar la anterior con SU host: el servicio y la
+    regla de firewall apuntan a un ejecutable que ha vuelto a su carpeta. }
+  EjecutarHost('instalar-servicio');
+  EjecutarHost('abrir-firewall');
+  EjecutarHost('iniciar-servicio');
+  Exec(ExpandConstant('{sys}\sc.exe'), 'query "{#NombreServicio}"', '', SW_HIDE, ewWaitUntilTerminated, Codigo);
+  if VersionAnterior <> '' then
+    RegWriteStringValue(HKEY_LOCAL_MACHINE, ClaveDesinstalar, 'DisplayVersion', VersionAnterior);
+
+  ActualizacionRevertida := True;
+  AvisoConfiguracion := 'No se pudo actualizar: ' + Motivo + #13#10 + #13#10;
+  if Restaurado then
+    AvisoConfiguracion := AvisoConfiguracion +
+      'Se volvió a la versión ' + VersionAnterior + ' y se restauraron sus datos. ' +
+      'El aula sigue funcionando como antes.'
+  else
+    AvisoConfiguracion := AvisoConfiguracion +
+      'Se volvió a la versión ' + VersionAnterior + ', pero no se pudieron restaurar los datos. ' +
+      'La copia de seguridad está en la carpeta Respaldos de ' + CarpetaDeEstado + '.';
+end;
+
+{ Antes de copiar archivos: parar lo propio, cerrar la aplicacion propia y
+  apartar la version anterior. }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
   Result := '';
   NeedsRestart := False;
+  ActualizacionRevertida := False;
+  SeHizoRespaldo := False;
+  AvisoConfiguracion := '';
+  AvisoInformativo := '';
 
   { El modo diagnostico no instala: solo informa. }
   if RutaVolcado <> '' then
@@ -530,84 +870,129 @@ begin
     Exit;
   end;
 
-  if ServicioRegistrado('{#NombreServicio}') then
-  begin
-    Exec(ExpandConstant('{sys}\sc.exe'), 'stop "{#NombreServicio}"', '', SW_HIDE,
-         ewWaitUntilTerminated, Codigo);
-    { El SCM tarda en soltar el ejecutable del servicio. }
-    Sleep(4000);
-  end;
+  VersionAnterior := VersionInstalada;
+
+  DetenerServicioPropio;
+  CerrarAplicacionPropia;
+  Result := ApartarProgramaAnterior;
 end;
 
-{ La pantalla "Backend Configuration": lo que el README del backend pide a
-  mano, hecho aqui sin que nadie escriba un comando. }
+{ Lo que el README del backend pide a mano, hecho aqui sin que nadie escriba un
+  comando. En una actualizacion, ademas: copia de seguridad, y vuelta atras si
+  algo falla entre preparar y validar. }
 procedure ConfigurarBackend;
 var
   Pagina: TOutputProgressWizardPage;
-  Host, Estado: String;
+  Estado, Motivo: String;
   Codigo: Integer;
-  Contenido: AnsiString;
+  Actualizando: Boolean;
 begin
-  Host := ExpandConstant('{app}\Runtime\{#EjecutableHost}');
   AvisoConfiguracion := '';
+  AvisoInformativo := '';
+  Motivo := '';
+  Actualizando := HayProgramaApartado;
 
   Pagina := CreateOutputProgressPage('Configuración del backend',
     'Se está preparando la API local de AVACOM OPS Master. No hace falta hacer nada.');
   Pagina.SetProgress(0, 100);
   Pagina.Show;
   try
-    Pagina.SetText('Creando la configuración de este equipo y la base de datos del expediente...', '');
-    Pagina.SetProgress(10, 100);
-    if not Exec(Host, 'preparar', '', SW_HIDE, ewWaitUntilTerminated, Codigo) then
-      Codigo := -1;
+    { --- Copia de seguridad de los datos (base + -wal + -shm + backend.env) --- }
+    if HayDatosPrevios then
+    begin
+      Pagina.SetText('Guardando una copia de seguridad de los datos...', '');
+      if EjecutarHost('respaldar ' + VersionAnterior) <> 0 then
+      begin
+        Motivo := 'no se pudo hacer la copia de seguridad de los datos.';
+        if Actualizando then RevertirActualizacion(Motivo)
+        else AvisoConfiguracion := 'No se pudo hacer la copia de seguridad de los datos.';
+        Exit;
+      end;
+      SeHizoRespaldo := True;
+
+      if EligioEmpezarDeCero then
+      begin
+        Pagina.SetText('Empezando de cero, como se pidió...', '');
+        EjecutarHost('vaciar-datos');
+      end;
+    end;
+    Pagina.SetProgress(15, 100);
+
+    { --- Configuracion, claves y migraciones --- }
+    Pagina.SetText('Creando la configuración de este equipo y preparando la base de datos...', '');
+    Codigo := EjecutarHost('preparar');
     if Codigo <> 0 then
     begin
-      Estado := '';
-      if LoadStringFromFile(ExpandConstant('{commonappdata}\AVACOM\{#NombreCorto}\Logs\preparacion-estado.txt'), Contenido) then
-        Estado := Trim(String(Contenido));
+      Estado := LeerArchivo(CarpetaDeEstado + '\Logs\preparacion-estado.txt');
       if Estado = '' then
         Estado := 'La preparación del backend terminó con el código ' + IntToStr(Codigo) + '.';
-      AvisoConfiguracion := Estado;
+      if Actualizando then RevertirActualizacion(Estado)
+      else AvisoConfiguracion := Estado;
       Exit;
     end;
-    Pagina.SetProgress(40, 100);
+    AvisoInformativo := LeerArchivo(CarpetaDeEstado + '\Logs\preparacion-aviso.txt');
+    Pagina.SetProgress(45, 100);
 
+    { --- Servicio y firewall: el comando que ejecutan cambio (Daphne) --- }
     Pagina.SetText('Registrando el servicio de la API local...', '');
-    if not Exec(Host, 'instalar-servicio', '', SW_HIDE, ewWaitUntilTerminated, Codigo) then
-      Codigo := -1;
-    if Codigo <> 0 then
+    if EjecutarHost('instalar-servicio') <> 0 then
     begin
-      AvisoConfiguracion := 'No se pudo registrar el servicio {#NombreServicio}.';
+      Motivo := 'no se pudo registrar el servicio {#NombreServicio}.';
+      if Actualizando then RevertirActualizacion(Motivo)
+      else AvisoConfiguracion := 'No se pudo registrar el servicio {#NombreServicio}.';
       Exit;
     end;
     Pagina.SetProgress(60, 100);
 
     Pagina.SetText('Autorizando el puerto ' + IntToStr(PuertoApi) +
                    ' para las tabletas del aula...', '');
-    Exec(Host, 'abrir-firewall', '', SW_HIDE, ewWaitUntilTerminated, Codigo);
-    Pagina.SetProgress(75, 100);
+    EjecutarHost('abrir-firewall');
+    Pagina.SetProgress(70, 100);
 
+    { --- Arrancar y validar: /health/ y el canal en tiempo real --- }
     Pagina.SetText('Iniciando la API local...', '');
-    if not Exec(Host, 'iniciar-servicio', '', SW_HIDE, ewWaitUntilTerminated, Codigo) then
-      Codigo := -1;
-    if Codigo <> 0 then
+    if EjecutarHost('iniciar-servicio') <> 0 then
     begin
-      AvisoConfiguracion := 'El servicio {#NombreServicio} quedó instalado pero no arrancó. ' +
-                            'Se iniciará al reiniciar el equipo.';
+      Motivo := 'el servicio {#NombreServicio} no arrancó.';
+      if Actualizando then RevertirActualizacion(Motivo)
+      else AvisoConfiguracion := 'El servicio {#NombreServicio} quedó instalado pero no arrancó. ' +
+                                 'Se iniciará al reiniciar el equipo.';
       Exit;
     end;
-    Pagina.SetProgress(85, 100);
+    Pagina.SetProgress(80, 100);
 
-    Pagina.SetText('Comprobando que la API local responde...', '');
-    if not Exec(Host, 'salud 90', '', SW_HIDE, ewWaitUntilTerminated, Codigo) then
-      Codigo := -1;
+    Pagina.SetText('Comprobando que la API local y el canal en tiempo real responden...', '');
+    Codigo := EjecutarHost('validar 90');
     if Codigo <> 0 then
-      AvisoConfiguracion := 'La API local no respondió durante la instalación. ' +
-                            'Revisa la carpeta de registros de AVACOM OPS Master.';
+    begin
+      if Codigo = 14 then
+        Motivo := 'la API respondió, pero el canal en tiempo real no acepta conexiones.'
+      else
+        Motivo := 'la API local no respondió durante la instalación.';
+      if Actualizando then RevertirActualizacion(Motivo)
+      else AvisoConfiguracion := 'La instalación terminó, pero ' + Motivo + ' ' +
+                                 'Revisa la carpeta de registros de AVACOM OPS Master.';
+      Exit;
+    end;
     Pagina.SetProgress(100, 100);
+
+    { --- Todo bien: la version anterior ya no hace falta --- }
+    if HayProgramaApartado then
+      DelTree(ExpandConstant('{app}\Anterior'), True, True, True);
   finally
     Pagina.Hide;
   end;
+end;
+
+{ Si la instalacion se interrumpe despues de apartar la version anterior (falla
+  la copia de archivos, se acaba el disco, alguien cancela), Inno Setup deshace
+  lo que instalo pero no sabe de {app}\Anterior: sin esto el equipo se quedaria
+  sin programa. Aqui, si la version anterior sigue apartada, se devuelve. }
+procedure DeinitializeSetup;
+begin
+  if HayProgramaApartado then
+    if DirExists(ExpandConstant('{app}\Anterior')) then
+      RevertirActualizacion('la instalación se interrumpió antes de terminar.');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -618,14 +1003,12 @@ end;
 
 { ------------------------------------------------------------ Desinstalacion }
 
+{ Cierra la aplicacion del profesor sola (solo la propia): pedirle a alguien que
+  la cierre y vuelva a intentarlo es un paso mas en una pantalla sin teclado. }
 function InitializeUninstall: Boolean;
 begin
   Result := True;
-  if ProcesoActivo('{#EjecutableApp}') then
-  begin
-    MsgBox('Cierra AVACOM OPS Master antes de desinstalarlo.', mbInformation, MB_OK);
-    Result := False;
-  end;
+  CerrarAplicacionPropia;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -634,14 +1017,16 @@ var
 begin
   if CurUninstallStep <> usPostUninstall then Exit;
 
-  Estado := ExpandConstant('{commonappdata}\AVACOM\{#NombreCorto}');
+  Estado := CarpetaDeEstado;
   if not DirExists(Estado) then Exit;
 
-  { El expediente del estudiante no se puede volver a generar. No se borra
-    salvo que se pida expresamente, y la respuesta por defecto es conservarlo. }
-  if MsgBox('¿Eliminar también el expediente de los estudiantes de este equipo' + #13#10 +
-            '(notas, progreso e intentos) y la configuración local?' + #13#10#13#10 +
-            'Si vas a reinstalar AVACOM OPS Master, toca No para conservarlo.',
+  { La base de datos y backend.env se conservan o se eliminan JUNTOS: sin las
+    claves, las personas guardadas en la base no se pueden descifrar. La
+    respuesta por defecto es conservar. %ProgramData%\AVACOM no se borra nunca:
+    es de todos los productos de AVACOM. }
+  if MsgBox('¿Eliminar también los datos de este equipo (organización, personas,' + #13#10 +
+            'tabletas, clases, expediente) y su configuración?' + #13#10#13#10 +
+            'Si vas a reinstalar AVACOM OPS Master, toca No para conservarlos.',
             mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
     DelTree(Estado, True, True, True);
 end;

@@ -211,6 +211,7 @@ ICONOS_ESTUDIO: dict[str, tuple[list, int]] = {
     "estudio_more": (una("dots-three", "bold", GRIS), 24),
     "estudio_arrow_white": (una("arrow-right", "bold", BLANCO), 20),
     "estudio_arrow_ink": (una("arrow-right", "bold", TINTA), 20),
+    "estudio_arrow_left": (una("arrow-left", "bold", TINTA), 20),
     "estudio_cloud_up_amber": (una("cloud-arrow-up", "regular", AMBAR), 22),
     "estudio_sync_blue": (una("arrows-clockwise", "bold", AZUL), 22),
     "estudio_cloud_check_green": (una("cloud-check", "regular", VERDE), 22),

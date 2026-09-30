@@ -92,9 +92,17 @@ class DispositivoView(VistaDispositivos):
 
 
 class DispositivoAccionView(VistaDispositivos):
+    """bloquear · desbloquear (profesor o administración) y asignar · liberar (FUN-092, FUN-093: técnico o administración)."""
+
     ACCIONES = {"bloquear": cu.BloquearDispositivo, "desbloquear": cu.DesbloquearDispositivo}
 
     def post(self, request, pk: str, accion: str):
+        if accion == "asignar":
+            datos = _validar(s.AsignacionEntrada, request.data)
+            return Response(cu.AsignarDispositivo(servicios()).ejecutar(self._actor(request, request.data), pk, datos["alumno_id"]))
+        if accion == "liberar":
+            _validar(s.LiberacionEntrada, request.data)
+            return Response(cu.LiberarDispositivo(servicios()).ejecutar(self._actor(request, request.data), pk))
         caso = self.ACCIONES.get(accion)
         if caso is None:
             return Response({"detail": f"Acción desconocida «{accion}».", "codigo": "datos_invalidos"}, status=400)

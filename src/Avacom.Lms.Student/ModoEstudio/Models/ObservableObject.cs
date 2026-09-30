@@ -29,4 +29,8 @@ public abstract class ObservableObject : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nombre));
 
     /// <summary>Avisa de varias propiedades derivadas de una vez.</summary>
- 
+    protected void OnPropertiesChanged(params string[] nombres)
+    {
+        foreach (var nombre in nombres) OnPropertyChanged(nombre);
+    }
+}

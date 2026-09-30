@@ -25,6 +25,10 @@ internal static class Program
             "iniciar" => Lanzador.Ejecutar(),
             "preparar" => Preparar.Ejecutar(),
             "salud" => Comprobar(argumentos),
+            "validar" => Validar(argumentos),
+            "respaldar" => Respaldar(argumentos),
+            "restaurar-datos" => RestaurarDatos(),
+            "vaciar-datos" => VaciarDatos(),
             "puerto-libre" => PuertoLibre(),
             "instalar-servicio" => Servicio.Instalar(new Registro("instalacion.log")),
             "quitar-servicio" => Con(Servicio.Quitar),
@@ -62,6 +66,90 @@ internal static class Program
         var registro = new Registro("instalacion.log");
         registro.Escribir($"Comprobacion de salud en {Salud.UrlSalud(puerto)}: {resultado.Detalle}");
         return resultado.Correcto ? 0 : 11;
+    }
+
+    /// <summary>
+    /// La validacion final de una instalacion o actualizacion: /health/ responde y
+    /// el canal en tiempo real acepta conexiones. Deja en Logs/resumen-nodo.txt lo
+    /// que la pantalla final muestra (direcciones para las tabletas, si falta la
+    /// organizacion).
+    /// 0 correcto, 11 el backend no responde, 14 el WebSocket no acepta conexiones.
+    /// </summary>
+    private static int Validar(string[] argumentos)
+    {
+        var segundos = argumentos.Length > 1 && int.TryParse(argumentos[1], out var valor) ? valor : 60;
+        var puerto = Configuracion.PuertoConfigurado();
+        var registro = new Registro("instalacion.log");
+        var resumen = Path.Combine(Rutas.CarpetaLogs, "resumen-nodo.txt");
+        File.Delete(resumen);
+
+        var salud = Salud.EsperarAsync(puerto, segundos).GetAwaiter().GetResult();
+        registro.Escribir($"Validacion de salud en {Salud.UrlSalud(puerto)}: {salud.Detalle}");
+        if (!salud.Correcto) return 11;
+
+        var socket = Salud.ProbarWebSocketAsync(puerto).GetAwaiter().GetResult();
+        registro.Escribir($"Validacion del tiempo real: {socket.Detalle}");
+        if (!socket.Correcto) return 14;
+
+        var estado = Salud.EstadoAsync(puerto).GetAwaiter().GetResult();
+        static string SiNo(bool? v) => v is null ? "desconocido" : v.Value ? "si" : "no";
+
+        var lineas = new List<string>
+        {
+            "salud=ok",
+            "websocket=ok",
+            $"organizacion={SiNo(estado.Instalado)}",
+            $"claves_derivadas={SiNo(estado.ClavesDerivadas)}",
+        };
+        lineas.AddRange(Direcciones.Listar(puerto).Select(d => $"direccion={d}"));
+        File.WriteAllLines(resumen, lineas);
+        registro.Escribir($"Estado del nodo: organizacion={SiNo(estado.Instalado)}, claves derivadas={SiNo(estado.ClavesDerivadas)}.");
+        return 0;
+    }
+
+    /// <summary>Copia de seguridad de la base (+wal, +shm) y backend.env. Con el servicio detenido.</summary>
+    private static int Respaldar(string[] argumentos)
+    {
+        var registro = new Registro("instalacion.log");
+        try
+        {
+            Datos.Respaldar(registro, argumentos.Length > 1 ? argumentos[1] : "anterior");
+            return 0;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            registro.Escribir("No se pudo hacer la copia de seguridad", error);
+            return 20;
+        }
+    }
+
+    private static int RestaurarDatos()
+    {
+        var registro = new Registro("instalacion.log");
+        try
+        {
+            return Datos.Restaurar(registro) ? 0 : 21;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            registro.Escribir("No se pudieron restaurar los datos", error);
+            return 22;
+        }
+    }
+
+    private static int VaciarDatos()
+    {
+        var registro = new Registro("instalacion.log");
+        try
+        {
+            Datos.Vaciar(registro);
+            return 0;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            registro.Escribir("No se pudieron retirar los datos", error);
+            return 23;
+        }
     }
 
     private static int PuertoLibre()

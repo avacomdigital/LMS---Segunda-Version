@@ -198,13 +198,18 @@ public sealed class AulaContenidoView : ContentView
             {
                 var label = Ds.ConTramos(b.Tramos, b.Texto, 20 * Escala);
                 if (b.Estilo == "definition")
+                {
+                    // La barra roja en la primera columna y el texto en la segunda (sin fijar la columna, el texto caía en la de 6 px y se leía letra por letra).
+                    var cuerpo = new Grid { ColumnDefinitions = [new ColumnDefinition(6), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 16 };
+                    cuerpo.Add(new BoxView { Color = Ds.Rojo, CornerRadius = 3 }, 0, 0);
+                    cuerpo.Add(label, 1, 0);
                     return new Border
                     {
                         BackgroundColor = Ds.PeligroSuave, StrokeThickness = 0, Padding = new Thickness(20, 16),
                         StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno },
-                        Content = new Grid { ColumnDefinitions = [new ColumnDefinition(6), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 16,
-                            Children = { new BoxView { Color = Ds.Rojo, CornerRadius = 3 }, label } },
+                        Content = cuerpo,
                     };
+                }
                 if (b.Estilo == "highlight")
                     return new Border { BackgroundColor = Ds.AlertaSuave, StrokeThickness = 0, Padding = new Thickness(20, 16), StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = label };
                 return label;

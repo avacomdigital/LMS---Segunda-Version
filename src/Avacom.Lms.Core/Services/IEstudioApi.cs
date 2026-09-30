@@ -24,6 +24,11 @@ public interface IEstudioApi
     // ---- estado y sesión de estudio (FUN-080, FUN-089, FUN-090)
     /// <summary>Nunca falla por el modo de estudio: <c>Disponible=false</c> con su motivo. Sin conexión devuelve null.</summary>
     Task<EstadoEstudio?> EstadoAsync(string dispositivo, string? alumnoId = null, CancellationToken ct = default);
+    /// <summary>
+    /// Los nombres entre los que el alumno se elige en «¿Quién eres?» (D-15): los grupos con lecciones asignadas y sus alumnos. Nunca falla por el
+    /// modo de estudio (<c>Disponible=false</c> con su motivo); sin conexión devuelve null.
+    /// </summary>
+    Task<EstudiantesEstudio?> EstudiantesAsync(string dispositivo, CancellationToken ct = default);
     Task<SesionEstudio?> AbrirSesionAsync(string dispositivo, string? nombre, string? plataforma, string? versionApp, string? alumnoId = null, CancellationToken ct = default);
     Task<bool> CerrarSesionAsync(string dispositivo, int colaPendiente, bool limpiezaCompleta, string? alumnoId = null, CancellationToken ct = default);
     Task<bool> LimpiezaReintentadaAsync(string dispositivo, string resultado, CancellationToken ct = default);
@@ -50,6 +55,11 @@ public interface IEstudioApi
     Task<ListaPaquetes?> PaquetesAsync(string dispositivo, string? alumnoId = null, CancellationToken ct = default);
     Task<PaqueteEstudio?> PaqueteAsync(string dispositivo, string paqueteId, string? alumnoId = null, CancellationToken ct = default);
     Task<ManifiestoPaquete?> ManifiestoAsync(string dispositivo, string paqueteId, string? alumnoId = null, CancellationToken ct = default);
+    /// <summary>
+    /// El manifiesto TAL COMO LLEGÓ (texto JSON sin tocar). La huella del manifiesto se verifica sobre este texto —no sobre
+    /// <see cref="ManifiestoAsync"/>, cuyo DTO pierde lo que no modela— y el almacén guarda este mismo texto para releerlo idéntico.
+    /// </summary>
+    Task<string?> ManifiestoCrudoAsync(string dispositivo, string paqueteId, string? alumnoId = null, CancellationToken ct = default);
     /// <summary>
     /// El archivo de un medio, en streaming y reanudable: <paramref name="desdeByte"/> manda <c>Range: bytes=N-</c>. Devuelve la respuesta
     /// abierta (200 o 206) para que quien llama la lea y la libere; null si el backend respondió un error (queda en <see cref="UltimoError"/>).

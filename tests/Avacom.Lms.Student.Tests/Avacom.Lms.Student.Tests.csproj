@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas de la lógica del modo de estudio de Student (MOD-008): el servicio real, sus sesiones de lección y de práctica, las descargas y la
+    conectividad. Esa lógica no depende de la interfaz: sólo de unas pocas piezas de MAUI Essentials (Preferences, FileSystem, DeviceInfo,
+    Connectivity). Como Student es una app MAUI y no se puede referenciar desde aquí, se COMPILAN sus archivos (vínculos, no copias) junto con
+    unos sustitutos mínimos de esas piezas (Shims/Maui.cs). Lo que se prueba es exactamente el código que corre en la tableta.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Avacom.Lms.Student.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Microsoft.Maui.Storage" />
+    <Using Include="Microsoft.Maui.Devices" />
+    <Using Include="Microsoft.Maui.Networking" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Avacom.Lms.Core\Avacom.Lms.Core.csproj" />
+  </ItemGroup>
+
+  <!-- El código de Student que se prueba, tal cual está en la app. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\StudyModeService.cs" Link="Student\Services\StudyModeService.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\StudyLessonSession.cs" Link="Student\Services\StudyLessonSession.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\StudyPracticeSession.cs" Link="Student\Services\StudyPracticeSession.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\EstudioLocal.cs" Link="Student\Services\EstudioLocal.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\ClaveDeStudent.cs" Link="Student\Services\ClaveDeStudent.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\DownloadService.cs" Link="Student\Services\DownloadService.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\ConnectivityService.cs" Link="Student\Services\ConnectivityService.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\IStudyModeService.cs" Link="Student\Services\IStudyModeService.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\IDownloadService.cs" Link="Student\Services\IDownloadService.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\IConnectivityService.cs" Link="Student\Services\IConnectivityService.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudyLessonState.cs" Link="Student\Models\StudyLessonState.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudyDownloadState.cs" Link="Student\Models\StudyDownloadState.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudySyncState.cs" Link="Student\Models\StudySyncState.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudyFormat.cs" Link="Student\Models\StudyFormat.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudyPractice.cs" Link="Student\Models\StudyPractice.cs" />
+  </ItemGroup>
+
+</Project>

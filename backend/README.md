@@ -105,6 +105,8 @@ set AVACOM_CONTENIDO_ENLACE_V2=%TEMP%\link-pruebas.json
 | `/api/dispositivos/` | POST · GET | **MOD-009 · Device Manager** (app `device_manager`, tablas `m09_*`): registro idempotente de la tableta por su huella (`identificador_hw`, `nombre`, `plataforma`, `version_app`) · inventario con estado en vivo (`en_linea`, `bloqueado`, `sesion_abierta`; `?todos=1` incluye las retiradas) |
 | `/api/dispositivos/latido/` | POST | La tableta dice que sigue viva (registra si es nueva) y recibe si está bloqueada o retirada |
 | `/api/dispositivos/{id}/` · `bloquear/` · `desbloquear/` | GET, PATCH · POST | Ficha y alta/baja (`nombre`, `tipo`, `activo`; dar de baja cierra sus sesiones) · bloqueo reversible: una tableta bloqueada no entra a clase ni recibe lanzamientos |
+| `/api/dispositivos/{id}/asignar/` · `liberar/` | POST | **Perfil del equipo** (FUN-092, FUN-093): `asignar` (`{alumno_id}`) lo deja a nombre de una persona (`perfil = asignado`, `asignado_a {id, rotulo}`; 409 `dispositivo_ya_asignado` si ya es de otra) y `liberar` lo devuelve al aula (409 `paquete_sin_integrar` mientras conserve un paquete de estudio activo). Permisos `device.assign` / `device.release` |
+| `/api/modo-estudio/…` | GET, POST, PATCH, DELETE | **MOD-008 · Modo Estudio** (app `modo_estudio`, tablas `m08_*`, contrato en [`spec-driven/04-modo-estudio/02-modelo-y-api.md`](../spec-driven/04-modo-estudio/02-modelo-y-api.md)): `estado/` (la pregunta del menú de Student: `disponible` en cualquier tableta utilizable; nunca falla) · `estudiantes/` (los nombres de «¿Quién eres?»: grupos con trabajo asignado y sus alumnos, sin sesión ni permiso) · `sesion/` · `asignaciones/` (pendientes, con sus medios autorizados) · `lecciones/{id}/` (abrir, `progreso/`, `completar/`, `practica/`) · `practicas/{id}/respuestas/`, `terminar/` (práctica autocalificable separada de la evaluación formal) · `paquetes/` (paquete descargable con huella, `Range` y vigencia; sólo se lo lleva el dueño de una tableta asignada) · `sync/`, `sync/status/` (trabajo sin red, idempotente por `emisor_id + secuencia`) · `docente/grupos/`, `docente/asignaciones/…` (asignar, «quién completó», cerrar, decidir lo que llegó fuera de plazo). Al aparato se le identifica con `dispositivo` (su huella) y, sin sesión, al alumno con el `alumno_id` que la tableta declara (identidad declarada, D-15: sin código ni contraseña; debe existir y estar activo) |
 | `/api/acceso/sesiones/` | POST · GET | Iniciar sesión (JWT de 4 h, **una sola por persona**, rol efectivo elegible) · listar sesiones |
 | `/api/acceso/sesiones/actual/`, `/api/acceso/sesiones/{id}/`, `/api/acceso/usuarios/{id}/sesiones/` | DELETE | Cerrar la propia · revocar ajena · revocar todas las de un usuario |
 | `/api/acceso/yo/`, `/api/acceso/yo/credencial/` | GET · PUT | Identidad, rol efectivo, roles disponibles, permisos y menú · cambiar la propia clave |
@@ -120,6 +122,12 @@ nunca por su ORM. Está especificado en
 [`spec-driven/02-classroom-engine/01-modelo-de-datos.md`](../spec-driven/02-classroom-engine/01-modelo-de-datos.md) (modelo `m07_*`
 y contrato de `/api/aula/`) y [`02-sugerencias-frontend.md`](../spec-driven/02-classroom-engine/02-sugerencias-frontend.md) (componente MAUI).
 No guarda ningún curso: lo lee en vivo de la biblioteca o del manifiesto de ejemplo y sólo escribe referencias.
+
+La app `modo_estudio/` implementa **MOD-008 · Modo Estudio** con la misma arquitectura hexagonal: el producto cuando no hay profesor delante. Lee la
+lección en vivo por los casos de uso del aula (no guarda ningún curso ni ninguna clave de respuesta), deja practicar con retroalimentación inmediata
+en una actividad separada de la evaluación formal (nunca toca `m07_intento` ni `m10_intento`), entrega un paquete descargable sólo al dueño de una
+tableta asignada (`perfil = asignado`, MOD-009) e integra sin duplicar el trabajo que la tableta hizo sin red. Sirve en cualquier tableta registrada: quien
+la tiene en la mano elige quién es (`GET /api/modo-estudio/estudiantes/`), sin código ni contraseña, y el nodo sólo comprueba que exista y esté activo.
 
 Para probar el consumo del curso sin la biblioteca:
 
@@ -178,6 +186,9 @@ error, **404/403** referencia inexistente o desactivada por la escuela.
 | `AVACOM_LMS_EXIGIR_SESION` | `0` por defecto. Con `1`, expediente y biblioteca exigen sesión (Q-34) |
 | `AVACOM_AULA_FUENTE_CURSOS` | Fuente de cursos por defecto de `/api/aula/`: `biblioteca` (por defecto) o `ejemplo` |
 | `AVACOM_AULA_CURSO_EJEMPLO` | Ruta del manifiesto de ejemplo (por defecto `spec-driven/02-classroom-engine/example.json`) |
+| `AVACOM_ESTUDIO_VIGENCIA_DIAS` | Modo Estudio: cuánto dura en el aparato un paquete de una asignación sin fecha límite (14 días por defecto; con fecha, hasta la fecha más la gracia) |
+| `AVACOM_ESTUDIO_GRACIA_MIN` | Modo Estudio: minutos de gracia por defecto de una asignación nueva (15, DEC-019) |
+| `AVACOM_ESTUDIO_MEDIO_MAX_MB` | Modo Estudio: tope de tamaño de UN medio al preparar un paquete (512 MB); uno mayor queda fuera del paquete (`medio_demasiado_grande`) |
 
 Si faltan las tres claves, el prototipo las deriva de `SECRET_KEY` con HKDF y `/health/` responde
 `"acceso": {"claves_derivadas": true}`. En una instalación distribuida deben venir en `backend.env`.

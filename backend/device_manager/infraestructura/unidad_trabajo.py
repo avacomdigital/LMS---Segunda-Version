@@ -17,6 +17,8 @@ class Cajones:
         self.auditoria = r.AuditoriaExpediente()
         self.organizaciones = r.OrganizacionesAcceso()
         self.sesiones_usuario = r.SesionesUsuarioAcceso()
+        self.alumnos = r.AlumnosAcceso()
+        self.paquetes_estudio = r.PaquetesEstudioPerezoso()
 
 
 class UnidadDeTrabajoDispositivos(Cajones):

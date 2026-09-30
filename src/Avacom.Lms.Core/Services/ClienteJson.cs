@@ -90,6 +90,85 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
     }
 
+    /// <summary>PATCH con cuerpo JSON (cambiar una asignación, registrar avance). Mismas reglas que <see cref="EnviarAsync{T}"/>.</summary>
+    protected async Task<T?> ParchearAsync<T>(string ruta, object cuerpo, CancellationToken ct)
+    {
+        try
+        {
+            var contenido = new StringContent(JsonSerializer.Serialize(cuerpo, Json), Encoding.UTF8, "application/json");
+            using var peticion = Peticion(HttpMethod.Patch, ruta, contenido);
+            using var respuesta = await http.SendAsync(peticion, ct);
+            if (!respuesta.IsSuccessStatusCode)
+            {
+                await RegistrarErrorAsync(respuesta, ct);
+                return default;
+            }
+            Limpiar();
+            return await respuesta.Content.ReadFromJsonAsync<T>(Json, ct);
+        }
+        catch (Exception ex) when (EsDeRed(ex))
+        {
+            SinRed();
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// GET que devuelve el cuerpo TAL COMO LLEGÓ, sin interpretarlo. Lo necesita quien debe verificar una huella sobre el texto original
+    /// (el manifiesto de un paquete de estudio): volver a serializar un DTO no reproduce lo que el nodo firmó.
+    /// </summary>
+    protected async Task<string?> ObtenerTextoAsync(string ruta, CancellationToken ct)
+    {
+        try
+        {
+            using var peticion = Peticion(HttpMethod.Get, ruta);
+            using var respuesta = await http.SendAsync(peticion, ct);
+            if (!respuesta.IsSuccessStatusCode)
+            {
+                await RegistrarErrorAsync(respuesta, ct);
+                return null;
+            }
+            var texto = await respuesta.Content.ReadAsStringAsync(ct);
+            Limpiar();
+            return texto;
+        }
+        catch (Exception ex) when (EsDeRed(ex))
+        {
+            SinRed();
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// GET en streaming: devuelve la respuesta ABIERTA (solo cabeceras leídas, <see cref="HttpCompletionOption.ResponseHeadersRead"/>) para que
+    /// quien llama lea el cuerpo por partes y la libere; sirve para bajar archivos grandes y reanudables (<c>Range</c>). <paramref name="cabeceras"/>
+    /// añade cabeceras a la petición. Con un estado que no es 2xx registra el error, libera la respuesta y devuelve null.
+    /// </summary>
+    protected async Task<HttpResponseMessage?> ObtenerRespuestaAsync(string ruta, Action<HttpRequestHeaders>? cabeceras, CancellationToken ct)
+    {
+        HttpResponseMessage? respuesta = null;
+        try
+        {
+            using var peticion = Peticion(HttpMethod.Get, ruta);
+            cabeceras?.Invoke(peticion.Headers);
+            respuesta = await http.SendAsync(peticion, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!respuesta.IsSuccessStatusCode)
+            {
+                await RegistrarErrorAsync(respuesta, ct);
+                respuesta.Dispose();
+                return null;
+            }
+            Limpiar();
+            return respuesta;
+        }
+        catch (Exception ex) when (EsDeRed(ex))
+        {
+            respuesta?.Dispose();
+            SinRed();
+            return null;
+        }
+    }
+
     /// <summary>DELETE sin cuerpo de respuesta (cerrar la sesión de usuario). Verdadero si el backend contestó 2xx.</summary>
     protected async Task<bool> EliminarAsync(string ruta, CancellationToken ct)
     {

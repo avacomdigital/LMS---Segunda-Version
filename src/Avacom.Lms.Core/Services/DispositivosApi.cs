@@ -19,6 +19,18 @@ public interface IDispositivosApi
     Task<DispositivoAula?> BloquearAsync(string dispositivoId, string actor, string? motivo = null, CancellationToken ct = default);
     Task<DispositivoAula?> DesbloquearAsync(string dispositivoId, string actor, CancellationToken ct = default);
     Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default);
+
+    /// <summary>
+    /// FUN-092 (MOD-008 · 008-01): deja la tableta asignada a un alumno; sólo en ese aparato existe el modo de estudio. Un aparato que ya es de
+    /// otra persona responde 409 <c>dispositivo_ya_asignado</c> (primero se libera) y el motivo queda en <see cref="UltimoError"/>.
+    /// </summary>
+    Task<DispositivoAula?> AsignarAsync(string dispositivoId, string alumnoId, string actor, CancellationToken ct = default);
+
+    /// <summary>
+    /// FUN-093: devuelve la tableta al perfil compartido. Con un paquete de estudio activo en ella responde 409 <c>paquete_sin_integrar</c>
+    /// (lo descargado y lo pendiente de la cola se resuelven antes de soltarla).
+    /// </summary>
+    Task<DispositivoAula?> LiberarAsync(string dispositivoId, string actor, CancellationToken ct = default);
 }
 
 public sealed class DispositivosApi(HttpClient http, Uri baseUri) : ClienteJson(http, baseUri), IDispositivosApi
@@ -37,4 +49,10 @@ public sealed class DispositivosApi(HttpClient http, Uri baseUri) : ClienteJson(
 
     public Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default) =>
         EnviarAsync<DispositivoAula>("api/dispositivos/latido/", new { identificador_hw = identificadorHw, nombre, plataforma, version_app = versionApp }, ct);
+
+    public Task<DispositivoAula?> AsignarAsync(string dispositivoId, string alumnoId, string actor, CancellationToken ct = default) =>
+        EnviarAsync<DispositivoAula>($"api/dispositivos/{Uri.EscapeDataString(dispositivoId)}/asignar/", new { alumno_id = alumnoId, actor }, ct);
+
+    public Task<DispositivoAula?> LiberarAsync(string dispositivoId, string actor, CancellationToken ct = default) =>
+        EnviarAsync<DispositivoAula>($"api/dispositivos/{Uri.EscapeDataString(dispositivoId)}/liberar/", new { actor }, ct);
 }

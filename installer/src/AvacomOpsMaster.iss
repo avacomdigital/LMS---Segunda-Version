@@ -10,9 +10,10 @@
 ;
 ;    * No cambia el comportamiento del producto. Configura lo que el backend
 ;      ya sabe leer (variables de entorno) y no toca su codigo.
-;    * No toca AVACOM Biblioteca. Otro AppId, otra carpeta, otro servicio,
-;      otra base de datos, otros logs, otro grupo del menu inicio. De la
-;      biblioteca solo se LEE la nota de enlace, y eso lo hace el backend.
+;    * No toca AVACOM Contenido (la biblioteca de cursos). Otro AppId, otra
+;      carpeta, otro servicio, otra base de datos, otros logs, otro grupo del
+;      menu inicio. De el solo se LEE la nota de enlace (link.json), y eso lo
+;      hace el backend en tiempo de ejecucion.
 ;    * No pide escribir nada. El equipo principal del aula es tactil y no
 ;      tiene teclado: todo el asistente se maneja con toques.
 ; ============================================================================
@@ -20,9 +21,10 @@
 #include "definiciones.iss"
 
 [Setup]
-; Este AppId identifica a AVACOM OPS Master y a nada mas. AVACOM Biblioteca
-; tiene el suyo: por eso aparecen como dos productos independientes en
-; "Aplicaciones instaladas" y desinstalar uno no afecta al otro.
+; Este AppId identifica a AVACOM OPS Master y a nada mas, y NO CAMBIA entre
+; versiones: asi una version nueva se reconoce como actualizacion de la anterior
+; y no como otro producto. AVACOM Contenido y AVACOM Student tienen el suyo: son
+; productos independientes en "Aplicaciones instaladas".
 AppId={{B6D1F0A4-3C57-4E2B-9A18-7F5C2E8D4A31}
 AppName={#NombreProducto}
 AppVersion={#VersionProducto}
@@ -36,7 +38,7 @@ VersionInfoDescription=Instalador de {#NombreProducto}
 VersionInfoCompany={#Fabricante}
 VersionInfoTextVersion={#VersionProducto} ({#Revision})
 
-; Carpeta propia bajo AVACOM. La biblioteca usa AVACOM\Biblioteca.
+; Carpeta propia bajo AVACOM. Contenido usa AVACOM\Contenido.
 DefaultDirName={autopf}\AVACOM\{#NombreCorto}
 ; Grupo propio en el menu inicio: no se comparte ni se sobrescribe ningun
 ; acceso directo de la biblioteca.
@@ -104,7 +106,7 @@ es.InfoBeforeLabel=Lee esta información antes de continuar.
 es.InfoBeforeClickLabel=Cuando estés listo, toca Siguiente.
 es.WizardSelectDir=Carpeta de instalación
 es.SelectDirDesc=¿Dónde se debe instalar [name]?
-es.SelectDirLabel3=La instalación colocará [name] en la carpeta siguiente. AVACOM Biblioteca, si está en este equipo, usa una carpeta distinta y no se modifica.
+es.SelectDirLabel3=La instalación colocará [name] en la carpeta siguiente. AVACOM Contenido, si está en este equipo, usa una carpeta distinta y no se modifica.
 es.SelectDirBrowseLabel=Para continuar, toca Siguiente. Para elegir otra carpeta, toca Examinar.
 es.FinishedHeadingLabel=Instalación completada
 es.FinishedLabelNoIcons={#NombreProducto} quedó instalado en este equipo.
@@ -113,12 +115,11 @@ es.ExitSetupTitle=Salir de la instalación
 es.ExitSetupMessage=La instalación no se ha terminado. Si sales ahora, {#NombreProducto} no quedará instalado.%n%n¿Salir de la instalación?
 
 [CustomMessages]
-es.TareaIconoEscritorio=Crear un icono grande en el escritorio
 es.EjecutarAhora=Abrir {#NombreProducto} ahora
-es.GrupoAccesos=Accesos directos
 
-[Tasks]
-Name: "iconoescritorio"; Description: "{cm:TareaIconoEscritorio}"; GroupDescription: "{cm:GrupoAccesos}"
+; Sin [Tasks] a proposito: el icono del escritorio NO es una opcion. En una
+; pantalla tactil basta un toque accidental sobre una casilla para dejar la OPS
+; sin icono, y sin teclado no hay otra forma de abrirla.
 
 [Dirs]
 ; --------------------------------------------------------------------------
@@ -136,6 +137,8 @@ Name: "{commonappdata}\AVACOM"; Flags: uninsneveruninstall
 Name: "{commonappdata}\AVACOM\{#NombreCorto}"; Flags: uninsneveruninstall
 Name: "{commonappdata}\AVACOM\{#NombreCorto}\Config"; Flags: uninsneveruninstall
 Name: "{commonappdata}\AVACOM\{#NombreCorto}\Data"; Flags: uninsneveruninstall
+; Copias de seguridad previas a cada actualizacion (las ultimas cinco).
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\Respaldos"; Flags: uninsneveruninstall
 ; El lanzador escribe su diagnostico como el usuario del aula, no como
 ; administrador: necesita poder escribir aqui.
 Name: "{commonappdata}\AVACOM\{#NombreCorto}\Logs"; Permissions: users-modify; Flags: uninsneveruninstall
@@ -148,8 +151,10 @@ Source: "{#CarpetaContenido}\App\*"; DestDir: "{app}\App"; Flags: ignoreversion 
 ; Backend Django REST Framework, tal cual esta en el repositorio.
 Source: "{#CarpetaContenido}\Backend\*"; DestDir: "{app}\Backend"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Runtime: Python embebido con Django, DRF y Waitress ya instalados, el
-; arranque de Waitress y el host del servicio.
+; Runtime: Python embebido con Django, DRF, Channels y Daphne ya instalados, el
+; arranque de Daphne y el host del servicio. Cada version trae su runtime
+; completo: al actualizar, el asistente aparta el anterior antes de copiar este
+; (nunca se mezclan runtimes, migraciones ni paquetes de versiones distintas).
 Source: "{#CarpetaContenido}\Runtime\*"; DestDir: "{app}\Runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Que se empaqueto y desde que revision.
@@ -161,7 +166,8 @@ Source: "{#CarpetaContenido}\LEEME.txt"; DestDir: "{app}"; Flags: ignoreversion
 ; se valida y despues se abre la interfaz.
 Name: "{group}\{#NombreProducto}"; Filename: "{app}\Runtime\{#EjecutableHost}"; Parameters: "iniciar"; WorkingDir: "{app}"; IconFilename: "{app}\App\{#EjecutableApp}"; IconIndex: 0; Comment: "Abre {#NombreProducto} y su API local"
 Name: "{group}\Desinstalar {#NombreProducto}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#NombreProducto}"; Filename: "{app}\Runtime\{#EjecutableHost}"; Parameters: "iniciar"; WorkingDir: "{app}"; IconFilename: "{app}\App\{#EjecutableApp}"; IconIndex: 0; Tasks: iconoescritorio
+; Siempre se crea: es un requisito, no una opcion.
+Name: "{autodesktop}\{#NombreProducto}"; Filename: "{app}\Runtime\{#EjecutableHost}"; Parameters: "iniciar"; WorkingDir: "{app}"; IconFilename: "{app}\App\{#EjecutableApp}"; IconIndex: 0; Comment: "Abre {#NombreProducto} y su API local"
 
 [Run]
 ; Casilla en la ultima pantalla: un toque y se abre.
@@ -179,10 +185,23 @@ Filename: "{app}\Runtime\{#EjecutableHost}"; Parameters: "detener-servicio"; Fla
 Filename: "{app}\Runtime\{#EjecutableHost}"; Parameters: "quitar-servicio"; Flags: runhidden waituntilterminated; RunOnceId: "QuitarServicioOps"
 Filename: "{app}\Runtime\{#EjecutableHost}"; Parameters: "cerrar-firewall"; Flags: runhidden waituntilterminated; RunOnceId: "CerrarFirewallOps"
 
-[UninstallDelete]
-; Los __pycache__ los crea Python al ejecutar, no el instalador.
+[InstallDelete]
+; Red de seguridad: el asistente ya aparta App, Backend y Runtime a
+; {app}\Anterior antes de copiar, asi que normalmente no queda nada que borrar.
+; Si quedara algo (un intento anterior cortado), se retira aqui para que la
+; version nueva nunca se mezcle con restos: Django carga TODAS las migraciones
+; que encuentra en la carpeta, y una que la version nueva ya no trae rompe el
+; comando de migracion.
 Type: filesandordirs; Name: "{app}\Backend"
-Type: filesandordirs; Name: "{app}\Runtime\Python\Lib\site-packages"
+Type: filesandordirs; Name: "{app}\Runtime\Python"
+Type: filesandordirs; Name: "{app}\Runtime\*.py"
+
+[UninstallDelete]
+; Lo que crea la ejecucion y no el instalador (cachés de Python, restos de una
+; actualizacion cortada).
+Type: filesandordirs; Name: "{app}\Backend"
+Type: filesandordirs; Name: "{app}\Runtime\Python"
+Type: filesandordirs; Name: "{app}\Anterior"
 Type: dirifempty; Name: "{app}"
 
 ; ============================================================================

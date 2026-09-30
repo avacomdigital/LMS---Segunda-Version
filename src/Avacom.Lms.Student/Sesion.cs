@@ -13,11 +13,15 @@ public static class Sesion
     private static IBibliotecaDeContenido? _biblioteca;
     private static IAulaApi? _aula;
     private static IAccesoApi? _acceso;
+    private static IEstudioApi? _estudio;
+    private static IDispositivosApi? _dispositivos;
     private static ColaRespuestas? _cola;
     private static SincronizadorRespuestas? _sincronizador;
     private static Uri? _baseActual;
     private static Uri? _baseAula;
     private static Uri? _baseAcceso;
+    private static Uri? _baseEstudio;
+    private static Uri? _baseDispositivos;
     private static readonly object Candado = new();
 
     /// <summary>
@@ -89,6 +93,36 @@ public static class Sesion
                 _baseAcceso = actual;
             }
             return _acceso;
+        }
+    }
+
+    /// <summary>El cliente de <c>/api/modo-estudio/</c> (MOD-008): pendientes, lecciones, prácticas, paquetes y sincronización del trabajo sin red.</summary>
+    public static IEstudioApi Estudio
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_estudio is null || _baseEstudio != actual)
+            {
+                _estudio = new EstudioApi(Http, actual);
+                _baseEstudio = actual;
+            }
+            return _estudio;
+        }
+    }
+
+    /// <summary>El cliente de <c>/api/dispositivos/</c> (MOD-009): sólo para dar de alta esta tableta la primera vez que se usa el modo de estudio (registro idempotente por su huella).</summary>
+    public static IDispositivosApi Dispositivos
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_dispositivos is null || _baseDispositivos != actual)
+            {
+                _dispositivos = new DispositivosApi(Http, actual);
+                _baseDispositivos = actual;
+            }
+            return _dispositivos;
         }
     }
 

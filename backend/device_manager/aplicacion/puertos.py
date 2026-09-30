@@ -51,6 +51,23 @@ class SesionesDeUsuario(Protocol):
     def cerrar_en_dispositivo(self, dispositivo_id: str, momento: int, actor: str) -> int: ...
 
 
+class Alumnos(Protocol):
+    """Las personas de MOD-001 a las que se asigna un equipo (FUN-092). Sólo lectura: este módulo no es dueño de personas."""
+
+    def existe(self, alumno_id: str) -> bool | None:
+        """True/False si el padrón lo sabe; None si no se puede saber (sin organización instalada)."""
+    def rotulos(self, alumno_ids: list[str]) -> dict[str, str]:
+        """El alias de cada persona (`m01_usuario.alias`); las que no existen no aparecen."""
+
+
+class PaquetesDeEstudio(Protocol):
+    """Lo que MOD-008 tiene en un equipo (FUN-093): liberar un equipo con un paquete activo lo dejaría a la vista del siguiente
+    alumno. El adaptador resuelve `modo_estudio` de forma perezosa: este módulo no lo importa al cargarse."""
+
+    def activos_en(self, dispositivo_id: str) -> int:
+        """Paquetes `solicitado`, `descargandose` o `disponible` (y vigentes) que el equipo conserva."""
+
+
 class RepositorioDispositivos(Protocol):
     """El inventario. Trabaja con dicts planos para que los casos de uso no dependan del ORM."""
 
@@ -60,6 +77,8 @@ class RepositorioDispositivos(Protocol):
     def listar(self, organizacion_id: str, solo_activos: bool = True) -> list[dict]: ...
     def actualizar(self, dispositivo_id: str, **campos) -> dict: ...
     def bloqueados_entre(self, dispositivo_ids: list[str]) -> set[str]: ...
+    def asignados_a(self, alumno_ids: list[str]) -> dict[str, dict]:
+        """Por cada alumno, el equipo activo que tiene asignado (perfil `asignado`); los que no tienen no aparecen."""
 
 
 class RepositorioSesionesAlumno(Protocol):
@@ -82,6 +101,8 @@ class UnidadDeTrabajo(Protocol):
     auditoria: Auditoria
     organizaciones: Organizaciones
     sesiones_usuario: SesionesDeUsuario
+    alumnos: Alumnos
+    paquetes_estudio: PaquetesDeEstudio
 
     def __enter__(self) -> "UnidadDeTrabajo": ...
     def __exit__(self, tipo, valor, traza) -> None: ...

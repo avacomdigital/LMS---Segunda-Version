@@ -9,7 +9,7 @@
         1. Comprueba las herramientas del equipo de compilacion.
         2. Publica AVACOM OPS Master (.NET MAUI) con el runtime dentro.
         3. Publica el host del backend (servicio + lanzador + preparacion).
-        4. Ensambla el runtime de Python con Django, DRF y Waitress.
+        4. Ensambla el runtime de Python con Django, DRF, Channels y Daphne.
         5. Copia el backend tal como esta en backend\.
         6. Escribe el manifiesto de lo empaquetado.
         7. Ejecuta las comprobaciones del asistente en este Windows.
@@ -30,9 +30,15 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $Version = '2.0.0',
+    # Por defecto sale de installer\version.json, la fuente unica de version del producto.
+    [string] $Version,
     [string] $Configuracion = 'Release',
     [string] $VersionPython = '3.12.10',
+    # Que se hace con la base de datos al actualizar. Es un dato de cada version:
+    #   reemplazables  la base todavia es desechable (se conserva si migra bien)
+    #   protegidos     nunca se reemplaza; copia previa obligatoria y rollback
+    # Al llegar el modulo de progreso y calificaciones, cambiar a 'protegidos'.
+    [ValidateSet('reemplazables', 'protegidos')] [string] $PoliticaDatos = 'reemplazables',
     [switch] $OmitirPruebas,
     [switch] $OmitirApp
 )
@@ -45,6 +51,10 @@ $staging = Join-Path $raiz 'dist\staging'
 $salida = Join-Path $raiz 'installer\latest'
 $iss = Join-Path $raiz 'installer\src\AvacomOpsMaster.iss'
 $props = Join-Path $PSScriptRoot 'Distribucion.props'
+
+if (-not $Version) {
+    $Version = (Get-Content (Join-Path $raiz 'installer\version.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
+}
 
 function Paso([string] $texto) {
     Write-Host ''
@@ -206,6 +216,7 @@ $codigo = Nativo -Ejecutable 'dotnet' -Argumentos @(
     'publish', (Join-Path $raiz 'installer\src\host\Avacom.Ops.Host.csproj')
     '-c', $Configuracion
     "-p:PublishDir=$staging\Runtime\"
+    "-p:Version=$Version"
     '--nologo', '-v', 'minimal'
 ) -Silencioso
 if ($codigo -ne 0) { Fallar 'No se pudo publicar el host del backend.' }
@@ -228,13 +239,14 @@ New-Item -ItemType Directory -Force $destinoBackend | Out-Null
 
 # Se excluye lo que es del equipo de desarrollo, no del producto:
 #   .venv        entorno virtual local, no portable
-#   db.sqlite3   base de datos de desarrollo; el nodo crea la suya vacia
+#   db.sqlite3*  base de datos de desarrollo (con su -wal y su -shm); el nodo
+#                crea la suya vacia
 #   __pycache__  bytecode del interprete del desarrollador
 # robocopy usa 0-7 para exitos (1 = se copiaron archivos) y 8+ para fallos.
 $codigo = Nativo -Ejecutable 'robocopy' -Argumentos @(
     (Join-Path $raiz 'backend'), $destinoBackend, '/E'
     '/XD', '.venv', '__pycache__'
-    '/XF', 'db.sqlite3'
+    '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm'
     '/NFL', '/NDL', '/NJH', '/NJS', '/NP'
 ) -Silencioso
 if ($codigo -ge 8) { Fallar "robocopy fallo al copiar el backend (codigo $codigo)." }
@@ -244,8 +256,16 @@ foreach ($obligatorio in @('manage.py', 'avacom_lms\settings.py', 'avacom_lms\ws
         Fallar "El backend copiado esta incompleto: falta $obligatorio."
     }
 }
-if (Test-Path (Join-Path $destinoBackend 'db.sqlite3')) {
+if (Get-ChildItem $destinoBackend -Filter 'db.sqlite3*' -ErrorAction SilentlyContinue) {
     Fallar 'La base de datos de desarrollo se colo en el paquete.'
+}
+foreach ($obligatorio in @('avacom_lms\asgi.py', 'classroom_engine\interfaces\websockets.py')) {
+    if (-not (Test-Path (Join-Path $destinoBackend $obligatorio))) {
+        Fallar "El backend no trae lo que Daphne sirve: falta $obligatorio."
+    }
+}
+if (Get-ChildItem $destinoBackend -Recurse -Include '*.pyc' -ErrorAction SilentlyContinue) {
+    Fallar 'Hay bytecode compilado (.pyc) dentro del backend a empaquetar.'
 }
 
 $paquetes = Get-ChildItem (Join-Path $staging 'Runtime\Python\Lib\site-packages') -Directory -Filter '*.dist-info' |
@@ -258,12 +278,14 @@ $manifiesto = [ordered]@{
     empaquetado         = (Get-Date).ToString('o')
     servicio            = 'AVACOMOPSBackend'
     escucha             = '0.0.0.0:8000'
-    servidor_wsgi       = 'waitress'
+    servidor_asgi       = 'daphne (avacom_lms.asgi:application, HTTP y WebSocket)'
+    politica_datos      = $PoliticaDatos
+    id_instalacion      = 'B6D1F0A4-3C57-4E2B-9A18-7F5C2E8D4A31'
     runtime_python      = $VersionPython
     paquetes_python     = @($paquetes)
     runtime_dotnet      = 'incluido en la aplicacion (autocontenido)'
     administra_cursos   = $false
-    dueno_de_los_cursos = 'AVACOM Biblioteca'
+    dueno_de_los_cursos = 'AVACOM Contenido'
 }
 $manifiesto | ConvertTo-Json -Depth 4 |
     Set-Content -Path (Join-Path $staging 'manifiesto.json') -Encoding utf8
@@ -274,7 +296,8 @@ AVACOM OPS Master $Version (revision $revision)
 Este equipo es el nodo principal del aula. Lo instalado aqui es:
 
   App\       AVACOM OPS Master, la aplicacion del profesor.
-  Backend\   La API local del aula (Django REST Framework).
+  Backend\   La API local del aula (Django REST Framework) y su canal en
+             tiempo real (WebSocket), servidos por Daphne.
   Runtime\   Lo que la API necesita para ejecutarse. No hace falta instalar
              Python ni .NET: ya van dentro.
 
@@ -285,16 +308,20 @@ conectan a http://<IP de este equipo>:8000.
 Lo que cambia con el uso NO esta en esta carpeta, esta en:
 
   %ProgramData%\AVACOM\OPS Master\Config    configuracion de este equipo
-  %ProgramData%\AVACOM\OPS Master\Data      expediente de los estudiantes
+  %ProgramData%\AVACOM\OPS Master\Data      base de datos del nodo (organizacion, personas,
+                                            tabletas, clases, expediente)
+  %ProgramData%\AVACOM\OPS Master\Respaldos  copias de seguridad previas a cada actualizacion
   %ProgramData%\AVACOM\OPS Master\Logs      registros para diagnostico
 
-Los cursos no viven aqui: son de AVACOM Biblioteca, que se instala aparte y
+Los cursos no viven aqui: son de AVACOM Contenido, que se instala aparte y
 tiene su propia carpeta. AVACOM OPS Master los consulta y guarda solo el
 expediente: inscripcion, progreso, intentos y notas.
 
 Para quitar el producto, usa "Aplicaciones instaladas" de Windows. La
-desinstalacion pregunta si quieres conservar el expediente; conservarlo es la
-respuesta por defecto.
+desinstalacion pregunta si quieres conservar los datos y su configuracion (van
+juntos); conservarlos es la respuesta por defecto.
+
+Politica de datos de esta version: $PoliticaDatos.
 "@ | Set-Content -Path (Join-Path $staging 'LEEME.txt') -Encoding utf8
 
 $tamano = [math]::Round(((Get-ChildItem -Recurse -File $staging | Measure-Object -Sum Length).Sum / 1MB), 0)
@@ -303,10 +330,14 @@ Write-Host "  Contenido a empaquetar: $tamano MB"
 # ------------------------------------------------- 7. Verificacion del asistente
 Paso '7/8  Verificando el codigo del asistente en este Windows'
 
-# Compilar no prueba que Pascal Script funcione. Esto ejecuta las nueve
+# Compilar no prueba que Pascal Script funcione. Esto ejecuta las diez
 # comprobaciones del equipo de verdad, sin instalar nada, y aborta si alguna
 # no llega a dar un veredicto.
 & (Join-Path $PSScriptRoot 'Verificar-Asistente.ps1') -Iscc $iscc
+
+# El probador de comunicacion (un .bat con el PowerShell dentro) se regenera
+# desde su fuente para que no se quede atras.
+& (Join-Path $PSScriptRoot 'New-ProbadorBat.ps1') | Out-Null
 
 # ------------------------------------------------------------ 8. Inno Setup
 Paso '8/8  Compilando el asistente con Inno Setup'
@@ -319,6 +350,7 @@ $codigo = Nativo -Ejecutable $iscc -Argumentos @(
     "/DCarpetaSalida=$salida"
     "/DRevision=$revision"
     "/DVersionProducto=$Version"
+    "/DPoliticaDatos=$PoliticaDatos"
     $iss
 ) -Directorio (Split-Path $iss) -LineasSiFalla 40
 if ($codigo -ne 0) { Fallar 'Inno Setup no pudo compilar el asistente.' }
@@ -335,6 +367,32 @@ Version $Version
 Revision $revision
 Empaquetado $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss zzz'))
 "@ | Set-Content -Path (Join-Path $salida 'SHA256.txt') -Encoding utf8
+
+# El verificador se versiona junto al instalador (installer\latest) y no se
+# genera: si falta, la carpeta de entrega esta incompleta.
+if (-not (Test-Path (Join-Path $salida 'AVACOM-Verificar-Instalador.bat'))) {
+    Fallar 'Falta installer\latest\AVACOM-Verificar-Instalador.bat: la carpeta de entrega esta incompleta.'
+}
+
+@"
+AVACOM OPS Master $Version (revision $revision)
+
+Esta carpeta es lo que se sube como release de GitHub:
+
+  $($instalador.Name)   el instalador (no se versiona: supera los 100 MB de GitHub)
+  SHA256.txt                            la huella del instalador; si se versiona
+  AVACOM-Verificar-Instalador.bat       revisa el equipo y el instalador SIN instalar nada
+  LEEME.txt                             este archivo
+
+Antes de instalar en un equipo del aula, toca AVACOM-Verificar-Instalador.bat:
+comprueba la descarga (SHA256), ejecuta las diez comprobaciones del asistente y
+enseña el estado de lo ya instalado. No modifica el equipo.
+
+Para instalar, toca el instalador. Todo se maneja con toques: no hay que escribir
+nada. Python, .NET y todo lo que la API necesita van dentro; no hace falta internet.
+
+Politica de datos de esta version: $PoliticaDatos.
+"@ | Set-Content -Path (Join-Path $salida 'LEEME.txt') -Encoding utf8
 
 Write-Host ''
 Write-Host 'Instalador listo' -ForegroundColor Green

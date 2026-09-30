@@ -12,5 +12,9 @@ public partial class AppShell : Shell
         // MOD-007 · Classroom Engine: reflejo de la clase en la tableta (S1 → S2)
         Routing.RegisterRoute("clase-unirse", typeof(Pages.ClaseUnirsePage));
         Routing.RegisterRoute("clase-siguiendo", typeof(Pages.ClaseSiguiendoPage));
+        // MOD-008 · Modo Estudio: «Mis lecciones», la lección, su práctica (sólo en un aparato asignado al alumno)
+        Routing.RegisterRoute("estudio", typeof(ModoEstudio.Views.StudyModePage));
+        Routing.RegisterRoute("estudio-leccion", typeof(ModoEstudio.Views.StudyLessonPage));
+        Routing.RegisterRoute("estudio-practica", typeof(ModoEstudio.Views.StudyPracticePage));
     }
 }

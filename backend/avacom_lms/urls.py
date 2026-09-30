@@ -8,5 +8,6 @@ urlpatterns = [
     path("api/dispositivos/", include("device_manager.interfaces.urls")),
     path("api/biblioteca/", include("biblioteca.urls")),
     path("api/aula/", include("classroom_engine.interfaces.urls")),
+    path("api/modo-estudio/", include("modo_estudio.interfaces.urls")),
     path("api/", include("expediente.urls")),
 ]

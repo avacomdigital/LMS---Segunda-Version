@@ -13,6 +13,11 @@ public partial class StudentMenuPage : ContentPage
         var name = Sesion.Nombre; var primero = name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? name;
         StudentName.Text = primero; WelcomeLabel.Text = $"Bienvenido, {primero}"; Iniciales.Text = Avacom.Lms.Core.Models.Identidad.InicialesDe(name);
     }
+    /// <summary>
+    /// «Modo de estudio» está en cualquier tableta (D-15): no pide código como «Clase en vivo»; al entrar pregunta quién eres, porque las lecciones las
+    /// asigna el profesor a un grupo y en un LMS offline nadie puede verificar quién es quién.
+    /// </summary>
+    private async void OnEstudio(object? sender, EventArgs e) => await Shell.Current.GoToAsync("estudio");
     private async void OnCourses(object? sender, EventArgs e) => await Shell.Current.GoToAsync("asignaturas");
     private async void OnClaseEnVivo(object? sender, EventArgs e) => await Shell.Current.GoToAsync("clase-unirse");
 
@@ -35,7 +40,8 @@ public partial class StudentMenuPage : ContentPage
             using var tope = new CancellationTokenSource(TopeDeSalida);
             Task salida = sesionId is not null && participanteId is not null ? DeclararSalidaAsync(sesionId, participanteId, dispositivo, tope.Token) : Task.CompletedTask;
             Task cola = VaciarColaAsync(tope.Token);
-            await Task.WhenAny(Task.WhenAll(salida, cola), Task.Delay(TopeDeSalida));
+            Task estudio = ModoEstudio.EstudioCompose.AlSalirAsync(tope.Token);   // FUN-089: cierra la sesión de estudio; lo pendiente sale solo (BR-137)
+            await Task.WhenAny(Task.WhenAll(salida, cola, estudio), Task.Delay(TopeDeSalida));
             tope.Cancel();
             await Sesion.CerrarSesionDeUsuarioAsync();
 

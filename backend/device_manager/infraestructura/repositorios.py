@@ -14,7 +14,8 @@ from ..dominio import dispositivo as dom
 from ..dominio.errores import SinPermiso
 
 CAMPOS_DISPOSITIVO = ("id", "organizacion_id", "identificador_hw", "nombre", "tipo", "plataforma", "version_app",
-                      "activo", "bloqueado", "registrado_en", "ultimo_latido_en", "espacio_libre_mb", "bateria_pct")
+                      "activo", "bloqueado", "registrado_en", "ultimo_latido_en", "espacio_libre_mb", "bateria_pct",
+                      "perfil", "asignado_a_id", "asignado_en")
 CAMPOS_SESION = ("id", "alumno_id", "dispositivo_id", "iniciada_en", "finalizada_en", "motivo_cierre")
 
 
@@ -50,6 +51,13 @@ class DispositivosDjango:
             return set()
         return set(m.Dispositivo.objects.filter(pk__in=ids).filter(bloqueado=True).values_list("id", flat=True)) | \
             set(m.Dispositivo.objects.filter(pk__in=ids, activo=False).values_list("id", flat=True))
+
+    def asignados_a(self, alumno_ids: list[str]) -> dict[str, dict]:
+        ids = [i for i in alumno_ids if i]
+        if not ids:
+            return {}
+        filas = m.Dispositivo.objects.filter(perfil=dom.ASIGNADO, asignado_a_id__in=ids, activo=True).order_by("asignado_en", "id")
+        return {f.asignado_a_id: _d(f, CAMPOS_DISPOSITIVO) for f in filas}   # con varios, el más reciente gana
 
 
 class SesionesAlumnoDjango:
@@ -119,6 +127,36 @@ class SesionesUsuarioAcceso:
         return cerradas
 
 
+class AlumnosAcceso:
+    """Lee `m01_usuario` del módulo de acceso: quién existe y cómo se llama (el alias). Nunca escribe: MOD-009 no es dueño
+    de personas. Sin organización instalada no se puede saber si alguien existe (Q-34): se devuelve None y no se bloquea."""
+
+    def existe(self, alumno_id: str) -> bool | None:
+        from acceso.models import Organizacion, Usuario
+        if not Organizacion.objects.exists():
+            return None
+        return Usuario.objects.filter(pk=alumno_id).exists()
+
+    def rotulos(self, alumno_ids: list[str]) -> dict[str, str]:
+        ids = [i for i in alumno_ids if i]
+        if not ids:
+            return {}
+        from acceso.models import Usuario
+        return dict(Usuario.objects.filter(pk__in=ids).values_list("id", "alias"))
+
+
+class PaquetesEstudioPerezoso:
+    """MOD-008 visto desde el inventario (FUN-093). `modo_estudio` se importa al preguntar y no al cargar: este módulo no
+    depende de él ni en el arranque ni en las migraciones. Si el modo de estudio no está instalado no hay paquetes."""
+
+    def activos_en(self, dispositivo_id: str) -> int:
+        try:
+            from modo_estudio import servicios as estudio
+        except ImportError:
+            return 0
+        return estudio.paquetes_activos_en(dispositivo_id)
+
+
 class AutorizacionAcceso:
     """Traduce los permisos `device.*` a los que siembra MOD-001. Sin sesión (Q-04 abierta) se permite,
     igual que en el expediente y en el aula; con sesión de alumno se niega siempre (nivel 1)."""
@@ -128,6 +166,9 @@ class AutorizacionAcceso:
         dom.P_READ: ("identity.device.manage", "identity.exam_access.grant"),
         dom.P_UPDATE: ("identity.device.manage",),
         dom.P_BLOCK: ("identity.device.manage", "identity.exam_access.grant"),
+        # FUN-092 y FUN-093: asignar y liberar el equipo de una persona es administración de dispositivos (técnico y administrador).
+        dom.P_ASSIGN: ("identity.device.manage",),
+        dom.P_RELEASE: ("identity.device.manage",),
     }
 
     def exigir(self, actor: Actor, permiso: str) -> None:

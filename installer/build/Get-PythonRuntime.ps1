@@ -8,14 +8,15 @@
     autocontenida con:
 
         Python embeddable (python.org, sin instalador ni registro)
-        + Django + Django REST Framework + Waitress + dependencias
+        + Django + Django REST Framework + Channels + Daphne (Twisted) + dependencias
 
     El resultado se copia tal cual dentro del paquete de distribucion. En el
     equipo destino solo se descomprime: no se ejecuta pip ni winget.
 
-    Los paquetes son todos "py3-none-any" (Python puro), asi que se resuelven
-    con --only-binary y --platform win_amd64 para que el resultado no dependa
-    del Python que tenga el equipo de compilacion.
+    Algunos paquetes traen extensiones nativas (cryptography, cffi, ujson...).
+    Se resuelven con --only-binary y --platform win_amd64 para que solo se
+    usen ruedas precompiladas y el resultado no dependa del Python que tenga el
+    equipo de compilacion: en el equipo destino no se compila nada.
 
 .NOTES
     Requiere internet SOLO en el equipo de compilacion.
@@ -107,7 +108,7 @@ $destinoTfm = ($PythonVersion -split '\.')[0..1] -join '.'
     --no-warn-script-location
 if ($LASTEXITCODE -ne 0) { throw 'pip no pudo preparar el runtime del backend.' }
 
-# Los .exe de consola (django-admin, waitress-serve) apuntan al Python del
+# Los .exe de consola (django-admin, daphne) apuntan al Python del
 # equipo de compilacion: no sirven en el destino y confunden. El backend se
 # ejecuta con `python.exe -m`, nunca con estos lanzadores.
 $bin = Join-Path $sitePackages 'bin'
@@ -116,14 +117,41 @@ Get-ChildItem -Path $sitePackages -Filter '*.exe' -File -ErrorAction SilentlyCon
 
 # Comprobacion real: el runtime que se va a distribuir debe poder importar lo
 # que el backend necesita. Si esto falla, el paquete no sale.
-$verificacion = & $pythonExe -c "import django, rest_framework, waitress, zoneinfo, sqlite3; print(django.get_version())" 2>&1
+$verificacion = & $pythonExe -c "import django, rest_framework, channels, daphne, twisted, autobahn, zoneinfo, sqlite3, argon2, cryptography, jwt; print(django.get_version())" 2>&1
 if ($LASTEXITCODE -ne 0) {
     throw "El runtime ensamblado no pudo importar el backend: $verificacion"
 }
-Write-Host "  Runtime listo: Python $PythonVersion con Django $verificacion"
+Write-Host "  Runtime listo: Python $PythonVersion con Django $verificacion y Daphne"
+
+# Waitress ya no se usa. Si reaparece en el runtime es porque alguien lo puso de
+# nuevo en la lista de dependencias: se avisa aqui y no en el equipo del aula.
+if (Test-Path (Join-Path $sitePackages 'waitress')) {
+    throw 'El runtime trae waitress, que ya no se usa: el servidor es Daphne.'
+}
 
 $paquetes = Get-ChildItem -Path $sitePackages -Directory -Filter '*.dist-info' |
     ForEach-Object { $_.Name -replace '\.dist-info$', '' } | Sort-Object
+
+# Cada paquete fijado en el archivo de requisitos tiene que haber quedado
+# instalado exactamente con esa version (pip puede resolver otra si el pin se
+# escribio mal, y entonces lo que se prueba no es lo que se distribuye).
+$instalados = @{}
+foreach ($dist in $paquetes) {
+    $corte = $dist.LastIndexOf('-')
+    $instalados[($dist.Substring(0, $corte) -replace '_', '-').ToLowerInvariant()] = $dist.Substring($corte + 1)
+}
+foreach ($linea in Get-Content $RequirementsFile) {
+    if ($linea -match '^\s*([A-Za-z0-9_.\-]+)==([^\s#]+)') {
+        $nombre = ($Matches[1] -replace '_', '-').ToLowerInvariant()
+        $version = $Matches[2]
+        # Normalizacion de nombres como la de pip: guiones, puntos y guiones bajos son lo mismo.
+        $coincide = $instalados.Keys | Where-Object { ($_ -replace '\.', '-') -eq ($nombre -replace '\.', '-') } | Select-Object -First 1
+        if (-not $coincide) { throw "El paquete $nombre no quedo instalado en el runtime." }
+        if ($instalados[$coincide] -ne $version) {
+            throw "El paquete $nombre quedo en la version $($instalados[$coincide]) y el archivo de requisitos fija $version."
+        }
+    }
+}
 [pscustomobject]@{
     python   = $PythonVersion
     paquetes = $paquetes

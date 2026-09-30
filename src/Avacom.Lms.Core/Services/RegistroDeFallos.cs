@@ -11,8 +11,16 @@ public static class RegistroDeFallos
 {
     private static readonly object Cerrojo = new();
 
-    public static string Ruta(string app) =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AVACOM", "lms", $"fallos-{app}.log");
+    /// <summary>
+    /// La carpeta del registro. <c>AVACOM_LMS_DIR_FALLOS</c> la sustituye (lo usan las pruebas automáticas para no escribir en el registro real de quien
+    /// trabaja en el equipo); sin ella, <c>%LOCALAPPDATA%\AVACOM\lms</c>.
+    /// </summary>
+    private static string Carpeta =>
+        Environment.GetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS") is { Length: > 0 } propia
+            ? propia
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AVACOM", "lms");
+
+    public static string Ruta(string app) => Path.Combine(Carpeta, $"fallos-{app}.log");
 
     public static void Escribir(string app, string origen, Exception? excepcion)
     {

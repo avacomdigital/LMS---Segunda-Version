@@ -7,7 +7,7 @@
 ;
 ;      PruebaAsistente.exe /VERYSILENT /VOLCADO=<archivo>
 ;
-;  corre las nueve comprobaciones del equipo en un Windows real, escribe el
+;  corre las diez comprobaciones del equipo en un Windows real, escribe el
 ;  resultado en <archivo> y aborta sin tocar nada.
 ;
 ;  Sirve para lo que un compilador no puede comprobar: que Pascal Script no

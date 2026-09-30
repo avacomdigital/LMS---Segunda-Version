@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- La práctica de una lección (MOD-008 · FUN-083). Misma composición que «Mis lecciones»: la retícula del menú, oscurecida, y un modal
+     blanco centrado. Dentro, PracticaEstudioView (Ui) con corrección inmediata: es práctica, no evaluación. -->
+<ContentPage
+    x:Class="Avacom.Lms.Student.ModoEstudio.Views.StudyPracticePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#F1F1F1"
+    SizeChanged="OnPageSizeChanged">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Styles/StudyModeStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid>
+        <GraphicsView InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+            <GraphicsView.Drawable>
+                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#26000000" StrokeWidth="1.25" />
+            </GraphicsView.Drawable>
+        </GraphicsView>
+        <BoxView Color="#8C000000" HorizontalOptions="Fill" VerticalOptions="Fill" />
+
+        <Grid x:Name="Modal" HorizontalOptions="Center" VerticalOptions="Center">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 34" BackgroundColor="#0B000000" Margin="-10,6,-10,-30" InputTransparent="True" />
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 30" BackgroundColor="#12000000" Margin="-4,4,-4,-16" InputTransparent="True" />
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 27" BackgroundColor="#1A000000" Margin="0,2,0,-5" InputTransparent="True" />
+            <Border Style="{StaticResource StudyModalCard}" SemanticProperties.Description="Práctica de estudio">
+                <Grid RowDefinitions="Auto,*" Padding="26,22,26,22" RowSpacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                        <Button x:Name="Atras" Text="Mi lección" ImageSource="estudio_arrow_left.png" Style="{StaticResource StudyGhostButton}" Clicked="OnAtras"
+                                AutomationId="practica-atras" HeightRequest="44" ContentLayout="Left,8" Padding="16,0" />
+                        <Label Grid.Column="1" x:Name="Eyebrow" Style="{StaticResource StudyEyebrow}" VerticalOptions="Center" HorizontalOptions="Center" />
+                        <Button Grid.Column="2" Style="{StaticResource StudyCloseButton}" ImageSource="estudio_close.png" Clicked="OnCerrar" AutomationId="practica-cerrar"
+                                SemanticProperties.Description="Cerrar y volver a Mis lecciones" />
+                    </Grid>
+                    <Grid Grid.Row="1">
+                        <ui:PracticaEstudioView x:Name="Practica" />
+                        <VerticalStackLayout x:Name="Cargando" IsVisible="True" HorizontalOptions="Center" VerticalOptions="Center" Spacing="12">
+                            <ActivityIndicator IsRunning="True" WidthRequest="28" HeightRequest="28" Color="#02739E" />
+                            <Label x:Name="TextoCargando" Text="Preparando tu práctica…" Style="{StaticResource StudyBody}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout x:Name="Problema" IsVisible="False" HorizontalOptions="Center" VerticalOptions="Center" Spacing="12" Padding="24">
+                            <Label x:Name="ProblemaTitulo" FontFamily="InterSemiBold" FontSize="22" HorizontalOptions="Center" HorizontalTextAlignment="Center" TextColor="{StaticResource StudyInk}" />
+                            <Label x:Name="ProblemaTexto" Style="{StaticResource StudyBody}" FontSize="16" HorizontalOptions="Center" HorizontalTextAlignment="Center" MaximumWidthRequest="460" />
+                            <Button Text="Volver a Mis lecciones" Style="{StaticResource StudyGhostButton}" Clicked="OnCerrar" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

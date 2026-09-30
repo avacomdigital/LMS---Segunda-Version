@@ -15,9 +15,9 @@ internal static class Servicio
     public const string NombreVisible = "AVACOM OPS Master Backend";
 
     private const string Descripcion =
-        "API local de AVACOM OPS Master (Django REST Framework sobre Waitress). " +
-        "Atiende a AVACOM OPS Master y a las tabletas del aula en el puerto 8000. " +
-        "No administra cursos: los cursos son de AVACOM Biblioteca.";
+        "API local de AVACOM OPS Master (Django REST Framework sobre Daphne). " +
+        "Atiende a AVACOM OPS Master y a las tabletas del aula, HTTP y tiempo real (WebSocket), en el puerto 8000. " +
+        "No administra cursos: los cursos son de AVACOM Contenido.";
 
     public static bool Existe()
     {

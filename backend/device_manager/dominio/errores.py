@@ -46,3 +46,16 @@ class DispositivoInactivo(ErrorDispositivos):
     """La tableta fue dada de baja del inventario del aula."""
     codigo = "dispositivo_inactivo"
     http = 403
+
+
+class DispositivoYaAsignado(ErrorDispositivos):
+    """El equipo ya es de otra persona (FUN-092): primero se libera y después se asigna a quien corresponda."""
+    codigo = "dispositivo_ya_asignado"
+    http = 409
+
+
+class PaqueteSinIntegrar(ErrorDispositivos):
+    """El equipo aún tiene un paquete de estudio activo (FUN-093): mientras la persona conserve material o trabajo sin integrar en
+    él, liberarlo lo dejaría a la vista del siguiente alumno. Debe retirarse el paquete antes de liberar el equipo."""
+    codigo = "paquete_sin_integrar"
+    http = 409

@@ -9,10 +9,10 @@
         AVACOM OPS Master (interfaz)
             │  HTTP  127.0.0.1:8000
             ▼
-        Servicio AVACOMOPSBackend  →  Waitress  →  Django / DRF
-            │  loopback, puerto efímero, cabecera X-Avacom-Ficha
+        Servicio AVACOMOPSBackend  →  Daphne (ASGI)  →  Django / DRF + WebSocket
+            │  loopback, puerto efímero, cabecera X-Avacom-Token
             ▼
-        AVACOM Biblioteca  (127.0.0.1:{Puerto de enlace.json})
+        AVACOM Contenido  (127.0.0.1:{apiPort de link.json})
 
     La gracia del diagnóstico está en separar dos fallos que se ven igual desde
     la pantalla del profesor —«no aparecen los cursos»— y tienen causas
@@ -22,11 +22,11 @@
       · la Biblioteca sí está, pero el backend no la alcanza.
 
     Para distinguirlos, el script habla con la Biblioteca por su cuenta, con la
-    ficha de la nota de enlace, y compara lo que ve él con lo que dice el
+    token de link.json, y compara lo que ve él con lo que dice el
     backend en /health/.
 
     También lee los registros del backend y clasifica los errores de Python,
-    con atención especial a los que ocurren en los hilos de Waitress: son los
+    con atención especial a los que ocurren dentro de las peticiones de Daphne: son los
     que rompen una petición suelta y no dejan rastro en la pantalla.
 
     NO MODIFICA NADA. Solo lee y consulta. No reinicia servicios, no cambia
@@ -74,14 +74,14 @@ Set-StrictMode -Version Latest
 # comprobación que falla no sirve para nada. Cada bloque maneja su error.
 $ErrorActionPreference = 'Continue'
 
-$VersionDiagnostico = '2.0.0'
+$VersionDiagnostico = '2.1.0'
 $RaizDatos = Join-Path $env:ProgramData 'AVACOM\OPS Master'
-$RutaEnlace = Join-Path $env:ProgramData 'AVACOM\contenido\enlace.json'
+$RutaEnlace = Join-Path $env:ProgramData 'AVACOM\content\link.json'
 $NombreServicio = 'AVACOMOPSBackend'
 
 # Respuestas crudas que se guardan en el paquete de evidencias.
 $Evidencias = New-Object System.Collections.Generic.List[object]
-# La ficha es la credencial de la Biblioteca: nunca sale del equipo.
+# El token es la credencial de la biblioteca: nunca sale del equipo.
 $FichaParaOcultar = ''
 
 # ---------------------------------------------------------------- utilidades
@@ -544,60 +544,67 @@ if ($BackendVivo) {
 }
 
 # =================================================== 6. La nota de enlace
-Seccion '6 · La nota de enlace de AVACOM Biblioteca'
+Seccion '6 · La nota de enlace de AVACOM Contenido (link.json)'
 
+# AVACOM Contenido publica en link.json el puerto de su API (apiPort), el de su
+# servidor de medios (mediaPort) y el token con el que se le habla
+# (cabecera X-Avacom-Token). Cambian en cada arranque de la biblioteca.
+# El backend la relee en cada peticion y este diagnostico tambien.
 $PuertoBiblioteca = 0
-$FichaBiblioteca = ''
+$FichaBiblioteca = ''   # el token: la credencial de la biblioteca (se oculta en todo lo que sale del equipo)
 $ProcesoNota = 0
 
 if (-not (Test-Path $RutaEnlace)) {
-    Anotar 'BLOQUEA' 'No hay nota de enlace: AVACOM Biblioteca no está publicando su API' `
+    Anotar 'BLOQUEA' 'No hay nota de enlace: AVACOM Contenido no está publicando su API' `
         "Se esperaba en $RutaEnlace" `
-        ('Abre AVACOM Biblioteca en este equipo y entra en la pestaña «Contenido AVACOM» con la licencia ' +
-         'cargada. La API de la Biblioteca sólo se enciende al abrir esa pestaña: tener la ventana abierta no basta.')
+        'Abre AVACOM Contenido: al arrancar escribe la nota con sus puertos y su token.'
 } else {
     try {
         $archivo = Get-Item $RutaEnlace
         $edad = (Get-Date) - $archivo.LastWriteTime
         $nota = Get-Content $RutaEnlace -Raw -Encoding UTF8 | ConvertFrom-Json
 
-        # El backend acepta PascalCase y minúsculas; aquí se hace lo mismo.
-        foreach ($nombre in @('Puerto', 'puerto')) {
+        # El backend acepta varios nombres para cada campo; aquí se hace lo mismo.
+        foreach ($nombre in @('apiPort', 'port', 'puerto')) {
             $v = Prop $nota $nombre 0
             if ($v) { $PuertoBiblioteca = [int]$v; break }
         }
-        foreach ($nombre in @('Ficha', 'ficha')) {
+        $puertoMedios = 0
+        $v = Prop $nota 'mediaPort' 0
+        if ($v) { $puertoMedios = [int]$v }
+        foreach ($nombre in @('token')) {
             $v = Prop $nota $nombre ''
             if ($v) { $FichaBiblioteca = [string]$v; break }
         }
-        foreach ($nombre in @('Proceso', 'proceso')) {
+        foreach ($nombre in @('pid', 'processId', 'proceso')) {
             $v = Prop $nota $nombre 0
             if ($v) { $ProcesoNota = [int]$v; break }
         }
         $contrato = 0
-        foreach ($nombre in @('Contrato', 'contrato')) {
+        foreach ($nombre in @('contract', 'contrato')) {
             $v = Prop $nota $nombre 0
             if ($v) { $contrato = [int]$v; break }
         }
 
         $FichaParaOcultar = $FichaBiblioteca
-        Guardar-Evidencia 'biblioteca-enlace.json' (Get-Content $RutaEnlace -Raw -Encoding UTF8) 0 $RutaEnlace
+        Guardar-Evidencia 'contenido-link.json' (Get-Content $RutaEnlace -Raw -Encoding UTF8) 0 $RutaEnlace
 
         Anotar 'OK' 'La nota de enlace existe' `
-            ("Escrita hace $([int]$edad.TotalMinutes) min · contrato $contrato · puerto $PuertoBiblioteca · " +
-             "proceso $ProcesoNota · ficha " + $(if ($FichaBiblioteca) { "presente ($($FichaBiblioteca.Length) caracteres)" } else { 'AUSENTE' }))
+            ("Escrita hace $([int]$edad.TotalMinutes) min · contrato $(if ($contrato) { $contrato } else { '(no declarado)' }) · " +
+             "apiPort $PuertoBiblioteca · mediaPort $puertoMedios · proceso $ProcesoNota · token " +
+             $(if ($FichaBiblioteca) { "presente ($($FichaBiblioteca.Length) caracteres)" } else { 'AUSENTE' }))
 
-        if (-not $PuertoBiblioteca -or -not $FichaBiblioteca -or -not $contrato) {
+        if (-not $PuertoBiblioteca -or -not $FichaBiblioteca) {
             Anotar 'BLOQUEA' 'La nota de enlace está incompleta' `
-                'Faltan Contrato, Puerto o Ficha, y el backend la rechaza entera.' `
-                'Cierra AVACOM Biblioteca por completo y vuelve a abrirla con la pestaña «Contenido AVACOM».'
+                'Faltan apiPort o token, y el backend la rechaza entera.' `
+                'Cierra AVACOM Contenido por completo y vuelve a abrirlo.'
         }
-        if ($contrato -gt 1) {
-            Anotar 'BLOQUEA' "La Biblioteca habla el contrato $contrato y este LMS sólo entiende hasta el 1" '' `
+        if ($contrato -gt 2) {
+            Anotar 'BLOQUEA' "AVACOM Contenido habla el contrato $contrato y este LMS sólo entiende hasta el 2" '' `
                 'Hay que actualizar AVACOM OPS Master a una versión que entienda ese contrato.'
         }
 
-        # ¿La nota es de esta sesión de la Biblioteca, o quedó de una anterior?
+        # ¿La nota es de esta sesión de la biblioteca, o quedó de una anterior?
         if ($ProcesoNota) {
             $vivo = $null
             try { $vivo = Get-Process -Id $ProcesoNota -ErrorAction Stop } catch { }
@@ -605,8 +612,8 @@ if (-not (Test-Path $RutaEnlace)) {
                 Anotar 'OK' "El proceso de la nota sigue vivo: $($vivo.ProcessName) (pid $ProcesoNota)"
             } else {
                 Anotar 'BLOQUEA' "El proceso $ProcesoNota de la nota de enlace ya no existe" `
-                    'La nota quedó de una sesión anterior de AVACOM Biblioteca: apunta a un puerto muerto.' `
-                    'Abre AVACOM Biblioteca y entra en «Contenido AVACOM»: al hacerlo reescribe la nota con su puerto real.'
+                    'La nota quedó de una sesión anterior de AVACOM Contenido: apunta a un puerto muerto.' `
+                    'Abre AVACOM Contenido: al arrancar reescribe la nota con su puerto real.'
             }
         }
 
@@ -620,300 +627,197 @@ if (-not (Test-Path $RutaEnlace)) {
             if (@($puedeSistema).Count -eq 0) {
                 Anotar 'AVISO' 'La nota de enlace podría no ser legible por el servicio' `
                     "El servicio corre como SYSTEM y en los permisos de $RutaEnlace no aparece." `
-                    'Si el backend dice que la Biblioteca no está mientras este script sí la alcanza, esta es la causa.'
+                    'Si el backend dice que la biblioteca no está mientras este script sí la alcanza, esta es la causa.'
             }
         } catch { }
     } catch {
         Anotar 'BLOQUEA' 'La nota de enlace no se pudo leer' $_.Exception.Message `
-            'Cierra AVACOM Biblioteca y vuelve a abrirla para que la reescriba.'
+            'Cierra AVACOM Contenido y vuelve a abrirlo para que la reescriba.'
     }
 }
 
-try {
-    $appBiblioteca = @(Get-Process -Name 'Avacom.Biblioteca.App' -ErrorAction Stop)
-    Anotar 'INFO' "AVACOM Biblioteca está abierta ($(@($appBiblioteca).Count) proceso)" `
-        (($appBiblioteca | ForEach-Object { "pid $($_.Id)" }) -join ', ')
-    if ($ProcesoNota -and -not (@($appBiblioteca | Where-Object { $_.Id -eq $ProcesoNota }).Count)) {
-        Anotar 'AVISO' 'La Biblioteca abierta no es la que escribió la nota de enlace' `
-            "La nota dice pid $ProcesoNota y la que está abierta tiene otro." `
-            'Entra en la pestaña «Contenido AVACOM» de la Biblioteca abierta para que reescriba la nota.'
-    }
-} catch {
-    Anotar 'BLOQUEA' 'AVACOM Biblioteca no está abierta en este equipo' '' `
-        ('Los cursos son suyos: sin ella, AVACOM OPS Master funciona pero no tiene nada que mostrar. ' +
-         'Ábrela y entra en la pestaña «Contenido AVACOM».')
+$appContenido = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -match '^Avacom\.Contenido|^AVACOM Contenido|^Avacom\.Content' })
+if (@($appContenido).Count -gt 0) {
+    Anotar 'INFO' "AVACOM Contenido está abierto ($(@($appContenido).Count) proceso)" `
+        (($appContenido | ForEach-Object { "$($_.ProcessName) pid $($_.Id)" }) -join ', ')
+} else {
+    Anotar 'AVISO' 'No se ve AVACOM Contenido abierto en este equipo' '' `
+        ('Los cursos son suyos: sin él, AVACOM OPS Master funciona pero no tiene nada que mostrar. ' +
+         'Si su API corre como servicio o con otro nombre de proceso, ignora este aviso.')
 }
 
-# ============================ 7. Hablar con la Biblioteca por nuestra cuenta
-Seccion '7 · Contacto directo con AVACOM Biblioteca'
+# ============================= 7. Hablar con AVACOM Contenido por nuestra cuenta
+Seccion '7 · Contacto directo con AVACOM Contenido (API v2)'
 
 $BibliotecaAlcanzable = $false
 # -1 significa «no se pudo saber», que no es lo mismo que cero.
 $CursosEnBiblioteca = -1
 if (-not $PuertoBiblioteca -or -not $FichaBiblioteca) {
-    Anotar 'INFO' 'No se puede probar el contacto directo sin puerto y ficha' `
+    Anotar 'INFO' 'No se puede probar el contacto directo sin apiPort y token' `
         'Resuelve primero lo del apartado anterior.'
 } else {
-    $directo = Invoke-Peticion "http://127.0.0.1:$PuertoBiblioteca/v1/salud" `
-        -Cabeceras @{ 'X-Avacom-Ficha' = $FichaBiblioteca } -SegundosDeEspera 6
+    $directo = Invoke-Peticion "http://127.0.0.1:$PuertoBiblioteca/v2/health" `
+        -Cabeceras @{ 'X-Avacom-Token' = $FichaBiblioteca } -SegundosDeEspera 6
 
-    Guardar-Evidencia 'biblioteca-salud.json' $directo.Cuerpo $directo.Estado $directo.Url
+    Guardar-Evidencia 'contenido-health.json' $directo.Cuerpo $directo.Estado $directo.Url
 
     if ($directo.Estado -eq 200) {
         $BibliotecaAlcanzable = $true
-        $capacidades = @(Prop $directo.Json 'capacidades' @())
-        Anotar 'OK' "AVACOM Biblioteca contesta en 127.0.0.1:$PuertoBiblioteca ($($directo.Milisegundos) ms)" `
-            ("componente $(Prop $directo.Json 'componente' '?') · contrato $(Prop $directo.Json 'contrato' '?')`n" +
-             "capacidades: " + $(if (@($capacidades).Count) { $capacidades -join ', ' } else { '(ninguna)' }))
+        $indice = [string](Prop $directo.Json 'index' '?')
+        Anotar 'OK' "AVACOM Contenido contesta en 127.0.0.1:$PuertoBiblioteca ($($directo.Milisegundos) ms)" `
+            ("contrato $(Prop $directo.Json 'contract' '?') · esquema $(Prop $directo.Json 'schema' '?') · " +
+             "índice $indice · cursos instalados $(Prop $directo.Json 'installedCourses' '?')")
 
-        if ($capacidades -notcontains 'curso') {
-            Anotar 'BLOQUEA' "La Biblioteca no publica la capacidad 'curso'" `
-                ('Sin ella no puede entregar cursos a nadie, y el backend responde 501.') `
-                'La versión de AVACOM Biblioteca instalada es anterior a la que este LMS necesita. Actualízala.'
+        if ($indice -eq 'rebuilding') {
+            Anotar 'AVISO' 'El índice de AVACOM Contenido se está reconstruyendo' '' `
+                'Espera unos minutos: mientras se reconstruye, la lista de cursos puede salir incompleta.'
         }
 
         <#
             La pregunta del aula es «¿por qué no salen los cursos?». Aquí se le
-            pide la lista a la Biblioteca directamente, con su misma ficha y su
-            misma ruta. Si ella ya devuelve cero, no hay nada que el backend
-            pueda entregar y buscar el fallo en el LMS es perder el tiempo.
+            pide la lista a la biblioteca directamente, con su mismo token. Si
+            ella ya devuelve cero, no hay nada que el backend pueda entregar y
+            buscar el fallo en el LMS es perder el tiempo.
         #>
-        $directoCursos = Invoke-Peticion "http://127.0.0.1:$PuertoBiblioteca/v1/cursos" `
-            -Cabeceras @{ 'X-Avacom-Ficha' = $FichaBiblioteca } -SegundosDeEspera 10
-        Guardar-Evidencia 'biblioteca-cursos.json' $directoCursos.Cuerpo $directoCursos.Estado $directoCursos.Url
+        $directoCursos = Invoke-Peticion "http://127.0.0.1:$PuertoBiblioteca/v2/courses?page=1&pageSize=100" `
+            -Cabeceras @{ 'X-Avacom-Token' = $FichaBiblioteca } -SegundosDeEspera 10
+        Guardar-Evidencia 'contenido-cursos.json' $directoCursos.Cuerpo $directoCursos.Estado $directoCursos.Url
 
         if ($directoCursos.Estado -eq 200) {
-            # La Biblioteca contesta a veces una lista y a veces un objeto que
-            # la envuelve; el backend admite las dos formas y aquí igual.
-            $lista = @()
-            if ($directoCursos.Json -is [System.Array]) {
-                $lista = @($directoCursos.Json)
-            } else {
-                $lista = @(Prop $directoCursos.Json 'cursos' @())
-            }
-            $CursosEnBiblioteca = @($lista).Count
+            $lista = @(Prop $directoCursos.Json 'items' @())
+            $total = [int](Prop $directoCursos.Json 'total' @($lista).Count)
+            $CursosEnBiblioteca = $total
 
-            if ($CursosEnBiblioteca -gt 0) {
-                Anotar 'OK' "La Biblioteca ofrece $CursosEnBiblioteca curso(s)" `
+            if ($total -gt 0) {
+                Anotar 'OK' "AVACOM Contenido ofrece $total curso(s)" `
                     (($lista | Select-Object -First 8 | ForEach-Object {
-                        "$(Prop $_ 'curso_ref' '?')  ·  $(Prop $_ 'titulo' '?')"
+                        "$(Prop $_ 'id' (Prop $_ 'courseId' '?'))  ·  $(Prop $_ 'title' (Prop $_ 'titulo' '?'))"
                     }) -join "`n")
             } else {
-                Anotar 'BLOQUEA' 'AVACOM Biblioteca no ofrece ningún curso' `
+                Anotar 'BLOQUEA' 'AVACOM Contenido no ofrece ningún curso' `
                     ('Contesta correctamente, pero su lista de cursos está vacía. El problema no es la ' +
                      'comunicación con el LMS: no hay nada que entregar.') `
-                    ('Abre AVACOM Biblioteca y comprueba que haya un paquete de contenido instalado y publicado, ' +
-                     'y que la política de la escuela no lo esté ocultando.')
+                    'Abre AVACOM Contenido y comprueba que haya un paquete de curso instalado.'
             }
         } else {
-            Anotar 'AVISO' "La Biblioteca contestó $($directoCursos.Estado) al pedirle sus cursos" `
+            Anotar 'AVISO' "AVACOM Contenido contestó $($directoCursos.Estado) al pedirle sus cursos" `
                 (Recortar $directoCursos.Cuerpo 300)
         }
-
-        # El catálogo dice si hay contenido instalado, aunque no haya cursos.
-        $directoCatalogo = Invoke-Peticion "http://127.0.0.1:$PuertoBiblioteca/v1/catalogo" `
-            -Cabeceras @{ 'X-Avacom-Ficha' = $FichaBiblioteca } -SegundosDeEspera 10
-        Guardar-Evidencia 'biblioteca-catalogo.json' $directoCatalogo.Cuerpo $directoCatalogo.Estado $directoCatalogo.Url
-
-        if ($directoCatalogo.Estado -eq 200) {
-            $elementos = @()
-            if ($directoCatalogo.Json -is [System.Array]) {
-                $elementos = @($directoCatalogo.Json)
-            } else {
-                $elementos = @(Prop $directoCatalogo.Json 'elementos' @())
-                if (@($elementos).Count -eq 0) { $elementos = @(Prop $directoCatalogo.Json 'items' @()) }
-            }
-            if ($CursosEnBiblioteca -eq 0 -and @($elementos).Count -gt 0) {
-                Anotar 'AVISO' "Hay $(@($elementos).Count) elemento(s) de contenido pero ningún curso ofrecido" `
-                    'El material está instalado; lo que falta es un curso que lo ofrezca, o lo oculta la política de la escuela.' `
-                    'Revísalo dentro de AVACOM Biblioteca: es ahí donde se administran los cursos.'
-            } elseif ($CursosEnBiblioteca -eq 0 -and @($elementos).Count -eq 0) {
-                Anotar 'BLOQUEA' 'AVACOM Biblioteca no tiene contenido instalado' `
-                    'Ni cursos ni elementos: el catálogo está vacío.' `
-                    'Instala un paquete de contenido en AVACOM Biblioteca.'
-            }
-        }
     } elseif ($directo.Estado -eq 401 -or $directo.Estado -eq 403) {
-        Anotar 'BLOQUEA' "La Biblioteca rechazó la ficha de la nota de enlace ($($directo.Estado))" `
+        Anotar 'BLOQUEA' "AVACOM Contenido rechazó el token de la nota de enlace ($($directo.Estado))" `
             (Recortar $directo.Cuerpo 200) `
-            ('La nota es vieja: la Biblioteca cambió su ficha al reiniciarse. Entra en la pestaña ' +
-             '«Contenido AVACOM» para que la reescriba.')
+            ('La nota es vieja: la biblioteca cambia su token al reiniciarse. Ábrela de nuevo para que ' +
+             'reescriba la nota.')
     } elseif ($directo.Estado -eq 0) {
         Anotar 'BLOQUEA' "Nada contesta en 127.0.0.1:$PuertoBiblioteca" $directo.Error `
-            ('El puerto de la nota está muerto. Cierra AVACOM Biblioteca por completo, vuelve a abrirla y ' +
-             'entra en «Contenido AVACOM».')
+            ('El puerto de la nota está muerto. Cierra AVACOM Contenido por completo y vuelve a abrirlo.')
     } else {
-        Anotar 'AVISO' "La Biblioteca contestó $($directo.Estado) en /v1/salud" (Recortar $directo.Cuerpo 200)
+        Anotar 'AVISO' "AVACOM Contenido contestó $($directo.Estado) en /v2/health" (Recortar $directo.Cuerpo 200)
     }
 }
 
-# ======================== 8. ¿Coincide lo que ve el backend con la realidad?
+# ======================== 8. Lo que dice el backend de sí mismo
 Seccion '8 · Lo que ve el backend'
 
 if (-not $BackendVivo) {
     Anotar 'INFO' 'Sin API local no hay nada que comparar' 'Resuelve primero el apartado 5.'
-} elseif ($null -eq $EstadoBiblioteca) {
-    Anotar 'AVISO' 'El backend no informó del estado de la Biblioteca en /health/'
 } else {
-    $disponible = [bool](Prop $EstadoBiblioteca 'disponible' $false)
-    $motivo = [string](Prop $EstadoBiblioteca 'motivo' '')
-    $sugerencia = [string](Prop $EstadoBiblioteca 'sugerencia' '')
-    $puertoVisto = [int](Prop $EstadoBiblioteca 'puerto' 0)
-    $capacidades = @(Prop $EstadoBiblioteca 'capacidades' @())
-    $conteos = Prop $EstadoBiblioteca 'conteos' $null
-
-    if ($disponible) {
-        Anotar 'OK' 'El backend ve AVACOM Biblioteca' `
-            ("contrato $(Prop $EstadoBiblioteca 'contrato' '?') · puerto $puertoVisto · " +
-             "huella $(Prop $EstadoBiblioteca 'huella_catalogo' '?')`n" +
-             "capacidades: " + $(if (@($capacidades).Count) { $capacidades -join ', ' } else { '(ninguna)' }) + "`n" +
-             "cursos: $(Prop $conteos 'cursos' '?') · elementos: $(Prop $conteos 'elementos' '?') · paquetes: $(Prop $conteos 'paquetes' '?')")
-
-        if ([int](Prop $conteos 'cursos' 0) -eq 0) {
-            Anotar 'AVISO' 'La Biblioteca está conectada pero no ofrece ningún curso' `
-                'La comunicación funciona; lo que falta es contenido publicado.' `
-                'Instala y publica un paquete de contenido en AVACOM Biblioteca.'
-        }
+    # Modulo de acceso: sin organizacion el login responde 409 no_instalado.
+    $acceso = Prop $Salud.Json 'acceso' $null
+    if ($null -eq $acceso) {
+        Anotar 'AVISO' 'El backend no informó del estado del módulo de acceso en /health/'
     } else {
-        # El caso interesante: nosotros la alcanzamos y el backend no.
-        if ($BibliotecaAlcanzable) {
-            Anotar 'BLOQUEA' 'La Biblioteca funciona, pero el backend no la alcanza' `
-                ("Este script habla con ella en 127.0.0.1:$PuertoBiblioteca, y el backend dice:`n" +
-                 "  motivo: $motivo`n  sugerencia: $sugerencia") `
-                ('Es un problema del backend, no de la Biblioteca. Las tres causas, en orden: ' +
-                 '(1) AVACOM_CONTENIDO_ENLACE apunta a otra nota; ' +
-                 '(2) el servicio corre como una cuenta que no puede leer la nota; ' +
-                 "(3) el servicio lleva mucho tiempo arriba y arrastra un error: reinícialo con sc stop $NombreServicio y sc start $NombreServicio.")
+        if ([bool](Prop $acceso 'instalado' $false)) {
+            Anotar 'OK' 'El nodo tiene organización y administrador'
         } else {
-            Anotar 'BLOQUEA' 'El backend no ve AVACOM Biblioteca' `
-                ("motivo: $motivo`nsugerencia: $sugerencia") `
-                'Coincide con lo visto en los apartados anteriores: el problema está en la Biblioteca, no en el backend.'
+            Anotar 'AVISO' 'El nodo aún no tiene organización ni administrador (el login responde 409 no_instalado)' '' `
+                'Créalos una sola vez desde AVACOM OPS Master la primera vez que se abra, o con manage.py acceso_instalar.'
+        }
+        $derivadas = Prop $acceso 'claves_derivadas' $null
+        if ($derivadas -eq $true) {
+            Anotar 'INFO' 'Las claves de acceso son las derivadas de AVACOM_LMS_SECRET' `
+                'Es lo normal en un nodo que viene de la versión 2.0.0 y ya tiene personas guardadas.' `
+                'No las cambies mientras haya personas guardadas: dejarían de poder descifrarse.'
+        } elseif ($derivadas -eq $false) {
+            Anotar 'OK' 'Las claves de acceso son propias de este nodo (backend.env)'
         }
     }
 
-    if ($puertoVisto -and $PuertoBiblioteca -and $puertoVisto -ne $PuertoBiblioteca) {
-        Anotar 'BLOQUEA' 'El backend está leyendo una nota de enlace distinta' `
-            "La nota de este equipo dice puerto $PuertoBiblioteca y el backend usa $puertoVisto." `
-            "Revisa AVACOM_CONTENIDO_ENLACE en $ArchivoConfig y en las variables de entorno de la máquina."
+    # /health/ describe la biblioteca con el contrato anterior (enlace.json);
+    # el aula lee la API v2. Se muestra como referencia y no como veredicto.
+    if ($null -ne $EstadoBiblioteca) {
+        $motivo = [string](Prop $EstadoBiblioteca 'motivo' '')
+        if (-not [bool](Prop $EstadoBiblioteca 'disponible' $false) -and $motivo) {
+            Anotar 'INFO' '/health/ describe la biblioteca con el contrato anterior y la ve no disponible' $motivo `
+                'No es un fallo si el apartado 7 alcanzó a AVACOM Contenido: el aula usa la API v2 (link.json).'
+        }
+    }
+
+    # El canal en tiempo real: el mismo puerto, otro protocolo.
+    try {
+        Add-Type -AssemblyName System.Net.WebSockets -ErrorAction SilentlyContinue
+        $ws = New-Object System.Net.WebSockets.ClientWebSocket
+        $limite = New-Object System.Threading.CancellationTokenSource (8000)
+        $ws.ConnectAsync([Uri]"ws://127.0.0.1:$Puerto/ws/aula/sesiones/diagnostico/?rol=docente", $limite.Token).GetAwaiter().GetResult()
+        Anotar 'OK' 'El canal en tiempo real (WebSocket) acepta conexiones' "ws://127.0.0.1:$Puerto/ws/aula/sesiones/…"
+        try { $ws.Abort() } catch { }
+    } catch {
+        Anotar 'BLOQUEA' 'El canal en tiempo real (WebSocket) no acepta conexiones' $_.Exception.Message `
+            ('El backend debe correr con Daphne (avacom_lms.asgi). Si corre con otro servidor, o con un manage.py ' +
+             'runserver antiguo, las tabletas no reciben actividad en vivo. Reinstala AVACOM OPS Master.')
     }
 }
 
-# ===================================== 9. Extremo a extremo, por capacidad
-Seccion '9 · Prueba extremo a extremo de cada capacidad'
+# ===================================== 9. Extremo a extremo: los cursos del aula
+Seccion '9 · Los cursos que entrega el aula'
 
 $CursosEnLms = -1
 if (-not $BackendVivo) {
-    Anotar 'INFO' 'Sin API local no se pueden probar las capacidades'
+    Anotar 'INFO' 'Sin API local no se pueden probar los cursos'
 } else {
-    # Los cursos son lo que realmente usa la pantalla del profesor.
-    $cursos = Invoke-Peticion "$Base/api/biblioteca/cursos/?persona=diagnostico"
+    # Lo que usa la pantalla del profesor: /api/aula/cursos/ (fuente: la biblioteca v2).
+    $cursos = Invoke-Peticion "$Base/api/aula/cursos/"
     Guardar-Evidencia 'lms-cursos.json' $cursos.Cuerpo $cursos.Estado $cursos.Url
 
     switch ($cursos.Estado) {
         200 {
-            $lista = @(Prop $cursos.Json 'cursos' @())
-            $CursosEnLms = @($lista).Count
-            Anotar 'OK' "El LMS entrega $CursosEnLms curso(s)" `
-                (($lista | Select-Object -First 8 | ForEach-Object {
-                    "$(Prop $_ 'curso_ref' '?')  ·  $(Prop $_ 'titulo' '?')"
-                }) -join "`n")
-
-            <#
-                El veredicto que buscaba el aula: comparar lo que la Biblioteca
-                tiene con lo que el LMS entrega. Sólo hay tres desenlaces y cada
-                uno señala a un responsable distinto.
-            #>
-            if ($CursosEnBiblioteca -ge 0) {
-                if ($CursosEnBiblioteca -gt 0 -and $CursosEnLms -eq 0) {
-                    Anotar 'BLOQUEA' "La Biblioteca ofrece $CursosEnBiblioteca curso(s) y el LMS entrega 0" `
-                        ('La comunicación funciona y el contenido existe: los cursos se pierden dentro del backend.') `
-                        ('Esto es un fallo del backend, no de la instalación ni de la Biblioteca. Envía el paquete ' +
-                         'de diagnóstico: lleva las dos respuestas crudas, que es lo que hace falta para localizarlo.')
-                } elseif ($CursosEnBiblioteca -eq $CursosEnLms -and $CursosEnLms -gt 0) {
-                    Anotar 'OK' "El LMS entrega los mismos $CursosEnLms curso(s) que tiene la Biblioteca" `
-                        ('La cadena completa funciona. Si la pantalla de AVACOM OPS Master sigue vacía, el fallo ' +
-                         'está en la interfaz, no en la comunicación.')
-                } elseif ($CursosEnLms -ne $CursosEnBiblioteca) {
-                    Anotar 'AVISO' "La Biblioteca ofrece $CursosEnBiblioteca curso(s) y el LMS entrega $CursosEnLms" `
-                        'Los recuentos no coinciden.' `
-                        'Envía el paquete de diagnóstico con las dos respuestas crudas.'
+            $lista = @()
+            if ($cursos.Json -is [System.Array]) { $lista = @($cursos.Json) }
+            else {
+                foreach ($nombre in @('cursos', 'items', 'asignaturas')) {
+                    $candidata = @(Prop $cursos.Json $nombre @())
+                    if (@($candidata).Count -gt 0) { $lista = $candidata; break }
                 }
+            }
+            $CursosEnLms = @($lista).Count
+            Anotar 'OK' "El aula responde con $CursosEnLms elemento(s) de curso" `
+                (Recortar $cursos.Cuerpo 300)
+
+            if ($CursosEnBiblioteca -gt 0 -and $CursosEnLms -eq 0) {
+                Anotar 'BLOQUEA' "AVACOM Contenido ofrece $CursosEnBiblioteca curso(s) y el aula entrega 0" `
+                    'La comunicación funciona y el contenido existe: los cursos se pierden dentro del backend.' `
+                    ('Envía el paquete de diagnóstico: lleva las dos respuestas crudas, que es lo que hace falta ' +
+                     'para localizar el fallo.')
+            } elseif ($CursosEnBiblioteca -gt 0 -and $CursosEnLms -gt 0) {
+                Anotar 'OK' 'La cadena completa funciona: la biblioteca ofrece cursos y el aula los entrega' `
+                    'Si la pantalla de AVACOM OPS Master sigue vacía, el fallo está en la interfaz, no en la comunicación.'
             }
         }
         503 {
-            Anotar 'BLOQUEA' 'Los cursos no se pueden listar: la Biblioteca no está disponible (503)' `
+            Anotar 'BLOQUEA' 'Los cursos no se pueden listar: la biblioteca no está disponible (503)' `
                 (Recortar $cursos.Cuerpo 300) `
-                'Es el mismo diagnóstico de los apartados 6 a 8.'
-        }
-        501 {
-            Anotar 'BLOQUEA' 'La Biblioteca no publica la capacidad de cursos (501)' `
-                (Recortar $cursos.Cuerpo 300) `
-                'La versión de AVACOM Biblioteca instalada es más antigua que lo que espera este LMS. Actualízala.'
+                'Es el mismo diagnóstico de los apartados 6 y 7.'
         }
         502 {
-            Anotar 'BLOQUEA' 'La Biblioteca contestó con error al pedirle los cursos (502)' `
+            Anotar 'BLOQUEA' 'AVACOM Contenido contestó con error al pedirle los cursos (502)' `
                 (Recortar $cursos.Cuerpo 300) `
-                'El fallo está dentro de AVACOM Biblioteca. Mira sus propios registros.'
+                'El fallo está dentro de AVACOM Contenido. Mira sus propios registros.'
         }
         0 {
             Anotar 'BLOQUEA' 'La petición de cursos no llegó a completarse' $cursos.Error
         }
         default {
-            Anotar 'AVISO' "La lista de cursos contestó $($cursos.Estado)" (Recortar $cursos.Cuerpo 300)
-        }
-    }
-
-    <#
-        Cada capacidad opcional se prueba con una referencia que a propósito no
-        existe. Lo que importa no es el contenido, es QUÉ TIPO de fallo llega,
-        porque cada uno señala un eslabón distinto de la cadena:
-
-          404/403 → la petición llegó hasta la Biblioteca y volvió: el enlace
-                    funciona de punta a punta para esa capacidad
-          501     → el enlace funciona, pero la Biblioteca no publica eso
-          503     → el backend no llega a la Biblioteca
-          502     → la Biblioteca contestó con un error propio
-    #>
-    $refInexistente = 'diagnostico-referencia-inexistente'
-    $pruebas = @(
-        @{ Capacidad = 'medio';      Url = "$Base/api/biblioteca/medio/$refInexistente/" }
-        @{ Capacidad = 'leccion';    Url = "$Base/api/biblioteca/leccion/$refInexistente/" }
-        @{ Capacidad = 'evaluacion'; Url = "$Base/api/biblioteca/evaluacion/$refInexistente/" }
-        @{ Capacidad = 'voz';        Url = "$Base/api/biblioteca/voz/$refInexistente/" }
-    )
-
-    foreach ($prueba in $pruebas) {
-        $r = Invoke-Peticion $prueba.Url
-        $cap = $prueba.Capacidad
-        switch ($r.Estado) {
-            0 { Anotar 'AVISO' "Capacidad '$cap': la petición no se completó" $r.Error }
-            503 {
-                Anotar 'BLOQUEA' "Capacidad '$cap': el backend no alcanza la Biblioteca (503)" `
-                    (Recortar $r.Cuerpo 200) `
-                    'Mismo diagnóstico de los apartados 6 a 8.'
-            }
-            501 {
-                Anotar 'AVISO' "Capacidad '$cap': la Biblioteca no la publica (501)" `
-                    (Recortar $r.Cuerpo 200) `
-                    "Si el aula necesita ese tipo de material, hay que actualizar AVACOM Biblioteca."
-            }
-            502 {
-                Anotar 'BLOQUEA' "Capacidad '$cap': la Biblioteca contestó con error (502)" (Recortar $r.Cuerpo 200) `
-                    'El fallo está dentro de AVACOM Biblioteca.'
-            }
-            500 {
-                Anotar 'BLOQUEA' "Capacidad '$cap': el backend falló con un 500" (Recortar $r.Cuerpo 200) `
-                    'Hay una excepción de Python sin manejar. Mira el apartado de registros.'
-            }
-            default {
-                if ($r.Estado -in @(403, 404)) {
-                    Anotar 'OK' "Capacidad '$cap': el enlace funciona de punta a punta ($($r.Estado) por referencia inexistente, que es lo esperado)"
-                } elseif ($r.Estado -eq 200) {
-                    Anotar 'OK' "Capacidad '$cap': el enlace funciona de punta a punta (la Biblioteca entregó material)"
-                } else {
-                    Anotar 'INFO' "Capacidad '$cap': contestó $($r.Estado)" (Recortar $r.Cuerpo 200)
-                }
-            }
+            Anotar 'AVISO' "La lista de cursos del aula contestó $($cursos.Estado)" (Recortar $cursos.Cuerpo 300)
         }
     }
 }
@@ -924,7 +828,7 @@ Seccion '10 · Errores de Python en los registros del backend'
 <#
     Clasificación de los errores que se ven de verdad en este backend.
 
-    `Hilo = $true` marca los que ocurren dentro de un hilo de Waitress. Son los
+    `Hilo = $true` marca los que ocurren dentro de una petición de Daphne. Son los
     peores de diagnosticar sin esto: revientan una petición suelta, el cliente
     ve un 500 o un cuelgue, el servicio sigue «en marcha» y en la pantalla del
     profesor no queda ninguna pista.
@@ -932,27 +836,27 @@ Seccion '10 · Errores de Python en los registros del backend'
 $Clasificacion = @(
     @{ Patron = 'SQLite objects created in a thread can only be used in that same thread'
        Clase  = 'Hilo · SQLite usado desde otro hilo'; Hilo = $true
-       Causa  = 'Una conexión SQLite se creó en un hilo de Waitress y se usó en otro.'
-       Accion = 'Es un fallo del backend, no de la instalación. Baja AVACOM_OPS_BACKEND_THREADS a 1 para seguir dando clase y repórtalo.' }
+       Causa  = 'Una conexión SQLite se creó en una petición de Daphne y se usó en otro.'
+       Accion = 'Es un fallo del backend, no de la instalación. Repórtalo con este registro.' }
 
     @{ Patron = 'database is locked'
        Clase  = 'Hilo · SQLite bloqueado por concurrencia'; Hilo = $true
        Causa  = 'Varios hilos (o dos procesos) escriben el expediente a la vez y SQLite agota su espera.'
-       Accion = 'Comprueba que no haya un manage.py runserver abierto sobre la misma base. Si persiste, baja AVACOM_OPS_BACKEND_THREADS a 4.' }
+       Accion = 'Comprueba que no haya un manage.py runserver abierto sobre la misma base. Si persiste, repórtalo con este registro.' }
 
     @{ Patron = 'SynchronousOnlyOperation'
        Clase  = 'Hilo · ORM llamado desde contexto asíncrono'; Hilo = $true
        Causa  = 'Se tocó la base de datos desde código asíncrono.'
        Accion = 'Fallo del backend. Repórtalo con este registro.' }
 
-    @{ Patron = 'Exception while serving'
-       Clase  = 'Hilo · excepción sin manejar en un hilo de Waitress'; Hilo = $true
-       Causa  = 'Waitress atrapó un error que subió hasta el servidor: esa petición murió.'
+    @{ Patron = 'Exception inside application|Exception while serving'
+       Clase  = 'Hilo · excepción sin manejar en una petición de Daphne'; Hilo = $true
+       Causa  = 'Daphne atrapó un error que subió hasta el servidor: esa petición murió.'
        Accion = 'La línea siguiente del registro dice la excepción real. Mírala y repórtala.' }
 
     @{ Patron = 'There is no current event loop in thread'
        Clase  = 'Hilo · sin bucle de eventos'; Hilo = $true
-       Causa  = 'Código asíncrono ejecutado en un hilo de Waitress que no tiene bucle propio.'
+       Causa  = 'Código asíncrono ejecutado en una petición de Daphne que no tiene bucle propio.'
        Accion = 'Fallo del backend. Repórtalo con este registro.' }
 
     @{ Patron = 'cannot schedule new futures after (interpreter )?shutdown'
@@ -1114,7 +1018,7 @@ if (@($ArchivosDeLog).Count -eq 0) {
         }
 
         if ($enHilos -gt 0) {
-            Anotar 'BLOQUEA' "$enHilos de esos errores ocurrieron dentro de hilos de Waitress" `
+            Anotar 'BLOQUEA' "$enHilos de esos errores ocurrieron dentro de peticiones de Daphne" `
                 ('Son los que no se ven: revientan una petición suelta, la interfaz muestra un cuelgue o un 500, ' +
                  'y el servicio sigue apareciendo «en marcha».') `
                 'Revisa la acción indicada en cada grupo marcado como «Hilo ·» aquí arriba.'

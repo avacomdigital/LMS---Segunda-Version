@@ -58,9 +58,25 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("classroom.results.view", "aula", "Ver el panel de resultados agregados de la clase (FUN-072)", O, False),
     ("classroom.message.send", "aula", "Enviar un aviso a un dispositivo o al grupo (FUN-075)", O, False),
     ("classroom.end", "aula", "Finalizar la sesión de clase y consolidar su registro (FUN-079)", O, False),
+    # --- MOD-008 · Modo Estudio (sección J de su ficha). Los seis primeros son del alumno sobre lo suyo (SELF); los dos últimos son del
+    # proyecto (el Maestro no da permiso a CAP-050/051): el profesor asigna y ve quién completó sobre sus grupos. Los evalúa
+    # `modo_estudio.infraestructura.autorizacion.AutorizacionEstudio`.
+    ("study.open", "estudio", "Abrir y cerrar la sesión de estudio en una tableta asignada (FUN-080, FUN-089)", S, False),
+    ("study.assignment.read", "estudio", "Ver el trabajo pendiente propio con sus fechas límite (FUN-081)", S, False),
+    ("study.lesson.open", "estudio", "Abrir una lección asignada y sus medios (FUN-082)", S, False),
+    ("study.lesson.complete", "estudio", "Registrar avance por bloques y marcar la lección como completada (FUN-087)", S, False),
+    ("study.answer.submit", "estudio", "Practicar con retroalimentación inmediata y reanudar la práctica (FUN-083, FUN-088)", S, False),
+    ("study.package.download", "estudio", "Pedir, bajar, confirmar y retirar el paquete de estudio (FUN-084)", S, False),
+    ("study.assignment.create", "estudio", "Asignar una lección a un grupo o a alumnos con fecha límite (CAP-050)", O, False),
+    ("study.assignment.review", "estudio", "Ver quién completó lo asignado y resolver lo pendiente de decisión (CAP-051, BR-074)", O, False),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
+
+# Los seis permisos `study.*` del alumno: sólo el rol STUDENT los tiene. El Maestro es explícito: el administrador «no accede al
+# modo de estudio del alumno», así que se excluyen de ADMIN aunque el resto de los permisos se le concedan por defecto.
+PERMISOS_DE_ESTUDIO_DEL_ALUMNO = ("study.open", "study.assignment.read", "study.lesson.open", "study.lesson.complete",
+                                  "study.answer.submit", "study.package.download")
 
 # Correspondencia con los códigos usados antes de alinear con el Documento Maestro.
 # La migración 0003 la aplica sobre las filas existentes.
@@ -95,6 +111,8 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "student.progress.read": S, "student.progress.write": S, "student.exam.attempt": S,
         "results.read": S, "content.read": S, "identity.user.read": S, "identity.password.change_own": S,
         "identity.session.read": S, "identity.session.revoke_own": S, "identity.group.read": S,
+        # El modo de estudio es del alumno y sólo sobre lo suyo.
+        **{c: S for c in PERMISOS_DE_ESTUDIO_DEL_ALUMNO},
     }),
     "TEACHER": ("Profesor", Menu.TEACHER, 2, {
         "student.progress.read": G, "results.read": G, "reports.student.view": G, "content.read": O, "content.project": G,
@@ -106,10 +124,13 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "classroom.start": G, "classroom.code.rotate": G, "classroom.device.admit": G, "classroom.device.remove": G,
         "classroom.device.lock": G, "classroom.present": G, "classroom.activity.launch": G, "classroom.activity.close": G,
         "classroom.results.view": G, "classroom.message.send": G, "classroom.end": G,
+        # Asigna trabajo de estudio y ve quién lo completó, sobre sus grupos.
+        "study.assignment.create": G, "study.assignment.review": G,
     }),
     "ADMIN": ("Administrador", Menu.ADMIN, 3, {
-        # Todo salvo lo que el Maestro le niega: calificar directamente, el modo de estudio y el intento del alumno.
-        **{c: a for c, a in _TODOS_ORG.items() if c not in ("student.progress.write", "student.exam.attempt")},
+        # Todo salvo lo que el Maestro le niega: calificar directamente, el modo de estudio del alumno y el intento del alumno.
+        **{c: a for c, a in _TODOS_ORG.items()
+           if c not in ("student.progress.write", "student.exam.attempt", *PERMISOS_DE_ESTUDIO_DEL_ALUMNO)},
     }),
     "REPORTS": ("Reportes", Menu.REPORTS, 2, {
         # Sólo lectura. Ninguna escritura sobre datos académicos, en ninguna circunstancia.

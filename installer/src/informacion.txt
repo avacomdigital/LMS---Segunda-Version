@@ -10,8 +10,9 @@ AVACOM LMS 2.0 · AVACOM OPS Master
 Qué queda instalado en este equipo
 
     · AVACOM OPS Master, la aplicación del profesor.
-    · La API local del aula, que se instala como un servicio de Windows y
-      arranca sola cada vez que se enciende el equipo.
+    · La API local del aula (y su canal en tiempo real), que se instala como
+      un servicio de Windows y arranca sola cada vez que se enciende el equipo.
+    · Un icono de AVACOM OPS Master en el escritorio y en el menú Inicio.
 
 Todo lo que la API necesita para funcionar viaja dentro de este instalador.
 No hace falta internet, ni instalar nada más, ni escribir ningún comando.
@@ -19,13 +20,14 @@ No hace falta internet, ni instalar nada más, ni escribir ningún comando.
 
 Qué NO cambia
 
-    · Los cursos y el contenido siguen siendo de AVACOM Biblioteca. AVACOM
+    · Los cursos y el contenido siguen siendo de AVACOM Contenido. AVACOM
       OPS Master los consulta, no los administra.
-    · Si AVACOM Biblioteca ya está en este equipo, no se modifica: cada
+    · Si AVACOM Contenido ya está en este equipo, no se modifica: cada
       producto tiene su carpeta, su servicio, sus datos y sus registros.
-    · Las notas, el progreso y los intentos de los estudiantes se guardan
-      fuera de la carpeta del programa y sobreviven a cualquier
-      reinstalación o actualización.
+    · Los datos del aula (organización, personas, tabletas, clases y
+      expediente) se guardan fuera de la carpeta del programa. Antes de
+      actualizar se hace una copia de seguridad, y si algo falla se vuelve
+      a la versión anterior sin perderlos.
 
 
 El aula
@@ -40,5 +42,5 @@ Licencia y uso
 Software de AVACOM para uso educativo en las instituciones autorizadas.
 Al continuar, aceptas instalar y ejecutar estos componentes en este equipo.
 
-Este prototipo de aula funciona en una red cerrada y sin autenticación de
-usuario: instálalo solo en equipos de la institución y en su red local.
+Este prototipo de aula funciona en una red cerrada: instálalo solo en
+equipos de la institución y en su red local.
