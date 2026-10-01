@@ -209,9 +209,17 @@ internal static class Preparar
             using var proceso = Process.Start(inicio);
             if (proceso is null) return new Resultado(-1, string.Empty);
 
+            // Las dos salidas se leen a la vez: leerlas una tras otra bloquea el
+            // proceso si un traceback largo llena el pipe de stderr mientras
+            // aqui se espera a stdout (justo lo que pasa cuando falla migrate).
+            var tareaErrores = proceso.StandardError.ReadToEndAsync();
             var salida = proceso.StandardOutput.ReadToEnd();
-            var errores = proceso.StandardError.ReadToEnd();
-            proceso.WaitForExit(300_000);
+            var errores = tareaErrores.GetAwaiter().GetResult();
+            if (!proceso.WaitForExit(300_000))
+            {
+                proceso.Kill(entireProcessTree: true);
+                return new Resultado(-1, salida);
+            }
 
             foreach (var linea in (salida + errores).Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {

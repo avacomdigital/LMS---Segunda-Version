@@ -59,12 +59,26 @@ internal static class Lanzador
 
         try
         {
-            Process.Start(new ProcessStartInfo
+            var inicio = new ProcessStartInfo
             {
                 FileName = Rutas.AppExe,
                 WorkingDirectory = Rutas.CarpetaApp,
-                UseShellExecute = true,
-            });
+                UseShellExecute = false,
+            };
+
+            // La leccion usa WebView (audio, video, PDF, laboratorio). WebView2
+            // guarda su perfil por defecto JUNTO AL EJECUTABLE, y la aplicacion
+            // vive en Program Files, donde quien da la clase no puede escribir:
+            // al crear la primera WebView falla y el proceso se cierra sin avisar.
+            // Se le da una carpeta propia y escribible. Es una variable de
+            // entorno que WebView2 ya lee: no cambia el producto.
+            var perfilWeb = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "AVACOM", "OPS Master", "WebView2");
+            Directory.CreateDirectory(perfilWeb);
+            inicio.Environment["WEBVIEW2_USER_DATA_FOLDER"] = perfilWeb;
+
+            Process.Start(inicio);
             registro.Escribir("Interfaz de AVACOM OPS Master abierta.");
             return 0;
         }

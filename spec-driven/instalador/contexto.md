@@ -14,6 +14,13 @@ Otros detalles a tener en cuenta:
 6. La idea es que el wizard permita instalar el programa sin el uso de comandos, teclas, solo clicks (puede ejecutar en segundo plano archivos .BAT pero el WIZARD lo administra no el usuario para evitar hacer uso del teclado).
 7. El backend siempre debe correr en el 0.0.0.0:8000 
 
+## Reglas fundamentales
+
+1. Siempre que se genere un instalador debes verificar que es la versión actual y no versiones anteriores. 
+2. El instalador debe asegurar que el programa resultante tenga los temas de auditoria, permisos de escritura y lectura, también permisos para borrar y hacer todas las modificaciones y acciones que requiere el LMS para ejecutarse.
+3. El instalador de la OPS AVACOM debe asegurarse siempre de que el sistema de pueda guardar la información de auditoría y logs.
+4. Evitar que los problemas de configuración externa rompa la información del sistema o lo inhabilite por completo. 
+
 ## Dos instaladores, no uno
 
 AVACOM OPS Master y AVACOM Student tienen instaladores separados. No comparten identificador de instalación, carpeta, versión, desinstalador ni ciclo de publicación, y ninguno exige que el otro esté instalado en el mismo equipo. Lo único que los une es el contrato de red: Student habla con el backend que instala OPS. Este documento describe los dos porque el contexto es común, pero cada uno se construye, se prueba y se entrega por su cuenta.

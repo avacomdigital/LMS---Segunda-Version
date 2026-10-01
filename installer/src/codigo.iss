@@ -23,7 +23,7 @@ var
   ValidacionSuperada: Boolean;
   AvisoConfiguracion: String;
   AvisoInformativo: String;
-  { La actualizacion aparta el programa anterior a {app}\Anterior mientras la
+  { La actualizacion aparta el programa anterior a <app>\Anterior mientras la
     nueva se copia y se valida; si algo falla se vuelve a poner en su sitio. }
   VersionAnterior: String;
   HayProgramaApartado: Boolean;
@@ -154,6 +154,18 @@ function ContenidoPresente: Boolean;
 begin
   Result := FileExists(ExpandConstant('{commonappdata}\AVACOM\content\link.json'))
          or DirExists(ExpandConstant('{autopf}\AVACOM\Contenido'));
+end;
+
+{ El runtime de WebView2 (el de Edge) lo usa la leccion para audio, video, PDF y
+  laboratorios. Windows 11 lo trae; un Windows 10 limpio puede no traerlo. }
+function WebView2Presente: Boolean;
+var
+  Version: String;
+begin
+  Result :=
+    (RegQueryStringValue(HKLM32, 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version) and (Version <> '') and (Version <> '0.0.0.0'))
+    or (RegQueryStringValue(HKLM64, 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version) and (Version <> '') and (Version <> '0.0.0.0'))
+    or (RegQueryStringValue(HKCU, 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version) and (Version <> '') and (Version <> '0.0.0.0'));
 end;
 
 function VersionInstalada: String;
@@ -381,7 +393,12 @@ begin
 
   { 8. Dependencias criticas: van dentro del paquete, no se instalan aparte }
   if FileExists(ExpandConstant('{sys}\sc.exe')) and FileExists(ExpandConstant('{sys}\netsh.exe')) then
-    PonerCheck(7, True, True, 'Python, .NET y la API van dentro del instalador (no requiere internet)')
+  begin
+    if WebView2Presente then
+      PonerCheck(7, True, True, 'Python, .NET y la API van dentro del instalador; WebView2 presente (lecciones)')
+    else
+      PonerCheck(7, False, False, 'Falta el runtime de WebView2 de Microsoft: las lecciones con audio, video o PDF pueden cerrar la aplicación');
+  end
   else
     PonerCheck(7, False, False, 'No se encontraron herramientas del sistema para registrar el servicio');
 
@@ -389,16 +406,16 @@ begin
   if ContenidoPresente then
     PonerCheck(8, True, True, 'AVACOM Contenido detectado: se instalará junto a él sin modificarlo')
   else
-    PonerCheck(8, True, False, 'AVACOM Contenido no está en este equipo; el aula no tendrá cursos hasta instalarlo');
+    PonerCheck(8, False, False, 'AVACOM Contenido no está en este equipo; el aula no tendrá cursos hasta instalarlo');
 
   { 10. Red del aula. Informativa: la regla de firewall abre solo redes privadas }
   Publicas := RedesPublicasConectadas;
   if Publicas = 0 then
     PonerCheck(9, True, True, 'Las redes conectadas no son públicas: las tabletas podrán llegar')
   else if Publicas > 0 then
-    PonerCheck(9, True, False, 'Windows clasifica una red conectada como pública; si las tabletas no llegan, cámbiala a privada')
+    PonerCheck(9, False, False, 'Windows clasifica una red conectada como pública; si las tabletas no llegan, cámbiala a privada')
   else
-    PonerCheck(9, True, False, 'No se pudo comprobar si la red del aula es privada');
+    PonerCheck(9, False, False, 'No se pudo comprobar si la red del aula es privada');
 
   ValidacionSuperada := (Bloqueo = '');
   if ValidacionSuperada then
@@ -752,7 +769,7 @@ begin
   end;
 end;
 
-{ Aparta la version anterior (App, Backend, Runtime) a {app}\Anterior. Asi la
+{ Aparta la version anterior (App, Backend, Runtime) a <app>\Anterior. Asi la
   nueva se copia sobre carpetas vacias -nada de mezclar runtimes, ni
   migraciones viejas, ni cachés- y, si falla, la anterior se puede volver a
   poner. Los datos no se tocan: viven en ProgramData. Devuelve '' si todo bien. }
@@ -986,7 +1003,7 @@ end;
 
 { Si la instalacion se interrumpe despues de apartar la version anterior (falla
   la copia de archivos, se acaba el disco, alguien cancela), Inno Setup deshace
-  lo que instalo pero no sabe de {app}\Anterior: sin esto el equipo se quedaria
+  lo que instalo pero no sabe de <app>\Anterior: sin esto el equipo se quedaria
   sin programa. Aqui, si la version anterior sigue apartada, se devuelve. }
 procedure DeinitializeSetup;
 begin
