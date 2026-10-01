@@ -1,6 +1,6 @@
 ﻿# Manejo de AVACOM Student por UI Automation, sin ratón ni foco: lista controles, invoca botones por su
 # nombre, escribe en entradas por ValuePattern y captura sólo la ventana con PrintWindow.
-# Uso: powershell -File ui-student.ps1 -Pid 1234 -Accion list|invoke|set|shot|text -Nombre "..." -Valor "..." -Salida x.png
+# Uso: powershell -File ui-student.ps1 -Pid 1234 -Accion list|invoke|set|shot|text|ajustar -Nombre "..." -Valor "..." -Salida x.png
 param(
     [int]$ProcId,
     [string]$Accion = "list",
@@ -17,6 +17,7 @@ Add-Type @"
 using System; using System.Runtime.InteropServices;
 public static class Win { [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
 [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hwnd, out RECT r);
+[DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
 [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; } }
 "@
 if ($Espera -gt 0) { Start-Sleep -Milliseconds $Espera }
@@ -26,6 +27,11 @@ $win = $null
 for ($i = 0; $i -lt 10 -and $null -eq $win; $i++) {
     $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
     if ($null -eq $win) { Start-Sleep -Milliseconds 500 }
+}
+if ($null -eq $win) {
+    # Una ventana maximizada a veces no aparece como hija directa del escritorio en el árbol de UIA: se llega a ella por su manejador.
+    $proc = Get-Process -Id $ProcId -ErrorAction SilentlyContinue
+    if ($null -ne $proc -and $proc.MainWindowHandle -ne [IntPtr]::Zero) { $win = [System.Windows.Automation.AutomationElement]::FromHandle($proc.MainWindowHandle) }
 }
 if ($null -eq $win) { Write-Output "SIN VENTANA para pid $ProcId"; exit 1 }
 $hwnd = [IntPtr]$win.Current.NativeWindowHandle
@@ -74,6 +80,13 @@ switch ($Accion) {
         if ($null -eq $hallado) { Write-Output "NO HAY ENTRADA '$Nombre'"; exit 2 }
         $p = $hallado.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
         $p.SetValue($Valor); Write-Output "ESCRITO '$Valor'"
+    }
+    "ajustar" {
+        # Coloca la ventana en 0,0 con el tamaño dado ("1920x1040"), sin foco: sirve para juzgar la composición a pantalla completa. No se maximiza porque una
+        # ventana maximizada no expone su árbol a UI Automation.
+        $dim = $Valor -split "x"
+        [Win]::SetWindowPos($hwnd, [IntPtr]::Zero, 0, 0, [int]$dim[0], [int]$dim[1], 0x0014) | Out-Null    # SWP_NOZORDER | SWP_NOACTIVATE
+        Write-Output "AJUSTADA $Valor"
     }
     "shot" {
         $r = New-Object Win+RECT
