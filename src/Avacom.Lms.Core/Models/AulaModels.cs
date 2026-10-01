@@ -819,9 +819,21 @@ public sealed record DispositivoAula(
     [property: JsonPropertyName("bateria_pct")] int? BateriaPct = null,
     // MOD-008 · 008-01: el aparato asignado a una persona (perfil «asignado») es el único donde existe el modo de estudio.
     [property: JsonPropertyName("perfil")] string? Perfil = null,
-    [property: JsonPropertyName("asignado_a")] AlumnoEstudio? AsignadoA = null)
+    [property: JsonPropertyName("asignado_a")] AlumnoEstudio? AsignadoA = null,
+    // MOD-010: lo que la tableta DECLARA poder garantizar en un examen (abierto · supervisado · controlado). Vacío = no la declaró.
+    [property: JsonPropertyName("capacidad_control")] string? CapacidadControl = null)
 {
     public bool Asignado => string.Equals(Perfil, "asignado", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Verdadero si la tableta declaró su capacidad de control. Sin declarar cuenta como «abierto» frente a un examen (BR-075).</summary>
+    public bool CapacidadDeclarada => !string.IsNullOrWhiteSpace(CapacidadControl);
+    /// <summary>La capacidad en palabras de aula: «Controlado», «Supervisado», «Abierto» o «No declarada».</summary>
+    public string CapacidadLegible => !CapacidadDeclarada ? "No declarada" : CapacidadControl!.Trim().ToLowerInvariant() switch
+    {
+        "controlado" => "Controlado",
+        "supervisado" => "Supervisado",
+        "abierto" => "Abierto",
+        _ => "No declarada",
+    };
     public string NombreVisible => string.IsNullOrWhiteSpace(Nombre) ? IdentificadorHw ?? Id : Nombre!;
     public string PlataformaLegible => Plataforma switch
     {
