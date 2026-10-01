@@ -51,8 +51,11 @@ public sealed class AuditoriaApi(HttpClient http, Uri baseUri) : ClienteJson(htt
     public Task<ListaExportaciones?> ExportacionesAsync(CancellationToken ct = default) =>
         ObtenerAsync<ListaExportaciones>("api/auditoria/exportaciones/", ct);
 
+    /// <summary>El nodo valida `desde`/`hasta` como enteros no nulos: se manda sólo el alcance que aplica (tramo o rango), nunca nulos.</summary>
     public Task<Exportacion?> ExportarAsync(string motivoCodigo, string? tramoId = null, long? desde = null, long? hasta = null, string? motivoDetalle = null, CancellationToken ct = default) =>
-        EnviarAsync<Exportacion>("api/auditoria/exportar/", new { tramo_id = tramoId, desde, hasta, motivo_codigo = motivoCodigo, motivo_detalle = motivoDetalle ?? string.Empty }, ct);
+        string.IsNullOrWhiteSpace(tramoId)
+            ? EnviarAsync<Exportacion>("api/auditoria/exportar/", new { desde, hasta, motivo_codigo = motivoCodigo, motivo_detalle = motivoDetalle ?? string.Empty }, ct)
+            : EnviarAsync<Exportacion>("api/auditoria/exportar/", new { tramo_id = tramoId, motivo_codigo = motivoCodigo, motivo_detalle = motivoDetalle ?? string.Empty }, ct);
 
     public async Task<string?> DescargarExportacionAsync(string exportacionId, string rutaDestino, CancellationToken ct = default)
     {

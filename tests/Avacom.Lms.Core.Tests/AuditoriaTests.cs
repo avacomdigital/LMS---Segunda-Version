@@ -354,6 +354,23 @@ public sealed class CabecerasYClientesTests : IDisposable
     }
 
     [Fact]
+    public async Task AuditoriaApi_ExportarMandaSoloElAlcanceQueAplica_SinNulos()
+    {
+        var manejador = new ManejadorFalso(_ => Task.FromResult(Respuesta(HttpStatusCode.Created, """{"exportacion_id":"x1","alcance":"tramo 1-10","desde":1,"hasta":10,"total":10,"archivo":"exportacion-x1.jsonl","mensaje":"Queda registrado que exportaste tramo 1-10.","descarga":"/api/auditoria/exportaciones/x1/descargar/"}""")));
+        var api = new AuditoriaApi(new HttpClient(manejador), new Uri("http://127.0.0.1:8000/"));
+        var r = await api.ExportarAsync("auditoria_externa", tramoId: "t1");
+        Assert.Equal("x1", r!.ExportacionId);
+        using var porTramo = JsonDocument.Parse(manejador.Cuerpos[0]!);
+        Assert.Equal("t1", porTramo.RootElement.GetProperty("tramo_id").GetString());
+        Assert.False(porTramo.RootElement.TryGetProperty("desde", out _));   // el nodo rechaza `desde: null`
+        Assert.Equal("auditoria_externa", porTramo.RootElement.GetProperty("motivo_codigo").GetString());
+        await api.ExportarAsync("inspeccion_interna", desde: 3, hasta: 9, motivoDetalle: "visita");
+        using var porRango = JsonDocument.Parse(manejador.Cuerpos[1]!);
+        Assert.Equal((3, 9, "visita"), (porRango.RootElement.GetProperty("desde").GetInt32(), porRango.RootElement.GetProperty("hasta").GetInt32(), porRango.RootElement.GetProperty("motivo_detalle").GetString()));
+        Assert.False(porRango.RootElement.TryGetProperty("tramo_id", out _));
+    }
+
+    [Fact]
     public async Task LogsApi_EntregaLosRenglonesConLosNombresDelNodo_YElEntregadorDevuelveLoQueNoSePudoEntregar()
     {
         var falla = true;

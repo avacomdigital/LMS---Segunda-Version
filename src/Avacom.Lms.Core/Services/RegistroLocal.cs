@@ -35,7 +35,7 @@ public sealed record RenglonLog(
     [property: JsonPropertyName("dispositivo_id")] string? DispositivoId,
     [property: JsonPropertyName("version_app")] string? VersionApp)
 {
-    public bool EsAdvertenciaOPeor => Nivel is "WARNING" or "ERROR" or "CRITICAL";
+    [JsonIgnore] public bool EsAdvertenciaOPeor => Nivel is "WARNING" or "ERROR" or "CRITICAL";
 }
 
 /// <summary>

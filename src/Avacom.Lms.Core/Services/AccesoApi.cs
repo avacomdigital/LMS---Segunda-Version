@@ -46,6 +46,12 @@ public interface IAccesoApi
     Task<ConfiguracionAcceso?> ConfiguracionAsync(CancellationToken ct = default);
     Task<SesionAcceso?> IniciarSesionAsync(string identificador, string secreto, string dispositivo, string? rol = null, CancellationToken ct = default);
     Task<bool> CerrarSesionAsync(CancellationToken ct = default);
+    /// <summary>
+    /// BR-101 / PAN-241: concede a <paramref name="usuarioId"/> una escalada temporal de <paramref name="permiso"/> con motivo y caducidad. La
+    /// concede quien firma el pase vigente (<see cref="ClienteJson.Token"/>), que debe ser una identidad DISTINTA de quien la recibe.
+    /// Es la «autorización de salida» que exige exportar la bitácora (MOD-019, ESC-03). Devuelve la escalada o null (y el motivo en UltimoError).
+    /// </summary>
+    Task<JsonElement?> OtorgarEscaladaAsync(string usuarioId, string permiso, string alcance, string motivo, long vigenteHastaMs, CancellationToken ct = default);
 }
 
 public sealed class AccesoApi(HttpClient http, Uri baseUri) : ClienteJson(http, baseUri), IAccesoApi
@@ -60,6 +66,10 @@ public sealed class AccesoApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
         if (sesion is not null) Token = sesion.Token;
         return sesion;
     }
+
+    public Task<JsonElement?> OtorgarEscaladaAsync(string usuarioId, string permiso, string alcance, string motivo, long vigenteHastaMs, CancellationToken ct = default) =>
+        EnviarAsync<JsonElement?>($"api/acceso/usuarios/{Uri.EscapeDataString(usuarioId)}/escaladas/",
+                                  new { permiso, alcance, motivo, vigente_hasta = vigenteHastaMs }, ct);
 
     public async Task<bool> CerrarSesionAsync(CancellationToken ct = default)
     {
