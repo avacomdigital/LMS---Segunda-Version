@@ -12,11 +12,9 @@ from __future__ import annotations
 
 import json
 import os
-import random
 from urllib.parse import unquote
 
 from ..aplicacion.puertos import Bytes
-from ..dominio.curso import sin_claves
 from ..dominio.errores import CapacidadAusente, CursoNoEncontrado, FuenteNoDisponible, ReferenciaNoEncontrada
 from . import marcadores
 
@@ -59,51 +57,6 @@ class FuenteEjemplo:
                                         curso_ref=curso_ref, version=version)
             return manifiesto
         raise CursoNoEncontrado(f"La fuente de ejemplo sólo conoce «{manifiesto.get('id')}».", curso_ref=curso_ref)
-
-    # --------------------------------------------------------------- exámenes (MOD-010)
-    def esquema(self, curso_ref: str) -> dict:
-        """El esquema ligero del curso: lo mismo que `GET /v2/courses/{id}` (metadatos, lecciones con resúmenes de objeto, medios)."""
-        m = self.curso(curso_ref)
-        lecciones = [{"id": l.get("id"), "title": l.get("title"),
-                      "objects": [{"id": o.get("id"), "type": o.get("type"), "title": o.get("title"), "modes": o.get("modes"),
-                                   "questionCount": len(o.get("questions") or [])} for o in l.get("objects") or []]}
-                     for l in m.get("lessons") or []]
-        return {"courseId": m.get("id"), "id": m.get("id"), "version": m.get("version"), "title": m.get("title"), "lessons": lecciones,
-                "media": list(m.get("media") or [])}
-
-    def _examen(self, curso_ref: str, objeto_ref: str) -> tuple[dict, dict]:
-        manifiesto = self.curso(curso_ref)
-        for leccion in manifiesto.get("lessons") or []:
-            for objeto in leccion.get("objects") or []:
-                if str(objeto.get("id")) == objeto_ref and objeto.get("type") == "exam":
-                    return manifiesto, objeto
-        raise ReferenciaNoEncontrada(f"El examen «{objeto_ref}» no está en el manifiesto de ejemplo.", pregunta_ref="", objeto_ref=objeto_ref)
-
-    def examen_pool(self, curso_ref: str, objeto_ref: str) -> dict:
-        manifiesto, examen = self._examen(curso_ref, objeto_ref)
-        return {"courseId": manifiesto.get("id"), "version": manifiesto.get("version"), "objectId": examen.get("id"),
-                "settings": dict(examen.get("settings") or {}),
-                "questions": [{"questionId": q.get("id"), "type": q.get("type"), "topicRef": q.get("topicRef"), "difficulty": q.get("difficulty"),
-                               "estimatedSec": q.get("estimatedSec"), "points": q.get("points")} for q in examen.get("questions") or []]}
-
-    def examen_preguntas(self, curso_ref: str, objeto_ref: str, ids: list[str], semilla: str | None = None) -> dict:
-        """Las preguntas pedidas, SIN claves y en el orden de `ids`, con opciones y elementos barajados de forma reproducible por `semilla` (como la
-        biblioteca)."""
-        manifiesto, examen = self._examen(curso_ref, objeto_ref)
-        por_id = {str(q.get("id")): q for q in examen.get("questions") or []}
-        faltan = [i for i in ids if i not in por_id]
-        if faltan:
-            raise ReferenciaNoEncontrada(f"Preguntas que no están en el examen: {', '.join(faltan)}.", pregunta_ref=",".join(faltan))
-        salida = []
-        for ref in ids:
-            pregunta = sin_claves({k: v for k, v in por_id[ref].items() if k != "teacherNotes"})
-            for clave in ("options", "right", "items"):
-                lista = pregunta.get(clave)
-                if isinstance(lista, list) and len(lista) > 1:
-                    random.Random(f"{semilla or ''}|{ref}|{clave}").shuffle(lista)
-            salida.append(pregunta)
-        return {"courseId": manifiesto.get("id"), "version": manifiesto.get("version"), "objectId": examen.get("id"), "title": examen.get("title"),
-                "instructions": examen.get("instructions"), "questions": salida}
 
     # ------------------------------------------------------------- evaluar
     def evaluar(self, curso_ref: str, version: str, objeto_ref: str, pregunta_ref: str, respuesta: dict) -> dict:

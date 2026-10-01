@@ -47,18 +47,6 @@ class FuenteDeCursos(Protocol):
     def evaluar_lote(self, curso_ref: str, version: str, items: list[dict]) -> list[dict]:
         """Varias respuestas de una vez (hasta 200 por llamada); cada item lleva objectId, questionId y response."""
 
-    def esquema(self, curso_ref: str) -> dict:
-        """El esquema LIGERO del curso para ASIGNAR un examen (MOD-010): metadatos, lecciones con resúmenes de objeto —también los de modo `exam`— y
-        la lista de medios. Sin láminas ni preguntas."""
-
-    def examen_pool(self, curso_ref: str, objeto_ref: str) -> dict:
-        """`ExamPool`: `{courseId, version, objectId, settings, questions[{questionId, type, topicRef, difficulty, estimatedSec, points}]}`. Con
-        ellos MOD-010 arma el examen de cada alumno. Sin enunciados ni claves."""
-
-    def examen_preguntas(self, curso_ref: str, objeto_ref: str, ids: list[str], semilla: str | None = None) -> dict:
-        """`ExamQuestions`: `{courseId, version, objectId, title, instructions, questions[]}` con SÓLO las preguntas pedidas, sin claves, en el
-        orden de `ids` y con opciones y elementos barajados de forma reproducible por `semilla`."""
-
     def estado(self) -> dict:
         """Nunca lanza: {disponible, motivo, sugerencia, huella, cursos_instalados…}."""
 

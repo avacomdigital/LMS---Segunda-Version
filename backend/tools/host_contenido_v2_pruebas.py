@@ -10,7 +10,6 @@ en loopback, con la forma comprobada en vivo el 2026-09-21 contra `GET /v2/opena
                                                       → la lección completa recortada (+ courseId, version)
   GET  /v2/courses/{id}/objects/{oid}?profile&seed&includeActivityKeys
                                                       → un objeto completo (+ courseId, version, lessonId)
-  GET  /v2/courses/{id}/exams/{oid}/pool · /questions?ids&seed → ExamPool (ajustes y metadatos) · ExamQuestions (sin claves, en el orden pedido)
   GET  /v2/courses/{id}/questions/{qid}/grading-guide?version
   POST /v2/evaluate · /v2/evaluate/batch (≤ 200)      → veredicto con las claves del manifiesto completo · {results[]}
 
@@ -540,27 +539,6 @@ class HostContenidoV2Pruebas:
                         salida = objeto_visible(hallado[1], perfil=pm[0], claves_actividad=claves_actividad)
                         barajar_preguntas(salida.get("questions") or [], consulta.get("seed"))
                         return self._json(200, {**salida, "courseId": ref, "version": curso.get("version"), "lessonId": hallado[0].get("id")})
-                    if len(partes) == 6 and partes[3] == "exams" and partes[5] in ("pool", "questions"):
-                        hallado = host._objeto(curso, partes[4])
-                        if hallado is None or hallado[1].get("type") != "exam":
-                            return self._error(404, "object_not_found", "Exam not found")
-                        examen = hallado[1]
-                        if partes[5] == "pool":
-                            return self._json(200, {
-                                "courseId": ref, "version": curso.get("version"), "objectId": examen.get("id"), "settings": examen.get("settings") or {},
-                                "questions": [{"questionId": q.get("id"), "type": q.get("type"), "topicRef": q.get("topicRef"),
-                                               "difficulty": q.get("difficulty"), "estimatedSec": q.get("estimatedSec"), "points": q.get("points")}
-                                              for q in examen.get("questions") or []]})
-                        ids = [i for i in str(consulta.get("ids") or "").split(",") if i]
-                        if not ids:
-                            return self._error(400, "invalid_parameter", "ids is required")
-                        por_id = {str(q.get("id")): q for q in examen.get("questions") or []}
-                        if any(i not in por_id for i in ids):
-                            return self._error(404, "question_not_found", "Question not found")
-                        visibles = objeto_visible({**examen, "questions": [por_id[i] for i in ids]}, perfil="student")["questions"]
-                        barajar_preguntas(visibles, consulta.get("seed"))
-                        return self._json(200, {"courseId": ref, "version": curso.get("version"), "objectId": examen.get("id"),
-                                                "title": examen.get("title"), "instructions": examen.get("instructions"), "questions": visibles})
                     if len(partes) == 6 and partes[3] == "questions" and partes[5] == "grading-guide":
                         version = consulta.get("version")
                         fuente = host._curso(ref, version)

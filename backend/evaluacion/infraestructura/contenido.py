@@ -4,6 +4,9 @@ CLAVES que ve un alumno y la calificación en la biblioteca. Se reutilizan la fu
 la normalización de preguntas del aula —la misma que ya pintan los controles de Student—; sólo cambia una cosa: las URL de los medios apuntan a las rutas
 de este módulo (`/api/evaluacion/intentos/{id}/medios/…`), que sirven únicamente los medios de ESTE examen.
 
+La capa de biblioteca y las fuentes de cursos NO se modifican: lo que sólo el examen necesita (esquema con objetos `exam`, `pool`, preguntas de un alumno)
+lo pide `fuentes_examen`, que vive en este módulo.
+
 Regla de oro (artículo 14): nada se cachea ni se guarda. Cada llamada vuelve a preguntar. La clave de una respuesta sólo vive en la biblioteca: aquí sólo
 pasan lo que el alumno contestó y el veredicto que devuelve.
 """
@@ -20,6 +23,7 @@ from classroom_engine.infraestructura.contenedor import servicios as servicios_a
 
 from ..dominio import armado as armado_dom
 from ..dominio import errores as e10
+from . import fuentes_examen
 
 
 def traducir(error: Exception) -> Exception:
@@ -63,8 +67,8 @@ class ContenidoEvaluacion:
     def examen(self, fuente: str, curso_ref: str, objeto_ref: str) -> dict:
         origen = self._origen(fuente, curso_ref)
         try:
-            esquema = origen.esquema(curso_ref)
-            pool = origen.examen_pool(curso_ref, objeto_ref)
+            esquema = fuentes_examen.esquema(origen, curso_ref)
+            pool = fuentes_examen.examen_pool(origen, curso_ref, objeto_ref)
         except e7.ErrorAula as error:
             raise traducir(error) from error
         leccion = objeto = None
@@ -98,7 +102,7 @@ class ContenidoEvaluacion:
     def _crudo(self, fuente: str, curso_ref: str, version: str, objeto_ref: str, refs: list[str], semilla: str):
         origen = self._origen(fuente, curso_ref)
         try:
-            datos = origen.examen_preguntas(curso_ref, objeto_ref, list(refs), semilla or None)
+            datos = fuentes_examen.examen_preguntas(origen, curso_ref, objeto_ref, list(refs), semilla or None)
         except e7.ErrorAula as error:
             raise traducir(error) from error
         instalada = str(datos.get("version") or "")
@@ -129,10 +133,10 @@ class ContenidoEvaluacion:
         medios: list[dict] = []
         if medios_de_preguntas(crudas):
             try:
-                medios = [m for m in origen.esquema(curso_ref).get("media") or [] if isinstance(m, dict)]
+                medios = [m for m in fuentes_examen.esquema(origen, curso_ref).get("media") or [] if isinstance(m, dict)]
             except e7.ErrorAula as error:
                 raise traducir(error) from error
-        vistas = curso_aula.preguntas_de_examen(crudas, medios, self._url_de_medios(intento_id, dispositivo, alumno_id), semilla)
+        vistas = fuentes_examen.preguntas_de_examen(crudas, medios, self._url_de_medios(intento_id, dispositivo, alumno_id))
         por_ref = {p["pregunta_ref"]: p for p in vistas}
         return {"titulo": datos.get("title"), "instrucciones": datos.get("instructions"),
                 "instrucciones_tramos": curso_aula.tramos(datos.get("instructions")), "version": str(datos.get("version") or ""),

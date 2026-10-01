@@ -33,10 +33,6 @@ Cómo se pide cada cosa (todo con la cabecera `X-Avacom-Token`):
                                                      medios (mediaPort) y no piden token: son capacidades efímeras
   POST /v2/evaluate · /v2/evaluate/batch           → EvaluationResult · {results[]}
   GET  /v2/courses/{id}/questions/{qid}/grading-guide?version
-  GET  /v2/courses/{id}/exams/{oid}/pool           → ExamPool: los ajustes del examen y, por pregunta, sus METADATOS (MOD-010 arma el
-                                                     examen de cada alumno con ellos)
-  GET  /v2/courses/{id}/exams/{oid}/questions?ids&seed → ExamQuestions: las preguntas elegidas para UN alumno, sin claves, en el orden
-                                                     pedido y con opciones y elementos barajados de forma reproducible por `seed`
 """
 from __future__ import annotations
 
@@ -62,8 +58,6 @@ RUTA_CURSO = "/v2/courses/{curso}"
 RUTA_LECCION = "/v2/courses/{curso}/lessons/{leccion}"
 RUTA_OBJETO = "/v2/courses/{curso}/objects/{objeto}"
 RUTA_GUIA = "/v2/courses/{curso}/questions/{pregunta}/grading-guide"
-RUTA_EXAMEN_POOL = "/v2/courses/{curso}/exams/{objeto}/pool"
-RUTA_EXAMEN_PREGUNTAS = "/v2/courses/{curso}/exams/{objeto}/questions"
 RUTA_EVALUAR = "/v2/evaluate"
 RUTA_EVALUAR_LOTE = "/v2/evaluate/batch"
 RUTA_SESIONES_MEDIOS = "/v2/media-sessions"
@@ -359,19 +353,6 @@ def guia_calificacion(curso_ref: str, pregunta_ref: str, version: str | None = N
     """`GET …/questions/{questionId}/grading-guide?version=`: rúbrica y respuesta modelo de una
     pregunta abierta. Sólo para calificar A MANO (MOD-011): el aula no la expone."""
     return _pedir("GET", RUTA_GUIA.format(curso=_ref(curso_ref), pregunta=_ref(pregunta_ref)), consulta={"version": version})
-
-
-def examen_pool(curso_ref: str, objeto_ref: str) -> dict:
-    """`GET …/exams/{objectId}/pool` (ExamPool): `{courseId, version, objectId, settings, questions[{questionId, type, topicRef, difficulty,
-    estimatedSec, points}]}`. Son los datos con que MOD-010 arma el examen de cada alumno; no trae enunciados ni claves."""
-    return _pedir("GET", RUTA_EXAMEN_POOL.format(curso=_ref(curso_ref), objeto=_ref(objeto_ref)))
-
-
-def examen_preguntas(curso_ref: str, objeto_ref: str, ids: list[str], semilla: str | None = None) -> dict:
-    """`GET …/exams/{objectId}/questions?ids=a,b,c&seed=…` (ExamQuestions): las preguntas pedidas, SIN claves, en el orden de `ids`. `seed` hace
-    reproducible el barajado de opciones y elementos para un alumno."""
-    return _pedir("GET", RUTA_EXAMEN_PREGUNTAS.format(curso=_ref(curso_ref), objeto=_ref(objeto_ref)),
-                  consulta={"ids": ",".join(str(i) for i in ids), "seed": semilla})
 
 
 def evaluar(curso_ref: str, version: str, objeto_ref: str, pregunta_ref: str, respuesta: dict) -> dict:

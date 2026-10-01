@@ -560,7 +560,7 @@ Los dieciséis `assessment.*` se siembran con una migración idempotente de `acc
 
 | Módulo | Qué toma MOD-010 | Por dónde | Qué cambia en ese módulo |
 |---|---|---|---|
-| **Biblioteca** (MOD-004/005) | `pool`, `questions`, `evaluate/batch`, versión instalada | `FuenteDeCursos` (puerto del aula) | El puerto gana `examen_pool` y `examen_preguntas`; los adaptadores `FuenteBiblioteca` y `FuenteEjemplo` los implementan; `biblioteca/contenido_v2.py` gana las dos funciones; el host de pruebas v2 sirve los dos endpoints |
+| **Biblioteca** (MOD-004/005) | `pool`, `questions`, `evaluate/batch`, versión instalada | `FuenteDeCursos` (puerto del aula) | La capa de biblioteca y el puerto NO cambian: `evaluacion/infraestructura/fuentes_examen.py` pide `pool` y `questions` con el cliente de la biblioteca tal como está; el host de pruebas v2 se extiende dentro de `evaluacion/tests/` |
 | **MOD-001** Acceso | Grupos, alumnos activos, titularidad del profesor, permisos | `IdentidadAcceso` + `AutorizacionEvaluacion` (política de `acceso`) | Los permisos `assessment.*` y su migración `0009` |
 | **MOD-007** Aula | La clase de la que nace el examen (opcional); el canal de tiempo real | `TiempoRealCanales` | El puerto `Evaluacion` (`intentos_abiertos`) cuenta también los intentos vivos de MOD-010 al cerrar la clase; el estado del examen se avisa por el canal del aula; el examen ya no se pinta atenuado en P2 |
 | **MOD-009** Dispositivos | Capacidad declarada, sesión de alumno, bloqueo de tableta | `device_manager.servicios` | `m09_dispositivo.capacidad_control` + `capacidad_detalle` y su registro/latido (migración `0005`) |

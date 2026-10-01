@@ -143,26 +143,5 @@ class FuenteBiblioteca:
         except (BibliotecaNoDisponible, BibliotecaError) as error:
             raise _traducir(error, curso_ref=curso_ref) from error
 
-    def esquema(self, curso_ref: str) -> dict:
-        try:
-            datos = v2.esquema_curso(curso_ref, modo="exam", perfil="student")      # con `mode=class` el examen (modo `exam`) no aparece
-        except (BibliotecaNoDisponible, BibliotecaError) as error:
-            raise _traducir(error, curso_ref=curso_ref) from error
-        if not isinstance(datos, dict):
-            raise FuenteError("La biblioteca no devolvió el esquema del curso.", curso_ref=curso_ref)
-        return datos
-
-    def examen_pool(self, curso_ref: str, objeto_ref: str) -> dict:
-        try:
-            return v2.examen_pool(curso_ref, objeto_ref)
-        except (BibliotecaNoDisponible, BibliotecaError) as error:
-            raise _traducir(error, curso_ref=curso_ref) from error
-
-    def examen_preguntas(self, curso_ref: str, objeto_ref: str, ids: list[str], semilla: str | None = None) -> dict:
-        try:
-            return v2.examen_preguntas(curso_ref, objeto_ref, ids, semilla)
-        except (BibliotecaNoDisponible, BibliotecaError) as error:
-            raise _traducir(error, curso_ref=curso_ref, pregunta_ref=",".join(ids)) from error
-
     def estado(self) -> dict:
         return v2.estado()

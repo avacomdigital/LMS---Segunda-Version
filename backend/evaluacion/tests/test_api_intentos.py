@@ -10,6 +10,7 @@ from classroom_engine.dominio import curso as curso_aula
 from device_manager import models as m09
 
 from .. import models as m
+from ..infraestructura import fuentes_examen
 from .base import BASE, MIN, BaseEvaluacion, FuenteQueCalifica, respuesta_correcta
 
 
@@ -133,19 +134,19 @@ class AbrirIntentoTests(BaseEvaluacion):
 
     def test_si_el_curso_cambia_de_version_el_intento_no_se_abre_inv_024(self):
         a = self.crear_asignacion("abierto")
-        original = FuenteQueCalifica.examen_pool
+        original = fuentes_examen.examen_pool
 
-        def otra_version(self, curso_ref, objeto_ref):
-            return {**original(self, curso_ref, objeto_ref), "version": "2.0.0"}
+        def otra_version(origen, curso_ref, objeto_ref):
+            return {**original(origen, curso_ref, objeto_ref), "version": "2.0.0"}
 
-        with mock.patch.object(FuenteQueCalifica, "examen_pool", otra_version):
+        with mock.patch.object(fuentes_examen, "examen_pool", otra_version):
             r = self.api.post(f"{BASE}/asignaciones/{a['id']}/intentos/", self.alumno(), format="json")
         self.assertEqual((r.status_code, r.json()["codigo"], r.json()["asignada"], r.json()["instalada"]), (409, "version_no_disponible", "1.0.0", "2.0.0"))
         self.assertEqual(m.Intento.objects.count(), 0)
 
     def test_sin_biblioteca_no_se_abre_pero_tampoco_se_rompe(self):
         a = self.crear_asignacion("abierto")
-        with mock.patch.object(FuenteQueCalifica, "examen_pool", side_effect=__import__("classroom_engine.dominio.errores", fromlist=["x"]).FuenteNoDisponible("cerrada")):
+        with mock.patch.object(fuentes_examen, "examen_pool", side_effect=__import__("classroom_engine.dominio.errores", fromlist=["x"]).FuenteNoDisponible("cerrada")):
             r = self.api.post(f"{BASE}/asignaciones/{a['id']}/intentos/", self.alumno(), format="json")
         self.assertEqual((r.status_code, r.json()["disponible"]), (503, False))
         self.abrir(a["id"], esperado=201)                                                            # al volver la biblioteca, abre sin más

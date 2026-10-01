@@ -420,12 +420,11 @@ Congelar: `consumido_ms += ultimo_latido_en − reloj_desde`; `reloj_desde = nul
 | `acceso/dominio/plantillas.py` + migración `0009_permisos_evaluacion` | Los 16 permisos `assessment.*` y su reparto por rol | D-18 |
 | `audit/dominio/catalogos.py` | Acciones nuevas `evaluacion.*` (catálogo cerrado) | MOD-019 §3.5 |
 | `device_manager` (modelo, caso de uso, serializer, `servicios`) + migración `0005_capacidad_control` | `capacidad_control` y `capacidad_detalle`, declarables en el registro y el latido | BR-075 |
-| `biblioteca/contenido_v2.py` | `examen_pool(curso, objeto)` y `examen_preguntas(curso, objeto, ids, semilla)` | `GET …/exams/{oid}/pool` y `…/questions` |
-| `classroom_engine/aplicacion/puertos.py` + `fuente_biblioteca.py` + `fuente_ejemplo.py` | `FuenteDeCursos.examen_pool` y `.examen_preguntas` (el ejemplo los lee del manifiesto) | Una sola fuente de cursos |
-| `classroom_engine/dominio/curso.py` | `pregunta_de_aula(...)` público con semilla opcional | Las preguntas del examen llegan en la misma forma que las del aula, y los controles de Student ya las pintan |
+| `classroom_engine/infraestructura/contenedor.py` + `avacom_lms/settings.py` | `AVACOM_AULA_PERMITIR_EJEMPLO` (apagado salvo `=1` o `manage.py test`): sin él, pedir la fuente `ejemplo` se resuelve con la biblioteca | Los cursos salen SIEMPRE de la biblioteca, también en el instalador |
 | `classroom_engine/infraestructura/repositorios.py` | `EvaluacionExpediente.intentos_abiertos` suma los intentos vivos de MOD-010 | Cerrar una clase cuenta los exámenes abiertos (JRN-011) |
 | `classroom_engine/infraestructura/tiempo_real.py` | `evaluacion_panel` va sólo al profesor | El aviso del panel no necesita llegar a 50 tabletas |
-| `tools/host_contenido_v2_pruebas.py` | `GET …/exams/{oid}/pool` y `…/questions` | La suite no necesita la biblioteca real |
+
+**La capa de biblioteca no se toca** (`biblioteca/`, `FuenteDeCursos` y sus adaptadores, `classroom_engine/dominio/curso.py`, el host de pruebas v2). Lo que sólo el examen necesita de un curso —el esquema con los objetos de modo `exam`, `GET …/exams/{oid}/pool` y `…/questions`, y la vista de las preguntas de un alumno— vive en `evaluacion/infraestructura/fuentes_examen.py`, que sólo *lee* de ellas (con la biblioteca, por el cliente `biblioteca.contenido_v2` tal como está; con el ejemplo de pruebas, por el manifiesto). Para las pruebas contra HTTP, `evaluacion/tests/host_examenes.py` extiende el host de pruebas de la biblioteca con esas dos rutas sin modificarlo.
 
 ---
 
@@ -511,7 +510,7 @@ Cada respuesta que recibe un alumno se recorre con `contiene_clave` en `test_api
 **Construido y probado (2026-10-01).**
 
 * La app `evaluacion` entera: cinco tablas `m10_*` (la del intento se llama `m10_intento_formal`), dominio puro, casos de uso por la interfaz de sus puertos, repositorios, unidad de trabajo, programador del nodo y las 36 rutas de §4. Migraciones `evaluacion/0001`, `acceso/0009` y `device_manager/0005`.
-* Integraciones: permisos `assessment.*` (16), acciones `evaluacion.*` del catálogo de MOD-019, capacidad de control de la tableta (MOD-009), `pool`/`questions` de la API v2 por el puerto `FuenteDeCursos`, el conteo de exámenes abiertos al cerrar una clase y el aviso por el canal de tiempo real del aula.
+* Integraciones: permisos `assessment.*` (16), acciones `evaluacion.*` del catálogo de MOD-019, capacidad de control de la tableta (MOD-009), `pool`/`questions` de la API v2 por `fuentes_examen` (sin tocar la capa de biblioteca), el conteo de exámenes abiertos al cerrar una clase y el aviso por el canal de tiempo real del aula.
 * Suite completa: **961 pruebas en verde** (651 de la línea base más 310 nuevas), 3 omitidas por depender de `jsonschema`.
 
 **Defectos que las pruebas destaparon y se corrigieron.** (1) La unidad de trabajo revertía lo que el reloj había provocado cuando la petición que lo descubrió se rechazaba (D-21). (2) Un intento entregado con la biblioteca caída guardaba `porcentaje = 0` (D-22). (3) Recalificar lo ya calificado volvía a publicar `intento_calificado`. (4) El cierre manual de la asignación entregaba con `origen_entrega = profesor` en vez de `cierre`, y el corte de la gracia de una tableta sin señal se medía contra su último latido y no contra el cierre de la asignación (§5.7). (5) Anular sin persona identificada se firmaba como «docente» (D-23). (6) Un intento defectuoso detenía el barrido del nodo entero (D-24).

@@ -13,12 +13,12 @@ import tempfile
 
 from django.test import override_settings
 
-from tools.host_contenido_v2_pruebas import HostContenidoV2Pruebas
 
 from .. import models as m
 from ..aplicacion import barrido
 from ..infraestructura.contenedor import servicios
 from .base import CURSO, EXAMEN, BaseEvaluacion, manifiesto_de_banco_fijo, respuesta_correcta
+from .host_examenes import HostConExamenes
 
 
 def claves_de(valor) -> set[str]:
@@ -39,7 +39,7 @@ class _ConBiblioteca(BaseEvaluacion):
         self.addCleanup(shutil.rmtree, self.carpeta, ignore_errors=True)
         self.ruta_enlace = os.path.join(self.carpeta, "link.json")
         self.v1 = manifiesto_de_banco_fijo()
-        self.host = HostContenidoV2Pruebas(self.ruta_enlace, {CURSO: self.v1}, archivados={(CURSO, self.v1["version"]): copy.deepcopy(self.v1)}).iniciar()
+        self.host = HostConExamenes(self.ruta_enlace, {CURSO: self.v1}, archivados={(CURSO, self.v1["version"]): copy.deepcopy(self.v1)}).iniciar()
         self.addCleanup(self.host.detener)
         ajuste = override_settings(AVACOM_CONTENIDO_ENLACE_V2=self.ruta_enlace)
         ajuste.enable()
