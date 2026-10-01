@@ -16,5 +16,10 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("estudio", typeof(ModoEstudio.Views.StudyModePage));
         Routing.RegisterRoute("estudio-leccion", typeof(ModoEstudio.Views.StudyLessonPage));
         Routing.RegisterRoute("estudio-practica", typeof(ModoEstudio.Views.StudyPracticePage));
+        // MOD-010 · Evaluation & Delivery Engine: mis evaluaciones, la antesala, el examen (sin salida mientras dura) y la entrega con su resultado
+        Routing.RegisterRoute("evaluaciones", typeof(Examen.EvaluacionesPage));
+        Routing.RegisterRoute("examen-antesala", typeof(Examen.ExamenAntesalaPage));
+        Routing.RegisterRoute("examen", typeof(Examen.ExamenPage));
+        Routing.RegisterRoute("examen-entrega", typeof(Examen.ExamenEntregaPage));
     }
 }

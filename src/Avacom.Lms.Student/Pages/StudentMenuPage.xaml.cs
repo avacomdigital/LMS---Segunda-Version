@@ -18,6 +18,8 @@ public partial class StudentMenuPage : ContentPage
     /// asigna el profesor a un grupo y en un LMS offline nadie puede verificar quién es quién.
     /// </summary>
     private async void OnEstudio(object? sender, EventArgs e) => await Shell.Current.GoToAsync("estudio");
+    /// <summary>«Exámenes» (MOD-010): lo que el profesor aplicó a esta persona. Sin sesión de usuario pregunta quién eres, sin código ni contraseña.</summary>
+    private async void OnEvaluaciones(object? sender, EventArgs e) => await Shell.Current.GoToAsync("evaluaciones");
     private async void OnCourses(object? sender, EventArgs e) => await Shell.Current.GoToAsync("asignaturas");
     private async void OnClaseEnVivo(object? sender, EventArgs e) => await Shell.Current.GoToAsync("clase-unirse");
 

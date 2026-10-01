@@ -240,6 +240,63 @@ public partial class ClaseSiguiendoPage : ContentPage
         PintarPendientes(estado);
         ActualizarActividad(estado);
         PintarAvisos(estado);
+        _ = RefrescarExamenesAsync();
+    }
+
+    // ----------------------------------------------------------------- el examen de la clase (MOD-010)
+
+    private long _ultimoSondeoDeExamenes;
+    private string? _firmaExamenes;
+
+    /// <summary>
+    /// Cada ~3 s, si se sabe quién presenta, pregunta qué evaluaciones le alcanzan y ofrece las que el profesor aplicó a ESTA clase. Un examen no se responde dentro de la clase:
+    /// tiene su antesala, su bloqueo y su reloj, así que la tarjeta lleva a ellos. Sin saber quién presenta (sin sesión y sin haberse elegido en «Exámenes») no se puede
+    /// preguntar al nodo; si hay algo abierto en algún grupo, la tarjeta lleva a «Mis evaluaciones», donde se elige quién eres.
+    /// </summary>
+    private async Task RefrescarExamenesAsync()
+    {
+        if (_saliendo || Environment.TickCount64 - _ultimoSondeoDeExamenes < 3000) return;
+        _ultimoSondeoDeExamenes = Environment.TickCount64;
+        try
+        {
+            var tarjetas = new List<(string Titulo, string Detalle, string Boton, string Ruta)>();
+            if (Sesion.SabeQuienEvalua)
+            {
+                var mis = await Sesion.Evaluacion.MisAsync(Sesion.Dispositivo, Sesion.AlumnoParaEvaluar);
+                if (mis is null) return;                            // sin red: la tarjeta que ya está se queda
+                foreach (var e in mis.Pendientes.Where(x => x.SesionId == SesionId && x.Estado is "activa" or "activa_fuera_de_plazo"))
+                {
+                    var sigue = e.MiIntento is { Estado: "en_curso" or "en_curso_fuera_de_plazo" or "pausado_desconexion" or "restaurando" };
+                    if (e.MiIntento is { Estado: "entregado" or "en_revision_docente" or "calificado" or "anulado" }) continue;
+                    tarjetas.Add((e.Titulo, sigue ? "Tienes un examen en curso" : "Tu profesor abrió un examen para la clase", sigue ? "Continuar" : "Ver el examen",
+                                  $"examen-antesala?asignacion={Uri.EscapeDataString(e.Id)}&reanudar={(sigue ? 1 : 0)}"));
+                }
+            }
+            else
+            {
+                var quien = await Sesion.Evaluacion.EstudiantesAsync();
+                if (quien is { Disponible: true }) tarjetas.Add(("Hay una evaluación abierta", "Elige quién eres para presentarla", "Ir a Exámenes", "evaluaciones"));
+            }
+            var firma = string.Join("|", tarjetas.Select(t => t.Ruta));
+            if (firma == _firmaExamenes) return;
+            _firmaExamenes = firma;
+            ExamenesHost.Clear();
+            foreach (var (titulo, detalle, boton, ruta) in tarjetas)
+            {
+                var grid = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
+                grid.Add(Ds.IconoCategoria("examen", 48), 0, 0);
+                var textos = new VerticalStackLayout { VerticalOptions = LayoutOptions.Center };
+                textos.Add(Ds.Cuerpo(titulo, 17));
+                textos.Add(Ds.Secundario(detalle, 13));
+                grid.Add(textos, 1, 0);
+                var abrir = Ds.Boton(boton, Ds.Rango.Primary, async (_, _) => await Shell.Current.GoToAsync(ruta), 56);
+                abrir.FontSize = 16;
+                abrir.AutomationId = "clase-examen-abrir";
+                grid.Add(abrir, 2, 0);
+                ExamenesHost.Add(Ds.Tarjeta(grid, Ds.RadioInterno, new Thickness(14, 12), Ds.InfoSuave));
+            }
+        }
+        catch (Exception ex) { RegistroDeFallos.Escribir("student", "ClaseSiguiendoPage.Examenes", ex); }
     }
 
     /// <summary>

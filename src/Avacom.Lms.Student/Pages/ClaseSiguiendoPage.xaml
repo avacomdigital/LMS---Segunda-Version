@@ -22,7 +22,7 @@
                     <Button Grid.Column="3" Text="Salir" BackgroundColor="Transparent" TextColor="#27272A" FontSize="17" FontAttributes="Bold" HeightRequest="52" Clicked="OnSalir" />
                 </Grid>
             </Border>
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="10">
                 <!-- DEC-034 · CMP-063: mientras el profesor proyecta esta pantalla al grupo, se ve, siempre y con texto. -->
                 <Border x:Name="ProyectandoBanda" Grid.Row="0" IsVisible="False" BackgroundColor="#F5E8F1" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="16,10"
                         SemanticProperties.Description="Tu pantalla se está proyectando al grupo">
@@ -41,6 +41,8 @@
                     </Border>
                 </Grid>
                 <VerticalStackLayout x:Name="PendientesHost" Grid.Row="3" Spacing="8" />
+                <!-- MOD-010: el profesor aplicó un examen a esta clase. Se presenta aparte, con su antesala; aquí sólo se avisa y se ofrece. -->
+                <VerticalStackLayout x:Name="ExamenesHost" Grid.Row="4" Spacing="8" />
             </Grid>
         </Grid>
         <ui:BloqueoView x:Name="Bloqueo" />

@@ -1,5 +1,7 @@
+using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
+using Avacom.Lms.Student.ModoEstudio.Services;
 
 namespace Avacom.Lms.Student;
 
@@ -25,6 +27,10 @@ public static class Sesion
     private static Uri? _baseAcceso;
     private static Uri? _baseEstudio;
     private static Uri? _baseDispositivos;
+    private static EvaluacionApi? _evaluacion;
+    private static Uri? _baseEvaluacion;
+    private static ColaExamen? _colaExamen;
+    private static AlmacenDePin? _pinDeSalida;
     private static readonly object Candado = new();
 
     /// <summary>
@@ -154,6 +160,97 @@ public static class Sesion
             }
         }
     }
+
+    // ------------------------------------------------------------------------------ evaluación (MOD-010)
+
+    /// <summary>El cliente de <c>/api/evaluacion/</c> (MOD-010) para la tableta: mis evaluaciones, antesala, el intento, las respuestas, los incidentes y la entrega.</summary>
+    public static IExamenAlumnoApi Evaluacion
+    {
+        get
+        {
+            var actual = BaseUri;
+            lock (Candado)
+            {
+                if (_evaluacion is null || _baseEvaluacion != actual)
+                {
+                    _evaluacion = new EvaluacionApi(Http, actual);
+                    _baseEvaluacion = actual;
+                }
+                return _evaluacion;
+            }
+        }
+    }
+
+    /// <summary>
+    /// La cola local CIFRADA del examen (BR-009, BR-071): cada respuesta, incidente e informe de bloqueo se guarda AQUÍ antes de intentar enviarse y sólo se borra cuando el
+    /// nodo acusa recibo. Tiene su propia clave (<c>examen-clave</c>): destruir la del modo de estudio no toca un examen en curso.
+    /// </summary>
+    public static ColaExamen ColaDeExamen
+    {
+        get
+        {
+            lock (Candado)
+            {
+                if (_colaExamen is null)
+                {
+                    var carpeta = Path.Combine(FileSystem.AppDataDirectory, "examen");
+                    Directory.CreateDirectory(carpeta);
+                    _colaExamen = new ColaExamen(Path.Combine(carpeta, "cola.avc"), new ClaveDeStudent(Path.Combine(FileSystem.AppDataDirectory, "examen-clave")));
+                }
+                return _colaExamen;
+            }
+        }
+    }
+
+    /// <summary>La salida administrativa del bloqueo (kiosk.md §5.3): PIN con PBKDF2 y sal propia de ESTA tableta. Sin PIN fijado no hay salida local; la vía es el cierre forzado del profesor.</summary>
+    public static AlmacenDePin PinDeSalida
+    {
+        get
+        {
+            lock (Candado)
+            {
+                if (_pinDeSalida is null)
+                {
+                    var carpeta = Path.Combine(FileSystem.AppDataDirectory, "examen");
+                    Directory.CreateDirectory(carpeta);
+                    _pinDeSalida = new AlmacenDePin(Path.Combine(carpeta, "salida.json"));
+                }
+                return _pinDeSalida;
+            }
+        }
+    }
+
+    /// <summary>El servicio de kiosco de esta plataforma (Android, Windows o ninguno). Uno por proceso.</summary>
+    public static IKioskService Kiosco => Avacom.Lms.Student.Examen.KioscoReal.Crear();
+
+    /// <summary>El examen que esta tableta está presentando ahora (lo comparten la antesala, el examen y la entrega).</summary>
+    public static SesionDeExamen? ExamenActual { get; set; }
+
+    /// <summary>
+    /// A quién se le presentan las evaluaciones cuando el nodo NO exige sesión (Q-34): la persona que eligió en «¿Quién eres?», sin código ni contraseña (D-19: el LMS es
+    /// offline y no hay verificación central). Con sesión de usuario el nodo sabe quién es por su pase y esto no se usa.
+    /// </summary>
+    public static string? AlumnoDeEvaluacion
+    {
+        get => Preferences.Default.Get<string?>("student_eval_alumno", null);
+        set { if (value is null) Preferences.Default.Remove("student_eval_alumno"); else Preferences.Default.Set("student_eval_alumno", value); }
+    }
+
+    public static string? AlumnoDeEvaluacionRotulo
+    {
+        get => Preferences.Default.Get<string?>("student_eval_rotulo", null);
+        set { if (value is null) Preferences.Default.Remove("student_eval_rotulo"); else Preferences.Default.Set("student_eval_rotulo", value); }
+    }
+
+    /// <summary>El <c>alumno_id</c> que viaja en las llamadas de evaluación: nada con sesión de usuario (el pase ya dice quién es) y el elegido sin ella.</summary>
+    public static string? AlumnoParaEvaluar => ClienteJson.Token is not null ? null : AlumnoDeEvaluacion;
+
+    /// <summary>¿Se sabe a quién presentar? Con sesión sí; sin ella, sólo si la persona ya se eligió.</summary>
+    public static bool SabeQuienEvalua => ClienteJson.Token is not null || AlumnoDeEvaluacion is not null;
+
+    /// <summary>Una sesión de examen nueva para esta tableta y esta persona, con el kiosco, la cola cifrada y la salida administrativa de la tableta.</summary>
+    public static SesionDeExamen NuevaSesionDeExamen() =>
+        new(Evaluacion, ColaDeExamen, Kiosco, Dispositivo, AlumnoParaEvaluar, new DatosDeTableta(DeviceInfo.Current.Name, Plataforma, VersionApp), PinDeSalida);
 
     /// <summary>La huella con la que MOD-009 reconoce esta tableta en el inventario del aula.</summary>
     public static string Dispositivo => $"student-{DeviceInfo.Current.Name}";
