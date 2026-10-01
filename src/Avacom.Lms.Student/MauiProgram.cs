@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Avacom.Lms.Student;
 
@@ -7,6 +7,7 @@ public static class MauiProgram
 	public static MauiApp CreateMauiApp()
 	{
 		Avacom.Lms.Core.Services.RegistroDeFallos.Observar("student");
+		Sesion.PrepararAparato();   // MOD-019: logs locales con versión y aparato; el id de la tableta persiste entre arranques
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()

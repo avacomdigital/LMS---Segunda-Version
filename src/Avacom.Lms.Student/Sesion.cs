@@ -15,6 +15,9 @@ public static class Sesion
     private static IAccesoApi? _acceso;
     private static IEstudioApi? _estudio;
     private static IDispositivosApi? _dispositivos;
+    private static ILogsApi? _logs;
+    private static EntregadorDeLogs? _entregador;
+    private static Uri? _baseLogs;
     private static ColaRespuestas? _cola;
     private static SincronizadorRespuestas? _sincronizador;
     private static Uri? _baseActual;
@@ -154,6 +157,36 @@ public static class Sesion
 
     /// <summary>La huella con la que MOD-009 reconoce esta tableta en el inventario del aula.</summary>
     public static string Dispositivo => $"student-{DeviceInfo.Current.Name}";
+
+    /// <summary>El cliente de <c>/api/logs/</c> (MOD-019): la tableta entrega sus avisos WARNING+ al nodo, de mejor esfuerzo. Nunca lee la bitácora.</summary>
+    public static ILogsApi Logs
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_logs is null || _baseLogs != actual)
+            {
+                _logs = new LogsApi(Http, actual);
+                _baseLogs = actual;
+            }
+            return _logs;
+        }
+    }
+
+    /// <summary>Sube al nodo, cada minuto y cuando hay red del aula, los renglones WARNING+ del registro local (§2.4 de MOD-019). Sin red, espera.</summary>
+    public static EntregadorDeLogs EntregadorDeLogs => _entregador ??= new EntregadorDeLogs(() => Logs, "student", () => VersionApp);
+
+    /// <summary>
+    /// MOD-019 (019-01): el id con el que el nodo conoce a esta tableta (<c>m09_dispositivo</c>). Lo aprende del latido y de la participación
+    /// en una clase, se guarda en Preferences y desde entonces viaja en <c>X-Avacom-Dispositivo</c> en cada petición y en el WebSocket.
+    /// Nunca se inventa: una tableta que no entró nunca a una clase no lleva cabecera.
+    /// </summary>
+    public static void PrepararAparato()
+    {
+        AparatoRegistrado.Cargar = () => Preferences.Default.Get<string?>("student_dispositivo_id", null);
+        AparatoRegistrado.Guardar = id => { if (id is null) Preferences.Default.Remove("student_dispositivo_id"); else Preferences.Default.Set("student_dispositivo_id", id); };
+        RegistroLocal.Configurar("student", VersionApp, () => AparatoRegistrado.Id);
+    }
 
     /// <summary>Plataforma y versión declaradas al entrar a clase, para que el inventario sepa qué app corre cada tableta.</summary>
     public static string Plataforma =>

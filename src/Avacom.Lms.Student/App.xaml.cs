@@ -1,4 +1,4 @@
-﻿using Avacom.Lms.Core.Models;
+using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,6 +22,9 @@ public partial class App : Application
 		var ventana = new Window(new AppShell());
 		// Segundo plano, vuelta y cierre: la tableta declara «reconectando», «conectado» y «salió» (007-04).
 		CicloDeVida.Enganchar(ventana);
+		// MOD-019: arranque tras reinicio (canal dispositivo) y entrega de los avisos locales al nodo cada minuto, de mejor esfuerzo.
+		RegistroLocal.Info(Canal.Dispositivo, "app.arranque", "Student arrancó", new { version = Sesion.VersionApp, plataforma = Sesion.Plataforma, servidor = Sesion.BaseUri.ToString() });
+		Sesion.EntregadorDeLogs.Iniciar();
 		return ventana;
 	}
 

@@ -44,6 +44,9 @@ internal sealed class ConnectivityService : IConnectivityService, IDisposable
     {
         if (_visible == visible) return;
         _visible = visible;
+        // MOD-019 §2.4 (canal comunicacion): sólo la transición. Perder el aula es un aviso; recuperarla, información.
+        if (visible) RegistroLocal.Info(Canal.Comunicacion, "aula.visible", "El aula vuelve a verse desde la tableta");
+        else RegistroLocal.Advertencia(Canal.Comunicacion, "aula.invisible", "El aula dejó de verse desde la tableta", new { dispositivo = _dispositivo });
         try { Changed?.Invoke(visible); }
         catch (Exception ex) { RegistroDeFallos.Escribir("student", "ConnectivityService.Changed", ex); }
     }
@@ -52,6 +55,8 @@ internal sealed class ConnectivityService : IConnectivityService, IDisposable
     {
         try
         {
+            // MOD-019 §2.4 (canal dispositivo): el cambio de red del aparato, sin nombres de redes.
+            RegistroLocal.Info(Canal.Dispositivo, "red.cambio", "Cambió la red del aparato", new { acceso = e.NetworkAccess.ToString() });
             if (e.NetworkAccess == NetworkAccess.None) Informar(false);
             else await ProbeAsync();
         }

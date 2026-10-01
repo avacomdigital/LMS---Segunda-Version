@@ -49,6 +49,23 @@ public partial class ConnectionPage : ContentPage
         finally { CheckButton.IsEnabled = true; }
     }
 
+    /// <summary>MOD-019 §3.6: «Exportar diagnóstico», un ZIP con los logs del aparato (sin datos personales), la versión y la configuración no sensible.</summary>
+    private void OnDiagnostico(object? sender, EventArgs e)
+    {
+        try
+        {
+            var carpeta = Path.Combine(FileSystem.AppDataDirectory, "diagnostico");
+            var ruta = RegistroLocal.ExportarDiagnostico(Path.Combine(carpeta, $"diagnostico-student-{DateTime.Now:yyyyMMdd-HHmmss}.zip"),
+                new { servidor = ServerEntry.Text, plataforma = Sesion.Plataforma, sesion_obligatoria = Sesion.SesionObligatoria, pendientes_de_entrega = RegistroLocal.CuentaPendientes });
+            Estado($"●  Diagnóstico guardado en {ruta}", VerdeSuave, Verde);
+        }
+        catch (Exception ex)
+        {
+            RegistroDeFallos.Escribir("student", "ConnectionPage.Diagnostico", ex);
+            Estado("●  No se pudo crear el diagnóstico", RojoSuave, Rojo);
+        }
+    }
+
     private void Estado(string texto, string fondo, string tinta)
     {
         StatusCard.BackgroundColor = Color.FromArgb(fondo); StatusLabel.TextColor = Color.FromArgb(tinta); StatusLabel.Text = texto;
