@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.ExamenPanelPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False"
+    SizeChanged="OnPageSizeChanged">
+    <!-- Panel del examen en vivo (MOD-010 · PAN-005/121 · Guion, pasos 5 a 12). Es un panel de CONTINUIDAD, no de vigilancia: no suena, no marca nada en
+         rojo y no ofrece «anular». La cabecera (qué examen es, en qué estado, qué se puede hacer con él y cuántos van en cada punto), los avisos y la barra
+         de «Reactivar a todos» quedan fijos; la lista de alumnos se desplaza y conserva el ORDEN que manda el nodo —primero quien necesita al profesor—,
+         nunca el alfabético. Lo pinta el código; todo se hace con toques. -->
+    <Grid x:Name="Raiz">
+        <Grid RowDefinitions="Auto,Auto,Auto,*" Padding="44,22,48,14">
+            <VerticalStackLayout x:Name="CabeceraHost" Grid.Row="0" HorizontalOptions="Center" WidthRequest="1500" />
+            <VerticalStackLayout x:Name="AvisoHost" Grid.Row="1" HorizontalOptions="Center" WidthRequest="1500" Spacing="8" />
+            <ContentView x:Name="ReactivarHost" Grid.Row="2" HorizontalOptions="Center" WidthRequest="1500" />
+            <ScrollView x:Name="Desplazable" Grid.Row="3" Margin="0,12,0,0">
+                <VerticalStackLayout x:Name="FilasHost" HorizontalOptions="Center" WidthRequest="1500" Spacing="10" Padding="0,0,0,40" />
+            </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>

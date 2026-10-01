@@ -20,5 +20,10 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("estudio", typeof(Pages.EstudioPage));
         // MOD-019 · Audit: la bitácora (Administrador) y el estado del equipo con sus errores (Técnico)
         Routing.RegisterRoute("logs-bitacora", typeof(Pages.BitacoraPage));
+        // MOD-010 · Evaluation & Delivery Engine: aplicar un examen a la clase, vigilarlo sin vigilar, ver el expediente de un intento y los resultados
+        Routing.RegisterRoute("examen-aplicar", typeof(Pages.ExamenAplicarPage));
+        Routing.RegisterRoute("examen-panel", typeof(Pages.ExamenPanelPage));
+        Routing.RegisterRoute("examen-expediente", typeof(Pages.ExamenExpedientePage));
+        Routing.RegisterRoute("examen-resultados", typeof(Pages.ExamenResultadosPage));
     }
 }

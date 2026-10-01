@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.ExamenResultadosPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False"
+    SizeChanged="OnPageSizeChanged">
+    <!-- Resultados de un examen (MOD-010). Una tabla para el profesor: cómo le fue a cada alumno, quién aprobó, quién entregó fuera de plazo y cuántos avisos
+         tuvo su intento. Con menos de tres entregas no se calcula un promedio (CMP-043). Los resultados son provisionales hasta que la nota publicada exista
+         (MOD-011): lo que aún falta revisar se dice, no se esconde. -->
+    <Grid x:Name="Raiz">
+        <Grid RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
+            <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
+                <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                    <Label Text="RESULTADOS DEL EXAMEN" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                    <Label x:Name="TituloLabel" Text="Cargando…" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
+                    <Label x:Name="SubtituloLabel" Text="" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+                <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+            </Grid>
+            <VerticalStackLayout x:Name="AvisoHost" Grid.Row="1" HorizontalOptions="Center" WidthRequest="1280" Spacing="8" />
+            <ScrollView x:Name="Desplazable" Grid.Row="2">
+                <VerticalStackLayout x:Name="ContenidoHost" HorizontalOptions="Center" WidthRequest="1280" Spacing="14" Padding="0,0,0,40" />
+            </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>

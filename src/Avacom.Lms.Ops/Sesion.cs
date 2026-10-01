@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 
@@ -16,6 +17,8 @@ public static class Sesion
     private static IEstudioApi? _estudio;
     private static IAccesoApi? _acceso;
     private static IAuditoriaApi? _auditoria;
+    private static EvaluacionApi? _evaluacion;
+    private static Uri? _baseEvaluacion;
     private static ILogsApi? _logs;
     private static EntregadorDeLogs? _entregador;
     private static Uri? _baseAuditoria;
@@ -113,6 +116,24 @@ public static class Sesion
                 _baseEstudio = actual;
             }
             return _estudio;
+        }
+    }
+
+    /// <summary>
+    /// El cliente de <c>/api/evaluacion/</c> (MOD-010), una instancia por dirección. Es el mismo objeto que implementa <see cref="IExamenDocenteApi"/> (lo que usa
+    /// OPS: aplicar un examen, vigilarlo, reactivar, revisar y anular) y <see cref="IExamenAlumnoApi"/> (lo que usa Student); aquí sólo se usa la del profesor.
+    /// </summary>
+    public static EvaluacionApi Evaluacion
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_evaluacion is null || _baseEvaluacion != actual)
+            {
+                _evaluacion = new EvaluacionApi(Http, actual);
+                _baseEvaluacion = actual;
+            }
+            return _evaluacion;
         }
     }
 

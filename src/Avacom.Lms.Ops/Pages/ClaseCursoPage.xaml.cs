@@ -7,7 +7,7 @@ namespace Avacom.Lms.Ops.Pages;
 
 /// <summary>
 /// P2 · Curso y lecciones. Una tarjeta por lección con sus objetos como chips de categoría;
-/// el examen aparece atenuado (lo aplica MOD-010). Se toca una lección para seleccionarla y
+/// el examen es un objeto más de la lección (se aplica durante la clase, MOD-010). Se toca una lección para seleccionarla y
 /// un único botón Primary inicia la clase (BR-044, vía «leccion»); «Clase libre» es la vía
 /// alternativa. Nada exige teclado.
 /// </summary>
@@ -107,9 +107,9 @@ public partial class ClaseCursoPage : ContentPage
         var soloExamen = leccion.SoloExamen;
         var numeroChip = new Border
         {
-            BackgroundColor = soloExamen ? Ds.Lienzo : Ds.Rojo, StrokeThickness = 0, WidthRequest = 56, HeightRequest = 56,
+            BackgroundColor = Ds.Rojo, StrokeThickness = 0, WidthRequest = 56, HeightRequest = 56,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, VerticalOptions = LayoutOptions.Start,
-            Content = new Label { Text = numero.ToString(), FontSize = 24, FontAttributes = FontAttributes.Bold, TextColor = soloExamen ? Ds.TintaSuave : Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+            Content = new Label { Text = numero.ToString(), FontSize = 24, FontAttributes = FontAttributes.Bold, TextColor = Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
         };
         grid.Add(numeroChip, 0, 0);
         var textos = new VerticalStackLayout { Spacing = 8 };
@@ -119,9 +119,11 @@ public partial class ClaseCursoPage : ContentPage
         foreach (var objeto in leccion.Objetos ?? [])
         {
             var color = Ds.Categoria(objeto.Componente);
-            var chip = Ds.Pildora($"{Ds.Icono(objeto.Componente)}  {objeto.ComponenteLegible} · {objeto.Titulo}", objeto.FueraDeAlcance ? Ds.Lienzo : color, objeto.FueraDeAlcance ? Ds.TintaSuave : null, 14);
+            // El examen ya se puede aplicar (MOD-010): su chip es de categoría como los demás. Sólo lo que de verdad no se ejecuta sigue atenuado.
+            var noSeEjecuta = objeto.FueraDeAlcance && objeto.Componente != "examen" && objeto.Tipo != "exam";
+            var chip = Ds.Pildora($"{Ds.Icono(objeto.Componente)}  {objeto.ComponenteLegible} · {objeto.Titulo}", noSeEjecuta ? Ds.Lienzo : color, noSeEjecuta ? Ds.TintaSuave : null, 14);
             chip.Margin = new Thickness(0, 0, 8, 8);
-            if (objeto.FueraDeAlcance) chip.Opacity = 0.7;
+            if (noSeEjecuta) chip.Opacity = 0.7;
             chips.Add(chip);
         }
         textos.Add(chips);
@@ -129,13 +131,13 @@ public partial class ClaseCursoPage : ContentPage
         {
             leccion.DuracionEstimadaMin is > 0 ? $"{leccion.DuracionEstimadaMin} min" : null,
             $"{leccion.ObjetosDelAula.Count} objeto(s) para el aula",
-            soloExamen ? "Sólo examen: lo aplica el módulo de evaluación" : null,
+            soloExamen ? "Sólo examen: se aplica durante la clase" : null,
         }.Where(x => x is not null));
         textos.Add(Ds.Secundario(pie, 14));
         grid.Add(textos, 1, 0);
         var tarjeta = Ds.Tarjeta(grid, Ds.RadioTarjeta, new Thickness(22, 20));
-        if (soloExamen) tarjeta.Opacity = 0.6;
-        else Ds.Tocable(tarjeta, () => { Seleccionar(leccion); return Task.CompletedTask; });
+        // Una lección que sólo tiene examen también se puede dar: el examen se aplica desde la clase.
+        Ds.Tocable(tarjeta, () => { Seleccionar(leccion); return Task.CompletedTask; });
         return tarjeta;
     }
 

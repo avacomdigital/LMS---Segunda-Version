@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Controls;
+using Avacom.Lms.Ops.Examen;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
@@ -54,6 +55,9 @@ public partial class ClaseSesionPage : ContentPage
     private Button? _bloqueoBtn, _seguimientoBtn, _actividadBtn, _avisoBtn, _terminarBtn, _reanudarBtn, _rotarBtn;
     private readonly Button _participantesBtn;
     private Task<DistribuirSolicitud?>? _lanzamientoEnCurso;
+    // MOD-010: los exámenes que ya se aplicaron en esta clase (para mostrar «Ver panel del examen» en vez de «Aplicar examen»).
+    private IReadOnlyList<AsignacionConReferencias> _examenes = [];
+    private string _examenesLlave = string.Empty;
 
     public string SesionId { get; set; } = string.Empty;
 
@@ -98,6 +102,7 @@ public partial class ClaseSesionPage : ContentPage
         _saliendo = false;
         await RefrescarAsync();
         if (_saliendo) return;
+        await CargarExamenesAsync();
         IniciarCanal();
         _temporizador ??= Dispatcher.CreateTimer();
         _temporizador.Tick -= OnTick;
@@ -184,6 +189,7 @@ public partial class ClaseSesionPage : ContentPage
             case "cambio":
                 if (m.Que is "resultados" or "entregas" or "distribucion" && ResultadosHost.IsVisible)
                     _ = ResultadosPanel.RefrescarAsync();
+                if (m.Que == "evaluacion") _ = CargarExamenesAsync();
                 PedirRefresco();
                 break;
         }
@@ -460,11 +466,13 @@ public partial class ClaseSesionPage : ContentPage
     private View FilaObjeto(ObjetoAula objeto)
     {
         var seleccionado = _sesion?.Selector?.ObjetoRef == objeto.ObjetoRef;
+        // MOD-010: el examen no se proyecta, se APLICA al grupo (o, si ya se aplicó, se vigila desde su panel).
+        var esExamen = EsExamen(objeto);
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(40), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 12 };
         fila.Add(Ds.IconoCategoria(objeto.Componente, 40), 0, 0);
         var textos = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
         textos.Add(Ds.Cuerpo(objeto.Titulo, 15));
-        textos.Add(Ds.Secundario(string.Join(" · ", new[] { objeto.ComponenteLegible, objeto.DuracionTexto, objeto.FueraDeAlcance ? "lo aplica MOD-010" : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 13));
+        textos.Add(Ds.Secundario(string.Join(" · ", new[] { objeto.ComponenteLegible, objeto.DuracionTexto, esExamen ? (ExamenDe(objeto) is null ? "Aplicar examen" : "Ver panel del examen") : objeto.FueraDeAlcance ? "lo aplica MOD-010" : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 13));
         fila.Add(textos, 1, 0);
         var pila = new VerticalStackLayout { Spacing = 6 };
         pila.Add(fila);
@@ -493,10 +501,57 @@ public partial class ClaseSesionPage : ContentPage
             BackgroundColor = seleccionado ? Ds.VioletaSuave : Colors.Transparent,
             Stroke = new SolidColorBrush(seleccionado ? Ds.CatClaseEnVivo : Colors.Transparent), StrokeThickness = seleccionado ? 2 : 0,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Padding = new Thickness(10, 8), Content = pila,
-            Opacity = objeto.FueraDeAlcance ? 0.6 : 1,
+            Opacity = objeto.FueraDeAlcance && !esExamen ? 0.6 : 1,
         };
         if (!objeto.FueraDeAlcance) Ds.Tocable(tarjeta, () => ProyectarAsync(objeto.ObjetoRef, null));
+        else if (esExamen) Ds.Tocable(tarjeta, () => AbrirExamenAsync(objeto));
         return tarjeta;
+    }
+
+    // ----------------------------------------------------------------- exámenes de la clase (MOD-010)
+
+    private static bool EsExamen(ObjetoAula objeto) => objeto.FueraDeAlcance && (objeto.Componente == "examen" || objeto.Tipo == "exam");
+
+    /// <summary>El examen de esta clase que corresponde a ese objeto del curso, si ya se aplicó (abierto o cerrado).</summary>
+    private AsignacionConReferencias? ExamenDe(ObjetoAula objeto) =>
+        _examenes.Where(a => a.ObjetoRef == objeto.ObjetoRef)
+            .OrderByDescending(a => a.Estado is "activa" or "activa_fuera_de_plazo").ThenByDescending(a => a.CreadaEn ?? 0).FirstOrDefault();
+
+    /// <summary>Lee los exámenes aplicados en esta clase. Si el nodo no contesta se conserva lo que ya se sabía; sólo se repinta la secuencia si algo cambió.</summary>
+    private async Task CargarExamenesAsync()
+    {
+        if (_sesion is null || _saliendo) return;
+        var lista = await ExamenExtra.Api.AsignacionesDeClaseAsync(Sesion.ProfesorId, _sesion.Id);
+        if (lista is null || _saliendo) return;
+        var visibles = lista.Asignaciones.Where(a => a.CuentaEnLaClase).ToList();
+        var llave = string.Join("|", visibles.Select(a => $"{a.Id}:{a.Estado}:{a.ObjetoRef}"));
+        if (llave == _examenesLlave) return;
+        _examenesLlave = llave;
+        _examenes = visibles;
+        PintarSecuencia();
+    }
+
+    /// <summary>Un toque en el examen: si ya se aplicó, su panel; si no, la pantalla para aplicarlo (nivel, tiempo, fecha, intentos…).</summary>
+    private async Task AbrirExamenAsync(ObjetoAula objeto)
+    {
+        if (_sesion is null) return;
+        if (ExamenDe(objeto) is { } aplicado)
+        {
+            await Shell.Current.GoToAsync($"examen-panel?asignacion={Uri.EscapeDataString(aplicado.Id)}");
+            return;
+        }
+        var curso = _sesion.CursoRef ?? _vista?.CursoRef;
+        if (string.IsNullOrWhiteSpace(curso))
+        {
+            await Aviso("Este examen no se puede aplicar desde aquí", "La clase no tiene un curso. Inicia una clase desde un curso para aplicar su examen.");
+            return;
+        }
+        var consulta = new (string Clave, string? Valor)[]
+        {
+            ("curso", curso), ("objeto", objeto.ObjetoRef), ("fuente", string.IsNullOrWhiteSpace(_sesion.FuenteCurso) ? Sesion.FuenteAula : _sesion.FuenteCurso),
+            ("sesion", _sesion.Id), ("titulo", objeto.Titulo), ("curso_titulo", _vista?.Titulo ?? _sesion.CursoRotulo),
+        };
+        await Shell.Current.GoToAsync("examen-aplicar?" + string.Join("&", consulta.Select(c => $"{c.Clave}={Uri.EscapeDataString(c.Valor ?? string.Empty)}")));
     }
 
     // -------------------------------------------------------------- selector

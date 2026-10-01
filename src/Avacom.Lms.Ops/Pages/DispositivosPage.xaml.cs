@@ -129,7 +129,17 @@ public partial class DispositivosPage : ContentPage
         var estado = Ds.Pildora(d.EstadoLegible, !d.Activo ? Ds.TintaSuave : d.Bloqueado ? Ds.PeligroSuave : d.EnLinea ? Ds.ExitoSuave : Ds.AlertaSuave,
             !d.Activo ? Colors.White : d.Bloqueado ? TintaPeligro : Ds.Tinta, 14);
         estado.VerticalOptions = LayoutOptions.Center;
-        fila.Add(estado, 2, 0);
+        // MOD-010 · BR-075: lo que la tableta DECLARA poder garantizar en un examen (abierto, supervisado o controlado). Decide si alcanza el nivel de un examen.
+        var estadoYCapacidad = new HorizontalStackLayout { Spacing = 8, VerticalOptions = LayoutOptions.Center };
+        estadoYCapacidad.Add(estado);
+        if (d.Activo)
+        {
+            var capacidad = Ds.Pildora(d.CapacidadDeclarada ? $"Capacidad: {d.CapacidadLegible.ToLowerInvariant()}" : "Capacidad no declarada",
+                d.CapacidadDeclarada ? Ds.InfoSuave : Color.FromArgb("#F0F0F2"), d.CapacidadDeclarada ? Color.FromArgb("#02739E") : Ds.TintaSuave, 13);
+            SemanticProperties.SetDescription(capacidad, d.CapacidadDeclarada ? $"Capacidad de control para exámenes: {d.CapacidadLegible}" : "Esta tableta no declaró su capacidad de control para exámenes");
+            estadoYCapacidad.Add(capacidad);
+        }
+        fila.Add(estadoYCapacidad, 2, 0);
         if (d.Activo)
         {
             var botones = new HorizontalStackLayout { Spacing = 12, VerticalOptions = LayoutOptions.Center };

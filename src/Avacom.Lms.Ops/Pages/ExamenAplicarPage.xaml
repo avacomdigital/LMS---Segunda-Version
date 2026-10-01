@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.ExamenAplicarPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False">
+    <!-- Aplicar un examen (MOD-010 · Guion, pasos 1 a 4). Una sola tarjeta en el tercio central de la ventana: Grid *,*,* de ancho y *,4*,* de alto,
+         con la tarjeta llenando la celda del centro (sin márgenes ni anchos máximos), de 1/6 a 5/6 del alto. La cabecera y el pie quedan fijos;
+         sólo el cuerpo se desplaza. Nada exige teclado: todo son fichas y tarjetas que se tocan. El nivel nunca viene elegido. -->
+    <Grid x:Name="Raiz" ColumnDefinitions="*,*,*" RowDefinitions="*,4*,*">
+        <Border Grid.Row="1" Grid.Column="1" Padding="28,22,22,22" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 24">
+            <Border.Shadow><Shadow Brush="#18181B" Offset="0,10" Radius="28" Opacity="0.10" /></Border.Shadow>
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">
+
+                <VerticalStackLayout Grid.Row="0" Spacing="3" Padding="0,0,6,0">
+                    <Label Text="APLICAR EXAMEN" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                    <Label x:Name="TituloLabel" Text="Examen" FontFamily="InterMedium" FontSize="26" TextColor="#18181B" LineBreakMode="TailTruncation" MaxLines="2" />
+                    <Label x:Name="SubtituloLabel" Text="" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="TailTruncation" />
+                </VerticalStackLayout>
+
+                <ScrollView x:Name="Desplazable" Grid.Row="1">
+                    <VerticalStackLayout x:Name="CuerpoHost" Spacing="24" Padding="0,0,10,12" />
+                </ScrollView>
+
+                <VerticalStackLayout Grid.Row="2" Spacing="10" Padding="0,0,6,0">
+                    <VerticalStackLayout x:Name="AvisoHost" Spacing="8" />
+                    <Label x:Name="ResumenLabel" FontFamily="InterMedium" FontSize="16" TextColor="#3F3F46" LineBreakMode="WordWrap" />
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+                        <ContentView x:Name="CancelarSlot" Grid.Column="1" VerticalOptions="Center" />
+                        <ContentView x:Name="AplicarSlot" Grid.Column="2" VerticalOptions="Center" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>
