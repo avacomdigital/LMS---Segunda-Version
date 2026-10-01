@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Avacom.Lms.Core.Models;
+using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Ui.Design;
 
@@ -25,12 +26,6 @@ namespace Avacom.Lms.Ops.Pages;
 public partial class ClaseHoyPage : ContentPage
 {
     /// <summary>Nombres de país para los códigos ISO que trae la clasificación; un código desconocido se muestra tal cual.</summary>
-    private static readonly Dictionary<string, string> Paises = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["CO"] = "Colombia", ["US"] = "Estados Unidos", ["MX"] = "México", ["ES"] = "España", ["AR"] = "Argentina",
-        ["PE"] = "Perú", ["CL"] = "Chile", ["EC"] = "Ecuador", ["PA"] = "Panamá", ["CR"] = "Costa Rica", ["GT"] = "Guatemala",
-    };
-
     private readonly FilterPicker _pais = new() { Placeholder = "Todos los países" };
     private readonly FilterPicker _nivel = new() { Placeholder = "Todos los niveles" };
     private readonly FilterPicker _grado = new() { Placeholder = "Todos los grados" };
@@ -154,8 +149,7 @@ public partial class ClaseHoyPage : ContentPage
         .ThenBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
         .Select(g => g.Key);
 
-    private static string? NombrePais(string? codigo) =>
-        string.IsNullOrWhiteSpace(codigo) ? null : Paises.TryGetValue(codigo, out var nombre) ? nombre : codigo;
+    private static string? NombrePais(string? codigo) => IndiceDeCursos.NombrePais(codigo);
 
     private bool HayFiltros => _pais.Selected is not null || _nivel.Selected is not null
         || _grado.Selected is not null || _materia.Selected is not null || Normalizar(Buscador.Text).Length > 0;
@@ -169,25 +163,12 @@ public partial class ClaseHoyPage : ContentPage
         if (_grado.Selected is { } grado && cl?.Grado?.Nombre != grado) return false;
         if (_materia.Selected is { } materia && asignatura.Nombre != materia) return false;
         if (palabras.Length == 0) return true;
-        var campos = new[]
-        {
-            curso.Titulo, curso.Subtitulo, curso.Descripcion, curso.CursoRef, asignatura.Nombre, asignatura.Codigo,
-            cl?.Pais, NombrePais(cl?.Pais), cl?.Idioma, cl?.Nivel?.Nombre, cl?.Nivel?.Codigo, cl?.Grado?.Nombre, cl?.Grado?.Codigo,
-            cl?.Tema?.Nombre, cl?.Tema?.Codigo, cl?.Asignatura?.Nombre, cl?.Asignatura?.Codigo,
-        }.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => Normalizar(x!)).ToList();
+        var campos = IndiceDeCursos.Campos(curso, asignatura).Select(Normalizar).ToList();
         return palabras.All(p => campos.Any(c => c.Contains(p, StringComparison.Ordinal)));
     }
 
-    /// <summary>Minúsculas y sin tildes, para que «matematicas» encuentre «Matemáticas».</summary>
-    private static string Normalizar(string? texto)
-    {
-        if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
-        var descompuesto = texto.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
-        var sb = new StringBuilder(descompuesto.Length);
-        foreach (var c in descompuesto)
-            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark) sb.Append(c);
-        return sb.ToString().Normalize(NormalizationForm.FormC);
-    }
+    /// <summary>Minúsculas y sin tildes, para que «matematicas» encuentre «Matemáticas» (la misma regla que la búsqueda de Modo de estudio).</summary>
+    private static string Normalizar(string? texto) => IndiceDeCursos.Normalizar(texto);
 
     /// <summary>Vuelve a pintar hexágonos y secciones con los cursos que pasan la búsqueda y los filtros. Los colores de materia no cambian al filtrar.</summary>
     private void PintarCatalogo()

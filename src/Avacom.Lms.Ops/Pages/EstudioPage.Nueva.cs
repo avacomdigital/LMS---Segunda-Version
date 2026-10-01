@@ -9,6 +9,9 @@ namespace Avacom.Lms.Ops.Pages;
 public partial class EstudioPage
 {
     private const int MinutosFinDelDia = 23 * 60 + 59;
+    /// <summary>Cursos que se pintan a la vez (el catálogo llegará a ~25 000): el resto se alcanza buscando o con «Mostrar más».</summary>
+    private const int LimiteInicialCursos = 12;
+    private const int PasoDeMasCursos = 12;
 
     private static readonly (string Rotulo, int Dias)[] DiasPredefinidos =
         [("Hoy", 0), ("Mañana", 1), ("En 3 días", 3), ("En 1 semana", 7), ("En 2 semanas", 14)];
@@ -40,6 +43,11 @@ public partial class EstudioPage
     private string? _catalogoError;
     private bool _catalogoCargando;
     private string? _asignatura;
+    private IndiceDeCursos? _indice;
+    private string _busqueda = string.Empty;
+    private int _limiteCursos = LimiteInicialCursos;
+    private int _versionBusqueda;
+    private VerticalStackLayout? _resultados;
     private FichaCurso? _curso;
     private VistaCurso? _vistaCurso;
     private string? _cursoError;
@@ -62,6 +70,7 @@ public partial class EstudioPage
         _todoElGrupo = true;
         _elegidos.Clear();
         _asignatura = null;
+        LimpiarBusqueda();
         _curso = null;
         _vistaCurso = null;
         _cursoError = null;
@@ -281,6 +290,7 @@ public partial class EstudioPage
         if (_vista != Vista.Nueva) return;
         _catalogoCargando = false;
         _catalogo = catalogo;
+        _indice = catalogo is { Disponible: true } ? new IndiceDeCursos(catalogo) : null;
         _catalogoError = catalogo is null ? EstudioTexto.Error(api.UltimoError, api.UltimoMotivo) : null;
         if (catalogo is { Asignaturas.Count: 1 }) _asignatura = catalogo.Asignaturas[0].Codigo;
         if (_paso == 2) PintarPaso();
@@ -326,48 +336,30 @@ public partial class EstudioPage
 
         var contenido = new List<View> { fuenteChip };
         var asignaturas = _catalogo.Asignaturas;
+        // El buscador mira TODOS los cursos de TODAS las materias; la materia sólo acota cuando no se está buscando.
+        DesengancharBuscador();
+        contenido.Add(CajaBuscador());
         if (asignaturas.Count > 1)
         {
             var chips = EstudioUi.Envolver();
             foreach (var asignatura in asignaturas)
             {
                 var codigo = asignatura.Codigo;
-                chips.Add(EstudioUi.Chip($"{asignatura.Nombre} · {asignatura.Cursos.Count}", _asignatura == codigo, () =>
+                chips.Add(EstudioUi.Chip($"{asignatura.Nombre} · {asignatura.Cursos.Count}", _asignatura == codigo && _busqueda.Length == 0, () =>
                 {
                     _asignatura = codigo;
+                    LimpiarBusqueda();
                     _curso = null; _vistaCurso = null; _leccion = null;
                     PintarPaso();
                     return Task.CompletedTask;
                 }, $"estudio-asignatura-{codigo}"));
             }
-            contenido.Add(Ds.Secundario("Materia", 15));
+            contenido.Add(Ds.Secundario(_busqueda.Length > 0 ? "Materia (la búsqueda mira todas)" : "Materia", 15));
             contenido.Add(chips);
         }
-
-        var cursos = asignaturas.Count == 0
-            ? _catalogo.Cursos
-            : asignaturas.Count == 1 ? asignaturas[0].Cursos
-            : asignaturas.FirstOrDefault(a => a.Codigo == _asignatura)?.Cursos ?? [];
-        if (asignaturas.Count > 1 && _asignatura is null)
-            contenido.Add(Ds.Secundario("Elige una materia para ver sus cursos.", 15));
-        else if (cursos.Count == 0)
-            contenido.Add(Ds.Secundario("No hay cursos en esta materia.", 15));
-        else
-        {
-            contenido.Add(Ds.Secundario("Curso", 15));
-            var lista = new VerticalStackLayout { Spacing = 10 };
-            foreach (var curso in cursos)
-            {
-                var c = curso;
-                var disponible = c.NoDisponible is null;
-                var texto = new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center };
-                texto.Add(new Label { Text = c.Titulo, FontFamily = Ds.FuenteMedia, FontSize = 19, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap });
-                texto.Add(Ds.Secundario(c.Detalle, 14));
-                lista.Add(EstudioUi.TarjetaElegible(texto, _curso?.CursoRef == c.CursoRef, async () => await ElegirCursoAsync(c),
-                    disponible ? $"Curso {c.Titulo}" : $"Curso {c.Titulo}, no disponible", $"estudio-curso-{c.CursoRef}", disponible));
-            }
-            contenido.Add(lista);
-        }
+        _resultados = new VerticalStackLayout { Spacing = 10 };
+        contenido.Add(_resultados);
+        PintarResultados();
         ContenidoHost.Add(Seccion("¿Qué lección?", "Elige el curso y después la lección. La lección se lee de la biblioteca; aquí sólo se guarda a cuál te refieres.", contenido.ToArray()));
 
         if (_curso is null) return;
