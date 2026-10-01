@@ -17,7 +17,7 @@
 El examen es el momento en que el producto tiene que ser **creíble sin ser policial**. Este módulo no promete un sistema infalible: promete que cada respuesta queda a salvo, que el reloj es el del nodo, que lo que la plataforma no garantiza se dice en voz alta y que **anular un intento es siempre una decisión humana, motivada y con nombre**.
 
 1. **El expediente del examen es lo único que se guarda.** El examen (sus preguntas, sus claves, su rúbrica) vive en AVACOM Biblioteca (artículo 14). Aquí hay referencias (`curso_ref`, `objeto_ref`, `pregunta_ref`), la versión congelada del curso y lo que el alumno hizo.
-2. **Cinco tablas.** `m10_asignacion` (ENT-011), `m10_admision` (BR-075/076), `m10_intento` (ENT-012, el agregado más crítico), `m10_incidente` (expediente de integridad, sólo inserción) y `m10_evento_salida` (outbox `evaluacion.*.v1`). Las respuestas por pregunta viven **dentro del intento** (acuerdo del CTO, 2026-09-24); no hay `m10_respuesta`.
+2. **Cinco tablas.** `m10_asignacion` (ENT-011), `m10_admision` (BR-075/076), `m10_intento_formal` (ENT-012, el agregado más crítico), `m10_incidente` (expediente de integridad, sólo inserción) y `m10_evento_salida` (outbox `evaluacion.*.v1`). Las respuestas por pregunta viven **dentro del intento** (acuerdo del CTO, 2026-09-24); no hay `m10_respuesta`.
 3. **Nueve estados del intento y seis de la asignación**, exactamente los del Maestro, con una sola extensión justificada (§5.2). **Ninguna flecha hacia `anulado` parte del sistema** (INV-018): lo impone el dominio y una restricción `CHECK` de la base.
 4. **Un reloj, el del nodo.** El cronómetro se congela cuando el alumno deja de dar señal y se reanuda desde el valor congelado (nunca desde el reloj de la tableta, INV-017). La reactivación de un intento suspendido es **del profesor** (PAN-061), salvo que la asignación diga `automatica`.
 5. **Idempotencia total.** Una respuesta es única por (intento, pregunta, sesión, secuencia) (INV-013): reenviar el mismo paquete no duplica nada y se acusa recibo igual; entre sesiones distintas gana la más reciente (BR-138). Un intento es único por (asignación, alumno, número) (INV-012).
@@ -38,9 +38,9 @@ Se numeran 010-NN como las tablas de requisitos de los módulos anteriores. «Ho
 | 010-01 | Asignar una evaluación a un grupo o a alumnos con política de plazo (FUN-108, FUN-106, FUN-107, BR-073, BR-074) | El examen se pinta atenuado «lo aplica MOD-010» (`fuera_de_alcance`) y MOD-008 tiene asignaciones de **lecciones** provisionales | `m10_asignacion` (§4.1), §8 |
 | 010-02 | Nivel mínimo de modo examen y su degradación (FUN-105, FUN-118, DEC-009) | No existe | `m10_asignacion.nivel_declarado / nivel_examen`, §6 |
 | 010-03 | Comparar el nivel con la capacidad declarada del dispositivo; admisión por el profesor (CAP-063, CAP-064, FUN-116, BR-075, BR-076, TST-041) | `m09_dispositivo` no declara capacidad | `m09_dispositivo.capacidad_control` (nuevo), `m10_admision` (§4.2), §6 |
-| 010-04 | Abrir un intento con cupo y versión congelada (FUN-109, BR-072, INV-012, INV-024) | `m07_intento` sólo cuelga de una actividad lanzada en clase | `m10_intento` (§4.3), §7 |
-| 010-05 | Guardar cada respuesta con secuencia y deduplicar (FUN-110, FUN-111, CAP-065, BR-009, BR-071, INV-013, BR-138) | Existe `fusionar_respuestas` en el aula | `m10_intento.respuestas` + `dominio/respuestas.py`, §4.6 |
-| 010-06 | Autocalificar los reactivos objetivos al instante y dejar en cola los de revisión docente (FUN-112, FUN-113, CAP-060, CAP-062, BR-068, BR-069, NFR-012 ≤ 2 s) | `POST /api/aula/.../evaluar/` califica sin guardar | `m10_intento` (`puntaje`, `requiere_revision`), §4.3 |
+| 010-04 | Abrir un intento con cupo y versión congelada (FUN-109, BR-072, INV-012, INV-024) | `m07_intento` sólo cuelga de una actividad lanzada en clase | `m10_intento_formal` (§4.3), §7 |
+| 010-05 | Guardar cada respuesta con secuencia y deduplicar (FUN-110, FUN-111, CAP-065, BR-009, BR-071, INV-013, BR-138) | Existe `fusionar_respuestas` en el aula | `m10_intento_formal.respuestas` + `dominio/respuestas.py`, §4.6 |
+| 010-06 | Autocalificar los reactivos objetivos al instante y dejar en cola los de revisión docente (FUN-112, FUN-113, CAP-060, CAP-062, BR-068, BR-069, NFR-012 ≤ 2 s) | `POST /api/aula/.../evaluar/` califica sin guardar | `m10_intento_formal` (`puntaje`, `requiere_revision`), §4.3 |
 | 010-07 | Entregar, cerrar y marcar fuera de plazo (FUN-114, FUN-115) | — | §5, §8 |
 | 010-08 | Registrar incidentes sin invalidar (FUN-117, CAP-066, BR-077, INV-018) | No existe | `m10_incidente` (§4.4) |
 | 010-09 | Reloj del nodo, punto de recuperación de 5 s, reconexión en 30 s, suspensión y reactivación (INV-010, TST-015, TST-034, TST-036, PAN-061, PAN-122) | El aula congela el cronómetro de una actividad cuando la clase se suspende | `consumido_ms`, `reloj_desde`, `pausas`, §5.2 |
@@ -63,7 +63,7 @@ El Maestro, el modelo del CTO y el código existente no dicen siempre lo mismo. 
 | D-3 | **Qué se asigna.** Un objeto `exam` de un curso instalado, con su versión. La biblioteca (contrato v2) publica seis tipos de pregunta (`multiple_choice`, `true_false`, `fill_blanks`, `matching`, `ordering`, `open`) frente a los diez del Maestro: los cinco primeros son autocalificables y `open` (texto, dibujo, audio) pasa a revisión docente. La columna `tipo` admite `examen` y `actividad`, pero la API **sólo acepta `examen`** (la actividad en clase sigue en `m07_intento` y la de estudio en `m08_practica`, Q-76). | El Maestro habla de siete tipos objetivos y tres de revisión; los que la biblioteca aún no publica (arrastrar y soltar, matemática con equivalencias, entrega de proyecto) no se inventan (Q-79). |
 | D-4 | **Lo provisional no se migra.** `m07_intento` (actividades lanzadas en clase) y `m08_asignacion`/`m08_practica` (estudio) **se quedan donde están** con sus pruebas. MOD-010 nace para la **evaluación formal**; la unificación bajo `m10_*` es la pregunta Q-75. | Mover tablas con datos y 400+ pruebas verdes por una deuda declarada es un riesgo sin beneficio para este módulo. Sí se conecta el puerto `Evaluacion` del aula para que cerrar una clase cuente los intentos abiertos de MOD-010 (§11). |
 | D-5 | **Cada alumno recibe su examen armado por el nodo.** `fixed`: todas las preguntas del banco. `random_balanced`: `questionCount` preguntas con dificultad y tiempo totales parecidos (tolerancias del examen) y los mismos temas, **de forma determinista** a partir de una `semilla` (`asignación‖alumno‖número`). Se guarda **sólo la lista ordenada de `pregunta_ref`** (referencias, art. 14), la semilla y la versión del curso (INV-024); el texto se vuelve a pedir a la biblioteca con la misma semilla en cada lectura. | La API de la biblioteca ya entrega `pool` (metadatos) y `questions?ids&seed` (texto sin claves) «para armar el examen de cada alumno». Determinista = reproducible en una auditoría y a prueba de reinicios. |
-| D-6 | **Las respuestas viven dentro del intento** (`m10_intento.respuestas`, JSON, una por elemento): decisión del CTO del 2026-09-24. INV-013 (`intento + pregunta + sesión + secuencia`) **no puede ser una restricción de la base** sobre una lista JSON; se valida en la aplicación, **dentro de la transacción**, y se prueba con reenvíos (TST-040). | Es la misma deuda que reconocen `m07_intento` y `m08_practica`. |
+| D-6 | **Las respuestas viven dentro del intento** (`m10_intento_formal.respuestas`, JSON, una por elemento): decisión del CTO del 2026-09-24. INV-013 (`intento + pregunta + sesión + secuencia`) **no puede ser una restricción de la base** sobre una lista JSON; se valida en la aplicación, **dentro de la transacción**, y se prueba con reenvíos (TST-040). | Es la misma deuda que reconocen `m07_intento` y `m08_practica`. |
 | D-7 | **Secuencia y sesiones.** La secuencia es un contador monotónico por intento y **sesión de alumno** que la tableta persiste **antes** de enviar (BR-009). Entre dos sesiones distintas del mismo alumno prevalece la **más reciente** (BR-138, TST-027): `sesion_orden` es el instante de apertura de la sesión (`m09_dim_sesion_alumno.iniciada_en`). Lo que llega de una sesión superada **se conserva en el intento** pero no pisa la respuesta de la sesión vigente. | Cambiar de equipo a mitad de intento (TST-026) continúa en la pregunta donde iba y no pierde nada. |
 | D-8 | **El reloj es del nodo.** `consumido_ms` acumula el tiempo en que el reloj corrió; `reloj_desde` marca el inicio del tramo en marcha (nulo si está congelado). Cuando el alumno deja de dar señal más de `AVACOM_EVAL_LATIDO_VENCIDO_MS` (30 s, INV-010), el nodo congela el reloj **en el último latido** (en favor del alumno). La tableta puede informar `transcurrido_ms` (su cronómetro monotónico): el nodo toma el **mayor** de los dos valores acotado por el tiempo real, de modo que desconectarse no regala tiempo. | BR-062 / INV-017: ninguna marca temporal con valor académico sale del reloj del dispositivo. TST-032: el cronómetro cierra a los 15 minutos exactos según el reloj del nodo. |
 | D-9 | **Los nueve estados del intento son los del Maestro**, con **una extensión**: `en_curso_fuera_de_plazo ↔ pausado_desconexion`. El diagrama del Maestro sólo permite pausar desde `en_curso`; un alumno puede desconectarse después de vencido un plazo blando, y sin esta flecha el intento quedaría en un estado que ya no describe la realidad. Al pausar se guarda el estado previo (`pausas[-1].estado_previo`) y la reactivación vuelve a él. | Pregunta Q-78 para el CTO. |
@@ -78,6 +78,10 @@ El Maestro, el modelo del CTO y el código existente no dicen siempre lo mismo. 
 | D-18 | **Permisos.** Los 11 `assessment.*` del Maestro más 5 del proyecto (`assessment.read`, `assessment.attempt.reactivate`, `assessment.attempt.void`, `assessment.review`, `assessment.results.view`). `assessment.exam_mode.override` (FUN-116) es un permiso **directo** del profesor sobre sus grupos y de la administración; el Maestro lo ata además a la escalada ESC-06 (Q-77). El alumno recibe sólo `assessment.attempt.start`, `assessment.answer.submit` y `assessment.attempt.submit`, sobre lo suyo; el administrador **no** (el Maestro le niega el intento del alumno). | Mismo criterio que `study.*` en MOD-008. |
 | D-19 | **Identidad igual que Modo Estudio.** Con JWT, el del token. Sin sesión (Q-34 abierta), el alumno que la tableta declara (`alumno_id`) más la huella del aparato; debe existir, estar activo y **alcanzarle la asignación** (inscrito en el grupo o entre los destinatarios admitidos, INV-026). Abrir el intento abre la «Dim Sesión Alumno» en MOD-009: abrirla en otra tableta cierra la anterior con motivo `relevo` (DEC-023, TST-027). | El LMS es offline y no hay verificación central (D-15 de MOD-008). |
 | D-20 | **Tiempo real.** Si la asignación nació en una clase (`sesion_id`), los cambios se avisan por el canal del aula (`cambio(sesion_id, "evaluacion")` a las tabletas y al profesor; `evaluacion_panel` sólo al profesor). El aviso nunca lleva contenido académico: el cliente vuelve a pedir por HTTP. Sin clase, y como respaldo siempre, funcionan el **latido de 5 s** de la tableta y el sondeo del panel. | La fuente de verdad sigue siendo HTTP. |
+| D-21 | **La unidad de trabajo confirma aunque el caso termine en error de negocio.** Cada caso de uso aplica primero lo que el reloj ya provocó (pausar a quien no dio señal, entregar por tiempo agotado o plazo) y después valida lo pedido. Si lo pedido se rechaza (409, 403, 404), lo que el reloj provocó **es verdad** y se confirma; de lo contrario se repetiría, con su incidente, en cada intento. Cualquier otra excepción (un fallo de verdad) revierte todo. Los casos de uso validan **antes** de escribir lo suyo, así que confirmar no deja nada a medias. | Visto en pruebas: un intento pausado por silencio volvía a «en curso» cuando la petición que lo descubrió era rechazada. |
+| D-22 | **Mientras la calificación esté pendiente no hay nota, ni siquiera parcial.** Sin el veredicto de la biblioteca, `puntaje`, `puntaje_maximo` y `porcentaje` quedan nulos: un cero provisional se leería como una calificación. Con reactivos abiertos por revisar, el profesor sí ve el parcial de lo ya calificado y el alumno nada (DEC-032, Q-84). | Visto en pruebas: un intento entregado con la biblioteca caída guardaba `porcentaje = 0`. |
+| D-23 | **Anular exige una persona identificada.** Las demás acciones del profesor, sin sesión y sin `actor` declarado (Q-34 abierta), se asientan como «docente»; anular, no: responde 400 en vez de firmar con un genérico (INV-018). | Anular es la acción que más pesa; su firma no puede ser un marcador de posición. |
+| D-24 | **El barrido del nodo aísla los fallos.** Cada asignación y cada intento se procesan en su propia transacción y su propio `try`: un caso defectuoso se registra y se cuenta en `errores`, y los demás se ponen al día igual. | Como el orden es siempre el mismo, un fallo que corta el barrido bloquearía a los que van detrás en cada ronda. |
 
 ---
 
@@ -112,7 +116,7 @@ El Maestro, el modelo del CTO y el código existente no dicen siempre lo mismo. 
 ### 4.0 · Diagrama
 
 ```
- m10_asignacion ──1:N── m10_intento ──1:N── m10_incidente          (sólo inserción)
+ m10_asignacion ──1:N── m10_intento_formal ──1:N── m10_incidente          (sólo inserción)
         │                    │
         └──1:N── m10_admision        (asignación × alumno × tableta: BR-075/076)
  m10_evento_salida                   (outbox evaluacion.*.v1, sin FK)
@@ -155,6 +159,7 @@ Convenciones del proyecto: prefijo por módulo (CV-01), identificadores de texto
 | `resultados` | char(16) | `nunca` · `al_entregar` · `tras_liberar` (copia de `showResults`); `liberados_en` bigint nulo |
 | `aprobacion_pct` | float nulo | `passingScorePct` del examen |
 | `permite_retroceso` · `mezclar_opciones` | bool | `allowBackNavigation` · `shuffleOptions` |
+| `ajustes` | JSON | copia de los ajustes del examen al asignar (evidencia, no contenido): `{selection, tiempo{politica, fijo_seg, extra_pct}, limite_seg_estimado, …}`. De aquí sale la duración que la antesala muestra al alumno cuando `tiempo_modo = biblioteca` |
 | `estado` | char(24) | `borrador` · `programada` · `activa` · `activa_fuera_de_plazo` · `cerrada` · `archivada` |
 | `creada_en` · `publicada_en` · `cerrada_en` · `archivada_en` | bigint (nulos salvo la primera) | |
 | `creado_por` | char(64) | |
@@ -163,7 +168,7 @@ Convenciones del proyecto: prefijo por módulo (CV-01), identificadores de texto
 
 ### 4.2 · `m10_admision` · Admisión de un dispositivo por debajo del nivel (BR-075, BR-076, FUN-116)
 
-Existe una fila cuando una tableta intenta abrir un intento y **no alcanza** el nivel vigente. El intento queda `no_iniciado` hasta que el profesor decide.
+Existe una fila cuando una tableta intenta abrir un intento y **no alcanza** el nivel vigente. El intento queda `no_iniciado` hasta que el profesor decide. **Admitir no abre el intento**: lo abre el alumno al volver a pulsar «Comenzar», que reutiliza el `no_iniciado` (no crea otro) y arranca el reloj en ese momento.
 
 | Columna | Tipo | Nota |
 |---|---|---|
@@ -179,7 +184,9 @@ Existe una fila cuando una tableta intenta abrir un intento y **no alcanza** el 
 
 `UNIQUE(asignacion, alumno_id, dispositivo_id)` (volver a intentarlo reutiliza la fila) · `CHECK estado ≠ en_espera ⇒ decidido_por ≠ '' y decidido_en no nulo` · `CHECK estado = admitido ⇒ nivel_admitido ≠ '' y motivo ≠ ''`.
 
-### 4.3 · `m10_intento` · Intento (ENT-012)
+### 4.3 · `m10_intento_formal` · Intento (ENT-012)
+
+> **Nombre real de la tabla: `m10_intento_formal`.** `m10_intento` ya lo usa el módulo `expediente` para el intento histórico del expediente del alumno; chocar con él obligaba a renombrar sus migraciones. Las restricciones se llaman `*_m10_intf_*`. En este documento «el intento» es esta tabla.
 
 | Columna | Tipo | Nota |
 |---|---|---|
@@ -236,7 +243,7 @@ Restricciones:
 | Columna | Tipo | Nota |
 |---|---|---|
 | `id` | char(36) PK | |
-| `intento` | FK → `m10_intento` PROTECT | |
+| `intento` | FK → `m10_intento_formal` PROTECT | |
 | `tipo` | char(32) | catálogo cerrado (§4.7) |
 | `severidad` | char(12) | `informativa` · `atencion` · `alta` |
 | `origen` | char(8) | `tableta` · `nodo` · `profesor` |
@@ -290,7 +297,7 @@ Transactional Outbox como las demás (`agregado_tipo`, `agregado_id`, `tipo_even
 | `bloqueo_fallido` | tableta | alta | La capa del sistema no se aplicó | `{resultado, motivo}` |
 | `bloqueo_liberado` | tableta | alta | El bloqueo se soltó con el examen en marcha | `{motivo}` |
 | `consulta_recurso` | tableta | informativa | `supervisado`: abrió un recurso habilitado | `{media_ref, desde, hasta}` |
-| `desconexion` | nodo | atencion | El programador pausó el intento por falta de latido | `{ultimo_latido_en, silencio_ms}` |
+| `desconexion` | nodo | atencion | El nodo pausó el intento por falta de latido. **`ocurrido_en` es el último latido** (cuando se perdió la señal), no el instante en que el nodo lo notó: así queda en su sitio de la línea de tiempo | `{ultimo_latido_en, silencio_ms, detectado_en}` |
 | `reconexion` | nodo | informativa | La tableta volvió a dar señal | `{pausa_ms}` |
 | `reinicio_nodo` | nodo | informativa | El nodo reinició con el intento abierto (`restaurando`) | `{}` |
 | `cambio_de_dispositivo` | nodo | atencion | El intento se continuó desde otra tableta (TST-026) | `{de, a}` |
@@ -333,12 +340,15 @@ stateDiagram-v2
 stateDiagram-v2
     [*] --> no_iniciado
     no_iniciado --> en_curso: abrir
+    no_iniciado --> en_curso_fuera_de_plazo: abrir con el plazo blando vencido
     en_curso --> pausado_desconexion: sin latido
     pausado_desconexion --> en_curso: reconectar · reactivar
     en_curso --> restaurando: reinicio del equipo
     pausado_desconexion --> restaurando: reinicio del equipo
     restaurando --> en_curso: recuperado con dispositivo
     restaurando --> pausado_desconexion: recuperado sin dispositivo
+    restaurando --> en_curso_fuera_de_plazo: recuperado con el plazo vencido (extensión E-3)
+    restaurando --> entregado: cierre forzado · cierre de la asignación (extensión E-3)
     en_curso --> en_curso_fuera_de_plazo: vence el plazo blando
     en_curso --> entregado: entregar
     pausado_desconexion --> entregado: cierre forzado
@@ -351,9 +361,12 @@ stateDiagram-v2
     entregado --> anulado: decisión docente
     en_revision_docente --> anulado: decisión docente
     calificado --> anulado: decisión docente
+    calificado --> en_revision_docente: envío tardío con reactivos manuales (extensión E-4)
     calificado --> [*]
     anulado --> [*]
 ```
+
+**Extensiones al diagrama del Maestro** (todas en `dominio/intento.TRANSICIONES`, todas preguntadas al CTO en Q-78): **E-1** `en_curso_fuera_de_plazo ↔ pausado_desconexion` (D-9) · **E-2** `activa → cerrada` por cierre manual de la asignación (§5.1) · **E-3** un intento `pausado_desconexion` o `restaurando` también pasa a `en_curso_fuera_de_plazo` al reactivarse y se **entrega** cuando la asignación cierra: ningún intento queda abierto en una asignación cerrada · **E-4** `calificado → en_revision_docente`: se aceptó un envío tardío dentro de la gracia y trae reactivos que sólo el profesor puntúa; el intento deja de estar «calificado» en vez de mostrar una nota que ya no es cierta.
 
 | Estado | El reloj | Acepta respuestas | Quién lo deja |
 |---|---|---|---|
@@ -463,6 +476,8 @@ Entrada: el `pool` de la biblioteca (`GET /v2/courses/{id}/exams/{oid}/pool`: `s
 | `blando` | La asignación pasa a `activa_fuera_de_plazo`; los intentos en curso pasan a `en_curso_fuera_de_plazo`; se sigue aceptando | …siempre se acepta; el intento queda `fuera_de_plazo = true` (FUN-115, `evaluacion.intento_fuera_de_plazo.v1`) |
 | `endurecido` | La asignación **cierra**; los intentos abiertos se entregan (`origen_entrega = plazo`) | …dentro de la gracia (≤ 15 min tras el cierre): se acepta y se suma al intento entregado. Pasada la gracia: `envio_tardio = pendiente_decision` y se **presenta al profesor** (BR-074, TST-042). Lo capturado **después** del cierre: se rechaza |
 
+**El corte de recepción.** «Capturado antes del cierre» se mide contra el **cierre de la asignación** cuando el intento se entregó porque ella cerró (`origen_entrega = plazo` o `cierre`), y contra la **entrega del propio intento** en los demás casos (`tiempo`, `alumno`, `profesor`). La diferencia importa con una tableta sin señal: el nodo entrega su intento con el reloj detenido en el último latido, pero lo que el alumno respondió sin red hasta la fecha límite se capturó antes del cierre y entra por la gracia. La gracia corre desde el cierre. Una asignación reabierta (sin `cerrada_en`) vuelve a medir contra la entrega. Si entregó el alumno (`origen_entrega = alumno`), no hay más respuestas ni dentro de la gracia: 409 `intento_cerrado`.
+
 El profesor decide **caso por caso** (`aceptar` / `descartar`, con quién y cuándo). Aceptar suma las respuestas, vuelve a calificar y deja el asiento; descartar las conserva como evidencia en `respuestas_pendientes` con `decision_envio`. **Nada se descarta en silencio.**
 
 ---
@@ -471,12 +486,12 @@ El profesor decide **caso por caso** (`aceptar` / `descartar`, con quién y cuá
 
 | Invariante | Dónde se cumple | Cómo se prueba |
 |---|---|---|
-| **INV-005** Ningún reenvío, reinicio o reconexión produce intento, respuesta ni calificación duplicados o distintos | Respuestas idempotentes por (pregunta, sesión, secuencia); `abrir` devuelve el intento vivo; calificar es idempotente (mismas respuestas ⇒ mismo resultado); incidentes por `ref_cliente` | Reenvío idéntico (TST-040), doble `abrir`, doble `entregar`, doble `calificar` |
+| **INV-005** Ningún reenvío, reinicio o reconexión produce intento, respuesta ni calificación duplicados o distintos | Respuestas idempotentes por (pregunta, sesión, secuencia); `abrir` devuelve el intento vivo; calificar es idempotente (mismas respuestas ⇒ mismo resultado); incidentes por `ref_cliente` | Reenvío idéntico (TST-040), doble `abrir`, doble `entregar`, doble `calificar`; recalificar lo ya calificado ni llama a la biblioteca ni repite eventos |
 | **INV-010** Punto de recuperación de 5 s; reconexión en 30 s; ningún intento se pierde, duplica ni cierra por un reinicio | Latido de 5 s; `restaurando` en el arranque; respuestas persistidas una a una (BR-071) | Reinicio simulado con intentos abiertos; ninguno cambia a `entregado`/`anulado` |
 | **INV-012** A lo sumo un intento por (alumno, asignación, número) | `UNIQUE` + índice parcial de intento vivo | Dos aperturas simultáneas |
 | **INV-013** A lo sumo una respuesta por (intento, pregunta, sesión, secuencia) | Aplicación, dentro de la transacción (D-6) | Reenvío y orden invertido (BR-138) |
 | **INV-017** Toda marca temporal con valor académico es del reloj del nodo | `Reloj` del nodo; `capturada_en_tableta` sólo como dato adicional; incidente `reloj_desfasado` | Tableta con el reloj adelantado y atrasado |
-| **INV-018** Ningún intento pasa a `anulado` por acción del sistema | Dominio (`anular` exige persona) + `CHECK` | Ninguna ruta del programador llega a `anulado` (prueba que recorre todas las transiciones automáticas) |
+| **INV-018** Ningún intento pasa a `anulado` por acción del sistema | Dominio (`anular` exige persona) + `CHECK`; la API no firma por nadie: sin `actor` ni sesión, anular responde 400 | Ninguna ruta del programador llega a `anulado` (prueba que recorre todas las transiciones automáticas); anular sin persona identificada se rechaza |
 | **INV-019** Toda calificación apunta a intento, evaluador y regla | `calificado_por` + `CHECK` | `sistema` en la autocalificación; la persona al publicar |
 | **INV-024** Un intento abierto tiene evaluación y versión congeladas | `curso_version` y `armado` fijados al abrir; `evaluar` siempre con esa versión | Cambiar la versión instalada con un intento abierto |
 | **INV-026** Toda respuesta pertenece a un alumno inscrito o admitido | `alcanza_al_alumno` en cada caso de uso de la tableta | Alumno de otro grupo: 404 (no se revela) |
@@ -511,7 +526,7 @@ Eventos propios del proyecto (el Maestro no los lista): `evaluacion.intento_paus
 
 ### 10.2 · Auditoría (MOD-019)
 
-Se reutilizan las acciones ya reservadas en el catálogo cerrado (`evaluacion.iniciada` = intento abierto, `evaluacion.enviada` = entregado, `evaluacion.anulada` = anulado, con motivo obligatorio, `calificacion.modificada` = puntuación manual cambiada, `aula.nivel.excepcion` = admisión bajo nivel) y se declaran las nuevas antes de anexarlas: `evaluacion.asignada`, `evaluacion.asignacion.cerrada`, `evaluacion.asignacion.reabierta`, `evaluacion.asignacion.prorrogada`, `evaluacion.plazo.configurado`, `evaluacion.plazo.endurecido`, `evaluacion.nivel.definido`, `evaluacion.nivel.degradado`, `evaluacion.intento.pausado`, `evaluacion.intento.reactivado`, `evaluacion.intento.restaurado`, `evaluacion.intento.calificado`, `evaluacion.intento.fuera_de_plazo`, `evaluacion.incidente.registrado`, `evaluacion.revision.publicada`, `evaluacion.envio.aceptado`, `evaluacion.envio.descartado`, `evaluacion.resultados.liberados`, `evaluacion.admision.decidida`. Los asientos de calificación y de datos de menores son **sensibles**: su detalle se enmascara salvo escalada (BR-131).
+Se reutilizan las acciones ya reservadas en el catálogo cerrado (`evaluacion.iniciada` = intento abierto, `evaluacion.enviada` = entregado, `evaluacion.anulada` = anulado, con motivo obligatorio, `calificacion.modificada` = puntuación manual cambiada, `aula.nivel.excepcion` = admisión bajo nivel) y se declaran las nuevas antes de anexarlas: `evaluacion.asignada`, `evaluacion.asignacion.cerrada`, `evaluacion.asignacion.reabierta`, `evaluacion.asignacion.prorrogada`, `evaluacion.plazo.configurado`, `evaluacion.plazo.endurecido`, `evaluacion.nivel.definido`, `evaluacion.nivel.degradado`, `evaluacion.intento.pausado`, `evaluacion.intento.reactivado`, `evaluacion.intento.restaurado`, `evaluacion.intento.calificado`, `evaluacion.intento.fuera_de_plazo`, `evaluacion.incidente.registrado`, `evaluacion.revision.publicada`, `evaluacion.envio.aceptado`, `evaluacion.envio.descartado`, `evaluacion.resultados.liberados`, `evaluacion.admision.decidida`. El intento de crear una evaluación o un reactivo (FUN-103, FUN-104) deja el asiento `administracion.rechazada` **antes** de responder 409: la unidad de trabajo confirma aunque el caso termine en un error de negocio (D-21). Los asientos de calificación y de datos de menores son **sensibles**: su detalle se enmascara salvo escalada (BR-131).
 
 ### 10.3 · Permisos
 
@@ -536,7 +551,7 @@ Los 11 del Maestro (sección J) y los 5 del proyecto. «Alcance» es el máximo 
 | `assessment.review` *(proyecto)* | CAP-062: puntuar y publicar | grupos propios | — | grupos propios | organización |
 | `assessment.results.view` *(proyecto)* | resultados y liberación (DEC-032) | grupos propios | — | grupos propios | organización |
 
-Los cinco `assessment.*` del alumno y del profesor se siembran con una migración idempotente de `acceso` (`0009`), igual que `study.*` (`0007`).
+Los dieciséis `assessment.*` se siembran con una migración idempotente de `acceso` (`0009`), igual que `study.*` (`0007`). Los tres del intento del alumno (`attempt.start`, `answer.submit`, `attempt.submit`) forman parte además de `PERMISOS_SESION_TEMPORAL`: un alumno con credencial provisional presenta su examen igual. `assessment.create` y `assessment.item.create` existen en el catálogo y **no tienen función** en el LMS (D-2).
 
 ---
 
@@ -583,7 +598,7 @@ Los cinco `assessment.*` del alumno y del profesor se siembran con una migració
 
 | # | Pregunta | Por qué importa |
 |---|---|---|
-| Q-75 | ¿`m07_intento` (actividades en clase) y `m08_practica` (estudio) pasan a `m10_intento` con un `modo` (`examen` · `actividad` · `estudio`) o se quedan como están? | Hoy hay tres sitios con la misma forma de intento. Unificar exige migrar datos y re-escribir pruebas; el Maestro dice que MOD-010 es dueño de **todo** intento. |
+| Q-75 | ¿`m07_intento` (actividades en clase) y `m08_practica` (estudio) pasan a `m10_intento_formal` con un `modo` (`examen` · `actividad` · `estudio`) o se quedan como están? | Hoy hay tres sitios con la misma forma de intento. Unificar exige migrar datos y re-escribir pruebas; el Maestro dice que MOD-010 es dueño de **todo** intento. |
 | Q-76 | ¿La actividad lanzada en clase debe pasar por una `m10_asignacion` (`tipo = actividad`)? | La columna existe y la API la rechaza; abrirla es una decisión de producto. |
 | Q-77 | ESC-06 (excepción de modo examen) ata `assessment.exam_mode.override` a una escalada temporal concedida por **otra** identidad. ¿La admisión de una tableta por debajo del nivel exige esa escalada o basta el permiso del profesor? | El Guion (paso 4) la trata como un gesto normal del profesor en el aula; la tabla de escaladas la trata como excepcional. Aquí es directa. |
 | Q-78 | ¿Se acepta la flecha `en_curso_fuera_de_plazo ↔ pausado_desconexion` y el cierre manual `activa → cerrada`? ¿La reactivación es del profesor **siempre**, o sólo pasado un umbral (hoy 30 s de silencio)? | Son dos vacíos del diagrama del Maestro. |

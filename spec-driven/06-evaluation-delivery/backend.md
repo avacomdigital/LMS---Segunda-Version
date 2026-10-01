@@ -4,7 +4,7 @@
 |---|---|
 | Estado | **Contrato de diseño** (2026-09-30). Lo implementa `backend/evaluacion/` (Django/DRF), con la misma arquitectura hexagonal que `acceso/`, `classroom_engine/`, `modo_estudio/` y `audit/`. Lo construido y cómo se comprobó está en §10. |
 | Módulo | **MOD-010 · Evaluation & Delivery Engine** (DOM-006). Funciones FUN-103…FUN-118, eventos `evaluacion.*.v1`, permisos `assessment.*`. |
-| Modelo | [modelado-datos.md](modelado-datos.md): `m10_asignacion`, `m10_admision`, `m10_intento`, `m10_incidente`, `m10_evento_salida`. |
+| Modelo | [modelado-datos.md](modelado-datos.md): `m10_asignacion`, `m10_admision`, `m10_intento_formal`, `m10_incidente`, `m10_evento_salida`. |
 | Cliente | [frontend.md](frontend.md): `Avacom.Lms.Core/Evaluacion/` (cliente `EvaluacionApi`, reglas de bloqueo), Student (antesala, examen, kiosco) y OPS (aplicar, panel, reactivar). |
 | Bloqueo de la tableta | [kiosk.md](kiosk.md). El nodo **decide** el plan de bloqueo (§5.5); la tableta lo **ejecuta** y lo **informa** (`POST /intentos/{id}/bloqueo/`). |
 
@@ -181,7 +181,7 @@ El panel **no es de vigilancia**: no suena, no marca en rojo y no ofrece «anula
 {"decision": "admitir", "nivel_admitido": "supervisado", "motivo": "La tableta no está aprovisionada", "actor": "…"}
 ```
 
-`decision`: `admitir` (con `nivel_admitido` **menor** que el exigido y `motivo`) o `rechazar` (con `motivo`). Admitir **abre el intento** para el alumno con `nivel_efectivo = nivel_admitido` (el alumno lo ve en su siguiente sondeo). Errores: `datos_invalidos` (sin motivo, nivel no menor) · `transicion_invalida` (ya decidida; se puede **cambiar** una decisión `rechazado` mientras la asignación esté viva).
+`decision`: `admitir` (con `nivel_admitido` **menor** que el exigido y `motivo`) o `rechazar` (con `motivo`). Admitir **no abre el intento**: deja la admisión `admitido` con su `nivel_admitido` y el alumno lo abre al volver a pulsar «Comenzar» (su siguiente sondeo de `mias/` ya le dice que puede), con `nivel_efectivo = nivel_admitido`; reutiliza el `no_iniciado` y el reloj arranca en ese momento. Errores: `datos_invalidos` (sin motivo, nivel no menor) · `transicion_invalida` (ya decidida; se puede **cambiar** una decisión `rechazado` mientras la asignación esté viva).
 
 **`POST /api/evaluacion/asignaciones/{id}/reactivar/`** — reactiva a **todos** los suspendidos y dice a cuántos afecta (`{reactivados: n}`; el profesor ve el número antes de confirmar, Guion paso 12).
 
@@ -323,11 +323,13 @@ Antes de leer o escribir una asignación o un intento, cada caso de uso llama a 
 | un intento corriendo y `restante ≤ 0` | se **entrega** (`origen_entrega = tiempo`, incidente `tiempo_agotado`) |
 | un intento `en_curso` y `ahora − ultimo_latido_en > AVACOM_EVAL_LATIDO_VENCIDO_MS` | `pausado_desconexion`, reloj congelado **en el último latido** |
 
+**Lo que el reloj provocó se confirma aunque la petición que lo descubrió se rechace** (D-21): la unidad de trabajo hace `commit` cuando el caso termina en un `ErrorEvaluacion` (409, 403, 404…) y `rollback` con cualquier otra excepción. Los casos de uso validan antes de escribir lo suyo, así que confirmar no deja nada a medias.
+
 El programador (§5.8) ejecuta lo mismo cada 5 s para todo el nodo, de modo que un examen se entrega por tiempo aunque nadie consulte nada. En las pruebas no corre: la corrección no depende de él.
 
 ### 5.2 · Armado y tiempo
 
-`armar(pool, estrategia, cantidad, tolerancias, cubrir_temas, semilla)` es una función pura (§7 del modelo). La `semilla` es `"{asignacion_id}|{alumno_id}|{numero}"`. El resultado se guarda en `m10_intento.armado` (referencias) y `armado_meta`. El límite en segundos sale de `tiempo_modo` (§7.2 del modelo).
+`armar(pool, estrategia, cantidad, tolerancias, cubrir_temas, semilla)` es una función pura (§7 del modelo). La `semilla` es `"{asignacion_id}|{alumno_id}|{numero}"`. El resultado se guarda en `m10_intento_formal.armado` (referencias) y `armado_meta`. El límite en segundos sale de `tiempo_modo` (§7.2 del modelo).
 
 ### 5.3 · Respuestas (INV-013, BR-138)
 
@@ -347,7 +349,7 @@ La forma de la respuesta se valida por tipo con `armado_meta.tipos` (la misma ta
 1. Arma el lote `[{objectId, questionId, response}]` con las respuestas **no revisadas** del intento y llama **una sola vez** a `evaluar_lote(curso_ref, curso_version, items)`.
 2. Traduce cada veredicto (`puntaje` decimal o nulo, `correcta`, `requiere_correccion_manual`, `pendiente`, `retroalimentacion[]`). Un `requiresManualGrading` deja el puntaje **nulo** aunque la biblioteca mande un número.
 3. Si el lote falla por **una** respuesta mal formada, prueba una por una (tope 20) para no dejar sin nota a las demás.
-4. Si la biblioteca no está (503/501): `calificacion_pendiente = true`, el intento queda `entregado` y `Barrido`/`recalificar` lo resuelven después.
+4. Si la biblioteca no está (503/501): `calificacion_pendiente = true`, el intento queda `entregado` con `puntaje`, `puntaje_maximo` y `porcentaje` **nulos** (no hay ni nota parcial, D-22) y `BarrerNodo`/`recalificar` lo resuelven después. `recalificar` sólo manda a la biblioteca lo que aún no tiene veredicto y **sólo publica eventos si calificó algo**: recalificar lo ya calificado es una operación sin efectos (INV-005).
 5. `porcentaje = 100 × Σ puntaje / Σ puntaje_maximo` (escala interna 0–100; nunca se redondea a entero antes de guardar). Un reactivo omitido suma **cero** sobre su máximo; los pendientes no suman ni restan.
 6. Con reactivos pendientes ⇒ `en_revision_docente` y `evaluacion.revision.solicitada.v1`. Sin ellos ⇒ `calificado` con `calificado_por = sistema` y `evaluacion.autocalificacion.completada.v1`.
 
@@ -386,6 +388,8 @@ Congelar: `consumido_ms += ultimo_latido_en − reloj_desde`; `reloj_desde = nul
 | antes del cierre | > cierre + gracia | `decide_el_profesor`: a `respuestas_pendientes`, `envio_tardio = pendiente_decision`, evento y aviso al panel |
 | después del cierre | — | `rechazar` (409 `asignacion_cerrada`) |
 
+«Cierre» es `dominio/asignacion.cierre_de_recepcion(intento, asignacion)`: el **cierre de la asignación** (`cerrada_en`) cuando el intento se entregó porque ella cerró (`origen_entrega = plazo` o `cierre`) y la **entrega del propio intento** en los demás casos. Así, una tableta que dejó de dar señal y cuyo intento el nodo entregó con el reloj detenido en el último latido todavía puede enviar lo que respondió sin red hasta la fecha límite. Si entregó el alumno, el intento no admite nada más: 409 `intento_cerrado`. Un reenvío idéntico de lo ya entregado se acusa sin tocar nada (INV-005).
+
 ### 5.8 · El programador del nodo
 
 `evaluacion/infraestructura/programador.py` (hilo daemon que arranca `avacom_lms/asgi.py`, como el del aula; `AVACOM_EVAL_PROGRAMADOR=0` lo desactiva):
@@ -394,13 +398,14 @@ Congelar: `consumido_ms += ultimo_latido_en − reloj_desde`; `reloj_desde = nul
 * **Cada 5 s**: pausar los que no dan latido, entregar los que agotaron el tiempo, cerrar las asignaciones con plazo endurecido vencido, mover `programada → activa` y `activa → activa_fuera_de_plazo`, reintentar las calificaciones pendientes.
 * **Cada minuto**: `cerrada` hace más de 24 h ⇒ `archivada`.
 
-Un tick que falla se registra y el siguiente lo reintenta; el nodo no se cae por esto.
+`BarrerNodo` devuelve `{asignaciones, pausados, entregados, recalificados, errores}` y trata **cada asignación y cada intento en su propia transacción y su propio `try`**: un caso defectuoso se registra (`avacom.evaluacion.programador`), se cuenta en `errores` y los demás se ponen al día igual (D-24). Un tick sin novedades no escribe en el registro. Un tick que falla por completo se registra y el siguiente lo reintenta; el nodo no se cae por esto.
 
 ### 5.9 · Reactivar
 
 * Sólo desde `pausado_desconexion` o `restaurando`. Vuelve al `estado_previo` guardado en la pausa. `reloj_desde = ahora`; el tiempo restante es el congelado.
 * Incidente `reactivado` (`por`, `restante_ms`, `desde_pregunta`) y asiento `evaluacion.intento.reactivado` (MOD-019 «sella incidentes y reactivaciones»).
 * `reactivar` sobre un intento que ya está corriendo no hace nada y responde igual (idempotente).
+* **Cierre forzado** (`POST /intentos/{id}/cerrar/`): sólo de un intento suspendido; lo entrega con `origen_entrega = profesor`. **Anular** sólo parte de un intento ya entregado, de una persona identificada y con motivo (≥ 3 caracteres): sin `actor` ni sesión responde 400 (D-23).
 * DEC-038: mientras haya un examen en curso, **no hay relevo de profesor**; la sesión permanece con el titular. Sólo el titular o la administración reactivan.
 
 ---
@@ -426,7 +431,7 @@ Un tick que falla se registra y el siguiente lo reintenta; el nodo no se cae por
 
 | Código | HTTP | Cuándo |
 |---|---|---|
-| `datos_invalidos` | 400 | Datos que no cumplen las reglas (nivel desconocido, plazo endurecido sin fecha, motivo ausente…) |
+| `datos_invalidos` | 400 | Datos que no cumplen las reglas (nivel desconocido, plazo endurecido sin fecha, motivo ausente, anular sin persona identificada…) |
 | `falta_dispositivo` · `falta_alumno` | 400 | No se sabe desde qué tableta o quién |
 | `sin_permiso` · `no_es_el_titular` | 403 | Permiso `assessment.*` no concedido · la asignación es de otro profesor |
 | `dispositivo_bloqueado` · `dispositivo_inactivo` | 403 | MOD-009 |
@@ -464,37 +469,51 @@ Un tick que falla se registra y el siguiente lo reintenta; el nodo no se cae por
 
 ## 9 · Pruebas
 
-Se ejecutan con `.venv\Scripts\python manage.py test evaluacion`. No necesitan la biblioteca real: usan la fuente «ejemplo» con el calificador de referencia (`tools.host_contenido_v2_pruebas.calificar`) y, para el contrato HTTP, el host de pruebas v2 con `pool` y `questions`.
+Se ejecutan con `.venv\Scripts\python manage.py test evaluacion` (302 pruebas, ~70 s) y la suite completa con `manage.py test` (961 pruebas, ~8 min). No necesitan la biblioteca real: la mayoría usa la fuente «ejemplo» con el calificador de referencia (`tools.host_contenido_v2_pruebas.calificar`); el contrato HTTP (`test_contrato_v2`) levanta el **host de pruebas de la API v2** con token y `link.json` y recorre `pool`, `questions` y `evaluate/batch` de verdad. Un reloj controlable (`self.avanzar(...)`) mueve el tiempo del nodo sin dormir.
 
-| Escenario del Maestro | ¿Se cubre en el backend? | Prueba |
+| Escenario del Maestro | ¿Se cubre en el backend? | Prueba (`evaluacion/tests/`) |
 |---|---|---|
-| **TST-004** Completar actividad (25 intentos entregados, ninguno sin dueño) | Sí | `test_carga.test_25_alumnos_entregan_y_ninguno_queda_sin_dueno` |
-| **TST-005** Ver resultados en vivo | Sí (panel) | `test_panel.test_el_panel_refleja_el_avance` |
-| **TST-012**, **TST-017** Caída de red y 50 reconectan sin duplicados | Sí | `test_respuestas.test_la_cola_de_50_alumnos_se_integra_sin_duplicados` |
-| **TST-015** Corte de 20 s | Sí (no se pausa antes de 30 s) | `test_reloj.test_un_corte_de_20_segundos_no_pausa` |
-| **TST-021** Carga nominal de 50 / latencia p95 | Parcial (50 alumnos en una corrida; la latencia real es de hardware) | `test_carga` |
+| **TST-004** Completar actividad (25 intentos entregados, ninguno sin dueño) | Sí | `test_carga.AulaCompletaTests.test_tst_004_veinticinco_alumnos_abren_responden_y_entregan_sin_perder_nada` |
+| **TST-005** Ver resultados en vivo | Sí (panel y totales) | `test_panel.OrdenDelPanelTests` · `test_calificacion.ResultadosDeLaAsignacionTests` |
+| **TST-012**, **TST-017** Caída de red y 50 reconectan sin duplicados | Sí | `test_carga.test_tst_017_cincuenta_tabletas_dan_senal_y_escriben_a_la_vez_y_nadie_se_suspende` · `test_respuestas.ReanudacionTests.test_la_cola_de_una_desconexion_larga_entra_completa_y_en_orden_al_volver` |
+| **TST-015** Corte de 20 s | Sí (no se pausa antes de 30 s) | `test_reloj.RelojDelIntentoTests.test_tst_015_un_corte_de_20_segundos_no_pausa_ni_pierde_nada` |
+| **TST-021** Carga nominal de 50 / latencia p95 | Parcial: 50 alumnos en una corrida y consultas del panel acotadas; la latencia real es de hardware | `test_carga` |
 | **TST-024** Paridad Windows/tableta | No es del backend | [frontend.md](frontend.md) |
-| **TST-026** Cambio de equipo a mitad de intento | Sí | `test_respuestas.test_cambio_de_equipo_continua_en_la_pregunta_siguiente` |
-| **TST-027** Doble sesión del alumno | Sí | `test_respuestas.test_la_sesion_mas_reciente_prevalece` |
-| **TST-030**, **TST-031** Intentos ilimitados / intento único | Sí | `test_intentos.test_cupo` |
-| **TST-032** Tiempo límite al reloj del nodo | Sí | `test_reloj.test_el_intento_se_entrega_al_agotarse_el_tiempo` |
-| **TST-033** Entrega automática con plazo endurecido | Sí | `test_plazos.test_el_plazo_endurecido_entrega_lo_respondido` |
-| **TST-034** Reconexión en examen | Sí | `test_reloj.test_reconexion_registra_incidente_y_no_invalida` |
-| **TST-036** Guardado parcial | Sí | `test_respuestas.test_cada_respuesta_se_guarda_sola` |
-| **TST-037** Autocalificación de los tipos objetivos | Sí | `test_calificacion.test_autocalifica_en_menos_de_dos_segundos` |
-| **TST-038** Revisión docente | Sí (provisional) | `test_calificacion.test_revision_docente` |
-| **TST-040** Intento duplicado | Sí | `test_respuestas.test_reenvio_identico_no_duplica` |
-| **TST-041** Equipo por debajo del nivel | Sí | `test_niveles.test_tableta_sin_capacidad_queda_en_espera` |
-| **TST-042**, **TST-078** Cola y ventana de gracia | Sí | `test_plazos.test_gracia_y_decision_del_profesor` |
+| **TST-026** Cambio de equipo a mitad de intento | Sí | `test_reloj.CambioDeTabletaTests.test_tst_026_pasar_a_otra_tableta_continua_donde_iba_y_no_pierde_respuestas` |
+| **TST-027** Doble sesión del alumno | Sí | `test_reloj.CambioDeTabletaTests.test_tst_027_…` · `test_respuestas.GuardarRespuestasTests.test_br_138_la_sesion_mas_reciente_prevalece_aunque_su_secuencia_sea_menor` |
+| **TST-030**, **TST-031** Intentos ilimitados / intento único | Sí | `test_api_intentos.AbrirIntentoTests.test_intentos_ilimitados_tst_030` · `test_cupo_por_defecto_de_uno_…` |
+| **TST-032** Tiempo límite al reloj del nodo | Sí | `test_reloj.RelojDelIntentoTests.test_tst_032_el_tiempo_se_agota_en_el_instante_exacto_y_el_nodo_entrega` · `test_barrido.BarridoTests.test_entrega_a_quien_agoto_el_tiempo_y_lo_califica` |
+| **TST-033** Entrega automática con plazo endurecido | Sí | `test_plazos.PlazoEndurecidoTests.test_tst_033_al_vencer_el_plazo_cierra_la_asignacion_y_entrega_lo_respondido` |
+| **TST-034** Reconexión en examen | Sí | `test_reloj.RelojDelIntentoTests.test_tst_034_un_corte_de_45_segundos_suspende_registra_incidente_y_no_invalida` |
+| **TST-036** Guardado parcial | Sí | `test_respuestas.GuardarRespuestasTests.test_tst_036_una_respuesta_mala_no_tumba_a_las_buenas_y_se_rechaza_con_su_motivo` |
+| **TST-037** Autocalificación de los tipos objetivos | Sí: una sola llamada por lote, ≤ 2 s, los seis tipos de la biblioteca | `test_calificacion.AutocalificacionTests.test_tst_037_…` · `test_contrato_v2.ExamenPorHttpTests` |
+| **TST-038** Revisión docente | Sí (provisional hasta MOD-011) | `test_calificacion.RevisionDocenteTests.test_tst_038_…` |
+| **TST-040** Intento duplicado | Sí | `test_respuestas.GuardarRespuestasTests.test_tst_040_el_reenvio_exacto_no_duplica_nada_y_lo_acusa_igual` |
+| **TST-041** Equipo por debajo del nivel | Sí | `test_niveles.AdmisionTests.test_tst_041_…` |
+| **TST-042**, **TST-078** Cola y ventana de gracia | Sí | `test_plazos.GraciaTests.test_tst_042_…` · `test_tst_078_…` |
 | **TST-076** Arrastrar y soltar | **No**: la biblioteca no publica ese tipo (Q-79) | — |
-| **TST-077** Examen Supervisado, 3 incidentes, 30 intentos válidos | Sí | `test_incidentes.test_incidentes_no_invalidan` |
-| **AC-073** Reinicio del nodo con 25 alumnos | Sí | `test_reloj.test_reinicio_deja_los_intentos_restaurando_sin_anular` |
-| **INV-018** Ninguna flecha automática a `anulado` | Sí | `test_intento_dominio.test_ninguna_transicion_automatica_llega_a_anulado` |
+| **TST-077** Examen Supervisado, incidentes, intentos válidos | Sí | `test_incidentes.IncidentesDeLaTabletaTests.test_tst_077_…` · `test_br_077_muchos_incidentes_no_anulan_…` |
+| **AC-073** Reinicio del nodo con alumnos presentando | Sí | `test_reloj.ReinicioDelNodoTests` · `test_barrido.ProgramadorTests.test_al_arrancar_…` |
+| **INV-018** Ninguna flecha automática a `anulado` | Sí | `test_dominio_intento.test_inv_018_…` · `test_arquitectura.test_el_dominio_nunca_asigna_anulado_fuera_de_anular` · `test_panel.AnularTests` |
+| **INV-024** La versión del curso se congela y se califica con ella | Sí, contra la API v2 real | `test_contrato_v2.CursoQueCambiaTests` |
+| **DEC-032** El alumno no ve su nota antes de que se libere | Sí | `test_calificacion.ResultadoDelAlumnoTests` |
 
-Además: pruebas puras del dominio (estados, reloj, armado, plazos, bloqueo), `test_arquitectura` (sin Django en dominio/aplicación, sin ORM en vistas, esquema sin curso ni claves) y el contrato de los cuerpos de respuesta (ninguna respuesta de alumno contiene una clave: se recorre con `curso.contiene_clave`).
+Por archivo: `test_dominio_reglas` (43) y `test_dominio_intento` (19) son puras (sin base de datos); `test_arquitectura` (10) comprueba que dominio y aplicación no importan Django, que las vistas no tocan el ORM, que el esquema no guarda curso ni claves, que `m10_incidente` es de sólo inserción, que el catálogo de permisos y de eventos es el esperado y que toda acción auditada existe en el catálogo cerrado de MOD-019; `test_api_asignaciones` (31), `test_api_intentos` (28), `test_niveles` (13), `test_reloj` (21), `test_plazos` (26), `test_respuestas` (20), `test_incidentes` (22), `test_calificacion` (26), `test_panel` (15), `test_barrido` (15), `test_carga` (3), `test_contrato_v2` (9) y `test_humo` (1) recorren la API. En `device_manager`, `test_capacidad_control` (8) cubre la capacidad declarada.
+
+Cada respuesta que recibe un alumno se recorre con `contiene_clave` en `test_api_intentos` y `test_contrato_v2.test_el_nodo_nunca_recibe_ni_entrega_una_clave`: ninguna lleva `isCorrect`, `answer`, `acceptedAnswers`, `correctOrder`, `pairs` ni `explanation`.
 
 ---
 
 ## 10 · Estado de construcción
 
-*(Se completa al terminar la implementación.)*
+**Construido y probado (2026-10-01).**
+
+* La app `evaluacion` entera: cinco tablas `m10_*` (la del intento se llama `m10_intento_formal`), dominio puro, casos de uso por la interfaz de sus puertos, repositorios, unidad de trabajo, programador del nodo y las 35 rutas de §4. Migraciones `evaluacion/0001`, `acceso/0009` y `device_manager/0005`.
+* Integraciones: permisos `assessment.*` (16), acciones `evaluacion.*` del catálogo de MOD-019, capacidad de control de la tableta (MOD-009), `pool`/`questions` de la API v2 por el puerto `FuenteDeCursos`, el conteo de exámenes abiertos al cerrar una clase y el aviso por el canal de tiempo real del aula.
+* Suite completa: **961 pruebas en verde** (651 de la línea base más 310 nuevas), 3 omitidas por depender de `jsonschema`.
+
+**Defectos que las pruebas destaparon y se corrigieron.** (1) La unidad de trabajo revertía lo que el reloj había provocado cuando la petición que lo descubrió se rechazaba (D-21). (2) Un intento entregado con la biblioteca caída guardaba `porcentaje = 0` (D-22). (3) Recalificar lo ya calificado volvía a publicar `intento_calificado`. (4) El cierre manual de la asignación entregaba con `origen_entrega = profesor` en vez de `cierre`, y el corte de la gracia de una tableta sin señal se medía contra su último latido y no contra el cierre de la asignación (§5.7). (5) Anular sin persona identificada se firmaba como «docente» (D-23). (6) Un intento defectuoso detenía el barrido del nodo entero (D-24).
+
+**No construido en el backend, a propósito.** Crear evaluaciones y reactivos (FUN-103/104, de la biblioteca); la nota publicada y los ajustes (MOD-011); archivos de dibujo y proyecto (MOD-014); SCORM (V1); arrastrar y soltar y matemática con equivalencias (la biblioteca no los publica, Q-79); unificar `m07_intento` y `m08_practica` bajo `m10_*` (Q-75).
+
+**No se puede comprobar aquí.** El comportamiento de las tabletas reales (Lock Task, Assigned Access, Shell Launcher), la latencia con 50 tabletas físicas y el apagado forzado: ver [frontend.md](frontend.md) §10 y [kiosk.md](kiosk.md) §7.
