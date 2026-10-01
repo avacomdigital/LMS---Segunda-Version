@@ -15,6 +15,7 @@ django_asgi_app = get_asgi_application()   # antes de importar nada que toque mo
 
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 
+from audit.infraestructura import verificador  # noqa: E402
 from classroom_engine.infraestructura import programador  # noqa: E402
 from classroom_engine.interfaces.websockets import websocket_urlpatterns  # noqa: E402
 
@@ -24,3 +25,5 @@ application = ProtocolTypeRouter({
 })
 
 programador.iniciar()
+# MOD-019: verifica la cadena de la bitácora cada hora (fuera de clase no hay diferencia: verifica por bloques) y rota por tamaño.
+verificador.iniciar()
