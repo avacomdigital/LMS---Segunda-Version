@@ -242,6 +242,7 @@ public sealed class EvaluacionApiTests : IDisposable
         await api.ElegibilidadAsync("p", "a-1", Niveles.Controlado);
         await api.AdmisionesAsync("p", "a-1", todas: true);
         await api.ResultadosAsync("p", "a-1");
+        await api.ContarSuspendidosAsync("p", "a-1");
         await api.ExpedienteAsync("p", "i-1");
         await api.RevisionAsync("p", "i-1");
         Assert.Equal(new[]
@@ -251,6 +252,7 @@ public sealed class EvaluacionApiTests : IDisposable
             Base + "asignaciones/a-1/elegibilidad/?nivel=controlado&actor=p",
             Base + "asignaciones/a-1/admisiones/?todas=1&actor=p",
             Base + "asignaciones/a-1/resultados/?actor=p",
+            Base + "asignaciones/a-1/reactivar/?actor=p",
             Base + "intentos/i-1/?actor=p",
             Base + "intentos/i-1/revision/?actor=p",
         }, capturas.Select(c => c.Url));

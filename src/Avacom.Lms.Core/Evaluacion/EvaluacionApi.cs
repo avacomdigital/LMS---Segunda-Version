@@ -190,6 +190,9 @@ public sealed class EvaluacionApi(HttpClient http, Uri baseUri) : ClienteJson(ht
         EnviarAsync<AdmisionPendiente>(Base + Asig(asignacionId) + $"admisiones/{Esc(admisionId)}/decidir/",
             Docente(actor, ("decision", decision), ("nivel_admitido", nivelAdmitido), ("motivo", motivo)), ct);
 
+    public Task<ReactivacionHecha?> ContarSuspendidosAsync(string actor, string asignacionId, CancellationToken ct = default) =>
+        ObtenerAsync<ReactivacionHecha>(Ruta(Asig(asignacionId) + "reactivar/", ("actor", actor)), ct);
+
     public Task<ReactivacionHecha?> ReactivarTodosAsync(string actor, string asignacionId, CancellationToken ct = default) =>
         EnviarAsync<ReactivacionHecha>(Base + Asig(asignacionId) + "reactivar/", Docente(actor), ct);
 

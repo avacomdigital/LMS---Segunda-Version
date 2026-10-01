@@ -98,6 +98,8 @@ public interface IExamenDocenteApi
     Task<ListaDeAdmisiones?> AdmisionesAsync(string actor, string asignacionId, bool todas = false, CancellationToken ct = default);
     /// <summary>FUN-116 / BR-076. <c>admitir</c> exige un nivel MENOR que el exigido y un motivo; <c>rechazar</c>, un motivo.</summary>
     Task<AdmisionPendiente?> DecidirAdmisionAsync(string actor, string asignacionId, string admisionId, string decision, string? nivelAdmitido, string motivo, CancellationToken ct = default);
+    /// <summary>Guion paso 12: cuántos esperan reactivación, ANTES de confirmar (no cambia nada).</summary>
+    Task<ReactivacionHecha?> ContarSuspendidosAsync(string actor, string asignacionId, CancellationToken ct = default);
     /// <summary>Guion paso 12: reactiva a todos los suspendidos y dice a cuántos afectó.</summary>
     Task<ReactivacionHecha?> ReactivarTodosAsync(string actor, string asignacionId, CancellationToken ct = default);
     Task<ResultadosDeExamen?> ResultadosAsync(string actor, string asignacionId, CancellationToken ct = default);
