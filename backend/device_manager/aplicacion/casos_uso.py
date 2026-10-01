@@ -68,8 +68,23 @@ def organizacion_de(uow: UnidadDeTrabajo) -> str:
     return org
 
 
+def _campos_de_capacidad(actual: dict | None, capacidad_control, capacidad_detalle, ahora: int) -> dict:
+    """MOD-010: lo que la tableta declara poder garantizar en un examen. Sólo se escribe si la tableta lo DECLARA (None = no dijo nada)."""
+    if capacidad_control is None and capacidad_detalle is None:
+        return {}
+    campos: dict = {}
+    if capacidad_control is not None:
+        declarada = dom.validar_capacidad_control(capacidad_control)
+        if declarada != (actual or {}).get("capacidad_control", ""):
+            campos["capacidad_control"] = declarada
+        campos["capacidad_declarada_en"] = ahora
+    if isinstance(capacidad_detalle, dict):
+        campos["capacidad_detalle"] = {str(k)[:40]: v for k, v in list(capacidad_detalle.items())[:20]}
+    return campos
+
+
 def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: str = "", tipo: str = dom.TABLETA,
-             plataforma: str = "", version_app: str = "", actor: str = "") -> tuple[dict, bool]:
+             plataforma: str = "", version_app: str = "", actor: str = "", capacidad_control=None, capacidad_detalle=None) -> tuple[dict, bool]:
     """CAP-052/053: registra la tableta la primera vez que se presenta y, después, sólo la reconoce
     (idempotente por organización + huella). Devuelve (dispositivo, creado). Nunca la bloquea ni la
     activa: eso lo decide el aula o el administrador."""
@@ -86,6 +101,7 @@ def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: st
             campos["plataforma"] = plataforma
         if version_app and version_app[:32] != existente["version_app"]:
             campos["version_app"] = version_app[:32]
+        campos.update(_campos_de_capacidad(existente, capacidad_control, capacidad_detalle, ahora))
         if not dom.en_linea(existente["ultimo_latido_en"], ahora):
             uow.outbox.publicar("Dispositivo", existente["id"], dom.EV_RECONECTADO,
                                 {"dispositivo_id": existente["id"], "silencio_ms": ahora - existente["ultimo_latido_en"], "instante": ahora})
@@ -94,7 +110,7 @@ def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: st
         "id": _id(), "organizacion_id": org, "identificador_hw": identificador_hw,
         "nombre": dom.normalizar_nombre(nombre, por_defecto=identificador_hw), "tipo": dom.validar_tipo(tipo),
         "plataforma": plataforma, "version_app": str(version_app or "")[:32], "activo": True, "bloqueado": False,
-        "registrado_en": ahora, "ultimo_latido_en": ahora,
+        "registrado_en": ahora, "ultimo_latido_en": ahora, **_campos_de_capacidad(None, capacidad_control, capacidad_detalle, ahora),
     })
     uow.outbox.publicar("Dispositivo", dispositivo["id"], dom.EV_REGISTRADO, {
         "dispositivo_id": dispositivo["id"], "nombre": dispositivo["nombre"], "tipo": dispositivo["tipo"],
@@ -105,7 +121,7 @@ def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: st
 
 
 def latido(uow: UnidadDeTrabajo, ahora: int, dispositivo_id: str, plataforma: str = "", version_app: str = "",
-           espacio_libre_mb: int | None = None, bateria_pct: int | None = None) -> dict | None:
+           espacio_libre_mb: int | None = None, bateria_pct: int | None = None, capacidad_control=None, capacidad_detalle=None) -> dict | None:
     """La tableta dio señal de vida (el sondeo del aula, la presencia, el propio latido), y opcionalmente cuánto
     espacio y batería le quedan (lo lee el profesor antes de distribuir un paquete: MSG-045)."""
     actual = uow.dispositivos.por_id(dispositivo_id)
@@ -120,6 +136,7 @@ def latido(uow: UnidadDeTrabajo, ahora: int, dispositivo_id: str, plataforma: st
         campos["plataforma"] = dom.validar_plataforma(plataforma)
     if version_app:
         campos["version_app"] = str(version_app)[:32]
+    campos.update(_campos_de_capacidad(actual, capacidad_control, capacidad_detalle, ahora))
     if not dom.en_linea(actual["ultimo_latido_en"], ahora):
         uow.outbox.publicar("Dispositivo", dispositivo_id, dom.EV_RECONECTADO,
                             {"dispositivo_id": dispositivo_id, "silencio_ms": ahora - actual["ultimo_latido_en"], "instante": ahora})
@@ -213,7 +230,7 @@ class RegistrarDispositivo(_CasoDeUso):
             dispositivo, creado = resolver(
                 uow, ahora, datos.get("identificador_hw") or datos.get("identificador"), nombre=datos.get("nombre"),
                 tipo=datos.get("tipo") or dom.TABLETA, plataforma=datos.get("plataforma"), version_app=datos.get("version_app"),
-                actor=actor)
+                actor=actor, capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"))
             return self._dto(uow, dispositivo, ahora), creado
 
 
@@ -226,7 +243,8 @@ class RegistrarLatido(_CasoDeUso):
         with self.s.uow() as uow:
             dispositivo, _ = resolver(
                 uow, ahora, datos.get("identificador_hw") or datos.get("identificador"), nombre=datos.get("nombre"),
-                tipo=datos.get("tipo") or dom.TABLETA, plataforma=datos.get("plataforma"), version_app=datos.get("version_app"))
+                tipo=datos.get("tipo") or dom.TABLETA, plataforma=datos.get("plataforma"), version_app=datos.get("version_app"),
+                capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"))
             return {**self._dto(uow, dispositivo, ahora), "servidor_en": ahora}
 
 

@@ -54,6 +54,11 @@ class Dispositivo(models.Model):
     perfil = models.CharField(max_length=12, default=dom.COMPARTIDO)
     asignado_a_id = models.CharField(max_length=64, null=True, blank=True)
     asignado_en = models.BigIntegerField(null=True, blank=True)
+    # MOD-010 · BR-075: lo que la tableta DECLARA poder garantizar en un examen (`abierto` · `supervisado` · `controlado`; vacío = nunca lo declaró) y el
+    # detalle que informa (`bloqueo_sistema`, `motivo`…). El nodo no lo infiere de la plataforma: la app mide e informa.
+    capacidad_control = models.CharField(max_length=12, blank=True, default="")
+    capacidad_detalle = models.JSONField(default=dict, blank=True)
+    capacidad_declarada_en = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = "m09_dispositivo"
@@ -65,6 +70,7 @@ class Dispositivo(models.Model):
                 | (~Q(perfil=dom.ASIGNADO) & Q(asignado_a_id__isnull=True)),
                 name="ck_m09_dispositivo_perfil_dueno"),
             models.CheckConstraint(condition=Q(perfil__in=dom.PERFILES), name="ck_m09_dispositivo_perfil_valido"),
+            models.CheckConstraint(condition=Q(capacidad_control__in=("",) + dom.NIVELES_CONTROL), name="ck_m09_dispositivo_capacidad_valida"),
         ]
 
     def __str__(self) -> str:

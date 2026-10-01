@@ -15,7 +15,7 @@ from ..dominio.errores import SinPermiso
 
 CAMPOS_DISPOSITIVO = ("id", "organizacion_id", "identificador_hw", "nombre", "tipo", "plataforma", "version_app",
                       "activo", "bloqueado", "registrado_en", "ultimo_latido_en", "espacio_libre_mb", "bateria_pct",
-                      "perfil", "asignado_a_id", "asignado_en")
+                      "perfil", "asignado_a_id", "asignado_en", "capacidad_control", "capacidad_detalle", "capacidad_declarada_en")
 CAMPOS_SESION = ("id", "alumno_id", "dispositivo_id", "iniciada_en", "finalizada_en", "motivo_cierre")
 
 

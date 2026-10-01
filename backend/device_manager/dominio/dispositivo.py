@@ -27,6 +27,13 @@ MOTIVOS_CIERRE = (USUARIO, INACTIVIDAD, SISTEMA, RELEVO)
 COMPARTIDO, ASIGNADO = "compartido", "asignado"
 PERFILES = (COMPARTIDO, ASIGNADO)
 
+# Capacidad de CONTROL que la tableta declara poder garantizar durante un examen (MOD-010, BR-075, DEC-009). `controlado` significa que la capa del
+# sistema operativo está aprovisionada (Device Owner en Android; Assigned Access o Shell Launcher en Windows); `supervisado`, que la app registra lo que
+# pasa pero el sistema ofrece una salida; `abierto`, que sólo se registran entrega y tiempo. Vacío = la tableta nunca lo declaró: el nodo la trata como
+# `abierto` (no presume lo que no sabe).
+ABIERTO, SUPERVISADO, CONTROLADO = "abierto", "supervisado", "controlado"
+NIVELES_CONTROL = (ABIERTO, SUPERVISADO, CONTROLADO)
+
 # Una tableta se considera viva si dio señal en el último minuto (el sondeo del aula es cada 2 s).
 LATIDO_VIVO_MS = 60_000
 
@@ -86,6 +93,14 @@ def validar_plataforma(valor) -> str:
     if plataforma not in PLATAFORMAS:
         raise DatosInvalidos(f"Plataforma desconocida: {valor!r}. Plataformas: windows, android.", plataforma=valor)
     return plataforma
+
+
+def validar_capacidad_control(valor) -> str:
+    """La capacidad que declara una tableta: vacío (no la declaró) o uno de los tres niveles. Un valor desconocido es un error de datos."""
+    texto = str(valor or "").strip().lower()
+    if texto and texto not in NIVELES_CONTROL:
+        raise DatosInvalidos(f"capacidad_control debe ser uno de: {', '.join(NIVELES_CONTROL)}.", capacidad_control=valor)
+    return texto
 
 
 def normalizar_alumno(valor) -> str:

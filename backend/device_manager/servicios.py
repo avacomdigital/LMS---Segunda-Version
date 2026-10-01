@@ -20,7 +20,7 @@ def _ahora(momento: int | None) -> int:
 
 
 def resolver(identificador_hw: str, nombre: str = "", tipo: str = dom.TABLETA, plataforma: str = "",
-             version_app: str = "", momento: int | None = None, actor: str = "") -> dict | None:
+             version_app: str = "", momento: int | None = None, actor: str = "", capacidad_control: str | None = None) -> dict | None:
     """Reconoce (o registra la primera vez) la tableta que se presenta con su huella. None si no
     trae huella o el nodo no está instalado: el aula sigue sin dispositivo, como hasta ahora."""
     if not str(identificador_hw or "").strip():
@@ -28,7 +28,8 @@ def resolver(identificador_hw: str, nombre: str = "", tipo: str = dom.TABLETA, p
     cajones = Cajones()
     if not cajones.organizaciones.unica_id():
         return None
-    dispositivo, _ = cu.resolver(cajones, _ahora(momento), identificador_hw, nombre, tipo, plataforma, version_app, actor)
+    dispositivo, _ = cu.resolver(cajones, _ahora(momento), identificador_hw, nombre, tipo, plataforma, version_app, actor,
+                                 capacidad_control=capacidad_control)
     return dispositivo
 
 
@@ -45,10 +46,11 @@ def listar(organizacion_id: str, solo_activos: bool = True) -> list[dict]:
 
 
 def latido(dispositivo_id: str, momento: int | None = None, plataforma: str = "", version_app: str = "",
-           espacio_libre_mb: int | None = None, bateria_pct: int | None = None) -> dict | None:
+           espacio_libre_mb: int | None = None, bateria_pct: int | None = None, capacidad_control: str | None = None) -> dict | None:
     if not dispositivo_id:
         return None
-    return cu.latido(Cajones(), _ahora(momento), dispositivo_id, plataforma, version_app, espacio_libre_mb, bateria_pct)
+    return cu.latido(Cajones(), _ahora(momento), dispositivo_id, plataforma, version_app, espacio_libre_mb, bateria_pct,
+                     capacidad_control=capacidad_control)
 
 
 def renombrar(dispositivo_id: str, nombre: str) -> dict | None:

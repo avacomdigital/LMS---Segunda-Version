@@ -13,6 +13,9 @@ class DispositivoEntrada(serializers.Serializer):
     tipo = serializers.ChoiceField(choices=["TABLETA", "MASTER", "OTRO"], required=False, default="TABLETA")
     plataforma = serializers.ChoiceField(choices=["", "windows", "android"], required=False, allow_blank=True, default="")
     version_app = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+    # MOD-010 · BR-075: lo que la tableta DECLARA poder garantizar en un examen (`abierto` · `supervisado` · `controlado`). Ausente = no dice nada.
+    capacidad_control = serializers.CharField(max_length=12, required=False, allow_blank=True)
+    capacidad_detalle = serializers.JSONField(required=False)
 
     def validate(self, datos):
         if not (datos.get("identificador_hw") or datos.get("identificador")):
