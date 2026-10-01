@@ -96,6 +96,7 @@ class PerderConexion(_CasoDeSesion):
                 return False
             uow.sesiones.actualizar_participante(participante_id, estado=dom.RECONECTANDO)
             uow.sesiones.registrar_presencia(participante_id, dom.RECONECTANDO, ahora, participante["dispositivo"], "socket cerrado")
+            self._auditar_presencia(uow, participante, dom.RECONECTANDO, "socket cerrado")
             self._publicar(uow, sesion_id, dom.EV_PRESENCIA_REGISTRADA, {
                 "participante_id": participante_id, "estado": dom.RECONECTANDO, "instante": ahora, "origen": "nodo"})
             self._difundir(uow, sesion_id, "presencia", conteo=True, participante_id=participante_id, estado=dom.RECONECTANDO)
@@ -130,6 +131,7 @@ class BarrerPresencia(_CasoDeSesion):
                 if p["estado"] == dom.CONECTADO and silencio > cfg.latido_vencido_ms:
                     uow.sesiones.actualizar_participante(p["id"], estado=dom.RECONECTANDO)
                     uow.sesiones.registrar_presencia(p["id"], dom.RECONECTANDO, ahora, p["dispositivo"], "latido vencido")
+                    self._auditar_presencia(uow, p, dom.RECONECTANDO, "latido vencido")
                     self._publicar(uow, sesion_id, dom.EV_PRESENCIA_REGISTRADA, {
                         "participante_id": p["id"], "estado": dom.RECONECTANDO, "instante": ahora, "origen": "nodo"})
                     self._difundir(uow, sesion_id, "presencia", conteo=True, participante_id=p["id"], estado=dom.RECONECTANDO)
@@ -137,6 +139,7 @@ class BarrerPresencia(_CasoDeSesion):
                 elif p["estado"] == dom.RECONECTANDO and silencio > cfg.ausencia_ms:
                     uow.sesiones.actualizar_participante(p["id"], estado=dom.SALIO, salida=ahora)
                     uow.sesiones.registrar_presencia(p["id"], dom.SALIO, ahora, p["dispositivo"], "ausencia prolongada")
+                    self._auditar_presencia(uow, p, dom.SALIO, "ausencia prolongada")
                     self._publicar(uow, sesion_id, dom.EV_PRESENCIA_REGISTRADA, {
                         "participante_id": p["id"], "estado": dom.SALIO, "instante": ahora, "origen": "nodo"})
                     if p.get("dim_sesion_alumno_id"):
@@ -264,7 +267,8 @@ class ProyectarAlumno(_CasoDeSesion):
         self._publicar(uow, sesion_id, dom.EV_PROYECCION_ALUMNO, {"participante_id": participante["id"], "activa": False, "instante": ahora})
         uow.auditoria.registrar(actor_id, "aula.proyeccion.terminada", "m07_participante", participante["id"],
                                 anterior={"desde": participante["proyectado_desde"], "autor": participante["proyectado_por"]},
-                                nuevo={"duracion_ms": ahora - participante["proyectado_desde"]})
+                                nuevo={"duracion_ms": ahora - participante["proyectado_desde"],
+                                       "duracion_seg": (ahora - participante["proyectado_desde"]) // 1000})
         self._difundir(uow, sesion_id, "proyeccion", participante_id=participante["id"], activa=False)
 
 

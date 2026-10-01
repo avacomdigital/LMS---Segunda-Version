@@ -117,6 +117,24 @@ _desconexiones: dict[tuple[str, str], asyncio.Task] = {}
 
 # ------------------------------------------------------------------------------ sesión (JWT)
 
+def _contexto_ws(principal, dispositivo_cabecera: str | None, corr: str | None):
+    """MOD-019: lo que corre por este socket deja asientos y líneas con origen `ws`, la persona de la sesión, el aparato
+    (cabecera X-Avacom-Dispositivo del handshake, validada contra m09_dispositivo, o el de la sesión) y un `corr` por conexión."""
+    from audit import contexto
+    from audit.middleware import dispositivo_validado
+    dispositivo_id = dispositivo_validado(dispositivo_cabecera) or (getattr(principal, "dispositivo_id", None) if principal else None)
+    return contexto.con(origen=contexto.ORIGEN_WS, corr=corr or contexto.nuevo_corr(),
+                        usuario_id=getattr(principal, "usuario_id", None), rol_codigo=getattr(principal, "rol_codigo", None),
+                        sesion_id=getattr(principal, "sesion_id", None), dispositivo_id=dispositivo_id)
+
+
+def _cabecera(scope, nombre: bytes) -> str | None:
+    for clave, valor in scope.get("headers") or []:
+        if clave.lower() == nombre:
+            return valor.decode("utf-8", "ignore")
+    return None
+
+
 def _principal(token: str):
     """El Principal de MOD-001 si el token es válido; None si no hay token. Un token roto lanza ErrorAcceso."""
     if not token:
@@ -133,26 +151,30 @@ def _actor_de(principal, rol: str) -> Actor | None:
                  dispositivo=str(principal.dispositivo_id or ""), sesion_usuario_id=principal.sesion_id, principal=principal)
 
 
-def _conectar(sesion_id: str, rol: str, participante_id: str, principal) -> dict:
+def _conectar(sesion_id: str, rol: str, participante_id: str, principal, dispositivo: str | None = None, corr: str | None = None) -> dict:
     """Valida quién se conecta y arma el saludo (síncrono: toca la base)."""
     s = servicios()
-    if rol == "docente" and principal is not None:
-        # Con sesión, ver la clase en vivo exige el permiso y ser su titular (o la administración).
-        with s.uow() as uow:
-            sesion = uow.sesiones.sesion(sesion_id)
-        if sesion is not None:
-            s.autorizacion.exigir(_actor_de(principal, rol), dom.P_RESULTS_VIEW, sesion)
-    persona = principal.usuario_id if (principal is not None and rol == "estudiante") else None
-    return tr.ConectarTiempoReal(s).ejecutar(sesion_id, rol, participante_id or None, persona)
+    with _contexto_ws(principal, dispositivo, corr):
+        if rol == "docente" and principal is not None:
+            # Con sesión, ver la clase en vivo exige el permiso y ser su titular (o la administración).
+            with s.uow() as uow:
+                sesion = uow.sesiones.sesion(sesion_id)
+            if sesion is not None:
+                s.autorizacion.exigir(_actor_de(principal, rol), dom.P_RESULTS_VIEW, sesion)
+        persona = principal.usuario_id if (principal is not None and rol == "estudiante") else None
+        return tr.ConectarTiempoReal(s).ejecutar(sesion_id, rol, participante_id or None, persona)
 
 
-def _latido(sesion_id: str, participante_id: str, estado: str | None, telemetria: dict | None, principal) -> dict:
+def _latido(sesion_id: str, participante_id: str, estado: str | None, telemetria: dict | None, principal,
+            dispositivo: str | None = None, corr: str | None = None) -> dict:
     persona = principal.usuario_id if principal is not None else None
-    return tr.LatidoParticipante(servicios()).ejecutar(sesion_id, participante_id, estado, telemetria, persona)
+    with _contexto_ws(principal, dispositivo, corr):
+        return tr.LatidoParticipante(servicios()).ejecutar(sesion_id, participante_id, estado, telemetria, persona)
 
 
-def _perder(sesion_id: str, participante_id: str) -> bool:
-    return tr.PerderConexion(servicios()).ejecutar(sesion_id, participante_id)
+def _perder(sesion_id: str, participante_id: str, dispositivo: str | None = None, corr: str | None = None) -> bool:
+    with _contexto_ws(None, dispositivo, corr):
+        return tr.PerderConexion(servicios()).ejecutar(sesion_id, participante_id)
 
 
 def _conteo(sesion_id: str) -> dict:
@@ -179,6 +201,9 @@ class ConsumidorAula(AsyncJsonWebsocketConsumer):
         self.rol = "docente" if (consulta.get("rol") or [""])[0] == "docente" else "estudiante"
         self.participante_id = (consulta.get("participante") or [""])[0]
         token = (consulta.get("token") or [""])[0]
+        # MOD-019: el aparato se declara en el handshake (cabecera) o, si el cliente no puede poner cabeceras, en la consulta.
+        self.dispositivo = _cabecera(self.scope, b"x-avacom-dispositivo") or (consulta.get("dispositivo") or [""])[0] or None
+        self.corr = _cabecera(self.scope, b"x-avacom-correlacion") or None
         await self.accept()   # se acepta y luego se cierra con código propio: el cliente puede saber por qué
         registrar_bucle(asyncio.get_running_loop())
 
@@ -192,7 +217,7 @@ class ConsumidorAula(AsyncJsonWebsocketConsumer):
             return await self._rechazar(CIERRE_PETICION, "datos_invalidos", "Falta el participante.")
 
         try:
-            saludo = await database_sync_to_async(_conectar)(self.sesion_id, self.rol, self.participante_id, self.principal)
+            saludo = await database_sync_to_async(_conectar)(self.sesion_id, self.rol, self.participante_id, self.principal, self.dispositivo, self.corr)
         except errores.NoEncontrado as error:
             return await self._rechazar(CIERRE_NO_EXISTE, error.codigo, error.detalle)
         except (errores.SinPermiso, errores.ParticipanteExpulsado) as error:
@@ -211,7 +236,7 @@ class ConsumidorAula(AsyncJsonWebsocketConsumer):
         if self.rol == "estudiante":
             # Abrir el socket es declararse conectado: reabre la sesión de alumno y avisa al profesor (007-04).
             try:
-                await database_sync_to_async(_latido)(self.sesion_id, self.participante_id, dom.CONECTADO, None, self.principal)
+                await database_sync_to_async(_latido)(self.sesion_id, self.participante_id, dom.CONECTADO, None, self.principal, self.dispositivo, self.corr)
             except errores.ErrorAula:
                 log.debug("No se pudo declarar la presencia al conectar", exc_info=True)
 
@@ -256,7 +281,7 @@ class ConsumidorAula(AsyncJsonWebsocketConsumer):
             estado = contenido.get("estado") if tipo == "presencia" else None
             telemetria = contenido.get("telemetria") if isinstance(contenido.get("telemetria"), dict) else None
             try:
-                await database_sync_to_async(_latido)(self.sesion_id, self.participante_id, estado, telemetria, self.principal)
+                await database_sync_to_async(_latido)(self.sesion_id, self.participante_id, estado, telemetria, self.principal, self.dispositivo, self.corr)
             except errores.ParticipanteExpulsado as error:
                 await self._rechazar(CIERRE_SIN_PERMISO, error.codigo, error.detalle)
             except errores.ErrorAula as error:

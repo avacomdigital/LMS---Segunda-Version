@@ -244,6 +244,23 @@ class _CasoDeSesion(_CasoDeUso):
             raise NoEncontrado(f"No existe el participante «{participante_id}» en esta sesión.", participante_id=participante_id)
         return participante
 
+    @staticmethod
+    def _auditar_presencia(uow: UnidadDeTrabajo, participante: dict, estado_nuevo: str, causa: str, actor: str = "sistema") -> None:
+        """MOD-019 (019-08): se audita SÓLO la transición de presencia, nunca el latido. Perder = conectado → reconectando/salió
+        (o reconectando → salió); recuperar = reconectando/salió → conectado."""
+        anterior = participante.get("estado")
+        if anterior == estado_nuevo:
+            return
+        if estado_nuevo in (dom.RECONECTANDO, dom.SALIO) and anterior in (dom.CONECTADO, dom.RECONECTANDO):
+            accion = "aula.presencia.perdida"
+        elif estado_nuevo == dom.CONECTADO and anterior in (dom.RECONECTANDO, dom.SALIO):
+            accion = "aula.presencia.recuperada"
+        else:
+            return
+        uow.auditoria.registrar(actor, accion, "m07_participante", participante["id"],
+                                anterior={"estado": anterior}, nuevo={"estado": estado_nuevo, "causa": causa, "persona_id": participante.get("persona_id")},
+                                dispositivo_id=participante.get("dispositivo_id") or None)
+
     def _admitidos(self, uow: UnidadDeTrabajo, sesion_id: str) -> list[dict]:
         return [p for p in uow.sesiones.participantes(sesion_id) if p["estado"] in dom.ADMITIDOS]
 
@@ -443,6 +460,7 @@ class _CasoDeSesion(_CasoDeUso):
         if participante["estado"] == dom.RECONECTANDO and sesion["estado"] == dom.ABIERTA:
             campos["estado"] = dom.CONECTADO
             uow.sesiones.registrar_presencia(participante["id"], dom.CONECTADO, ahora, participante["dispositivo"], "latido recuperado")
+            self._auditar_presencia(uow, participante, dom.CONECTADO, "latido recuperado")
             self._publicar(uow, sesion["id"], dom.EV_PRESENCIA_REGISTRADA, {
                 "participante_id": participante["id"], "estado": dom.CONECTADO, "instante": ahora})
             self._difundir(uow, sesion["id"], "presencia", conteo=True, participante_id=participante["id"], estado=dom.CONECTADO)
@@ -810,6 +828,7 @@ class RegistrarPresencia(_CasoDeSesion):
                     campos["estado"] = estado
                     campos["salida"] = ahora if estado == dom.SALIO else None
                     uow.sesiones.registrar_presencia(participante_id, estado, ahora, dispositivo or participante["dispositivo"])
+                    self._auditar_presencia(uow, participante, estado, "declarada por la tableta", actor=participante["persona_id"] or "sistema")
                     self._publicar(uow, sesion_id, dom.EV_PRESENCIA_REGISTRADA, {
                         "participante_id": participante_id, "estado": estado, "instante": ahora})
                     # La sesión de alumno en la tableta (MOD-009) sigue a la presencia: salir la cierra; volver la reabre.
@@ -1069,6 +1088,10 @@ class EnviarAviso(_CasoDeSesion):
                                               "texto": texto[:300], "enviado_en": ahora, "creado_por": actor.id})
             self._publicar(uow, sesion_id, dom.EV_MENSAJE_ENVIADO, {"aviso_id": aviso["id"], "participante_id": participante_id,
                                                                    "alcance": "participante" if participante_id else "grupo", "instante": ahora})
+            # MOD-019 (019-08): el aviso es un hecho auditable (a quién y cuánto), no su texto.
+            uow.auditoria.registrar(actor.id, "aula.aviso.enviado", "m07_aviso", aviso["id"],
+                                    nuevo={"alcance": "participante" if participante_id else "grupo", "participante_id": participante_id,
+                                           "largo": len(texto[:300])})
             self._difundir(uow, sesion_id, "aviso", aviso_id=aviso["id"], participante_id=participante_id)
             return aviso
 
@@ -1176,7 +1199,8 @@ class CerrarSesion(_CasoDeSesion):
                     uow.sesiones.actualizar_participante(p["id"], proyectado_desde=None, proyectado_por="")
                     uow.auditoria.registrar(actor.id, "aula.proyeccion.terminada", "m07_participante", p["id"],
                                             anterior={"desde": p["proyectado_desde"], "autor": p["proyectado_por"]},
-                                            nuevo={"duracion_ms": ahora - p["proyectado_desde"], "por_cierre": True})
+                                            nuevo={"duracion_ms": ahora - p["proyectado_desde"], "duracion_seg": (ahora - p["proyectado_desde"]) // 1000,
+                                                   "por_cierre": True})
             for p in participantes:
                 if p["estado"] in dom.ADMITIDOS:
                     uow.sesiones.actualizar_participante(p["id"], estado=dom.SALIO, salida=ahora)
