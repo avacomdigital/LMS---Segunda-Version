@@ -20,6 +20,8 @@ public partial class App : Application
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
 		var ventana = new Window(new AppShell());
+		// Pantalla completa desde el arranque sólo con AVACOM_STUDENT_KIOSCO=1 (cuentas dedicadas al examen); sin la variable no hace nada.
+		Avacom.Lms.Student.Examen.KioscoReal.PantallaCompletaDeArranque(ventana);
 		// Segundo plano, vuelta y cierre: la tableta declara «reconectando», «conectado» y «salió» (007-04).
 		CicloDeVida.Enganchar(ventana);
 		// MOD-019: arranque tras reinicio (canal dispositivo) y entrega de los avisos locales al nodo cada minuto, de mejor esfuerzo.
