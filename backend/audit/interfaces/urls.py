@@ -13,5 +13,8 @@ urlpatterns = [
     path("tramos/", views.TramosView.as_view(), name="auditoria-tramos"),
     path("verificar/", views.VerificarView.as_view(), name="auditoria-verificar"),
     path("estado/", views.EstadoView.as_view(), name="auditoria-estado"),
+    path("exportar/", views.ExportarView.as_view(), name="auditoria-exportar"),
+    path("exportaciones/", views.ExportacionesView.as_view(), name="auditoria-exportaciones"),
+    path("exportaciones/<str:pk>/descargar/", views.DescargarExportacionView.as_view(), name="auditoria-exportacion-descargar"),
     path("tecnico/accesos/", views.TecnicoAccesosView.as_view(), name="auditoria-tecnico-accesos"),
 ]

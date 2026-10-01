@@ -8,6 +8,7 @@ Contrato de degradación (el mismo del resto del backend): sin sesión → 401 `
 """
 from __future__ import annotations
 
+from django.http import FileResponse
 from rest_framework import exceptions, status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -17,7 +18,7 @@ from acceso.dominio import errores as errores_acceso
 from acceso.interfaces.permisos import SesionRequerida, principal_de
 
 from .. import contexto
-from ..aplicacion import consultar, estado, logs, tecnico, verificar
+from ..aplicacion import consultar, estado, exportar, logs, tecnico, verificar
 from ..dominio import catalogos, errores
 from ..infraestructura.autorizacion import AutorizacionAcceso
 from ..middleware import dispositivo_validado
@@ -104,6 +105,32 @@ class EstadoView(VistaAuditoria):
     def get(self, request):
         self.exigir(request, P_READ)
         return Response(estado.estado())
+
+
+class ExportarView(VistaAuditoria):
+    """FUN-200 / BR-105 / ESC-03: exporta un tramo o un rango firmado. Exige audit.export Y autorización de salida vigente."""
+
+    def post(self, request):
+        principal = self.exigir(request, P_EXPORT)
+        datos = _validar(s.ExportacionEntrada, request.data)
+        return Response(exportar.exportar(principal, self.autorizacion, tramo_id=datos.get("tramo_id"), desde=datos.get("desde"),
+                                          hasta=datos.get("hasta"), motivo_codigo=datos["motivo_codigo"], motivo_detalle=datos.get("motivo_detalle") or ""),
+                        status=status.HTTP_201_CREATED)
+
+
+class ExportacionesView(VistaAuditoria):
+    def get(self, request):
+        principal = self.exigir(request, P_EXPORT)
+        return Response({"exportaciones": exportar.listar(), "motivos": exportar.motivos(),
+                         "autorizacion_vigente": self.autorizacion.tiene_escalada(principal, P_EXPORT)})
+
+
+class DescargarExportacionView(VistaAuditoria):
+    def get(self, request, pk: str):
+        self.exigir(request, P_EXPORT)
+        ruta, _fila = exportar.archivo_de(pk)
+        respuesta = FileResponse(ruta.open("rb"), content_type="application/x-ndjson", as_attachment=True, filename=ruta.name)
+        return respuesta
 
 
 class TecnicoAccesosView(VistaAuditoria):
