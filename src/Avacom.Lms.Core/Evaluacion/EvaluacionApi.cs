@@ -62,6 +62,9 @@ public sealed class EvaluacionApi(HttpClient http, Uri baseUri) : ClienteJson(ht
 
     // ============================================================================================ tableta del alumno
 
+    public Task<EstudiantesDeExamen?> EstudiantesAsync(CancellationToken ct = default) =>
+        ObtenerAsync<EstudiantesDeExamen>(Ruta("estudiantes/"), ct);
+
     public Task<MisEvaluaciones?> MisAsync(string dispositivo, string? alumnoId = null, bool todas = false, CancellationToken ct = default) =>
         ObtenerAsync<MisEvaluaciones>(Ruta("mias/", ("dispositivo", dispositivo), ("alumno_id", alumnoId), ("todas", todas ? "1" : null)), ct);
 

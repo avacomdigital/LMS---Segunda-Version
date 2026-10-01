@@ -4,7 +4,7 @@
     "curso_rotulo": "Estados de la materia y sus cambios",
     "duracion_seg": 900,
     "estado": "activa",
-    "id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+    "id": "18beb971-9fa0-4567-b5e3-2a4bda89938e",
     "intentos_permitidos": 1,
     "intentos_usados": 0,
     "limite_en": null,
@@ -27,7 +27,7 @@
   "dispositivo": {
     "alcanza": true,
     "capacidad": "supervisado",
-    "id": "252694d2-18a2-4328-9309-21047723eed2",
+    "id": "f6ac0bc8-18d2-457f-bac8-fea33c7d2ec5",
     "nivel_exigido": "supervisado"
   },
   "mi_intento": null,

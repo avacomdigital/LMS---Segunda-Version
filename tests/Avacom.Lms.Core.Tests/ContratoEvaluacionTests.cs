@@ -166,6 +166,16 @@ public sealed class ContratoEvaluacionTests
     }
 
     [Fact]
+    public void QuienEres_ListaLosGruposConEvaluacionYSusAlumnos()
+    {
+        var e = Cargar<EstudiantesDeExamen>("estudiantes");
+        Assert.True(e.Disponible);
+        var grupo = Assert.Single(e.Grupos);
+        Assert.Equal("Octavo A", grupo.Nombre);
+        Assert.Equal("Juan P.", Assert.Single(grupo.Alumnos).Rotulo);
+    }
+
+    [Fact]
     public void AsignacionYLista()
     {
         var a = Cargar<AsignacionDeExamen>("asignacion");

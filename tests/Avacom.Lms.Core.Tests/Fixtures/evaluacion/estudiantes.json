@@ -1,0 +1,17 @@
+{
+  "disponible": true,
+  "grupos": [
+    {
+      "alumnos": [
+        {
+          "id": "08337623-9bb9-46d4-afc8-a069cc15170b",
+          "rotulo": "Juan P."
+        }
+      ],
+      "id": "1c46736a-5187-469d-a576-90efcf8b0e41",
+      "nombre": "Octavo A"
+    }
+  ],
+  "motivo": "",
+  "servidor_en": 1790000000000
+}

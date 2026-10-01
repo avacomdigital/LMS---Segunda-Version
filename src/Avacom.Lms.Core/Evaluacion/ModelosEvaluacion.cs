@@ -365,6 +365,16 @@ public sealed record MisEvaluaciones(
     public static readonly MisEvaluaciones Vacio = new([], []);
 }
 
+/// <summary>
+/// El «¿Quién eres?» de la evaluación (D-19): los alumnos de los grupos con una evaluación programada o abierta, entre los que la persona se elige. Es lo mismo que Modo
+/// Estudio: el LMS es offline y no hay verificación central. Con sesión de usuario no hace falta (el nodo sabe quién es por su pase).
+/// </summary>
+public sealed record EstudiantesDeExamen(
+    [property: JsonPropertyName("disponible")] bool Disponible,
+    [property: JsonPropertyName("motivo")] string? Motivo,
+    [property: JsonPropertyName("grupos")] IReadOnlyList<GrupoParaElegir> Grupos,
+    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0);
+
 public sealed record DatosDeLaAntesala(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("titulo")] string Titulo,

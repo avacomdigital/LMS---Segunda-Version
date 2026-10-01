@@ -5,7 +5,7 @@
     "estado": "activa",
     "gracia_ms": 900000,
     "grupo_rotulo": "Octavo A",
-    "id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+    "id": "18beb971-9fa0-4567-b5e3-2a4bda89938e",
     "intentos_permitidos": 1,
     "liberados_en": null,
     "limite_en": null,
@@ -22,7 +22,7 @@
   "filas": [
     {
       "admision": null,
-      "alumno_id": "0d0cff26-db0e-47be-b44d-4d6123617c33",
+      "alumno_id": "08337623-9bb9-46d4-afc8-a069cc15170b",
       "anulado_por": null,
       "bloqueo": {
         "resultado": "aplicado"
@@ -30,7 +30,7 @@
       "dispositivo": {
         "alcanza": true,
         "capacidad": "supervisado",
-        "id": "252694d2-18a2-4328-9309-21047723eed2",
+        "id": "f6ac0bc8-18d2-457f-bac8-fea33c7d2ec5",
         "nombre": "Tableta de Juan"
       },
       "envio_tardio": "",
@@ -47,7 +47,7 @@
           "tipo": "salida_de_app"
         }
       },
-      "intento_id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+      "intento_id": "d7ad1e9a-f341-452c-95d1-608d63877ada",
       "nivel_efectivo": "supervisado",
       "numero": 1,
       "origen_entrega": "",

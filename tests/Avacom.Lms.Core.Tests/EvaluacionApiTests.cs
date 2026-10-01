@@ -44,6 +44,15 @@ public sealed class EvaluacionApiTests : IDisposable
     // ---------------------------------------------------------------------------------------- la tableta
 
     [Fact]
+    public async Task Estudiantes_EsUnGetSinParametros_ElQuienEresDeLaEvaluacion()
+    {
+        var (api, capturas) = Api(HttpStatusCode.OK, """{"disponible":true,"motivo":"","grupos":[{"id":"g-1","nombre":"Octavo A","alumnos":[{"id":"a-1","rotulo":"Ana"}]}]}""");
+        var r = await api.EstudiantesAsync();
+        Assert.Equal("Ana", r!.Grupos.Single().Alumnos.Single().Rotulo);
+        Assert.Equal((HttpMethod.Get, Base + "estudiantes/"), (capturas.Single().Metodo, capturas.Single().Url));
+    }
+
+    [Fact]
     public async Task Mias_EsUnGetConElAparatoYLaOpcionTodas_SinCamposVacios()
     {
         var (api, capturas) = Api(HttpStatusCode.OK, """{"pendientes":[],"recientes":[],"servidor_en":1}""");

@@ -8,7 +8,7 @@
       "texto": "Lee con calma. El tiempo disponible aparece arriba de la pantalla."
     }
   ],
-  "intento_id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+  "intento_id": "d7ad1e9a-f341-452c-95d1-608d63877ada",
   "navegacion_atras": true,
   "pregunta_actual": "l3-q1",
   "preguntas": [
@@ -29,6 +29,21 @@
       "medios": [],
       "nivel_cognitivo": null,
       "opciones": [
+        {
+          "media_ref": null,
+          "opcion_ref": "a",
+          "texto": "Sólido",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Sólido"
+            }
+          ],
+          "url": null
+        },
         {
           "media_ref": null,
           "opcion_ref": "c",
@@ -55,21 +70,6 @@
               "matematica": false,
               "negrita": false,
               "texto": "Líquido"
-            }
-          ],
-          "url": null
-        },
-        {
-          "media_ref": null,
-          "opcion_ref": "a",
-          "texto": "Sólido",
-          "texto_alternativo": null,
-          "tramos": [
-            {
-              "cursiva": false,
-              "matematica": false,
-              "negrita": false,
-              "texto": "Sólido"
             }
           ],
           "url": null
@@ -282,21 +282,6 @@
       "opciones": [
         {
           "media_ref": null,
-          "opcion_ref": "d",
-          "texto": "Sal",
-          "texto_alternativo": null,
-          "tramos": [
-            {
-              "cursiva": false,
-              "matematica": false,
-              "negrita": false,
-              "texto": "Sal"
-            }
-          ],
-          "url": null
-        },
-        {
-          "media_ref": null,
           "opcion_ref": "c",
           "texto": "Vapor de agua",
           "texto_alternativo": null,
@@ -321,6 +306,21 @@
               "matematica": false,
               "negrita": false,
               "texto": "Aceite de cocina"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "d",
+          "texto": "Sal",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Sal"
             }
           ],
           "url": null
@@ -478,15 +478,15 @@
       "derecha": [
         {
           "media_ref": null,
-          "ref": "r-evaporation",
-          "texto": "Evaporación",
+          "ref": "r-condensation",
+          "texto": "Condensación",
           "texto_alternativo": null,
           "tramos": [
             {
               "cursiva": false,
               "matematica": false,
               "negrita": false,
-              "texto": "Evaporación"
+              "texto": "Condensación"
             }
           ],
           "url": null
@@ -523,15 +523,15 @@
         },
         {
           "media_ref": null,
-          "ref": "r-condensation",
-          "texto": "Condensación",
+          "ref": "r-evaporation",
+          "texto": "Evaporación",
           "texto_alternativo": null,
           "tramos": [
             {
               "cursiva": false,
               "matematica": false,
               "negrita": false,
-              "texto": "Condensación"
+              "texto": "Evaporación"
             }
           ],
           "url": null
@@ -641,15 +641,15 @@
       "elementos": [
         {
           "media_ref": null,
-          "ref": "y-liquid",
-          "texto": "Agua líquida",
+          "ref": "y-gas",
+          "texto": "Vapor",
           "texto_alternativo": null,
           "tramos": [
             {
               "cursiva": false,
               "matematica": false,
               "negrita": false,
-              "texto": "Agua líquida"
+              "texto": "Vapor"
             }
           ],
           "url": null
@@ -671,15 +671,15 @@
         },
         {
           "media_ref": null,
-          "ref": "y-gas",
-          "texto": "Vapor",
+          "ref": "y-liquid",
+          "texto": "Agua líquida",
           "texto_alternativo": null,
           "tramos": [
             {
               "cursiva": false,
               "matematica": false,
               "negrita": false,
-              "texto": "Vapor"
+              "texto": "Agua líquida"
             }
           ],
           "url": null

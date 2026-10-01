@@ -1,7 +1,7 @@
 {
   "admision": {
     "estado": "en_espera",
-    "id": "560a221c-7138-497e-aee5-3f45d8c022ab",
+    "id": "cdf5b016-faae-428c-87b0-7ebfae9247bd",
     "motivo": "",
     "nivel_admitido": "",
     "nivel_alcanzado": "supervisado",
@@ -18,7 +18,7 @@
   },
   "intento": {
     "estado": "no_iniciado",
-    "id": "a8b92b25-f595-48ef-a8a9-463590caf162",
+    "id": "4e2a9272-4f88-4147-bfc4-01dddc594958",
     "numero": 1
   },
   "mensaje": {

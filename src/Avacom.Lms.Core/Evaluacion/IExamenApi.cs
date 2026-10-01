@@ -28,6 +28,9 @@ public interface IExamenAlumnoApi
     string? UltimoMotivo { get; }
     ErrorAula? UltimoError { get; }
 
+    /// <summary>El «¿Quién eres?» sin sesión: los alumnos de los grupos con una evaluación abierta. Sin conexión devuelve null.</summary>
+    Task<EstudiantesDeExamen?> EstudiantesAsync(CancellationToken ct = default);
+
     /// <summary>Las evaluaciones que le alcanzan al alumno (programadas, abiertas y, con <paramref name="todas"/>, las cerradas de la última semana en que tiene intento).</summary>
     Task<MisEvaluaciones?> MisAsync(string dispositivo, string? alumnoId = null, bool todas = false, CancellationToken ct = default);
 

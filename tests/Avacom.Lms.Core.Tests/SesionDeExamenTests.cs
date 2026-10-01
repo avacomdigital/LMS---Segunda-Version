@@ -51,6 +51,8 @@ internal sealed class ApiAlumnoFalsa(List<string> orden) : IExamenAlumnoApi
         return false;
     }
 
+    public Task<EstudiantesDeExamen?> EstudiantesAsync(CancellationToken ct = default) => Task.FromResult<EstudiantesDeExamen?>(null);
+
     public Task<MisEvaluaciones?> MisAsync(string dispositivo, string? alumnoId = null, bool todas = false, CancellationToken ct = default) =>
         Task.FromResult(Falla("mias") ? null : MisEvaluaciones.Vacio);
 
