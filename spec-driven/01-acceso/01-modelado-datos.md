@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Módulo | `acceso` · **MOD-001 · Identity & Access** del Documento Maestro (DOM-001 · Identidad y Organización) |
-| Estado | Especificado e implementado en `backend/acceso/`; alineado con el Maestro según [04 · Lineamientos](04-Lineamientos-Al-Documento-Maestro.md) |
+| Estado | Especificado e implementado en `backend/acceso/`; alineado con el Maestro según [04 · Lineamientos](04-Lineamientos-Al-Documento-Maestro.md). Revisión 2026-10-01: registro de estudiantes y grupos desde OPS ([§3.28](#328--registro-de-estudiantes-y-grupos-desde-ops-pantalla-grupos)); sin tablas nuevas |
 | Prefijo de tablas | `m01_` (CV-01) · 18 tablas |
 | Plataforma | Python 3.12 · Django 5.2.3 · DRF 3.16.1 · SQLite · `argon2-cffi` · `cryptography` · `PyJWT` |
 | Cliente | .NET MAUI (AVACOM OPS Master en Windows, AVACOM Student en Windows/Android), sin internet, sin teclado en el nodo principal |
@@ -381,7 +381,7 @@ Ninguna relación **1:1 pura y obligatoria** existe en el módulo: hasta `usuari
 | `m01_rol_permiso` | `rol` ↔ `permiso` | `alcance`: el mismo permiso puede concederse a un rol con techo `ASSIGNED_GROUPS` y a otro con `ORGANIZATION`. Sin este atributo, el alcance tendría que vivir en `permiso` (uno solo para todos los roles) o en `rol` (uno solo para todos los permisos); ninguna de las dos es correcta |
 | `m01_usuario_rol` | `usuario` ↔ `rol` | `alcance_tipo`, `alcance_id`, `desde`, `hasta`, `asignado_por`, `revocado_en`. La pareja (usuario, rol) por sí sola ni siquiera es única: la misma persona puede tener el rol TEACHER dos veces, con dos alcances distintos (dos grupos) y dos vigencias distintas. La unicidad real es condicional — `UNIQUE(usuario, rol, alcance_tipo, alcance_id) WHERE revocado_en IS NULL` — por eso la tabla necesita su propia PK sustituta en vez de una PK compuesta |
 | `m01_usuario_permiso` | `usuario` ↔ `permiso` (escalada) | `alcance`, `otorgado_por`, `motivo`, `vigente_desde`, `vigente_hasta`, `revocado_en`. Mismo razonamiento que la anterior, con un atributo que no existe en `usuario_rol`: `motivo`, obligatorio porque BR-101 exige poder explicar por qué alguien recibió un permiso que su rol no le da |
-| `m01_miembro_grupo` | `grupo` ↔ `usuario` | `papel` (`ESTUDIANTE`/`DOCENTE`), `desde`, `hasta`. Aquí la unicidad **no** está filtrada por vigencia (`UNIQUE(grupo, usuario, papel)` a secas): la membresía se trata como un único hecho con intervalo abierto/cerrado que se reabre al reingresar, no como una bitácora de altas y bajas. Es una simplificación deliberada frente a `usuario_rol`/`usuario_permiso`: pertenecer a un grupo no necesita el mismo rastro de auditoría que un permiso o un rol con alcance de seguridad |
+| `m01_miembro_grupo` | `grupo` ↔ `usuario` | `papel` (`ESTUDIANTE`/`DOCENTE`), `desde`, `hasta`. Aquí la unicidad **no** está filtrada por vigencia (`UNIQUE(grupo, usuario, papel)` a secas): la membresía se trata como un único hecho con intervalo abierto/cerrado que se reabre al reingresar (`AgregarMiembro` lo hace así desde el 2026-10-01: antes insertaba otra fila y el `UNIQUE` daba 500), no como una bitácora de altas y bajas. Es una simplificación deliberada frente a `usuario_rol`/`usuario_permiso`: pertenecer a un grupo no necesita el mismo rastro de auditoría que un permiso o un rol con alcance de seguridad |
 
 Las cuatro son «tablas puente» en sentido estricto: existen exclusivamente porque la relación en sí misma **tiene información** que no pertenece a ninguna de las dos entidades que conecta. Ninguna es un simple cruce de identificadores.
 
@@ -467,6 +467,44 @@ En síntesis: `acceso` nunca es espejo de otro sistema — es cabecera de linaje
 
 El módulo tiene que contestar, sin red y en milisegundos, tres preguntas que se repiten miles de veces al día en un aula: *¿quién es*, *qué puede hacer* y *ya pasó esto antes*. El diseño relacional resuelve cada una con el mecanismo mínimo suficiente: la identidad se parte en cuenta + persona cifrada + identificadores externos para poder mostrar, buscar y proteger a la vez (§3.20, §3.22); la autorización se resuelve con cuatro tablas (`rol`, `permiso`, `rol_permiso`, `usuario_rol`) en vez de una tabla de permisos por contexto que crecería sin límite (§2.2) — el alcance vive como **atributo de la relación**, no como fila nueva por combinación posible; y lo que ya ocurrió (intentos, eventos) se guarda append-only con índices pensados para las dos preguntas que de verdad se hacen sobre esa evidencia: «¿debo bloquear?» y «¿qué falta por publicar?». La 3FN no es un ejercicio académico aquí: es lo que permite que renombrar un colegio, rotar una contraseña o revocar un rol sea escribir **una fila**, nunca corregir el mismo dato en varios lugares — una propiedad indispensable en un nodo que nadie va a estar reparando a mano.
 
+### 3.28 · Registro de estudiantes y grupos desde OPS (pantalla «Grupos»)
+
+**Qué se pidió (2026-10-01).** Poder registrar estudiantes y asociarlos a un grupo desde OPS —el hexágono «Perfil» pasa a llamarse **Grupos**— para tener alumnos reales con los que probar el modo de estudio (repaso).
+
+**Decisión: el modelo no cambia.** Registrar a un estudiante en un grupo ya era posible con las tablas existentes, y MOD-008 ya lee de ellas (`modo_estudio/infraestructura/identidad.py`: `m01_grupo`, `m01_miembro_grupo`, `m01_usuario`, sólo lectura). Lo que faltaba no era una tabla sino una **vía usable desde la pantalla** y dos arreglos de comportamiento. Qué toca cada operación:
+
+| Operación de la pantalla | Tablas que escribe | Caso de uso (reutilizado) |
+|---|---|---|
+| Crear un grupo | `m01_grupo` (+ `m01_evento_salida`, `m19_auditoria`) | `CrearGrupo` |
+| Registrar un estudiante en un grupo | `m01_usuario`, `m01_persona` (cifrada), `m01_identificador_usuario`, `m01_credencial`, `m01_usuario_rol`, `m01_miembro_grupo` — **una sola transacción** | `CrearUsuario` (rol `STUDENT`, `grupo_id`) |
+| Agregar a un estudiante que ya existe a otro grupo, o volver a uno | `m01_miembro_grupo` | `AgregarMiembro` |
+| Quitar del grupo | `m01_miembro_grupo.hasta` (la persona **no** se borra, CV-05) | `RetirarMiembro` |
+| «Preparar aula de prueba» (nodo vacío) | `m01_organizacion` y lo que crea el día cero | `InstalarNodo` con valores de prueba |
+
+**Qué se consideró y se descartó** (para no volver a proponerlo sin motivo nuevo):
+
+| Idea | Por qué no |
+|---|---|
+| Columna `grado` en `m01_grupo` o en el estudiante | El grado ya es el grupo («Sexto A»): `nombre` y `nivel_clave` lo dicen. Un dato más habría que mantenerlo igual en dos sitios (3FN) |
+| «Grupo principal» del estudiante | Pertenecer a varios grupos es legítimo (`UNIQUE(grupo, usuario, papel)`); la pantalla muestra todos y el modo de estudio los usa todos |
+| Que quien crea el grupo quede como `DOCENTE` | Sólo la administración tiene `identity.group.manage` (alcance `ORGANIZATION`) y la administración no «da» el grupo; el docente se asigna con `…/miembros/` (`papel: DOCENTE`). Con el nodo en prototipo, `GruposDelDocente` ya devuelve todos los grupos |
+| Tabla propia de «registro» o «matrícula» | Sería un segundo dueño del mismo hecho: la pertenencia **es** la matrícula |
+
+**Lo que sí cambió (comportamiento, no esquema):**
+
+1. **Reingreso a un grupo.** La pertenencia es un hecho con intervalo abierto o cerrado (§3.21). `AgregarMiembro` insertaba una fila nueva aunque la persona ya hubiera estado: el `UNIQUE(grupo, usuario, papel)` respondía 500. Ahora **reabre** la fila (`desde = ahora`, `hasta = NULL`). Prueba de regresión: `test_quien_salio_del_grupo_puede_volver`.
+2. **Padrón en una API pensada para una pantalla** (`/api/acceso/padron/…`, [02 · Endpoints §6 bis](02-Endpoints.md)): `acceso/aplicacion/padron.py` sólo compone los casos de uso anteriores. Una lectura trae grupos, estudiantes y estudiantes sin grupo.
+
+**Quién actúa.** Con sesión, quien firma el JWT y con **sus** permisos: un docente sólo registra estudiantes en sus grupos (`403` en uno ajeno) y no crea grupos. Sin sesión (Q-34 abierta, prototipo) actúa la primera cuenta `ADMIN` activa del nodo, así que las reglas, la auditoría y los eventos son los de siempre; con `AVACOM_LMS_EXIGIR_SESION=1` esas rutas devuelven 401 a un anónimo.
+
+**Lo que recibe el estudiante.**
+- Sin documento, el nodo emite una `CLAVE_INSTALACION` (`<ORG>-<6 dígitos>`, DEC-049). Con documento, queda como `CODIGO_ESTUDIANTIL` y con él se entra (`test_registrar_con_documento_y_pin_propios`).
+- El PIN lo genera el reglamento del perfil y se devuelve **una vez** (`secreto_inicial`); la cuenta nace con `debe_cambiar` (la primera entrada obliga a cambiarlo).
+- Un documento repetido es `400 identificador_duplicado`: no duplica a la persona.
+- En el modo de estudio el estudiante sólo **elige su nombre** en la tableta (MOD-008, D-15): no escribe clave ni PIN.
+
+**Límite.** Sin organización no hay grupos ni estudiantes (`409 no_instalado`). El instalador la crea; para probar en desarrollo, la pantalla ofrece «Preparar aula de prueba» (`AULA-PRUEBA`, administración sin clave utilizable) o se puede usar `manage.py acceso_instalar`.
+
 ---
 
 ## 4 · Protección de la información
@@ -549,7 +587,7 @@ Regla verificable: una prueba recorre `dominio/` y `aplicacion/` y falla si alg�
 ## 7 · Relación con el expediente y con los demás módulos del Maestro
 
 - `m01_usuario.id` **es** el `persona_id` del expediente. `vinculado_a` permite reasignar lo que hizo una cuenta provisional.
-- Grupos (MOD-002) viven hoy dentro de `acceso`; cuando exista ese módulo, se replicarán desde su dueño. Los dispositivos ya tienen dueño desde el 2026-09-28 (MOD-009, `device_manager`): este módulo los lee por su puerto `RepositorioDispositivos`, que llama a `device_manager/servicios.py` dentro de la transacción del login.
+- Grupos (MOD-002) viven hoy dentro de `acceso` y se administran desde la pantalla **Grupos** de OPS (§3.28); cuando exista ese módulo, se replicarán desde su dueño. Los dispositivos ya tienen dueño desde el 2026-09-28 (MOD-009, `device_manager`): este módulo los lee por su puerto `RepositorioDispositivos`, que llama a `device_manager/servicios.py` dentro de la transacción del login.
 - La orden de limpiar el contenedor de la tableta (MOD-009) se deriva de `identidad.sesion.cerrada.v1` con motivo `otro_dispositivo` o `dispositivo_compartido`.
 - La exigencia de sesión en el expediente sigue preparada y no activada (`AVACOM_LMS_EXIGIR_SESION=0`, Q-34).
 

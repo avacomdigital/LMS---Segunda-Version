@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Prefijo | `/api/acceso/` (incluido desde `avacom_lms/urls.py`) · 32 rutas |
+| Prefijo | `/api/acceso/` (incluido desde `avacom_lms/urls.py`) · 38 rutas (6 de ellas, `padron/`, nacieron el 2026-10-01) |
 | Estilo | `APIView` de DRF, JSON, sin `ModelSerializer` hacia el dominio: las vistas traducen HTTP ↔ casos de uso |
 | Autenticación | `Authorization: Bearer <JWT>`; la clase `AutenticacionJwt` resuelve la sesión (única, con rol efectivo, sujeta a inactividad) y construye un `Principal` |
 | Autorización | Cada vista declara `permiso` (`identity.*`) y calcula el `objetivo`; la decisión la toma `PoliticaAutorizacion` (dominio), nunca la vista |
@@ -252,6 +252,21 @@ Permiso `identity.user.unlock`. → `200 { "estado": "ACTIVO", "bloqueado_hasta"
 
 ---
 
+## 6 bis · Padrón del aula (pantalla «Grupos» de OPS)
+
+Estudiantes y grupos en pocas llamadas, pensadas para una pantalla táctil. No hay modelo propio: `acceso/aplicacion/padron.py` compone `CrearGrupo`, `CrearUsuario`, `AgregarMiembro` y `RetirarMiembro` ([01 · Modelado §3.28](01-modelado-datos.md)). **Con sesión** actúa quien firma el JWT, con sus permisos; **sin sesión** (Q-34 abierta) actúa la primera cuenta `ADMIN` activa; con `AVACOM_LMS_EXIGIR_SESION=1` un anónimo recibe 401.
+
+| Ruta | Verbo | Cuerpo / respuesta |
+|---|---|---|
+| `/api/acceso/padron/` | GET | `{ instalado, organizacion{codigo,nombre}, grupos[{id,codigo,nombre,periodo,nivel_clave,activo,estudiantes[{id,alias,estado,provisional}],docentes}], sin_grupo[{id,alias}] }`. Nodo vacío: `{ instalado:false, … }` con **200** (no es un error). Con sesión, sólo los grupos que el alcance permite |
+| `/api/acceso/padron/preparar/` | POST | Sin cuerpo. Crea la organización `AULA-PRUEBA` (día cero de prueba). `201 { organizacion }`; `409` si el nodo ya está instalado |
+| `/api/acceso/padron/grupos/` | POST | `{ "nombre", "codigo"?, "periodo"?, "nivel_clave"? }`. El código sale del nombre («Sexto A» → `SEXTO-A`) y el periodo es el año si no se dan. `201`; `409` si ya existe ese código en ese periodo; `403` si el rol no tiene `identity.group.manage` |
+| `/api/acceso/padron/estudiantes/` | POST | `{ "nombres", "apellidos"?, "documento"?, "pin"?, "grupo_id" }` → `201 { id, alias, grupo_id, identificador, secreto_inicial? }`. `secreto_inicial` (PIN generado) sale **una sola vez**. `400 identificador_duplicado`; `404` grupo inexistente; `403` grupo ajeno |
+| `/api/acceso/padron/grupos/{id}/estudiantes/` | POST | `{ "usuario_id" }`: agrega a un estudiante existente (o lo reincorpora, reabriendo su pertenencia). `201`, o `200` con `ya_estaba: true` |
+| `/api/acceso/padron/grupos/{id}/estudiantes/{usuario_id}/` | DELETE | Lo saca del grupo (`hasta = ahora`); la persona no se borra. `204` |
+
+---
+
 ## 7 · Integración con el resto del backend
 
 | Elemento | Cambio |
@@ -303,4 +318,5 @@ Permiso `identity.user.unlock`. → `200 { "estado": "ACTIVO", "bloqueado_hasta"
 | `test_api_sesiones` | Instalación, login, bloqueo, **sesión única**, **dispositivo compartido**, **inactividad**, **reinicio**, revocación total |
 | `test_api_usuarios` | Creación por alcance, **importación**, **admisión nominal**, credenciales, **roles con alcance**, **escaladas**, grupos, políticas por nivel, baja irreversible, retiro de identificadores |
 | `test_api_temporal` | Opciones A y B del pase de examen |
+| `test_api_padron` | Padrón de OPS: nodo vacío, aula de prueba, grupo con código y periodo por defecto, estudiante con y sin documento/PIN, documento repetido, matricular y retirar, **reingreso a un grupo**, visible para el modo de estudio, anónimo rechazado con sesión obligatoria, y permisos de docente (grupo propio sí, ajeno y crear grupo no) |
 | `test_outbox` | Outbox transaccional y nomenclatura `identidad.*.v1` |
