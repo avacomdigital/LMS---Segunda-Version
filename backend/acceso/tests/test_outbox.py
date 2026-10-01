@@ -32,10 +32,10 @@ class OutboxTests(BaseAcceso):
         with self.assertRaises(RuntimeError):
             with fabrica() as uow:
                 uow.outbox.publicar(EventoSalida("prueba", "x", "acceso.prueba", {}, 1))
-                uow.auditoria.registrar("x", "acceso.prueba")
+                uow.auditoria.registrar("x", "prueba.transaccion")
                 raise RuntimeError("algo falló después de escribir")
         self.assertEqual(m.EventoSalida.objects.count(), antes)
-        self.assertFalse(Auditoria.objects.filter(accion="acceso.prueba").exists())
+        self.assertFalse(Auditoria.objects.filter(accion="prueba.transaccion").exists())
 
     def test_una_creacion_rechazada_no_deja_rastro(self):
         antes = (m.Usuario.objects.count(), m.EventoSalida.objects.count(), m.Credencial.objects.count())

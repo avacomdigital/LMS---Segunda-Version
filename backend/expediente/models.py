@@ -215,7 +215,10 @@ class DisponibilidadObservada(models.Model):
 
 
 class Auditoria(models.Model):
-    """Append-only. No hay ruta ni operación que edite o borre auditoría."""
+    """Vista de lectura sobre `m19_bitacora` (MOD-019). Desde 2026-09-30 la bitácora vive en la app `audit`
+    (`m19_bitacora`, encadenada e inmutable); `m19_auditoria` es una VISTA con las columnas de siempre para que
+    quien consultaba aquí siga leyendo lo mismo. Ningún módulo escribe por este modelo: escriben por su puerto de
+    auditoría, que llega a `audit.servicios.anexar`."""
 
     actor_id = models.CharField(max_length=64, blank=True, default="")
     accion = models.CharField(max_length=64)
@@ -228,11 +231,10 @@ class Auditoria(models.Model):
     class Meta:
         db_table = "m19_auditoria"
         ordering = ["-momento", "-id"]
+        managed = False
 
     def save(self, *args, **kwargs):
-        if self.pk is not None:
-            raise ValueError("La auditoría es de sólo escritura: no se edita una fila existente.")
-        super().save(*args, **kwargs)
+        raise ValueError("La auditoría se escribe por audit.servicios.anexar; m19_auditoria es una vista de lectura.")
 
     def delete(self, *args, **kwargs):
         raise ValueError("La auditoría es de sólo escritura: no se borra.")

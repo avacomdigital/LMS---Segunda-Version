@@ -48,8 +48,10 @@ class Outbox(Protocol):
 
 
 class Auditoria(Protocol):
+    """MOD-019: el asiento queda en la misma transacción que el hecho. `extra` admite motivo, resultado, dispositivo_id y evento_id."""
+
     def registrar(self, actor: str, accion: str, tabla: str = "", objeto_id: str = "",
-                  anterior: dict | None = None, nuevo: dict | None = None) -> None: ...
+                  anterior: dict | None = None, nuevo: dict | None = None, **extra) -> None: ...
 
 
 # ------------------------------------------------------------------ identidad (MOD-001 / MOD-002)

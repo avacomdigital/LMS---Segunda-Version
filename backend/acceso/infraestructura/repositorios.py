@@ -499,9 +499,8 @@ class OutboxDjango:
 
 
 class AuditoriaExpediente:
-    """Escribe en la tabla append-only `m19_auditoria` que ya expone /api/auditoria/."""
+    """Anexa a la bitácora encadenada de MOD-019 (`m19_bitacora`, app `audit`): misma transacción que el hecho."""
 
-    def registrar(self, actor_id: str, accion: str, tabla: str = "", objeto_id: str = "", nuevo=None) -> None:
-        from expediente.models import Auditoria  # frontera entre módulos: sólo en el adaptador
-        Auditoria.objects.create(actor_id=actor_id or "", accion=accion, objeto_tabla=tabla, objeto_id=str(objeto_id or ""),
-                                 valor_anterior=None, valor_nuevo=nuevo)
+    def registrar(self, actor_id: str, accion: str, tabla: str = "", objeto_id: str = "", nuevo=None, anterior=None, **extra) -> None:
+        from audit import servicios as auditoria  # frontera entre módulos: sólo en el adaptador
+        auditoria.anexar(actor_id or "", accion, tabla, str(objeto_id or ""), anterior, nuevo, **extra)

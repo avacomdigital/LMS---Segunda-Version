@@ -40,6 +40,35 @@ class ResultadoConCaso(unittest.TextTestResult):
 
 
 class CorredorDePruebas(DiscoverRunner):
+    """Además: `TransactionTestCase` vacía las tablas con DELETE, que los triggers de la bitácora abortan. Aquí, y
+    sólo aquí (pruebas), el vaciado quita los triggers antes y los repone después; la base de producción no pasa por esto."""
+
+    def setup_test_environment(self, **kwargs):
+        super().setup_test_environment(**kwargs)
+        from django.db.backends.base.operations import BaseDatabaseOperations
+
+        from .infraestructura import triggers
+
+        original = BaseDatabaseOperations.execute_sql_flush
+        if getattr(original, "_avacom_envuelto", False):
+            return
+
+        def con_triggers(self, sql_list):
+            try:
+                triggers.quitar(self.connection)
+            except Exception:   # noqa: BLE001 — sin tabla aún
+                pass
+            try:
+                return original(self, sql_list)
+            finally:
+                try:
+                    triggers.crear(self.connection)
+                except Exception:   # noqa: BLE001
+                    pass
+
+        con_triggers._avacom_envuelto = True
+        BaseDatabaseOperations.execute_sql_flush = con_triggers
+
     def get_resultclass(self):
         base = super().get_resultclass()
         if base is None:

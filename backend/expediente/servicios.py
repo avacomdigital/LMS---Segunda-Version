@@ -13,7 +13,6 @@ from django.db import transaction
 
 from .models import (
     AperturaMaterial,
-    Auditoria,
     DisponibilidadObservada,
     Inscripcion,
     Intento,
@@ -33,15 +32,10 @@ def _dec(valor) -> Decimal:
     return Decimal(str(valor)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def auditar(actor: str, accion: str, tabla: str = "", objeto_id: str = "", anterior=None, nuevo=None) -> None:
-    Auditoria.objects.create(
-        actor_id=actor or "",
-        accion=accion,
-        objeto_tabla=tabla,
-        objeto_id=str(objeto_id or ""),
-        valor_anterior=anterior,
-        valor_nuevo=nuevo,
-    )
+def auditar(actor: str, accion: str, tabla: str = "", objeto_id: str = "", anterior=None, nuevo=None, **extra) -> None:
+    """Anexa a la bitácora encadenada de MOD-019 (`m19_bitacora`). `extra`: motivo, resultado, dispositivo_id, evento_id."""
+    from audit import servicios as auditoria   # frontera entre módulos: sólo en el adaptador
+    auditoria.anexar(actor or "", accion, tabla, str(objeto_id or ""), anterior, nuevo, **extra)
 
 
 # ------------------------------------------------------------- inscripción

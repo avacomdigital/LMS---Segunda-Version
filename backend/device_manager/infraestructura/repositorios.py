@@ -93,10 +93,12 @@ class OutboxDjango:
 
 
 class AuditoriaExpediente:
-    """m19_auditoria vive en el expediente (MOD-019 aún no tiene módulo propio). Sólo escritura."""
+    """Anexa a la bitácora encadenada de MOD-019 (`m19_bitacora`, app `audit`) dentro de la transacción del caso de uso.
+    El nombre se conserva por compatibilidad con el contenedor."""
 
-    def registrar(self, actor: str, accion: str, tabla: str = "", objeto_id: str = "", anterior=None, nuevo=None) -> None:
-        expediente_servicios.auditar(actor or "sistema", accion, tabla, str(objeto_id or ""), anterior, nuevo)
+    def registrar(self, actor: str, accion: str, tabla: str = "", objeto_id: str = "", anterior=None, nuevo=None, **extra) -> None:
+        from audit import servicios as auditoria   # frontera entre módulos: sólo en el adaptador
+        auditoria.anexar(actor or "sistema", accion, tabla, str(objeto_id or ""), anterior, nuevo, **extra)
 
 
 class OrganizacionesAcceso:

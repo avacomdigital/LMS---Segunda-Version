@@ -239,7 +239,11 @@ class FronteraTests(TestCase):
                 self.assertNotIn("correcta", campo.name, f"{modelo.__name__}.{campo.name}")
 
     def test_la_auditoria_es_de_solo_escritura(self):
-        fila = Auditoria.objects.create(actor_id="a", accion="x")
+        # MOD-019: m19_auditoria es una vista de lectura sobre m19_bitacora; se escribe por audit.servicios.anexar.
+        from audit import servicios as auditoria
+        auditoria.anexar("a", "prueba.expediente")
+        fila = Auditoria.objects.get(accion="prueba.expediente")
+        self.assertEqual(fila.actor_id, "a")
         fila.accion = "y"
         with self.assertRaises(ValueError):
             fila.save()

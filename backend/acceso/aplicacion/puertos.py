@@ -139,7 +139,9 @@ class Outbox(Protocol):
 
 
 class RegistroAuditoria(Protocol):
-    def registrar(self, actor_id: str, accion: str, tabla: str = "", objeto_id: str = "", nuevo=None) -> None: ...
+    """MOD-019: el asiento queda en la misma transacción que el hecho. `extra` admite motivo, resultado, dispositivo_id y evento_id."""
+
+    def registrar(self, actor_id: str, accion: str, tabla: str = "", objeto_id: str = "", nuevo=None, anterior=None, **extra) -> None: ...
 
 
 class UnidadDeTrabajo(Protocol):

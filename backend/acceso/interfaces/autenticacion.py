@@ -27,6 +27,11 @@ class AutenticacionJwt(BaseAuthentication):
             raise exceptions.AuthenticationFailed({"detail": "Token ilegible.", "codigo": "sesion_invalida"})
         except errores.ErrorAcceso as error:
             raise exceptions.AuthenticationFailed({"detail": error.detalle, "codigo": error.codigo})
+        # MOD-019: quien firma la sesión pasa al contexto de la operación ANTES de que corra la vista, para que todo
+        # asiento y toda línea de log que deje el caso de uso lleven actor, rol y aparato sin que nadie los pase a mano.
+        from audit import contexto   # módulo puro, sin modelos
+        contexto.establecer(usuario_id=principal.usuario_id, rol_codigo=principal.rol_codigo, sesion_id=principal.sesion_id,
+                            dispositivo_id=contexto.actual().dispositivo_id or principal.dispositivo_id)
         return principal, cabecera[1]
 
     def authenticate_header(self, request):
