@@ -12,6 +12,11 @@ public partial class DashboardPage : ContentPage
     {
         base.OnAppearing();
         PintarPersona();
+        // MOD-019: el menú de la bitácora sólo para Administrador y Técnico (sin sesión obligatoria, el prototipo lo deja ver; el nodo decide).
+        HistorialTile.IsVisible = Sesion.Usuario is null || Sesion.Usuario.Rol is "ADMIN" or "TECHNICIAN";
+        // 019-01: este equipo se presenta ante el nodo como MASTER y entrega sus logs cada minuto, de mejor esfuerzo.
+        _ = Sesion.RegistrarEquipoAsync();
+        Sesion.EntregadorDeLogs.Iniciar();
         if (Sesion.AvisoAlEntrar is { } aviso)
         {
             Sesion.AvisoAlEntrar = null;
@@ -79,6 +84,9 @@ public partial class DashboardPage : ContentPage
                 break;
             case "Modo de estudio":
                 await Shell.Current.GoToAsync("estudio");
+                break;
+            case "Historial":
+                await Shell.Current.GoToAsync("logs-bitacora");
                 break;
             default:
                 await DisplayAlertAsync(tile.Text, $"El módulo {tile.Text} está representado en este prototipo y listo para conectar su flujo.", "Entendido");

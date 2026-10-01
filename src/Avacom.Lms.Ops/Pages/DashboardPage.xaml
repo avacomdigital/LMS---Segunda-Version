@@ -82,7 +82,8 @@
                 IconGeometry="M230.92,212 C215.69,185.67 192.22,166.78 164.83,157.84 A72,72 0 1 0 91.17,157.84 C63.78,166.78 40.31,185.66 25.08,212 A8,8 0 1 0 38.93,220 C57.77,187.44 91.07,168 128,168 C164.93,168 198.23,187.44 217.07,220 A8,8 0 1 0 230.92,212 Z M72,96 A56,56 0 1 1 128,152 A56.06,56.06 0 0 1 72,96 Z" />
             <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="476,273,146,168" AccentColor="#A62080" Text="Progreso" Tapped="OnModuleTapped"
                 IconGeometry="M232,208 A8,8 0 0 1 224,216 H32 A8,8 0 0 1 24,208 V48 A8,8 0 0 1 40,48 V156.69 L90.34,106.34 A8,8 0 0 1 101.66,106.34 L128,132.69 L180.69,80 H160 A8,8 0 0 1 160,64 H200 A8,8 0 0 1 208,72 V112 A8,8 0 0 1 192,112 V91.31 L133.66,149.66 A8,8 0 0 1 122.34,149.66 L96,123.31 L40,179.31 V200 H224 A8,8 0 0 1 232,208 Z" />
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="634,273,146,168" AccentColor="#52525B" Text="Historial" Tapped="OnModuleTapped"
+            <!-- «Historial» (MOD-019): la bitácora de auditoría y los logs (ruta logs-bitacora). Con sesión sólo lo ven Administrador y Técnico. -->
+            <ui:ProfessorHexTile x:Name="HistorialTile" AbsoluteLayout.LayoutBounds="634,273,146,168" AccentColor="#52525B" Text="Historial" Tapped="OnModuleTapped"
                 IconGeometry="M136,80 V123.47 L172.12,145.14 A8,8 0 0 1 163.88,158.86 L123.88,134.86 A8,8 0 0 1 120,128 V80 A8,8 0 0 1 136,80 Z M128,32 A95.44,95.44 0 0 0 60.08,60.15 C52.81,67.51 46.35,74.59 40,82 V64 A8,8 0 0 0 24,64 V104 A8,8 0 0 0 32,112 H72 A8,8 0 0 0 72,96 H49 C56.15,87.58 63.27,79.65 71.39,71.43 A80,80 0 1 1 73.05,186.18 A8,8 0 1 0 62.05,197.82 A96,96 0 1 0 128,32 Z" />
 
             <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="238,409,146,168" AccentColor="#009C60" Text="Calendario" Tapped="OnModuleTapped"

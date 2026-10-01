@@ -18,5 +18,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("dispositivos", typeof(Pages.DispositivosPage));
         // MOD-008 · Modo Estudio: asignar lecciones a los alumnos y ver quién las completó
         Routing.RegisterRoute("estudio", typeof(Pages.EstudioPage));
+        // MOD-019 · Audit: la bitácora (Administrador) y el estado del equipo con sus errores (Técnico)
+        Routing.RegisterRoute("logs-bitacora", typeof(Pages.BitacoraPage));
     }
 }

@@ -15,6 +15,11 @@ public static class Sesion
     private static IDispositivosApi? _dispositivos;
     private static IEstudioApi? _estudio;
     private static IAccesoApi? _acceso;
+    private static IAuditoriaApi? _auditoria;
+    private static ILogsApi? _logs;
+    private static EntregadorDeLogs? _entregador;
+    private static Uri? _baseAuditoria;
+    private static Uri? _baseLogs;
     private static Uri? _baseAcceso;
     private static Uri? _baseActual;
     private static Uri? _baseAula;
@@ -127,6 +132,66 @@ public static class Sesion
     }
 
     public static string Dispositivo => $"ops-{DeviceInfo.Current.Name}";
+
+    /// <summary>El cliente de <c>/api/auditoria/</c> (MOD-019): la bitácora de sólo lectura, la integridad y las exportaciones. Una instancia por dirección.</summary>
+    public static IAuditoriaApi Auditoria
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_auditoria is null || _baseAuditoria != actual)
+            {
+                _auditoria = new AuditoriaApi(Http, actual);
+                _baseAuditoria = actual;
+            }
+            return _auditoria;
+        }
+    }
+
+    /// <summary>El cliente de <c>/api/logs/</c> (MOD-019): entrega de los avisos de este equipo y lectura de los logs del nodo.</summary>
+    public static ILogsApi Logs
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_logs is null || _baseLogs != actual)
+            {
+                _logs = new LogsApi(Http, actual);
+                _baseLogs = actual;
+            }
+            return _logs;
+        }
+    }
+
+    /// <summary>Sube al nodo, cada minuto y de mejor esfuerzo, los renglones WARNING+ del registro local de OPS (§2.4 de MOD-019).</summary>
+    public static EntregadorDeLogs EntregadorDeLogs => _entregador ??= new EntregadorDeLogs(() => Logs, "ops", () => AppInfo.Current.VersionString);
+
+    /// <summary>
+    /// MOD-019 (019-01): el id con el que el nodo conoce a este equipo (<c>m09_dispositivo</c>, tipo MASTER). Se aprende con el latido al
+    /// entrar al tablero y se guarda en Preferences; desde entonces viaja en <c>X-Avacom-Dispositivo</c> en cada petición y en el WebSocket.
+    /// </summary>
+    public static void PrepararAparato()
+    {
+        AparatoRegistrado.Cargar = () => Preferences.Default.Get<string?>("ops_dispositivo_id", null);
+        AparatoRegistrado.Guardar = id => { if (id is null) Preferences.Default.Remove("ops_dispositivo_id"); else Preferences.Default.Set("ops_dispositivo_id", id); };
+        RegistroLocal.Configurar("ops", AppInfo.Current.VersionString, () => AparatoRegistrado.Id);
+    }
+
+    private static int _registrando;
+
+    /// <summary>Se presenta ante el nodo como equipo MASTER (idempotente, por su huella). Mejor esfuerzo: si el nodo no contesta, se reintenta en el siguiente tablero.</summary>
+    public static async Task RegistrarEquipoAsync()
+    {
+        if (Interlocked.Exchange(ref _registrando, 1) == 1) return;
+        try
+        {
+            using var limite = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var equipo = await Dispositivos.LatidoAsync(Dispositivo, DeviceInfo.Current.Name, "windows", AppInfo.Current.VersionString, limite.Token, tipo: "MASTER");
+            if (equipo is not null) RegistroLocal.Info(Canal.Dispositivo, "equipo.registrado", "Este equipo se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado });
+        }
+        catch (Exception ex) { RegistroLocal.Advertencia(Canal.Comunicacion, "equipo.registro_fallo", "No se pudo presentar el equipo ante el nodo", new { tipo = ex.GetType().Name }); }
+        finally { Volatile.Write(ref _registrando, 0); }
+    }
 
     /// <summary>
     /// La persona que se identificó con MOD-001 (007-10). Vive sólo en memoria: el pase (JWT) no se guarda en disco y

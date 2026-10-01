@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 
 namespace Avacom.Lms.Ops;
@@ -8,6 +8,7 @@ public static class MauiProgram
 	public static MauiApp CreateMauiApp()
 	{
 		Avacom.Lms.Core.Services.RegistroDeFallos.Observar("ops");
+		Sesion.PrepararAparato();   // MOD-019: logs locales con versión y aparato; el id del equipo persiste entre arranques
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()

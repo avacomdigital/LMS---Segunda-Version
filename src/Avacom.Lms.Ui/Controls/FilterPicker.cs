@@ -78,6 +78,15 @@ public class FilterPicker : ContentView
         finally { silencio = false; }
     }
 
+    /// <summary>Deja elegido <paramref name="valor"/> si está entre los poblados (o «todos» si es null), sin avisar: para restaurar un filtro al repintar.</summary>
+    public void Elegir(string? valor)
+    {
+        var indice = valor is null ? -1 : valores.IndexOf(valor);
+        silencio = true;
+        try { lista.SelectedIndex = indice < 0 ? 0 : indice + 1; }
+        finally { silencio = false; }
+    }
+
     /// <summary>Vuelve a «todos». Avisa sólo si se pide.</summary>
     public void Reset(bool notificar = false)
     {
