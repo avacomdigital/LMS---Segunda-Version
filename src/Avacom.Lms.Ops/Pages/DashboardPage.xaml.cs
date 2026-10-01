@@ -82,6 +82,9 @@ public partial class DashboardPage : ContentPage
             case "Dispositivos":
                 await Shell.Current.GoToAsync("dispositivos");
                 break;
+            case "Grupos":
+                await Shell.Current.GoToAsync("grupos");
+                break;
             case "Modo de estudio":
                 await Shell.Current.GoToAsync("estudio");
                 break;
@@ -95,6 +98,7 @@ public partial class DashboardPage : ContentPage
     }
 
     private async void OnAssignmentsClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("asignaturas");
+    private async void OnGruposClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("grupos");
     private async void OnClassTodayClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("clase-hoy");
     /// <summary>Cerrar sesión avisa al nodo (si hay sesión de usuario) y suelta el pase antes de volver al acceso; la clase abierta sigue guardada.</summary>
     private async void OnLogoutClicked(object? sender, EventArgs e)

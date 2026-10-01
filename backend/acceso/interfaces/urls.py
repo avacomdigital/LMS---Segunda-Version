@@ -39,4 +39,11 @@ urlpatterns = [
     path("grupos/<str:pk>/", views.GrupoView.as_view(), name="acceso-grupo"),
     path("grupos/<str:pk>/miembros/", views.MiembrosView.as_view(), name="acceso-miembros"),
     path("grupos/<str:pk>/miembros/<str:usuario_id>/", views.MiembroView.as_view(), name="acceso-miembro"),
+    # padrón del aula (pantalla «Grupos» de OPS): estudiantes y grupos en pocas llamadas
+    path("padron/", views.PadronView.as_view(), name="acceso-padron"),
+    path("padron/preparar/", views.PadronPrepararView.as_view(), name="acceso-padron-preparar"),
+    path("padron/grupos/", views.PadronGruposView.as_view(), name="acceso-padron-grupos"),
+    path("padron/grupos/<str:pk>/estudiantes/", views.PadronMatriculaView.as_view(), name="acceso-padron-matricula"),
+    path("padron/grupos/<str:pk>/estudiantes/<str:usuario_id>/", views.PadronMatriculaView.as_view(), name="acceso-padron-retiro"),
+    path("padron/estudiantes/", views.PadronEstudiantesView.as_view(), name="acceso-padron-estudiantes"),
 ]

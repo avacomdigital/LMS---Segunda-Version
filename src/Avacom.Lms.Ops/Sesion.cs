@@ -14,6 +14,8 @@ public static class Sesion
     private static IBibliotecaDeContenido? _biblioteca;
     private static IAulaApi? _aula;
     private static IDispositivosApi? _dispositivos;
+    private static IPadronApi? _padron;
+    private static Uri? _basePadron;
     private static IEstudioApi? _estudio;
     private static IAccesoApi? _acceso;
     private static IAuditoriaApi? _auditoria;
@@ -94,6 +96,21 @@ public static class Sesion
                 _baseDispositivos = actual;
             }
             return _dispositivos;
+        }
+    }
+
+    /// <summary>El cliente de <c>/api/acceso/padron/</c> (MOD-001): grupos y estudiantes del aula, una instancia por dirección.</summary>
+    public static IPadronApi Padron
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_padron is null || _basePadron != actual)
+            {
+                _padron = new PadronApi(Http, actual);
+                _basePadron = actual;
+            }
+            return _padron;
         }
     }
 

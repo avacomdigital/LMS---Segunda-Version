@@ -11,10 +11,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..aplicacion import casos_uso as cu
+from ..aplicacion import padron as pad
 from ..dominio import errores
 from ..infraestructura.contenedor import servicios
 from . import serializers as s
-from .permisos import SesionRequerida, principal_de
+from .permisos import SesionRequerida, SesionSiSeExige, principal_de
 
 
 def _validar(serializer_cls, datos, parcial: bool = False) -> dict:
@@ -312,4 +313,50 @@ class MiembrosView(VistaAcceso):
 class MiembroView(VistaAcceso):
     def delete(self, request, pk: str, usuario_id: str):
         cu.RetirarMiembro(self.s).ejecutar(request.user, pk, usuario_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ======================================================== padrón del aula (pantalla «Grupos» de OPS)
+
+
+class VistaPadron(VistaAcceso):
+    """Estudiantes y grupos para OPS. Con sesión, quien firma (con sus permisos); sin sesión sólo mientras el nodo no la exija (Q-34)."""
+
+    permission_classes = [SesionSiSeExige]
+
+    @staticmethod
+    def actor(request):
+        return principal_de(request)
+
+
+class PadronView(VistaPadron):
+    def get(self, request):
+        return Response(pad.EstadoPadron(self.s).ejecutar(self.actor(request)))
+
+
+class PadronPrepararView(VistaPadron):
+    def post(self, request):
+        return Response(pad.PrepararAulaDePrueba(self.s).ejecutar(), status=201)
+
+
+class PadronGruposView(VistaPadron):
+    def post(self, request):
+        datos = _validar(s.GrupoPadronEntrada, request.data)
+        return Response(pad.RegistrarGrupo(self.s).ejecutar(self.actor(request), datos), status=201)
+
+
+class PadronEstudiantesView(VistaPadron):
+    def post(self, request):
+        datos = _validar(s.EstudiantePadronEntrada, request.data)
+        return Response(pad.RegistrarEstudiante(self.s).ejecutar(self.actor(request), datos), status=201)
+
+
+class PadronMatriculaView(VistaPadron):
+    def post(self, request, pk: str):
+        datos = _validar(s.MatriculaEntrada, request.data)
+        salida = pad.MatricularEstudiante(self.s).ejecutar(self.actor(request), pk, datos["usuario_id"])
+        return Response(salida, status=200 if salida.get("ya_estaba") else 201)
+
+    def delete(self, request, pk: str, usuario_id: str):
+        pad.RetirarEstudiante(self.s).ejecutar(self.actor(request), pk, usuario_id)
         return Response(status=status.HTTP_204_NO_CONTENT)

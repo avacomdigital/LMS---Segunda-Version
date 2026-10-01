@@ -78,8 +78,9 @@
                 IconGeometry="M176,24 H80 A24,24 0 0 0 56,48 V208 A24,24 0 0 0 80,232 H176 A24,24 0 0 0 200,208 V48 A24,24 0 0 0 176,24 Z M184,208 A8,8 0 0 1 176,216 H80 A8,8 0 0 1 72,208 V48 A8,8 0 0 1 80,40 H176 A8,8 0 0 1 184,48 Z M152,192 H104 A8,8 0 0 1 104,176 H152 A8,8 0 0 1 152,192 Z" />
             <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="159,273,146,168" AccentColor="#F2C600" Text="Enciclopedia" Tapped="OnModuleTapped"
                 IconGeometry="M231.65,194.55 L198.46,36.75 A16,16 0 0 0 179.46,24.36 L132.65,34.42 A16.08,16.08 0 0 0 120.35,53.42 L153.54,211.22 A16,16 0 0 0 169.16,224 A16.25,16.25 0 0 0 172.54,223.64 L219.35,213.58 A16.09,16.09 0 0 0 231.65,194.55 Z M136,50.15 L182.8,40.06 L186.13,55.93 L139.33,66 Z M142.62,81.62 L189.44,71.57 L192.78,87.47 L146,97.53 Z M149.26,113.19 L196.08,103.13 L209.38,166.37 L162.56,176.43 Z M216,197.94 L169.2,207.94 L165.87,192.07 L212.67,182 Z M104,32 H56 A16,16 0 0 0 40,48 V208 A16,16 0 0 0 56,224 H104 A16,16 0 0 0 120,208 V48 A16,16 0 0 0 104,32 Z M56,48 H104 V64 H56 Z M56,80 H104 V176 H56 Z M104,208 H56 V192 H104 Z" />
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="317,273,146,168" AccentColor="#18181B" Text="Perfil" Tapped="OnModuleTapped"
-                IconGeometry="M230.92,212 C215.69,185.67 192.22,166.78 164.83,157.84 A72,72 0 1 0 91.17,157.84 C63.78,166.78 40.31,185.66 25.08,212 A8,8 0 1 0 38.93,220 C57.77,187.44 91.07,168 128,168 C164.93,168 198.23,187.44 217.07,220 A8,8 0 1 0 230.92,212 Z M72,96 A56,56 0 1 1 128,152 A56.06,56.06 0 0 1 72,96 Z" />
+            <!-- «Grupos» (MOD-001 · padrón) ocupa el hexágono de «Perfil»: crear grupos y registrar estudiantes con su grupo, para probar el modo de estudio. -->
+            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="317,273,146,168" AccentColor="#0E7490" Text="Grupos" Tapped="OnModuleTapped"
+                IconGeometry="M244.8,150.4 A8,8 0 0 1 233.6,148.8 A51.6,51.6 0 0 0 192,128 A8,8 0 0 1 184.63,123.11 A8,8 0 0 1 192,112 A24,24 0 1 0 168.76,82 A8,8 0 1 1 153.26,78 A40,40 0 1 1 219,117.51 A67.94,67.94 0 0 1 246.43,139.19 A8,8 0 0 1 244.8,150.4 Z M190.92,212 A8,8 0 1 1 177.08,220 A57,57 0 0 0 78.92,220 A8,8 0 1 1 65.08,212 A72.06,72.06 0 0 1 98.82,182.08 A48,48 0 1 1 157.18,182.08 A72.06,72.06 0 0 1 190.92,212 Z M128,176 A32,32 0 1 0 96,144 A32,32 0 0 0 128,176 Z M72,120 A8,8 0 0 0 64,112 A24,24 0 1 1 87.24,82 A8,8 0 1 0 102.74,78 A40,40 0 1 0 37,117.51 A67.94,67.94 0 0 0 9.6,139.19 A8,8 0 1 0 22.4,148.8 A51.6,51.6 0 0 1 64,128 A8,8 0 0 0 72,120 Z" />
             <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="476,273,146,168" AccentColor="#A62080" Text="Progreso" Tapped="OnModuleTapped"
                 IconGeometry="M232,208 A8,8 0 0 1 224,216 H32 A8,8 0 0 1 24,208 V48 A8,8 0 0 1 40,48 V156.69 L90.34,106.34 A8,8 0 0 1 101.66,106.34 L128,132.69 L180.69,80 H160 A8,8 0 0 1 160,64 H200 A8,8 0 0 1 208,72 V112 A8,8 0 0 1 192,112 V91.31 L133.66,149.66 A8,8 0 0 1 122.34,149.66 L96,123.31 L40,179.31 V200 H224 A8,8 0 0 1 232,208 Z" />
             <!-- «Historial» (MOD-019): la bitácora de auditoría y los logs (ruta logs-bitacora). Con sesión sólo lo ven Administrador y Técnico. -->
@@ -108,7 +109,7 @@
                 <Button Grid.Column="2" Text="▤&#10;Asignaturas" Style="{StaticResource DockButton}" Clicked="OnAssignmentsClicked" />
                 <Button Grid.Column="3" Text="◉&#10;Clase de hoy" Style="{StaticResource DockButton}" Clicked="OnClassTodayClicked" />
                 <Button Grid.Column="4" Text="▥&#10;Enciclopedia" Style="{StaticResource DockButton}" />
-                <Button Grid.Column="5" Text="♙&#10;Perfil" Style="{StaticResource DockButton}" />
+                <Button Grid.Column="5" Text="♙&#10;Grupos" Style="{StaticResource DockButton}" Clicked="OnGruposClicked" />
                 <Button Grid.Column="6" Text="?&#10;Ayuda" Style="{StaticResource DockButton}" />
                 <Button Grid.Column="7" Text="↪&#10;Cerrar sesión" Style="{StaticResource DockButton}" Clicked="OnLogoutClicked" />
                 <Label Grid.Column="8" FontSize="24" HorizontalOptions="Center" Text="«" TextColor="White" VerticalOptions="Center" />

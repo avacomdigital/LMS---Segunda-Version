@@ -205,3 +205,26 @@ class GrupoCambios(serializers.Serializer):
 class MiembroEntrada(serializers.Serializer):
     usuario_id = serializers.CharField(max_length=36)
     papel = serializers.ChoiceField(choices=["ESTUDIANTE", "DOCENTE"], required=False, default="ESTUDIANTE")
+
+
+class GrupoPadronEntrada(serializers.Serializer):
+    """Pantalla «Grupos» de OPS: lo mínimo para crear un grupo. El código sale del nombre y el periodo es el año si no se dan."""
+
+    nombre = serializers.CharField(max_length=120)
+    codigo = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+    periodo = serializers.CharField(max_length=16, required=False, allow_blank=True, default="")
+    nivel_clave = serializers.ChoiceField(choices=NIVELES, required=False, allow_null=True, allow_blank=True, default=None)
+
+
+class EstudiantePadronEntrada(serializers.Serializer):
+    """Registrar a un estudiante con su grupo. `documento` y `pin` son opcionales: el nodo emite la clave y genera el PIN."""
+
+    nombres = serializers.CharField(max_length=120)
+    apellidos = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    documento = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    pin = serializers.CharField(max_length=128, required=False, allow_blank=True, default="", trim_whitespace=False)
+    grupo_id = serializers.CharField(max_length=36)
+
+
+class MatriculaEntrada(serializers.Serializer):
+    usuario_id = serializers.CharField(max_length=36)

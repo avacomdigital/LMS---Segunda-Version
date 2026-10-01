@@ -16,6 +16,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("clase-cierre", typeof(Pages.ClaseCierrePage));
         // MOD-009 · Device Manager: el inventario de tabletas del aula, con bloqueo por tableta
         Routing.RegisterRoute("dispositivos", typeof(Pages.DispositivosPage));
+        Routing.RegisterRoute("grupos", typeof(Pages.GruposPage));
         // MOD-008 · Modo Estudio: asignar lecciones a los alumnos y ver quién las completó
         Routing.RegisterRoute("estudio", typeof(Pages.EstudioPage));
         // MOD-019 · Audit: la bitácora (Administrador) y el estado del equipo con sus errores (Técnico)

@@ -1743,10 +1743,18 @@ class AgregarMiembro(Base):
             if rol_papel is PapelGrupo.DOCENTE and rol.nivel < 2:
                 raise errores.DatosInvalidos("Un estudiante no puede ser docente de un grupo.")
             ahora = self.ahora()
-            for m in uow.grupos.miembros(grupo.id):
+            # `UNIQUE(grupo, usuario, papel)`: la pertenencia es UN hecho con intervalo abierto o cerrado (modelado §3.21). Quien salió y
+            # vuelve REABRE su fila; insertar otra chocaría con la restricción (500).
+            miembro = None
+            for m in uow.grupos.miembros(grupo.id, vigentes=False):
                 if m.usuario_id == usuario.id and m.papel is rol_papel:
-                    return {"grupo_id": grupo.id, "usuario_id": usuario.id, "papel": rol_papel.value, "desde": m.desde, "ya_estaba": True}
-            miembro = MiembroGrupo(_nuevo_id(), grupo.id, usuario.id, rol_papel, ahora)
+                    if m.hasta is None:
+                        return {"grupo_id": grupo.id, "usuario_id": usuario.id, "papel": rol_papel.value, "desde": m.desde, "ya_estaba": True}
+                    miembro = m
+                    miembro.desde, miembro.hasta = ahora, None
+                    break
+            if miembro is None:
+                miembro = MiembroGrupo(_nuevo_id(), grupo.id, usuario.id, rol_papel, ahora)
             uow.grupos.guardar_miembro(miembro)
             self.auditar(uow, principal.usuario_id, "identidad.grupo.miembro_agregado", "m01_miembro_grupo", miembro.id,
                          {"grupo_id": grupo.id, "usuario_id": usuario.id, "papel": rol_papel.value})

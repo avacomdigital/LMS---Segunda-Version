@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.GruposPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False">
+    <!-- Grupos (MOD-001 · padrón). Dos columnas centradas: a la izquierda los grupos del aula y el botón para crear uno; a la derecha el
+         grupo elegido con sus estudiantes y el formulario para registrar a uno nuevo con ese grupo. Es la forma de tener alumnos y grupos
+         reales para probar el modo de estudio (repaso) sin pasar por la importación masiva. -->
+    <Grid RowDefinitions="Auto,*" Padding="44,28,48,24" RowSpacing="18">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280">
+            <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                <Label Text="GRUPOS" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                <Label Text="Grupos y estudiantes del aula" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" />
+                <Label x:Name="SubtituloLabel" Text="Cargando…" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+            <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+        </Grid>
+        <Grid Grid.Row="1" ColumnDefinitions="360,*" ColumnSpacing="20" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280">
+            <ScrollView Grid.Column="0"><VerticalStackLayout x:Name="ListaHost" Spacing="10" Padding="0,0,0,40" /></ScrollView>
+            <ScrollView Grid.Column="1"><VerticalStackLayout x:Name="DetalleHost" Spacing="14" Padding="0,0,0,40" /></ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>
