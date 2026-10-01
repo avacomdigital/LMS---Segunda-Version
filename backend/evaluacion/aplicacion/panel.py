@@ -323,6 +323,33 @@ class MisEvaluaciones(_Estado):
                                 "resultado_disponible": self.motor.resultado_disponible(asignacion, ultimo)} if ultimo else None)}
 
 
+class EstudiantesConEvaluacion(_CasoDeUso):
+    """El «¿Quién eres?» de la evaluación (D-19, D-25). Sin sesión (Q-34 abierta), la tableta pregunta a la persona quién es de entre los alumnos de los grupos que
+    tienen una evaluación programada o abierta, sin código ni contraseña: el LMS es offline y no hay verificación central. Es lo mismo que hace Modo Estudio con
+    sus lecciones. No lleva ni pide permiso y sólo nombra a quien puede presentar algo ahora."""
+
+    def __init__(self, servicios):
+        super().__init__(servicios)
+        self.motor = Motor(servicios)
+
+    def ejecutar(self) -> dict:
+        ahora = self.s.reloj.ahora_ms()
+        with self.s.uow() as uow:
+            grupos: dict[str, dict] = {}
+            for fila in uow.asignaciones.listar(estados=(cat.PROGRAMADA, cat.ACTIVA, cat.ACTIVA_FUERA_DE_PLAZO)):
+                asignacion = self.motor.asegurar_asignacion(uow, fila, ahora)
+                if asignacion["estado"] not in (cat.PROGRAMADA, *cat.ABIERTAS):
+                    continue
+                clave = asignacion.get("grupo_id") or "seleccion"
+                grupo = grupos.setdefault(clave, {"id": clave, "nombre": asignacion.get("grupo_rotulo") or "Alumnos", "alumnos": {}})
+                for d in destinatarios_de(uow, asignacion):
+                    grupo["alumnos"][d["id"]] = d["rotulo"]
+            salida = [{"id": g["id"], "nombre": g["nombre"],
+                       "alumnos": [{"id": i, "rotulo": r} for i, r in sorted(g["alumnos"].items(), key=lambda x: (x[1] or "").lower())]}
+                      for g in sorted(grupos.values(), key=lambda g: (g["nombre"] or "").lower()) if g["alumnos"]]
+            return {"disponible": bool(salida), "motivo": "" if salida else "sin_evaluaciones", "grupos": salida, "servidor_en": ahora}
+
+
 class Antesala(_Estado):
     """PAN-120 (alumno): lo que el alumno debe ver ANTES de empezar —duración, condiciones y qué se registra—. Iniciar sin que lo haya visto es lo que el
     sistema nunca hace."""

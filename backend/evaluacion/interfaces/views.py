@@ -273,6 +273,13 @@ class MisEvaluacionesView(VistaEvaluacion):
         return Response(panel_cu.MisEvaluaciones(servicios()).ejecutar(self._alumno(request, datos), datos))
 
 
+class EstudiantesView(VistaEvaluacion):
+    """«¿Quién eres?» de la evaluación: sin sesión, sin permiso y sin parámetros."""
+
+    def get(self, request):
+        return Response(panel_cu.EstudiantesConEvaluacion(servicios()).ejecutar())
+
+
 class AntesalaView(VistaEvaluacion):
     def get(self, request, asignacion_id: str):
         datos = self._datos_del_alumno(request)

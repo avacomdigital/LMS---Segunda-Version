@@ -56,6 +56,7 @@ class CapturarContratoTests(BaseEvaluacion):
 
             # ---- el examen supervisado completo
             a = self.crear_asignacion("supervisado", tiempo={"modo": "fijo", "limite_seg": 900}, resultados="tras_liberar")
+            self.guardar("estudiantes", self.get("/estudiantes/"))
             self.guardar("mias", self.get("/mias/", **self.alumno()))
             self.guardar("antesala", self.get(f"/asignaciones/{a['id']}/antesala/", **self.alumno()))
             apertura = self.post(f"/asignaciones/{a['id']}/intentos/", {**self.alumno(), "nombre": "Tableta de Juan", "plataforma": "android",

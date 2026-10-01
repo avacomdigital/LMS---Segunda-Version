@@ -33,6 +33,7 @@ urlpatterns = [
     path("intentos/<str:intento_id>/decidir-envio/", v.DecidirEnvioView.as_view(), name="evaluacion-decidir-envio"),
     path("intentos/<str:intento_id>/respuestas/<str:pregunta_ref>/puntuar/", v.PuntuarView.as_view(), name="evaluacion-puntuar"),
     # ---- el alumno: descubrir y abrir
+    path("estudiantes/", v.EstudiantesView.as_view(), name="evaluacion-estudiantes"),
     path("mias/", v.MisEvaluacionesView.as_view(), name="evaluacion-mias"),
     path("asignaciones/<str:asignacion_id>/antesala/", v.AntesalaView.as_view(), name="evaluacion-antesala"),
     path("asignaciones/<str:asignacion_id>/intentos/", v.AbrirIntentoView.as_view(), name="evaluacion-abrir"),

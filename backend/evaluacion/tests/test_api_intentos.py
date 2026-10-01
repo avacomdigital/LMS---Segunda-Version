@@ -280,6 +280,27 @@ class AntesalaYMisEvaluacionesTests(BaseEvaluacion):
         mia = self.api.get(f"{BASE}/mias/", self.alumno()).json()["pendientes"][0]
         self.assertEqual((mia["mi_intento"]["id"], mia["mi_intento"]["estado"], mia["nivel_examen"], mia["preguntas"]), (i, "en_curso", "abierto", 4))
 
+    def test_quien_eres_lista_a_quien_puede_presentar_algo_ahora_sin_sesion_ni_permiso(self):
+        sin_nada = self.api.get(f"{BASE}/estudiantes/")
+        self.assertEqual((sin_nada.status_code, sin_nada.json()["disponible"], sin_nada.json()["grupos"]), (200, False, []))
+        self.crear_asignacion("abierto", iniciar=False)                                  # un borrador no cuenta
+        self.assertEqual(self.api.get(f"{BASE}/estudiantes/").json()["grupos"], [])
+        a = self.crear_asignacion("abierto")
+        self.nuevo_alumno("Zoe", "910001")
+        self.nuevo_alumno("Abel", "910002")
+        ajeno, _ = self.alumno_con_tableta("Ajeno", "910003", grupo_id=self.otro_grupo["id"])    # su grupo no tiene evaluación
+        cuerpo = self.api.get(f"{BASE}/estudiantes/").json()
+        self.assertTrue(cuerpo["disponible"])
+        grupo = cuerpo["grupos"][0]
+        self.assertEqual((len(cuerpo["grupos"]), grupo["nombre"]), (1, "Octavo A"))
+        ids = [x["id"] for x in grupo["alumnos"]]
+        self.assertIn(self.estudiante_id, ids)
+        self.assertNotIn(ajeno, ids)
+        rotulos = [x["rotulo"].lower() for x in grupo["alumnos"]]
+        self.assertEqual(rotulos, sorted(rotulos))                                       # por nombre, para encontrarse rápido
+        self.accion(f"/asignaciones/{a['id']}/cerrar/")
+        self.assertEqual(self.api.get(f"{BASE}/estudiantes/").json()["grupos"], [])      # cerrada: ya no hay nada que presentar
+
     def test_recientes_solo_con_todas_y_solo_si_tiene_intento(self):
         a = self.crear_asignacion("abierto")
         i = self.abrir(a["id"])["intento"]["id"]
