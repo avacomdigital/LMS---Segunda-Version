@@ -210,7 +210,8 @@ error, **404/403** referencia inexistente o desactivada por la escuela.
 | `AVACOM_LMS_CLAVE_INDICE` | Clave HMAC-SHA-256 del índice ciego (búsqueda de DNI/código/correo) |
 | `AVACOM_LMS_CLAVE_TOKENS` | Clave HS256 de los JWT |
 | `AVACOM_LMS_EXIGIR_SESION` | `0` por defecto. Con `1`, expediente y biblioteca exigen sesión (Q-34) |
-| `AVACOM_AULA_FUENTE_CURSOS` | Fuente de cursos por defecto de `/api/aula/`: `biblioteca` (por defecto) o `ejemplo` |
+| `AVACOM_AULA_FUENTE_CURSOS` | Fuente de cursos por defecto de `/api/aula/`: `biblioteca`. `ejemplo` sólo se respeta con `AVACOM_AULA_PERMITIR_EJEMPLO=1` |
+| `AVACOM_AULA_PERMITIR_EJEMPLO` | `1` enciende el curso de ejemplo (`spec-driven/02-classroom-engine/example.json`) **sólo para pruebas y desarrollo**; `manage.py test` lo enciende solo. Apagado —lo normal, y lo que fija el instalador— pedir la fuente `ejemplo` se resuelve con la biblioteca: los cursos salen siempre de AVACOM Contenido |
 | `AVACOM_AULA_CURSO_EJEMPLO` | Ruta del manifiesto de ejemplo (por defecto `spec-driven/02-classroom-engine/example.json`) |
 | `AVACOM_ESTUDIO_VIGENCIA_DIAS` | Modo Estudio: cuánto dura en el aparato un paquete de una asignación sin fecha límite (14 días por defecto; con fecha, hasta la fecha más la gracia) |
 | `AVACOM_ESTUDIO_GRACIA_MIN` | Modo Estudio: minutos de gracia por defecto de una asignación nueva (15, DEC-019) |

@@ -32,18 +32,25 @@ def ruta_ejemplo() -> str:
     return getattr(settings, "AVACOM_AULA_CURSO_EJEMPLO", "") or ""
 
 
+def ejemplo_permitido() -> bool:
+    """El manifiesto de ejemplo sólo existe para pruebas y desarrollo (`AVACOM_AULA_PERMITIR_EJEMPLO=1`). En un nodo real está apagado."""
+    return bool(getattr(settings, "AVACOM_AULA_PERMITIR_EJEMPLO", False))
+
+
 def fuente_por_defecto() -> str:
-    return getattr(settings, "AVACOM_AULA_FUENTE_CURSOS", "biblioteca") or "biblioteca"
+    nombre = getattr(settings, "AVACOM_AULA_FUENTE_CURSOS", "biblioteca") or "biblioteca"
+    return nombre if nombre != "ejemplo" or ejemplo_permitido() else "biblioteca"
 
 
 def fuente(nombre: str | None, curso_ref: str = ""):
-    """La fuente pedida; sin nombre, la configurada. Si no se pidió ninguna y la referencia es la
-    del manifiesto de ejemplo, se resuelve sola: así las URL de medios no dependen del parámetro."""
+    """La fuente pedida; sin nombre, la configurada. Los cursos salen SIEMPRE de la biblioteca: pedir «ejemplo» con el ejemplo apagado (lo normal)
+    se resuelve con la biblioteca. Con el ejemplo permitido (pruebas), si no se pidió ninguna y la referencia es la del manifiesto de ejemplo, se
+    resuelve sola: así las URL de medios no dependen del parámetro."""
     if nombre:
         if nombre not in FUENTES:
             raise DatosInvalidos(f"Fuente desconocida «{nombre}». Fuentes: {', '.join(FUENTES)}.", fuente=nombre)
-        return FuenteEjemplo(ruta_ejemplo()) if nombre == "ejemplo" else FuenteBiblioteca()
-    if curso_ref and (curso_ref in ALIAS or _es_el_ejemplo(curso_ref)):
+        return FuenteEjemplo(ruta_ejemplo()) if nombre == "ejemplo" and ejemplo_permitido() else FuenteBiblioteca()
+    if ejemplo_permitido() and curso_ref and (curso_ref in ALIAS or _es_el_ejemplo(curso_ref)):
         return FuenteEjemplo(ruta_ejemplo())
     return fuente(fuente_por_defecto())
 

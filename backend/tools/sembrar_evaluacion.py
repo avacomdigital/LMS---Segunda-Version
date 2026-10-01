@@ -3,6 +3,7 @@ Siembra un nodo EN MARCHA con lo necesario para probar a mano (o con UI Automati
 examen del curso de ejemplo aplicado al grupo. Todo por la API, igual que lo haría OPS. Sólo usa la biblioteca estándar.
 
     set AVACOM_LMS_DB=%TEMP%\\copia-de-db.sqlite3
+    set AVACOM_AULA_PERMITIR_EJEMPLO=1      (el curso de ejemplo está apagado en un nodo real; aquí evita depender de la biblioteca)
     .venv\\Scripts\\python manage.py migrate
     .venv\\Scripts\\python manage.py runserver 127.0.0.1:8010 --noreload
     .venv\\Scripts\\python tools\\sembrar_evaluacion.py --base http://127.0.0.1:8010 --nivel supervisado --alumnos 3

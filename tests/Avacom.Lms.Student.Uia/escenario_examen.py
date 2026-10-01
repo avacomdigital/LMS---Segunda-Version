@@ -3,7 +3,7 @@ app de verdad, manejada por UI Automation y SIN el gancho de teclado ni la cober
 prueba corre en el equipo de trabajo). Cada paso deja una captura y el texto de la pantalla; al final imprime el veredicto de cada comprobación.
 
 Preparación (una sola vez; NUNCA contra el nodo real del aula):
-  1. Un nodo aparte:  set AVACOM_LMS_DB=<copia vacía>  ·  set AVACOM_EVAL_LATIDO_VENCIDO_MS=16000  ·  manage.py migrate  ·  manage.py runserver 127.0.0.1:8021 --noreload
+  1. Un nodo aparte:  set AVACOM_LMS_DB=<copia vacía>  ·  set AVACOM_AULA_PERMITIR_EJEMPLO=1  ·  set AVACOM_EVAL_LATIDO_VENCIDO_MS=16000  ·  manage.py migrate  ·  manage.py runserver 127.0.0.1:8021 --noreload
      (16000 y no menos: el nivel abierto late cada 10 s y un vencimiento menor pausa un examen sano)
   2. Sembrarlo:  backend/.venv/Scripts/python backend/tools/sembrar_evaluacion.py --base http://127.0.0.1:8021 --nivel supervisado --alumnos 3
   3. Lanzar Student con AVACOM_EXAM_NO_LOCKDOWN=1 (lanzar-student.ps1) y dejar su pid en salida/student.pid.

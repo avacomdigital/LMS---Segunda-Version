@@ -6,6 +6,7 @@ consultan en vivo por loopback. Aquí sólo se guarda el expediente del estudian
 inscripción, aperturas del visor, progreso por sección, intentos y notas.
 """
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -119,9 +120,12 @@ AVACOM_CONTENIDO_ENLACE_V2 = os.environ.get("AVACOM_CONTENIDO_ENLACE_V2") or Non
 AVACOM_CONTENIDO_TIEMPO_ESPERA_SEG = float(os.environ.get("AVACOM_CONTENIDO_TIEMPO_ESPERA_SEG", "3"))
 
 # ---------------------------------------------------- Classroom Engine (MOD-007)
-# App `classroom_engine`. La fuente de cursos por defecto es la biblioteca; el
-# manifiesto de ejemplo (spec-driven/02-classroom-engine/example.json) alimenta el
-# endpoint de prueba mientras la biblioteca publica el esquema de curso 1.0.
+# App `classroom_engine`. Los cursos salen SIEMPRE de la biblioteca (AVACOM Contenido, API v2). El manifiesto de
+# ejemplo (spec-driven/02-classroom-engine/example.json) sólo existe para las pruebas y el desarrollo: está
+# APAGADO salvo que se pida con AVACOM_AULA_PERMITIR_EJEMPLO=1 (o se corra `manage.py test`). Apagado, cualquier
+# petición de la fuente «ejemplo» —de un cliente viejo, de una preferencia guardada o de una variable de entorno—
+# se resuelve con la biblioteca. El instalador no lo enciende y el ejemplo ni siquiera viaja en él.
+AVACOM_AULA_PERMITIR_EJEMPLO = os.environ.get("AVACOM_AULA_PERMITIR_EJEMPLO") == "1" or "test" in sys.argv[1:2]
 AVACOM_AULA_FUENTE_CURSOS = os.environ.get("AVACOM_AULA_FUENTE_CURSOS", "biblioteca")
 AVACOM_AULA_CURSO_EJEMPLO = os.environ.get("AVACOM_AULA_CURSO_EJEMPLO") or str(
     BASE_DIR.parent / "spec-driven" / "02-classroom-engine" / "example.json"
