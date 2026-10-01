@@ -105,6 +105,11 @@ internal static class Configuracion
         contenido.AppendLine("# Tiempo de espera hacia AVACOM Contenido, en segundos.");
         contenido.AppendLine("AVACOM_CONTENIDO_TIEMPO_ESPERA_SEG=3");
         contenido.AppendLine();
+        contenido.AppendLine("# Los cursos salen SIEMPRE de AVACOM Contenido (la biblioteca). El curso de ejemplo");
+        contenido.AppendLine("# del repositorio es solo para pruebas: aqui esta apagado y no viaja en el instalador.");
+        contenido.AppendLine("AVACOM_AULA_FUENTE_CURSOS=biblioteca");
+        contenido.AppendLine("AVACOM_AULA_PERMITIR_EJEMPLO=0");
+        contenido.AppendLine();
         contenido.AppendLine("# AVACOM_CONTENIDO_ENLACE y AVACOM_CONTENIDO_ENLACE_V2 se dejan SIN definir");
         contenido.AppendLine("# a proposito: el backend busca la nota de enlace de AVACOM Contenido donde");
         contenido.AppendLine(@"# esta la publica (%ProgramData%\AVACOM\content\link.json). Definirlas aqui");
