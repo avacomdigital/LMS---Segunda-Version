@@ -201,6 +201,8 @@ El panel **no es de vigilancia**: no suena, no marca en rojo y no ofrece «anula
 
 ### 4.4 · Alumno
 
+**`GET /api/evaluacion/estudiantes/`** — el «¿Quién eres?» de la evaluación (D-19, D-25). **Sin sesión, sin permiso y sin parámetros.** `{disponible, motivo, grupos: [{id, nombre, alumnos: [{id, rotulo}]}], servidor_en}`: los alumnos de los grupos que tienen una evaluación `programada`, `activa` o `activa_fuera_de_plazo`, ordenados por nombre. Con sesión de usuario no hace falta (el pase del nodo ya dice quién es); sin ella, la tableta pregunta a la persona quién es y manda ese `alumno_id` en las demás llamadas. Es lo mismo que hace Modo Estudio con sus lecciones: el LMS es offline y no hay verificación central.
+
 **`GET /api/evaluacion/mias/`** — `?dispositivo=&alumno_id=&todas=1`. `{pendientes: […], recientes: […], servidor_en}`: las asignaciones que le alcanzan y están `programada`, `activa` o `activa_fuera_de_plazo` (y, con `todas=1`, las cerradas de los últimos 7 días en que tiene intento). Cada una lleva `mi_intento` `{id, numero, estado}` o `null`, `puede_comenzar` y `nivel_examen`. **Es lo que sondea Student** (cada 3 s dentro de la clase) y lo que dispara la antesala.
 
 **`GET /api/evaluacion/asignaciones/{id}/antesala/`** — PAN-120 (alumno).
@@ -508,7 +510,7 @@ Cada respuesta que recibe un alumno se recorre con `contiene_clave` en `test_api
 
 **Construido y probado (2026-10-01).**
 
-* La app `evaluacion` entera: cinco tablas `m10_*` (la del intento se llama `m10_intento_formal`), dominio puro, casos de uso por la interfaz de sus puertos, repositorios, unidad de trabajo, programador del nodo y las 35 rutas de §4. Migraciones `evaluacion/0001`, `acceso/0009` y `device_manager/0005`.
+* La app `evaluacion` entera: cinco tablas `m10_*` (la del intento se llama `m10_intento_formal`), dominio puro, casos de uso por la interfaz de sus puertos, repositorios, unidad de trabajo, programador del nodo y las 36 rutas de §4. Migraciones `evaluacion/0001`, `acceso/0009` y `device_manager/0005`.
 * Integraciones: permisos `assessment.*` (16), acciones `evaluacion.*` del catálogo de MOD-019, capacidad de control de la tableta (MOD-009), `pool`/`questions` de la API v2 por el puerto `FuenteDeCursos`, el conteo de exámenes abiertos al cerrar una clase y el aviso por el canal de tiempo real del aula.
 * Suite completa: **961 pruebas en verde** (651 de la línea base más 310 nuevas), 3 omitidas por depender de `jsonschema`.
 
