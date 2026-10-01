@@ -327,7 +327,7 @@ def _barajadas(elementos: list[dict], semilla: str) -> list[dict]:
     return orden
 
 
-def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio, rol: str = "docente") -> dict:
+def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio, rol: str = "docente", semilla: str = "") -> dict:
     """Sólo lo que hace falta para PREGUNTAR. Nunca lo que hace falta para corregir (ni siquiera el orden de la fuente: al alumno,
     «ordenar» y la columna derecha de «relacionar» le llegan barajados)."""
     tipo = str(p.get("type", ""))
@@ -365,15 +365,23 @@ def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio, rol: str = 
         salida["izquierda"] = [_item(i, medios, url_medio) for i in (p.get("left") or []) if isinstance(i, dict)]
         salida["derecha"] = [_item(i, medios, url_medio) for i in (p.get("right") or []) if isinstance(i, dict)]
         if rol != "docente":
-            salida["derecha"] = _barajadas(salida["derecha"], f"aula|derecha|{salida['pregunta_ref']}")
+            salida["derecha"] = _barajadas(salida["derecha"], f"aula|derecha|{salida['pregunta_ref']}" + (f"|{semilla}" if semilla else ""))
     elif tipo == "ordering":
         salida["elementos"] = [_item(i, medios, url_medio) for i in (p.get("items") or []) if isinstance(i, dict)]
         if rol != "docente":
-            salida["elementos"] = _barajadas(salida["elementos"], f"aula|elementos|{salida['pregunta_ref']}")
+            salida["elementos"] = _barajadas(salida["elementos"], f"aula|elementos|{salida['pregunta_ref']}" + (f"|{semilla}" if semilla else ""))
     elif tipo == "open":
         salida["formato_respuesta"] = p.get("responseFormat", "text")
         salida["longitud_maxima"] = p.get("maxLength")
     return salida
+
+
+def preguntas_de_examen(preguntas: list[dict], medios: list[dict], url_medio: UrlMedio, semilla: str = "") -> list[dict]:
+    """Las preguntas de UN alumno en un examen (MOD-010), tal como las entrega `GET …/exams/{oid}/questions` —ya sin claves—, en la vista de aula que
+    los controles de pregunta de Student ya saben pintar. `semilla` hace que cada alumno vea también las columnas y los elementos en su propio
+    orden. Defensa en profundidad: un barrido final vuelve a quitar cualquier clave de corrección (artículo 14.5)."""
+    catalogo = {x["media_ref"]: x for x in (_medio(m, url_medio) for m in medios or [] if isinstance(m, dict))}
+    return [sin_claves(_pregunta(p, catalogo, url_medio, "estudiante", semilla)) for p in preguntas or [] if isinstance(p, dict)]
 
 
 # ----------------------------------------------------------------- objetos

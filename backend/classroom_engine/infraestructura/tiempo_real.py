@@ -53,7 +53,7 @@ def grupo_participante(sesion_id: str, participante_id: str) -> str:
 
 
 # A quién le llega cada clase de cambio. Lo no listado va a todos.
-SOLO_DOCENTE = frozenset({"resultados", "entregas", "codigo"})
+SOLO_DOCENTE = frozenset({"resultados", "entregas", "codigo", "evaluacion_panel"})   # `evaluacion_panel` es de MOD-010: el aviso del panel de examen
 DOCENTE_Y_PARTICIPANTE = frozenset({"presencia", "ayuda", "proyeccion"})
 
 

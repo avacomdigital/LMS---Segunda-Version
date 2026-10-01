@@ -417,10 +417,14 @@ class EvaluacionExpediente:
         return ""
 
     def intentos_abiertos(self, curso_ref: str, personas: list[str]) -> int:
+        """Los intentos que sus alumnos siguen presentando al cerrar la clase (JRN-011): los del expediente (contrato 1) y, desde MOD-010, los
+        exámenes en curso, pausados o restaurándose (`evaluacion.servicios`, la interfaz de su dueño)."""
+        from evaluacion import servicios as evaluacion
         from expediente.models import Intento
         if not personas:
             return 0
-        return Intento.objects.filter(curso_ref=curso_ref, persona_id__in=personas, estado=Intento.ABIERTO).count()
+        return (Intento.objects.filter(curso_ref=curso_ref, persona_id__in=personas, estado=Intento.ABIERTO).count()
+                + evaluacion.intentos_vivos_de(personas))
 
 
 class AutorizacionAula:
