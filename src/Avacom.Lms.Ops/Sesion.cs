@@ -33,19 +33,12 @@ public static class Sesion
     public const string DireccionPorDefecto = "http://127.0.0.1:8000";
 
     public const string FuenteBiblioteca = "biblioteca";
-    public const string FuenteEjemplo = "ejemplo";
 
     /// <summary>
-    /// Fuente de cursos de MOD-007. Por defecto <c>biblioteca</c>: el backend habla con la API de
-    /// Contenido v2 de AVACOM Biblioteca. Cuando la biblioteca no está en el equipo, «Clase de hoy»
-    /// ofrece pasar al manifiesto de ejemplo con un toque (y volver tocando el chip de la fuente).
-    /// Se guarda en Preferences; nada más del cliente depende de esto.
+    /// Fuente de cursos de MOD-007: SIEMPRE <c>biblioteca</c>, la API de Contenido v2 de AVACOM Biblioteca a través del backend. El curso de ejemplo ya no se
+    /// ofrece: si la biblioteca no está encendida, las pantallas lo dicen y dejan reintentar. Una preferencia antigua <c>ops_fuente_aula</c> se ignora.
     /// </summary>
-    public static string FuenteAula
-    {
-        get => Preferences.Default.Get("ops_fuente_aula", FuenteBiblioteca) is FuenteEjemplo ? FuenteEjemplo : FuenteBiblioteca;
-        set => Preferences.Default.Set("ops_fuente_aula", value == FuenteEjemplo ? FuenteEjemplo : FuenteBiblioteca);
-    }
+    public static string FuenteAula => FuenteBiblioteca;
 
     public static Uri BaseUri
     {

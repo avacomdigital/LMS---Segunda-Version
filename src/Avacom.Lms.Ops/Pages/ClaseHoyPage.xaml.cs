@@ -8,10 +8,9 @@ namespace Avacom.Lms.Ops.Pages;
 
 /// <summary>
 /// P1 · Materias de hoy. Un hexágono por asignatura y, debajo, sus cursos como tarjetas.
-/// Las materias las entrega AVACOM Biblioteca (API de Contenido v2) a través del backend; si la
-/// biblioteca no está en el equipo, se ofrece el curso de ejemplo («Ciencias naturales») con un
-/// toque, y el chip de la fuente permite volver. Todo el journey de MOD-007 empieza aquí; nada se
-/// escribe en esta pantalla.
+/// Las materias las entrega AVACOM Biblioteca (API de Contenido v2) a través del backend, siempre:
+/// si la biblioteca no está encendida se dice y se puede reintentar tocando el chip de la fuente.
+/// Todo el journey de MOD-007 empieza aquí; nada se escribe en esta pantalla.
 ///
 /// Desde 2026-09-28 la pantalla viste el lenguaje Liquid Glass (<see cref="Glass"/>): fondo claro con la imagen de
 /// discos en relieve, menú vertical fijo y sólido a la izquierda (Menú principal, Lección, Configuración y Cerrar
@@ -43,12 +42,8 @@ public partial class ClaseHoyPage : ContentPage
     public ClaseHoyPage()
     {
         InitializeComponent();
-        // Tocar el chip alterna la fuente sin teclado: de ejemplo a biblioteca y viceversa.
-        Ds.Tocable(FuenteChip, async () =>
-        {
-            Sesion.FuenteAula = Sesion.FuenteAula == Sesion.FuenteEjemplo ? Sesion.FuenteBiblioteca : Sesion.FuenteEjemplo;
-            await CargarAsync();
-        });
+        // Tocar el chip vuelve a leer la biblioteca, sin teclado.
+        Ds.Tocable(FuenteChip, async () => await CargarAsync());
         // Buscador: País y Nivel a la vista; Grado y Materia bajo «Más filtros». Cualquier cambio repinta el catálogo.
         foreach (var filtro in new[] { _pais, _nivel })
         {
@@ -116,21 +111,10 @@ public partial class ClaseHoyPage : ContentPage
                     : Glass.Alerta(sinBiblioteca ? "AVACOM Biblioteca no está encendida en este equipo" : "No se pudieron leer las materias",
                         string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))),
                         sinBiblioteca ? Glass.Tono.Alerta : Glass.Tono.Peligro));
+                // Un solo Primary por pantalla: si ya hay «Continuar la clase», «Reintentar» baja a Secondary (vidrio).
                 var botones = new HorizontalStackLayout { Spacing = 16 };
-                botones.Add(Glass.Boton("Reintentar", async (_, _) => await CargarAsync(), 64, 220));
-                if (sinBiblioteca)
-                {
-                    // Un toque, sin teclado: seguir con el manifiesto de ejemplo hasta que la biblioteca esté.
-                    // Un solo Primary por pantalla: si ya hay «Continuar la clase», este baja a Secondary (vidrio).
-                    EventHandler usarEjemplo = async (_, _) =>
-                    {
-                        Sesion.FuenteAula = Sesion.FuenteEjemplo;
-                        await CargarAsync();
-                    };
-                    botones.Add(AvisoHost.Count == 0
-                        ? Ds.Boton("Usar el curso de ejemplo", Ds.Rango.Primary, usarEjemplo, 64, 300)
-                        : Glass.Boton("Usar el curso de ejemplo", usarEjemplo, 64, 300));
-                }
+                EventHandler reintentar = async (_, _) => await CargarAsync();
+                botones.Add(AvisoHost.Count == 0 ? Ds.Boton("Reintentar", Ds.Rango.Primary, reintentar, 64, 220) : Glass.Boton("Reintentar", reintentar, 64, 220));
                 pila.Add(botones);
                 AvisoHost.Add(pila);
                 return;
@@ -366,12 +350,10 @@ public partial class ClaseHoyPage : ContentPage
 
     private void PintarFuente(bool ok, string? detalle)
     {
-        var ejemplo = detalle == Sesion.FuenteEjemplo;
         var sinBiblioteca = detalle == "sin_biblioteca";
         FuenteChip.Mostrar(
-            ok ? (ejemplo ? "Curso de ejemplo · tocar para usar Biblioteca" : "Biblioteca conectada")
-               : (sinBiblioteca ? "Biblioteca apagada · tocar para usar el ejemplo" : "Sin conexión con el aula"),
-            ok ? (ejemplo ? Glass.Tono.Alerta : Glass.Tono.Exito) : (sinBiblioteca ? Glass.Tono.Alerta : Glass.Tono.Peligro));
+            ok ? "Biblioteca conectada" : (sinBiblioteca ? "Biblioteca apagada · tocar para reintentar" : "Sin conexión con el aula"),
+            ok ? Glass.Tono.Exito : (sinBiblioteca ? Glass.Tono.Alerta : Glass.Tono.Peligro));
     }
 
     private static Task AbrirAsync(FichaCurso curso) =>

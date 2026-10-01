@@ -10,7 +10,7 @@
     <!-- P1 · Clase de hoy. Dos columnas y una sola fila: el menú vertical fijo a la izquierda (250 px; 224 en anchos
          intermedios; raíl de iconos por debajo de 1100, ver OnPageSizeChanged) y el contenido, que se desplaza en
          vertical, a la derecha. No hay barra horizontal superior: el chip de la fuente vive arriba a la derecha del
-         contenido y sigue siendo tocable (alterna Biblioteca ↔ ejemplo). Fondo claro como el resto de la aplicación
+         contenido y sigue siendo tocable (vuelve a leer la biblioteca). Fondo claro como el resto de la aplicación
          (la imagen de discos en relieve), menú sólido del gris del dock y Liquid Glass sólo en tarjetas y avisos. -->
     <Grid x:Name="Marco" ColumnDefinitions="216,*">
         <!-- Fondo: la imagen de referencia de discos en relieve (assets/fondo-discos.png), a pantalla completa y detrás

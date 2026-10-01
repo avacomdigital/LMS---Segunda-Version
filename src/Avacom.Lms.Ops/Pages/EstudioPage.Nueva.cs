@@ -305,8 +305,7 @@ public partial class EstudioPage
 
     private void PasoDos()
     {
-        var fuente = Sesion.FuenteAula == Sesion.FuenteEjemplo ? "Curso de ejemplo" : "AVACOM Biblioteca";
-        var fuenteChip = Ds.Pildora($"Fuente: {fuente}", Ds.InfoSuave, Color.FromArgb("#02739E"), 13);
+        var fuenteChip = Ds.Pildora("Fuente: AVACOM Biblioteca", Ds.InfoSuave, Color.FromArgb("#02739E"), 13);
         fuenteChip.HorizontalOptions = LayoutOptions.Start;
 
         if (_catalogoCargando || (_catalogo is null && _catalogoError is null))
@@ -316,19 +315,11 @@ public partial class EstudioPage
         }
         if (_catalogo is null || !_catalogo.Disponible)
         {
-            var enEjemplo = Sesion.FuenteAula == Sesion.FuenteEjemplo;
             var acciones = new HorizontalStackLayout { Spacing = 12 };
             acciones.Add(EstudioUi.Accion("Reintentar", Ds.Rango.Secondary, async () => { _catalogo = null; await CargarCatalogoAsync(); }, 170, "estudio-reintentar").Vista);
-            acciones.Add(EstudioUi.Accion(enEjemplo ? "Volver a AVACOM Biblioteca" : "Usar el curso de ejemplo", Ds.Rango.Quiet, async () =>
-            {
-                Sesion.FuenteAula = enEjemplo ? Sesion.FuenteBiblioteca : Sesion.FuenteEjemplo;
-                _catalogo = null;
-                _curso = null; _vistaCurso = null; _leccion = null; _asignatura = null;
-                await CargarCatalogoAsync();
-            }, null, "estudio-cambiar-fuente").Vista);
             ContenidoHost.Add(Seccion("¿Qué lección?", null, fuenteChip,
                 EstudioUi.Aviso("No se pueden leer los cursos",
-                    _catalogoError ?? "AVACOM Biblioteca no está conectada. Una lección no se asigna a ciegas: conecta la biblioteca o usa el curso de ejemplo.",
+                    _catalogoError ?? "AVACOM Biblioteca no está conectada. Una lección no se asigna a ciegas: conecta la biblioteca y vuelve a intentarlo.",
                     Ds.AlertaSuave, Color.FromArgb("#806600")), acciones));
             return;
         }
