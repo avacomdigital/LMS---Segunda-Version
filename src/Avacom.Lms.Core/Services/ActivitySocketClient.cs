@@ -24,6 +24,7 @@ public sealed class ActivitySocketClient : IActivitySocketClient
         var query = $"role={Uri.EscapeDataString(role)}";
         if (!string.IsNullOrWhiteSpace(attemptId)) query += $"&attempt_id={Uri.EscapeDataString(attemptId)}";
         var uri = new Uri(socketBaseUri, $"ws/activities/{Uri.EscapeDataString(activityId)}/?{query}");
+        if (AparatoRegistrado.Id is { } aparato) { try { socket.Options.SetRequestHeader(ClienteJson.CabeceraDispositivo, aparato); } catch { } }
         await socket.ConnectAsync(uri, cancellationToken);
         receiveLoopCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _ = ReceiveLoopAsync(receiveLoopCancellation.Token);

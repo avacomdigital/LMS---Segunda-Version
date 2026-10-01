@@ -6,6 +6,10 @@ namespace Avacom.Lms.Core.Services;
 /// consola, un archivo en el perfil del usuario es lo único que queda.
 ///
 /// Ruta: %LOCALAPPDATA%\AVACOM\lms\fallos-{app}.log
+///
+/// Desde MOD-019 es una FACHADA de <see cref="RegistroLocal"/> (§2.4): cada excepción queda además como renglón ERROR del canal
+/// <c>aplicacion</c> en <c>{app}-app.log</c> / <c>{app}-errores.log</c> y en la cola que se entrega al nodo. El archivo plano de siempre se
+/// conserva para no cambiar lo que el técnico ya sabe leer.
 /// </summary>
 public static class RegistroDeFallos
 {
@@ -25,6 +29,7 @@ public static class RegistroDeFallos
     public static void Escribir(string app, string origen, Exception? excepcion)
     {
         if (excepcion is null) return;
+        try { RegistroLocal.Error(Canal.Aplicacion, "excepcion.no_controlada", origen, new { tipo = excepcion.GetType().Name }, excepcion); } catch { }
         try
         {
             var ruta = Ruta(app);
@@ -44,6 +49,7 @@ public static class RegistroDeFallos
     /// <summary>Engancha los tres orígenes de excepciones no controladas del proceso.</summary>
     public static void Observar(string app)
     {
+        RegistroLocal.Configurar(app);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Escribir(app, "AppDomain.UnhandledException", e.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, e) => Escribir(app, "TaskScheduler.UnobservedTaskException", e.Exception);
     }

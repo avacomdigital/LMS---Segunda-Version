@@ -134,13 +134,18 @@ public sealed class AulaApi(HttpClient http, Uri baseUri, string? fuente = null)
 
     // -------------------------------------------------------------- estudiante
 
-    public Task<EstadoTableta?> UnirseAsync(string codigo, string personaId, string personaRotulo, string dispositivo, string? participanteId,
-                                            string? plataforma = null, string? versionApp = null, CancellationToken ct = default) =>
-        EnviarAsync<EstadoTableta>("api/aula/sesiones/unirse/", new
+    public async Task<EstadoTableta?> UnirseAsync(string codigo, string personaId, string personaRotulo, string dispositivo, string? participanteId,
+                                                  string? plataforma = null, string? versionApp = null, CancellationToken ct = default)
+    {
+        var estado = await EnviarAsync<EstadoTableta>("api/aula/sesiones/unirse/", new
         {
             codigo_union = codigo, persona_id = personaId, persona_rotulo = personaRotulo, dispositivo, participante_id = participanteId,
             plataforma, version_app = versionApp,
         }, ct);
+        // MOD-019 (019-01): el nodo registró la tableta al entrar; su id viaja desde ahora en X-Avacom-Dispositivo.
+        if (estado?.Participante?.DispositivoId is { } aparato) AparatoRegistrado.Recordar(aparato);
+        return estado;
+    }
 
     public Task<EstadoTableta?> EstadoAsync(string sesionId, string participanteId, CancellationToken ct = default) =>
         ObtenerAsync<EstadoTableta>($"api/aula/sesiones/{sesionId}/estado/?participante={Uri.EscapeDataString(participanteId)}", ct);

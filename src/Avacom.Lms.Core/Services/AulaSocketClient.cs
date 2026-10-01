@@ -34,7 +34,9 @@ public sealed class AulaSocketClient : IAsyncDisposable
     public static readonly TimeSpan TiempoPorDefectoParaTrabajarSolo = TimeSpan.FromSeconds(10);
 
     private readonly Uri uri;
+    private readonly string sesionId;
     private readonly Func<object?>? telemetria;
+    private bool huboCaida;
     private readonly TimeSpan tiempoParaTrabajarSolo;
     private readonly SemaphoreSlim envio = new(1, 1);
     private CancellationTokenSource? parada;
@@ -47,12 +49,15 @@ public sealed class AulaSocketClient : IAsyncDisposable
                             Func<object?>? telemetria = null, TimeSpan? tiempoParaTrabajarSolo = null)
     {
         Rol = rol;
-        uri = UriDe(baseHttp, sesionId, rol, participanteId, token);
+        this.sesionId = sesionId;
+        uri = UriDe(baseHttp, sesionId, rol, participanteId, token, AparatoRegistrado.Id);
         this.telemetria = telemetria;
         this.tiempoParaTrabajarSolo = tiempoParaTrabajarSolo ?? TiempoPorDefectoParaTrabajarSolo;
     }
 
     public string Rol { get; }
+    /// <summary>La correlación (MOD-019) de esta conexión: la misma en el handshake y en todo lo que se registre de ella.</summary>
+    public string corr { get; } = ClienteJson.NuevoCorr();
     public ConexionAula Conexion { get; private set; } = ConexionAula.Reconectando;
     public bool Conectado => Conexion == ConexionAula.Conectado;
     /// <summary>El saludo del último canal abierto: estado de la sesión, conteo (profesor) y el latido que pide el nodo.</summary>
@@ -66,12 +71,14 @@ public sealed class AulaSocketClient : IAsyncDisposable
     public event Action<MensajeAula>? Mensaje;
     public event Action<ConexionAula>? ConexionCambio;
 
-    public static Uri UriDe(Uri baseHttp, string sesionId, string rol, string? participanteId, string? token)
+    public static Uri UriDe(Uri baseHttp, string sesionId, string rol, string? participanteId, string? token, string? dispositivo = null)
     {
         var construido = new UriBuilder(baseHttp) { Scheme = baseHttp.Scheme == Uri.UriSchemeHttps ? "wss" : "ws" };
         var consulta = new StringBuilder($"rol={(rol == "docente" ? "docente" : "estudiante")}");
         if (!string.IsNullOrWhiteSpace(participanteId)) consulta.Append("&participante=").Append(Uri.EscapeDataString(participanteId));
         if (!string.IsNullOrWhiteSpace(token)) consulta.Append("&token=").Append(Uri.EscapeDataString(token));
+        // MOD-019 (019-01): el aparato también en la consulta, por si el cliente no puede poner cabeceras en el handshake.
+        if (!string.IsNullOrWhiteSpace(dispositivo)) consulta.Append("&dispositivo=").Append(Uri.EscapeDataString(dispositivo));
         return new Uri(new Uri(construido.Uri.AbsoluteUri), $"ws/aula/sesiones/{Uri.EscapeDataString(sesionId)}/?{consulta}");
     }
 
@@ -144,21 +151,41 @@ public sealed class AulaSocketClient : IAsyncDisposable
             try
             {
                 using var nuevo = new ClientWebSocket();
+                if (AparatoRegistrado.Id is { } aparato) { try { nuevo.Options.SetRequestHeader(ClienteJson.CabeceraDispositivo, aparato); } catch { } }
+                try { nuevo.Options.SetRequestHeader(ClienteJson.CabeceraCorrelacion, corr); } catch { }
                 socket = nuevo;
                 await nuevo.ConnectAsync(uri, ct);
                 abierto = true;
+                if (huboCaida)
+                {
+                    huboCaida = false;
+                    RegistroLocal.Info(Canal.Comunicacion, "socket.recuperado", "El canal del aula volvió",
+                                       new { sesion_id = sesionId, rol = Rol, duracion_ms = sinCanal.ElapsedMilliseconds }, corr: corr);
+                }
                 using var latidos = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var latido = Task.Run(() => LatidoAsync(latidos.Token), latidos.Token);
                 try { await RecibirAsync(nuevo, ct); }
                 finally { latidos.Cancel(); try { await latido; } catch { } }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-            catch (Exception ex) when (ex is WebSocketException or HttpRequestException or IOException or InvalidOperationException or OperationCanceledException) { }
+            catch (Exception ex) when (ex is WebSocketException or HttpRequestException or IOException or InvalidOperationException or OperationCanceledException)
+            {
+                if (!abierto && !ct.IsCancellationRequested)
+                    RegistroLocal.Advertencia(Canal.Comunicacion, "socket.no_conecta", "No se pudo abrir el canal del aula",
+                                              new { sesion_id = sesionId, rol = Rol, tipo = ex.GetType().Name }, corr: corr);
+            }
             finally
             {
                 socket = null;
             }
             if (ct.IsCancellationRequested || Rechazado) break;
+            if (abierto)
+            {
+                // Se cayó un canal que estaba abierto: la duración de la caída la cuenta `sinCanal` hasta que vuelva (socket.recuperado).
+                huboCaida = true;
+                RegistroLocal.Advertencia(Canal.Comunicacion, "socket.caida", "Se cayó el canal del aula; reintentando",
+                                          new { sesion_id = sesionId, rol = Rol }, corr: corr);
+            }
             if (Conexion == ConexionAula.Conectado) { sinCanal.Restart(); }
             Cambiar(sinCanal.Elapsed >= tiempoParaTrabajarSolo ? ConexionAula.TrabajandoEnElDispositivo : ConexionAula.Reconectando);
             intento = abierto ? 0 : Math.Min(intento + 1, Esperas.Length - 1);
@@ -192,7 +219,12 @@ public sealed class AulaSocketClient : IAsyncDisposable
                 resultado = await s.ReceiveAsync(buffer.AsMemory(), ct);
                 if (resultado.MessageType == WebSocketMessageType.Close)
                 {
-                    if (s.CloseStatus is { } estado && (int)estado is >= 4400 and <= 4499) Marcar(rechazo: true);
+                    if (s.CloseStatus is { } estado && (int)estado is >= 4400 and <= 4499)
+                    {
+                        Marcar(rechazo: true);
+                        RegistroLocal.Advertencia(Canal.Comunicacion, "socket.rechazado", "El nodo cerró el canal del aula con un rechazo",
+                                                  new { sesion_id = sesionId, rol = Rol, codigo = (int)estado }, corr: corr);
+                    }
                     try { await s.CloseAsync(WebSocketCloseStatus.NormalClosure, "ok", CancellationToken.None); } catch { }
                     return;
                 }

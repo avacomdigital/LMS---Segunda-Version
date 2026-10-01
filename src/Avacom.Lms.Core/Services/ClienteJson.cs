@@ -37,6 +37,11 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
     public Uri BaseUri { get; } = baseUri;
     public string? UltimoMotivo { get; private set; }
     public ErrorAula? UltimoError { get; private set; }
+    /// <summary>El <c>corr</c> (MOD-019) de la última petición: con él se reconstruye la operación entera en el nodo (petición, asiento, evento, error).</summary>
+    public string? UltimoCorr { get; private set; }
+
+    public const string CabeceraDispositivo = "X-Avacom-Dispositivo";
+    public const string CabeceraCorrelacion = "X-Avacom-Correlacion";
 
     public Uri Absoluta(string rutaRelativa) => new(BaseUri, rutaRelativa.TrimStart('/'));
 
@@ -44,6 +49,10 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
     {
         var mensaje = new HttpRequestMessage(metodo, Absoluta(ruta)) { Content = contenido };
         if (Token is { } t) mensaje.Headers.Authorization = new AuthenticationHeaderValue("Bearer", t);
+        // MOD-019 (019-01): el aparato se identifica en cada llamada y cada petición lleva su correlación.
+        if (AparatoRegistrado.Id is { } aparato) mensaje.Headers.TryAddWithoutValidation(CabeceraDispositivo, aparato);
+        UltimoCorr = NuevoCorr();
+        mensaje.Headers.TryAddWithoutValidation(CabeceraCorrelacion, UltimoCorr);
         return mensaje;
     }
 
@@ -63,7 +72,7 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            SinRed();
+            SinRed(ruta, ex);
             return default;
         }
     }
@@ -85,7 +94,7 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            SinRed();
+            SinRed(ruta, ex);
             return default;
         }
     }
@@ -108,7 +117,7 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            SinRed();
+            SinRed(ruta, ex);
             return default;
         }
     }
@@ -134,7 +143,7 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            SinRed();
+            SinRed(ruta, ex);
             return null;
         }
     }
@@ -164,7 +173,7 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         catch (Exception ex) when (EsDeRed(ex))
         {
             respuesta?.Dispose();
-            SinRed();
+            SinRed(ruta, ex);
             return null;
         }
     }
@@ -186,7 +195,7 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            SinRed();
+            SinRed(ruta, ex);
             return false;
         }
     }
@@ -197,10 +206,24 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         UltimoError = null;
     }
 
-    private void SinRed()
+    /// <summary>Un identificador de correlación aceptable para el nodo (letras, dígitos, guion; 8–64 caracteres).</summary>
+    public static string NuevoCorr() => Guid.NewGuid().ToString("N");
+
+    private void SinRed(string ruta, Exception? ex = null)
     {
         UltimoMotivo = "No hay conexión con el aula.";
         UltimoError = new ErrorAula(0, "sin_conexion", UltimoMotivo, "Revisa que el equipo del aula esté encendido y en la misma red.", null);
+        // Canal comunicacion: sólo la ruta y el tipo de fallo; nunca el cuerpo. RegistroLocal frena las repeticiones del sondeo.
+        RegistroLocal.Advertencia(Canal.Comunicacion, "red.sin_conexion", $"Sin conexión con el aula: {Ruta(ruta)}",
+                                  new { ruta = Ruta(ruta), tipo = ex?.GetType().Name }, corr: UltimoCorr);
+    }
+
+    /// <summary>La ruta sin su consulta (los parámetros pueden llevar identificadores que no hace falta copiar al log).</summary>
+    private static string Ruta(string ruta)
+    {
+        var corte = ruta.IndexOf('?');
+        var limpia = corte < 0 ? ruta : ruta[..corte];
+        return limpia.StartsWith('/') ? limpia : "/" + limpia;
     }
 
     private async Task RegistrarErrorAsync(HttpResponseMessage respuesta, CancellationToken ct)
@@ -233,6 +256,12 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         };
         UltimoMotivo = detalle;
         UltimoError = new ErrorAula(estado, codigo, detalle, sugerencia, extra);
+        // MOD-019 §2.4: todo 401/403/409/5xx (y cualquier 4xx) con la ruta y el código del backend, sin el cuerpo.
+        var ruta = respuesta.RequestMessage?.RequestUri?.AbsolutePath ?? "?";
+        var nivel = estado >= 500 ? NivelLog.Error : estado == 404 ? NivelLog.Info : NivelLog.Warning;
+        RegistroLocal.Escribir(nivel, Canal.Comunicacion, "http.error", $"{respuesta.RequestMessage?.Method} {ruta} → {estado}",
+                               new { metodo = respuesta.RequestMessage?.Method?.Method, ruta, estado, codigo }, corr: UltimoCorr,
+                               ruta: estado >= 500 ? "bad" : "sad");
         if (UltimoError.SesionPerdida) SesionRechazada?.Invoke(UltimoError);
     }
 

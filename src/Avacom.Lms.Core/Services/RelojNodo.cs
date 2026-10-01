@@ -25,7 +25,11 @@ public static class RelojNodo
     public static void Aprender(long servidorEnMs)
     {
         if (servidorEnMs <= 0) return;
-        Interlocked.Exchange(ref desfase, servidorEnMs - LocalMs);
+        var nuevo = servidorEnMs - LocalMs;
+        var anterior = Interlocked.Exchange(ref desfase, nuevo);
+        // MOD-019 §2.4 (canal dispositivo): el reloj del aparato frente al del nodo, con el desfase medido, cuando pasa de un minuto.
+        if (Math.Abs(nuevo) > 60_000 && Math.Abs(nuevo - anterior) > 5_000)
+            RegistroLocal.Advertencia(Canal.Dispositivo, "reloj.desfasado", "El reloj de este aparato difiere del reloj del nodo", new { desfase_ms = nuevo });
         Volatile.Write(ref aprendido, 1);
     }
 

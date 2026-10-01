@@ -74,11 +74,21 @@ public sealed class ColaRespuestas
 
     private void Persistir()
     {
-        var carpeta = Path.GetDirectoryName(ruta);
-        if (!string.IsNullOrEmpty(carpeta)) Directory.CreateDirectory(carpeta);
-        var temporal = ruta + ".tmp";
-        File.WriteAllText(temporal, JsonSerializer.Serialize(estado, Json));
-        File.Move(temporal, ruta, overwrite: true);
+        try
+        {
+            var carpeta = Path.GetDirectoryName(ruta);
+            if (!string.IsNullOrEmpty(carpeta)) Directory.CreateDirectory(carpeta);
+            var temporal = ruta + ".tmp";
+            File.WriteAllText(temporal, JsonSerializer.Serialize(estado, Json));
+            File.Move(temporal, ruta, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // MOD-019 §2.4 (canal escritura): disco lleno, permisos, archivo bloqueado. Se registra con el código, nunca con el contenido.
+            RegistroLocal.Error(Canal.Escritura, "cola.persistir_fallo", "No se pudo escribir la cola de respuestas",
+                                new { hresult = ex.HResult, tipo = ex.GetType().Name, entradas = estado.Entradas.Count }, ex);
+            throw;
+        }
     }
 
     private Entrada Buscar(string sesion, string distribucion, string participante, int intento, bool crear)

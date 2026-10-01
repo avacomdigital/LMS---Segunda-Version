@@ -18,7 +18,12 @@ public interface IDispositivosApi
     Task<DispositivoAula?> DispositivoAsync(string dispositivoId, CancellationToken ct = default);
     Task<DispositivoAula?> BloquearAsync(string dispositivoId, string actor, string? motivo = null, CancellationToken ct = default);
     Task<DispositivoAula?> DesbloquearAsync(string dispositivoId, string actor, CancellationToken ct = default);
-    Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default);
+    /// <summary>
+    /// El latido (009-04): registra al equipo si es nuevo (por su huella) y devuelve si está bloqueado o retirado. <paramref name="tipo"/>
+    /// es <c>TABLETA</c> (por defecto), <c>MASTER</c> (el nodo de OPS) u <c>OTRO</c>. El id que responde el nodo queda en
+    /// <see cref="AparatoRegistrado"/> para la cabecera <c>X-Avacom-Dispositivo</c> (MOD-019).
+    /// </summary>
+    Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default, string? tipo = null);
 
     /// <summary>
     /// FUN-092 (MOD-008 · 008-01): deja la tableta asignada a un alumno; sólo en ese aparato existe el modo de estudio. Un aparato que ya es de
@@ -47,8 +52,13 @@ public sealed class DispositivosApi(HttpClient http, Uri baseUri) : ClienteJson(
     public Task<DispositivoAula?> DesbloquearAsync(string dispositivoId, string actor, CancellationToken ct = default) =>
         EnviarAsync<DispositivoAula>($"api/dispositivos/{Uri.EscapeDataString(dispositivoId)}/desbloquear/", new { actor }, ct);
 
-    public Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default) =>
-        EnviarAsync<DispositivoAula>("api/dispositivos/latido/", new { identificador_hw = identificadorHw, nombre, plataforma, version_app = versionApp }, ct);
+    public async Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default, string? tipo = null)
+    {
+        var dispositivo = await EnviarAsync<DispositivoAula>("api/dispositivos/latido/",
+            new { identificador_hw = identificadorHw, nombre, plataforma, version_app = versionApp, tipo = tipo ?? "TABLETA" }, ct);
+        if (dispositivo is not null) AparatoRegistrado.Recordar(dispositivo.Id);
+        return dispositivo;
+    }
 
     public Task<DispositivoAula?> AsignarAsync(string dispositivoId, string alumnoId, string actor, CancellationToken ct = default) =>
         EnviarAsync<DispositivoAula>($"api/dispositivos/{Uri.EscapeDataString(dispositivoId)}/asignar/", new { alumno_id = alumnoId, actor }, ct);
