@@ -71,9 +71,35 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("study.package.download", "estudio", "Pedir, bajar, confirmar y retirar el paquete de estudio (FUN-084)", S, False),
     ("study.assignment.create", "estudio", "Asignar una lección a un grupo o a alumnos con fecha límite (CAP-050)", O, False),
     ("study.assignment.review", "estudio", "Ver quién completó lo asignado y resolver lo pendiente de decisión (CAP-051, BR-074)", O, False),
+    # --- MOD-010 · Evaluation & Delivery Engine (sección J de su ficha: los once primeros; los cinco últimos son del proyecto). Los evalúa
+    # `evaluacion.infraestructura.autorizacion.AutorizacionEvaluacion`. `assessment.create` y `assessment.item.create` existen en el catálogo pero no tienen
+    # función en el LMS: crear una evaluación y añadir un reactivo (FUN-103, FUN-104) son de AVACOM Biblioteca (artículo 14).
+    ("assessment.create", "evaluacion", "Crear una evaluación con banco de reactivos (FUN-103): se hace en AVACOM Biblioteca", O, False),
+    ("assessment.item.create", "evaluacion", "Añadir un reactivo a una evaluación (FUN-104): se hace en AVACOM Biblioteca", O, False),
+    ("assessment.exam_mode.set", "evaluacion", "Fijar el nivel de modo examen exigido a los dispositivos de una evaluación (FUN-105)", O, False),
+    ("assessment.deadline.set", "evaluacion", "Configurar la fecha límite blanda de una asignación (FUN-106)", O, False),
+    ("assessment.deadline.enforce", "evaluacion", "Endurecer la fecha límite y decidir lo que llegó fuera de la gracia (FUN-107, BR-074)", O, False),
+    ("assessment.assign", "evaluacion", "Asignar una evaluación a un grupo o a alumnos concretos (FUN-108)", O, False),
+    ("assessment.attempt.start", "evaluacion", "Abrir el propio intento de una evaluación asignada (FUN-109)", S, False),
+    ("assessment.answer.submit", "evaluacion", "Enviar la respuesta propia a una pregunta del intento en curso (FUN-110)", S, False),
+    ("assessment.attempt.submit", "evaluacion", "Entregar el propio intento y cerrarlo (FUN-114)", S, False),
+    ("assessment.exam_mode.override", "evaluacion", "Admitir un dispositivo por debajo del nivel de examen declarado, con motivo (FUN-116, BR-076)", O, False),
+    ("assessment.exam_mode.downgrade", "evaluacion", "Degradar el nivel de modo examen de una evaluación en curso (FUN-118)", O, False),
+    ("assessment.read", "evaluacion", "Ver las evaluaciones asignadas, su panel y el expediente de cada intento (PAN-005, PAN-062)", O, False),
+    ("assessment.attempt.reactivate", "evaluacion", "Reactivar a un alumno suspendido, con el cronómetro congelado (PAN-061)", O, False),
+    ("assessment.attempt.void", "evaluacion", "Anular un intento ya entregado: decisión humana y motivada (INV-018)", O, True),
+    ("assessment.review", "evaluacion", "Puntuar a mano los reactivos de revisión docente y publicar el intento (CAP-062)", O, True),
+    ("assessment.results.view", "evaluacion", "Ver los resultados de una evaluación y liberarlos al alumno (DEC-032)", O, True),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
+
+# Los tres `assessment.*` del intento del alumno: sólo el rol STUDENT los tiene, sobre lo suyo. El Maestro le niega a la administración «el intento del alumno».
+PERMISOS_DE_EVALUACION_DEL_ALUMNO = ("assessment.attempt.start", "assessment.answer.submit", "assessment.attempt.submit")
+# Los que opera el profesor sobre sus grupos (el administrador los tiene sobre toda la organización).
+PERMISOS_DE_EVALUACION_DEL_DOCENTE = ("assessment.exam_mode.set", "assessment.deadline.set", "assessment.deadline.enforce", "assessment.assign",
+                                      "assessment.exam_mode.override", "assessment.exam_mode.downgrade", "assessment.read", "assessment.attempt.reactivate",
+                                      "assessment.attempt.void", "assessment.review", "assessment.results.view")
 
 # Los seis permisos `study.*` del alumno: sólo el rol STUDENT los tiene. El Maestro es explícito: el administrador «no accede al
 # modo de estudio del alumno», así que se excluyen de ADMIN aunque el resto de los permisos se le concedan por defecto.
@@ -115,6 +141,8 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "identity.session.read": S, "identity.session.revoke_own": S, "identity.group.read": S,
         # El modo de estudio es del alumno y sólo sobre lo suyo.
         **{c: S for c in PERMISOS_DE_ESTUDIO_DEL_ALUMNO},
+        # Presenta sus evaluaciones: abrir, responder y entregar SU intento.
+        **{c: S for c in PERMISOS_DE_EVALUACION_DEL_ALUMNO},
     }),
     "TEACHER": ("Profesor", Menu.TEACHER, 2, {
         "student.progress.read": G, "results.read": G, "reports.student.view": G, "content.read": O, "content.project": G,
@@ -128,11 +156,13 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "classroom.results.view": G, "classroom.message.send": G, "classroom.end": G,
         # Asigna trabajo de estudio y ve quién lo completó, sobre sus grupos.
         "study.assignment.create": G, "study.assignment.review": G,
+        # Asigna evaluaciones, vigila el examen, reactiva, admite tabletas, revisa y libera resultados, sobre sus grupos.
+        **{c: G for c in PERMISOS_DE_EVALUACION_DEL_DOCENTE},
     }),
     "ADMIN": ("Administrador", Menu.ADMIN, 3, {
         # Todo salvo lo que el Maestro le niega: calificar directamente, el modo de estudio del alumno y el intento del alumno.
         **{c: a for c, a in _TODOS_ORG.items()
-           if c not in ("student.progress.write", "student.exam.attempt", *PERMISOS_DE_ESTUDIO_DEL_ALUMNO)},
+           if c not in ("student.progress.write", "student.exam.attempt", *PERMISOS_DE_ESTUDIO_DEL_ALUMNO, *PERMISOS_DE_EVALUACION_DEL_ALUMNO)},
     }),
     "REPORTS": ("Reportes", Menu.REPORTS, 2, {
         # Sólo lectura. Ninguna escritura sobre datos académicos, en ninguna circunstancia.
@@ -174,6 +204,7 @@ POLITICAS_POR_DEFECTO: dict[Menu, dict] = {
 PERMISOS_SESION_TEMPORAL = frozenset({
     "student.exam.attempt", "student.progress.read", "student.progress.write",
     "content.read", "results.read", "identity.session.revoke_own",
+    *PERMISOS_DE_EVALUACION_DEL_ALUMNO,
 })
 
 # Lo único que puede hacer quien aún tiene una credencial provisional.
