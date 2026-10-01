@@ -664,7 +664,7 @@ public sealed class SesionDeExamenTests : IDisposable
     [Fact]
     public async Task UnHechoDelKiosco_SeEncolaConSuRefCliente_YSaleConElSiguienteVaciado()
     {
-        using var s = await Abierta();
+        using var s = await Abierta(Supervisado);
         kiosco.Disparar(new HechoDeKiosco(TiposDeIncidente.SalidaDeApp, new() { ["via"] = "inicio" }));
         kiosco.Disparar(new HechoDeKiosco(TiposDeIncidente.TeclaBloqueada));
         Assert.Equal(2, s.PendientesEnDispositivo);
@@ -673,6 +673,17 @@ public sealed class SesionDeExamenTests : IDisposable
         Assert.Equal(new[] { "salida_de_app", "tecla_bloqueada" }, enviados.Select(i => i.Tipo));
         Assert.Equal(2, enviados.Select(i => i.RefCliente).Distinct().Count());
         Assert.Equal(0, s.PendientesEnDispositivo);
+    }
+
+    [Fact]
+    public async Task EnUnExamenAbierto_LasSalidasYRegresosNoSeInforman_PeroUnCierreBloqueadoSi()
+    {
+        using var s = await Abierta(PlanDeBloqueo.Libre);                  // un examen abierto no registra salidas
+        kiosco.Disparar(new HechoDeKiosco(TiposDeIncidente.SalidaDeApp));
+        kiosco.Disparar(new HechoDeKiosco(TiposDeIncidente.RegresoAApp));
+        Assert.Equal(0, s.PendientesEnDispositivo);
+        kiosco.Disparar(new HechoDeKiosco(TiposDeIncidente.CierreBloqueado));
+        Assert.Equal(1, s.PendientesEnDispositivo);
     }
 
     [Fact]

@@ -274,11 +274,8 @@ public sealed class SesionDeExamen : IDisposable
         return secuencia;
     }
 
-    public void IrA(string preguntaRef)
-    {
-        PreguntaActual = preguntaRef;
-        Avisar();
-    }
+    /// <summary>Por dónde va el alumno (viaja en el latido). No avisa a la pantalla: es la propia pantalla quien la cambia.</summary>
+    public void IrA(string preguntaRef) => PreguntaActual = preguntaRef;
 
     // ======================================================================================================== latido
 
@@ -411,6 +408,9 @@ public sealed class SesionDeExamen : IDisposable
     private void AlHecho(HechoDeKiosco hecho)
     {
         if (disposed || IntentoId is not { } id || !EstadosIntento.AceptaRespuestas(Intento?.Estado) || !TiposDeIncidente.DeLaTableta.Contains(hecho.Tipo)) return;
+        // Las salidas y regresos sólo se informan si el plan del nodo las pide (supervisado y controlado). El servicio de plataforma no recibe el plan cuando éste no
+        // exige bloqueo, así que emite siempre; en un examen abierto nadie debe ver «salió de la aplicación».
+        if (hecho.Tipo is TiposDeIncidente.SalidaDeApp or TiposDeIncidente.RegresoAApp && Plan?.RegistrarSalidas != true) return;
         try
         {
             cola.RegistrarIncidente(id, hecho.Tipo, hecho.Detalle);
