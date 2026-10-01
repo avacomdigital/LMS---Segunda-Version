@@ -1,0 +1,43 @@
+{
+  "espera_reactivacion": false,
+  "intento": {
+    "asignacion_id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+    "envio_tardio": "",
+    "estado": "en_curso",
+    "fuera_de_plazo": false,
+    "id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+    "navegacion_atras": true,
+    "nivel_efectivo": "supervisado",
+    "numero": 1,
+    "pregunta_actual": "l3-q1",
+    "respondidas": 0,
+    "secuencia_maxima": 0,
+    "total": 12
+  },
+  "latido_seg": 5,
+  "mensaje": null,
+  "plan_bloqueo": {
+    "bloquear_capturas": false,
+    "capa_app": false,
+    "capa_sistema": false,
+    "capacidad": "supervisado",
+    "cubrir_pantallas_extra": false,
+    "latido_seg": 5,
+    "nivel": "supervisado",
+    "nivel_exigido": "supervisado",
+    "parcial": false,
+    "registrar_consultas": true,
+    "registrar_salidas": true
+  },
+  "reloj": {
+    "congelado": false,
+    "consumido_ms": 0,
+    "corriendo": true,
+    "limite_seg": 900,
+    "restante_ms": 900000,
+    "servidor_en": 1790000000000
+  },
+  "resultado_disponible": false,
+  "servidor_en": 1790000000000,
+  "sesion_activa": true
+}

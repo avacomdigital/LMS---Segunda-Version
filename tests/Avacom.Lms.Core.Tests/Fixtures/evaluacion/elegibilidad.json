@@ -1,0 +1,21 @@
+{
+  "filas": [
+    {
+      "alcanza": false,
+      "alumno_id": "0d0cff26-db0e-47be-b44d-4d6123617c33",
+      "capacidad": "supervisado",
+      "dispositivo_id": "252694d2-18a2-4328-9309-21047723eed2",
+      "dispositivo_nombre": "Tableta de Juan",
+      "nivel_exigido": "controlado",
+      "rotulo": "Juan P."
+    }
+  ],
+  "mensaje": "1 tabletas no alcanzan para el nivel controlado. Puedes admitirlas en un nivel menor o cambiarlas.",
+  "nivel_examen": "controlado",
+  "resumen": {
+    "alcanzan": 0,
+    "no_alcanzan": 1,
+    "sin_tableta": 0
+  },
+  "servidor_en": 1790000000000
+}

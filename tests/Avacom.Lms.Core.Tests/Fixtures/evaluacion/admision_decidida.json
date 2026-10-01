@@ -1,0 +1,16 @@
+{
+  "alumno_id": "0d0cff26-db0e-47be-b44d-4d6123617c33",
+  "alumno_rotulo": "Juan P.",
+  "asignacion_id": "4d34f7c6-5f3f-40c1-ac2c-8269b60c0851",
+  "decidido_en": 1790000000000,
+  "decidido_por": "4c81ab88-61cb-4a3e-9d0f-b99074486636",
+  "dispositivo_id": "252694d2-18a2-4328-9309-21047723eed2",
+  "dispositivo_rotulo": "Tableta de Juan",
+  "estado": "admitido",
+  "id": "560a221c-7138-497e-aee5-3f45d8c022ab",
+  "motivo": "La tableta aún no está aprovisionada",
+  "nivel_admitido": "supervisado",
+  "nivel_alcanzado": "supervisado",
+  "nivel_exigido": "controlado",
+  "solicitada_en": 1790000000000
+}

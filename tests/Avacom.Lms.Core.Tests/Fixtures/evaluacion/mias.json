@@ -1,0 +1,22 @@
+{
+  "alumno_id": "0d0cff26-db0e-47be-b44d-4d6123617c33",
+  "pendientes": [
+    {
+      "abre_en": null,
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "estado": "activa",
+      "id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+      "limite_en": null,
+      "mi_intento": null,
+      "motivo": "",
+      "nivel_examen": "supervisado",
+      "plazo": "blando",
+      "preguntas": 12,
+      "puede_comenzar": true,
+      "sesion_id": "",
+      "titulo": "Examen de estados de la materia"
+    }
+  ],
+  "recientes": [],
+  "servidor_en": 1790000000000
+}

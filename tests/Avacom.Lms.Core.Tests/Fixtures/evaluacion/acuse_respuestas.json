@@ -1,0 +1,32 @@
+{
+  "aceptadas": [
+    "l3-q1"
+  ],
+  "acuse": true,
+  "duplicadas": [],
+  "intento": {
+    "envio_tardio": "",
+    "estado": "en_curso",
+    "id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+    "respondidas": 1,
+    "secuencia_maxima": 1
+  },
+  "politica": "aceptar",
+  "rechazadas": [
+    {
+      "motivo": "la pregunta no está en tu examen",
+      "pregunta_ref": "l3-q-que-no-existe"
+    }
+  ],
+  "recibida_en": 1790000005000,
+  "reloj": {
+    "congelado": false,
+    "consumido_ms": 5000,
+    "corriendo": true,
+    "limite_seg": 900,
+    "restante_ms": 895000,
+    "servidor_en": 1790000005000
+  },
+  "servidor_en": 1790000005000,
+  "superadas": []
+}

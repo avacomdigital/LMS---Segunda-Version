@@ -1,0 +1,25 @@
+{
+  "aprobacion_pct": 60.0,
+  "asignacion_id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+  "datos_suficientes": false,
+  "filas": [
+    {
+      "alumno_id": "0d0cff26-db0e-47be-b44d-4d6123617c33",
+      "aprobado": true,
+      "definitivo": true,
+      "estado": "calificado",
+      "fuera_de_plazo": false,
+      "incidentes": 3,
+      "intento_id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+      "porcentaje": 80.9524,
+      "puntaje": 17.0,
+      "puntaje_maximo": 21.0,
+      "requiere_revision": false,
+      "rotulo": "Juan P."
+    }
+  ],
+  "liberados_en": null,
+  "promedio_porcentaje": null,
+  "servidor_en": 1790000125000,
+  "titulo": "Examen de estados de la materia"
+}

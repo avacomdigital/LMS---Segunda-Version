@@ -1,0 +1,46 @@
+{
+  "espera_reactivacion": true,
+  "intento": {
+    "asignacion_id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+    "envio_tardio": "",
+    "estado": "pausado_desconexion",
+    "fuera_de_plazo": false,
+    "id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+    "navegacion_atras": true,
+    "nivel_efectivo": "supervisado",
+    "numero": 1,
+    "pregunta_actual": "l3-q1",
+    "respondidas": 1,
+    "secuencia_maxima": 1,
+    "total": 12
+  },
+  "latido_seg": 5,
+  "mensaje": {
+    "codigo": "suspendido",
+    "texto": "Todo lo que respondiste está guardado y el tiempo está detenido. Tu examen queda en pausa. Avisa a tu profesor para continuar."
+  },
+  "plan_bloqueo": {
+    "bloquear_capturas": false,
+    "capa_app": false,
+    "capa_sistema": false,
+    "capacidad": "supervisado",
+    "cubrir_pantallas_extra": false,
+    "latido_seg": 5,
+    "nivel": "supervisado",
+    "nivel_exigido": "supervisado",
+    "parcial": false,
+    "registrar_consultas": true,
+    "registrar_salidas": true
+  },
+  "reloj": {
+    "congelado": true,
+    "consumido_ms": 5000,
+    "corriendo": false,
+    "limite_seg": 900,
+    "restante_ms": 895000,
+    "servidor_en": 1790000125000
+  },
+  "resultado_disponible": false,
+  "servidor_en": 1790000125000,
+  "sesion_activa": true
+}

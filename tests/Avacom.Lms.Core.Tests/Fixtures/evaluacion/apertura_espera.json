@@ -1,0 +1,29 @@
+{
+  "admision": {
+    "estado": "en_espera",
+    "id": "560a221c-7138-497e-aee5-3f45d8c022ab",
+    "motivo": "",
+    "nivel_admitido": "",
+    "nivel_alcanzado": "supervisado",
+    "nivel_exigido": "controlado"
+  },
+  "condiciones": {
+    "nivel": "controlado",
+    "registra": [
+      "Salidas de la aplicación",
+      "Tus respuestas y el tiempo que tomaste"
+    ],
+    "texto": "Durante este examen tu tableta solo muestra el examen. Si sales, tu profesor lo verá, y tus respuestas se guardan igual.",
+    "titulo": "Examen controlado"
+  },
+  "intento": {
+    "estado": "no_iniciado",
+    "id": "a8b92b25-f595-48ef-a8a9-463590caf162",
+    "numero": 1
+  },
+  "mensaje": {
+    "codigo": "espera_admision",
+    "texto": "Tu tableta no alcanza el nivel de control de este examen. Tu profesor debe decidir cómo continuar."
+  },
+  "servidor_en": 1790000000000
+}

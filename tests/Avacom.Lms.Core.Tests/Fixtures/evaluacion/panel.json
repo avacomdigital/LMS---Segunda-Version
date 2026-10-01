@@ -1,0 +1,88 @@
+{
+  "asignacion": {
+    "abre_en": null,
+    "curso_rotulo": "Estados de la materia y sus cambios",
+    "estado": "activa",
+    "gracia_ms": 900000,
+    "grupo_rotulo": "Octavo A",
+    "id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+    "intentos_permitidos": 1,
+    "liberados_en": null,
+    "limite_en": null,
+    "nivel_declarado": "supervisado",
+    "nivel_examen": "supervisado",
+    "objeto_rotulo": "Examen de estados de la materia",
+    "plazo": "blando",
+    "preguntas_por_alumno": 12,
+    "reactivacion": "profesor",
+    "resultados": "tras_liberar",
+    "sesion_id": "",
+    "titulo": "Examen de estados de la materia"
+  },
+  "filas": [
+    {
+      "admision": null,
+      "alumno_id": "0d0cff26-db0e-47be-b44d-4d6123617c33",
+      "anulado_por": null,
+      "bloqueo": {
+        "resultado": "aplicado"
+      },
+      "dispositivo": {
+        "alcanza": true,
+        "capacidad": "supervisado",
+        "id": "252694d2-18a2-4328-9309-21047723eed2",
+        "nombre": "Tableta de Juan"
+      },
+      "envio_tardio": "",
+      "estado": "en_curso",
+      "fuera_de_plazo": false,
+      "incidentes": {
+        "alta": 0,
+        "atencion": 0,
+        "informativa": 1,
+        "total": 1,
+        "ultimo": {
+          "ocurrido_en": 1790000005000,
+          "severidad": "informativa",
+          "tipo": "salida_de_app"
+        }
+      },
+      "intento_id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+      "nivel_efectivo": "supervisado",
+      "numero": 1,
+      "origen_entrega": "",
+      "porcentaje": null,
+      "pregunta_actual": "l3-q1",
+      "reloj": {
+        "congelado": false,
+        "consumido_ms": 5000,
+        "corriendo": true,
+        "limite_seg": 900,
+        "restante_ms": 895000,
+        "servidor_en": 1790000005000
+      },
+      "requiere_reactivacion": false,
+      "requiere_revision": false,
+      "respondidas": 1,
+      "rotulo": "Juan P.",
+      "silencio_ms": 0,
+      "total": 12
+    }
+  ],
+  "servidor_en": 1790000005000,
+  "totales": {
+    "anulados": 0,
+    "calificados": 0,
+    "con_incidentes": 1,
+    "destinatarios": 1,
+    "en_curso": 1,
+    "en_espera_admision": 0,
+    "en_revision": 0,
+    "entregados": 0,
+    "no_iniciados": 0,
+    "pendientes_decision": 0,
+    "restaurando": 0,
+    "sin_intento": 0,
+    "suspendidos": 0
+  }
+}

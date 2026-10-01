@@ -1,0 +1,109 @@
+{
+  "admisiones": [],
+  "bloqueo": {
+    "capas": {
+      "app": true,
+      "capturas": false,
+      "pantallas": false,
+      "sistema": false
+    },
+    "informado_en": 1790000005000,
+    "motivo": "",
+    "resultado": "aplicado"
+  },
+  "incidentes": [
+    {
+      "detalle": {
+        "segundos": 4
+      },
+      "dispositivo_id": "252694d2-18a2-4328-9309-21047723eed2",
+      "id": "3b466bc3-97f8-42af-a0ab-454ab9ca5c6e",
+      "intento_id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+      "ocurrido_en": 1790000005000,
+      "origen": "tableta",
+      "ref_cliente": "c-1",
+      "reportado_en_tableta": null,
+      "resolucion": "registrado",
+      "severidad": "informativa",
+      "tipo": "salida_de_app"
+    }
+  ],
+  "intento": {
+    "alumno_id": "0d0cff26-db0e-47be-b44d-4d6123617c33",
+    "alumno_rotulo": "Juan P.",
+    "anulado_en": null,
+    "anulado_por": "",
+    "asignacion_id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+    "calificacion_pendiente": false,
+    "calificado_por": "",
+    "consumido_ms": 0,
+    "curso_version": "1.0.0",
+    "decision_envio": {},
+    "dispositivo_id": "252694d2-18a2-4328-9309-21047723eed2",
+    "entregado_en": null,
+    "envio_tardio": "",
+    "estado": "en_curso",
+    "fuera_de_plazo": false,
+    "id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+    "iniciado_en": 1790000000000,
+    "motivo_anulacion": "",
+    "nivel_efectivo": "supervisado",
+    "numero": 1,
+    "origen_entrega": "",
+    "porcentaje": null,
+    "requiere_revision": false,
+    "semilla": "521ae26c-6516-464f-a33e-ad7d2021d5d7|0d0cff26-db0e-47be-b44d-4d6123617c33|1",
+    "tiempo_limite_seg": 900
+  },
+  "linea_de_tiempo": [
+    {
+      "detalle": {
+        "nivel_efectivo": "supervisado"
+      },
+      "en": 1790000000000,
+      "origen": "alumno",
+      "tipo": "intento_abierto"
+    },
+    {
+      "detalle": {
+        "segundos": 4
+      },
+      "en": 1790000005000,
+      "origen": "tableta",
+      "severidad": "informativa",
+      "tipo": "salida_de_app"
+    }
+  ],
+  "pausas": [],
+  "reloj": {
+    "congelado": false,
+    "consumido_ms": 5000,
+    "corriendo": true,
+    "limite_seg": 900,
+    "restante_ms": 895000,
+    "servidor_en": 1790000005000
+  },
+  "respondidas": 1,
+  "resumen_incidentes": {
+    "alta": 0,
+    "atencion": 0,
+    "informativa": 1,
+    "total": 1,
+    "ultimo": {
+      "ocurrido_en": 1790000005000,
+      "severidad": "informativa",
+      "tipo": "salida_de_app"
+    }
+  },
+  "servidor_en": 1790000005000,
+  "sesiones": [
+    {
+      "desde": 1790000000000,
+      "dispositivo_id": "252694d2-18a2-4328-9309-21047723eed2",
+      "hasta": null,
+      "orden": 1790000000000,
+      "sesion_ref": "901586b3-0f57-4436-aeb4-85379f0cb024"
+    }
+  ],
+  "total": 12
+}

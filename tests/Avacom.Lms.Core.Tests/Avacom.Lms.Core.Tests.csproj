@@ -19,6 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Respuestas reales de /api/evaluacion/ capturadas por backend/evaluacion/tests/test_capturar_contrato.py -->
+    <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\Avacom.Lms.Core\Avacom.Lms.Core.csproj" />
   </ItemGroup>
 

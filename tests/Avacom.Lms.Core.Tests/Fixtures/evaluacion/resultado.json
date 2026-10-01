@@ -1,0 +1,139 @@
+{
+  "aprobacion_pct": 60.0,
+  "aprobado": true,
+  "detalle": [
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q1",
+      "puntaje": 1.0,
+      "puntaje_maximo": 1.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q2",
+      "puntaje": 1.0,
+      "puntaje_maximo": 1.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q3",
+      "puntaje": 1.0,
+      "puntaje_maximo": 1.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q4",
+      "puntaje": 2.0,
+      "puntaje_maximo": 2.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "Completa",
+      "correcta": null,
+      "pregunta_ref": "l3-q5",
+      "puntaje": 1.0,
+      "puntaje_maximo": 3.0,
+      "respondida": true,
+      "retroalimentacion": []
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q6",
+      "puntaje": 2.0,
+      "puntaje_maximo": 2.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q7",
+      "puntaje": 1.0,
+      "puntaje_maximo": 1.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q8",
+      "puntaje": 1.0,
+      "puntaje_maximo": 1.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto: se mantiene constante durante la fusión."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q9",
+      "puntaje": 3.0,
+      "puntaje_maximo": 3.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q10",
+      "puntaje": 1.0,
+      "puntaje_maximo": 1.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "",
+      "correcta": true,
+      "pregunta_ref": "l3-q11",
+      "puntaje": 2.0,
+      "puntaje_maximo": 2.0,
+      "respondida": true,
+      "retroalimentacion": [
+        "Correcto."
+      ]
+    },
+    {
+      "comentario": "Completa",
+      "correcta": null,
+      "pregunta_ref": "l3-q12",
+      "puntaje": 1.0,
+      "puntaje_maximo": 3.0,
+      "respondida": true,
+      "retroalimentacion": []
+    }
+  ],
+  "intento_id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+  "porcentaje": 80.9524,
+  "puntaje": 17.0,
+  "puntaje_maximo": 21.0,
+  "servidor_en": 1790000125000
+}

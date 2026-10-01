@@ -1,0 +1,28 @@
+{
+  "bloqueo": {
+    "capas": {
+      "app": true,
+      "capturas": false,
+      "pantallas": false,
+      "sistema": false
+    },
+    "informado_en": 1790000005000,
+    "motivo": "",
+    "resultado": "aplicado"
+  },
+  "incidente": null,
+  "plan_bloqueo": {
+    "bloquear_capturas": false,
+    "capa_app": false,
+    "capa_sistema": false,
+    "capacidad": "supervisado",
+    "cubrir_pantallas_extra": false,
+    "latido_seg": 5,
+    "nivel": "supervisado",
+    "nivel_exigido": "supervisado",
+    "parcial": false,
+    "registrar_consultas": true,
+    "registrar_salidas": true
+  },
+  "servidor_en": 1790000005000
+}

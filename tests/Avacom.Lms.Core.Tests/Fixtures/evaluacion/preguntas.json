@@ -1,0 +1,734 @@
+{
+  "instrucciones": "Lee con calma. El tiempo disponible aparece arriba de la pantalla.",
+  "instrucciones_tramos": [
+    {
+      "cursiva": false,
+      "matematica": false,
+      "negrita": false,
+      "texto": "Lee con calma. El tiempo disponible aparece arriba de la pantalla."
+    }
+  ],
+  "intento_id": "401956a7-fe0d-4de1-8030-c5cd2fcdd38b",
+  "navegacion_atras": true,
+  "pregunta_actual": "l3-q1",
+  "preguntas": [
+    {
+      "componente": "opcion_multiple",
+      "credito_parcial": false,
+      "dificultad": 1,
+      "duracion_estimada_seg": 30,
+      "enunciado": "¿Qué estado tiene forma y volumen propios?",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "¿Qué estado tiene forma y volumen propios?"
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "opciones": [
+        {
+          "media_ref": null,
+          "opcion_ref": "c",
+          "texto": "Gas",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Gas"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "b",
+          "texto": "Líquido",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Líquido"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "a",
+          "texto": "Sólido",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Sólido"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "permite_varias": false,
+      "pregunta_ref": "l3-q1",
+      "puntos": 1,
+      "referencias_curriculares": [],
+      "tema_ref": "t-states",
+      "tipo": "multiple_choice"
+    },
+    {
+      "componente": "verdadero_falso",
+      "credito_parcial": false,
+      "dificultad": 1,
+      "duracion_estimada_seg": 20,
+      "enunciado": "Un gas ocupa todo el espacio del recipiente que lo contiene.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Un gas ocupa todo el espacio del recipiente que lo contiene."
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "opciones": [
+        {
+          "media_ref": null,
+          "opcion_ref": "true",
+          "texto": "Verdadero",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Verdadero"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "false",
+          "texto": "Falso",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Falso"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "pregunta_ref": "l3-q2",
+      "puntos": 1,
+      "referencias_curriculares": [],
+      "tema_ref": "t-states",
+      "tipo": "true_false"
+    },
+    {
+      "componente": "completar",
+      "credito_parcial": false,
+      "dificultad": 2,
+      "duracion_estimada_seg": 40,
+      "enunciado": "Completa.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Completa."
+        }
+      ],
+      "espacios": [
+        {
+          "espacio_ref": "b1",
+          "modo_entrada": "select",
+          "opciones": [
+            "sólido",
+            "líquido",
+            "gas"
+          ]
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "plantilla": "En un {{b1}} las partículas se deslizan unas sobre otras.",
+      "pregunta_ref": "l3-q3",
+      "puntos": 1,
+      "referencias_curriculares": [],
+      "tema_ref": "t-states",
+      "tipo": "fill_blanks"
+    },
+    {
+      "componente": "ordenar",
+      "credito_parcial": false,
+      "dificultad": 2,
+      "duracion_estimada_seg": 45,
+      "elementos": [
+        {
+          "media_ref": null,
+          "ref": "x-liquid",
+          "texto": "Líquido",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Líquido"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "x-gas",
+          "texto": "Gas",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Gas"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "x-solid",
+          "texto": "Sólido",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Sólido"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "enunciado": "Ordena de menor a mayor movimiento de las partículas.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Ordena de menor a mayor movimiento de las partículas."
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "pregunta_ref": "l3-q4",
+      "puntos": 2,
+      "referencias_curriculares": [],
+      "tema_ref": "t-states",
+      "tipo": "ordering"
+    },
+    {
+      "componente": "abierta",
+      "credito_parcial": false,
+      "dificultad": 4,
+      "duracion_estimada_seg": 150,
+      "enunciado": "Explica por qué un globo inflado se encoge un poco si lo metes en la nevera.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Explica por qué un globo inflado se encoge un poco si lo metes en la nevera."
+        }
+      ],
+      "formato_respuesta": "text",
+      "longitud_maxima": 600,
+      "medios": [],
+      "nivel_cognitivo": null,
+      "pregunta_ref": "l3-q5",
+      "puntos": 3,
+      "referencias_curriculares": [],
+      "tema_ref": "t-states",
+      "tipo": "open"
+    },
+    {
+      "componente": "opcion_multiple",
+      "credito_parcial": true,
+      "dificultad": 3,
+      "duracion_estimada_seg": 50,
+      "enunciado": "¿Cuáles son ejemplos de líquidos? Elige todas las correctas.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "¿Cuáles son ejemplos de líquidos? Elige todas las correctas."
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "opciones": [
+        {
+          "media_ref": null,
+          "opcion_ref": "d",
+          "texto": "Sal",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Sal"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "c",
+          "texto": "Vapor de agua",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Vapor de agua"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "a",
+          "texto": "Aceite de cocina",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Aceite de cocina"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "b",
+          "texto": "Jugo de naranja",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Jugo de naranja"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "permite_varias": true,
+      "pregunta_ref": "l3-q6",
+      "puntos": 2,
+      "referencias_curriculares": [],
+      "tema_ref": "t-states",
+      "tipo": "multiple_choice"
+    },
+    {
+      "componente": "opcion_multiple",
+      "credito_parcial": false,
+      "dificultad": 1,
+      "duracion_estimada_seg": 30,
+      "enunciado": "¿Cómo se llama el paso de líquido a gas?",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "¿Cómo se llama el paso de líquido a gas?"
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "opciones": [
+        {
+          "media_ref": null,
+          "opcion_ref": "b",
+          "texto": "Condensación",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Condensación"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "c",
+          "texto": "Solidificación",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Solidificación"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "a",
+          "texto": "Evaporación",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Evaporación"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "permite_varias": false,
+      "pregunta_ref": "l3-q7",
+      "puntos": 1,
+      "referencias_curriculares": [],
+      "tema_ref": "t-changes",
+      "tipo": "multiple_choice"
+    },
+    {
+      "componente": "verdadero_falso",
+      "credito_parcial": false,
+      "dificultad": 3,
+      "duracion_estimada_seg": 40,
+      "enunciado": "Mientras el hielo se derrite, su temperatura sube sin parar.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Mientras el hielo se derrite, su temperatura sube sin parar."
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "opciones": [
+        {
+          "media_ref": null,
+          "opcion_ref": "true",
+          "texto": "Verdadero",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Verdadero"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "opcion_ref": "false",
+          "texto": "Falso",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Falso"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "pregunta_ref": "l3-q8",
+      "puntos": 1,
+      "referencias_curriculares": [],
+      "tema_ref": "t-changes",
+      "tipo": "true_false"
+    },
+    {
+      "componente": "relacionar",
+      "credito_parcial": true,
+      "derecha": [
+        {
+          "media_ref": null,
+          "ref": "r-evaporation",
+          "texto": "Evaporación",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Evaporación"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "r-solidification",
+          "texto": "Solidificación",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Solidificación"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "r-melting",
+          "texto": "Fusión",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Fusión"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "r-condensation",
+          "texto": "Condensación",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Condensación"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "dificultad": 2,
+      "duracion_estimada_seg": 60,
+      "enunciado": "Relaciona cada situación con su cambio de estado.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Relaciona cada situación con su cambio de estado."
+        }
+      ],
+      "izquierda": [
+        {
+          "media_ref": null,
+          "ref": "m-ice",
+          "texto": "Un helado al sol",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Un helado al sol"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "m-puddle",
+          "texto": "Un charco que desaparece",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Un charco que desaparece"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "m-freezer",
+          "texto": "Agua en el congelador",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Agua en el congelador"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "pregunta_ref": "l3-q9",
+      "puntos": 3,
+      "referencias_curriculares": [],
+      "tema_ref": "t-changes",
+      "tipo": "matching"
+    },
+    {
+      "componente": "completar",
+      "credito_parcial": false,
+      "dificultad": 2,
+      "duracion_estimada_seg": 35,
+      "enunciado": "Completa con un número.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Completa con un número."
+        }
+      ],
+      "espacios": [
+        {
+          "espacio_ref": "b1",
+          "modo_entrada": "numeric",
+          "opciones": []
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "plantilla": "A nivel del mar, el agua pura hierve a {{b1}} °C.",
+      "pregunta_ref": "l3-q10",
+      "puntos": 1,
+      "referencias_curriculares": [],
+      "tema_ref": "t-changes",
+      "tipo": "fill_blanks"
+    },
+    {
+      "componente": "ordenar",
+      "credito_parcial": false,
+      "dificultad": 3,
+      "duracion_estimada_seg": 50,
+      "elementos": [
+        {
+          "media_ref": null,
+          "ref": "y-liquid",
+          "texto": "Agua líquida",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Agua líquida"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "y-solid",
+          "texto": "Hielo",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Hielo"
+            }
+          ],
+          "url": null
+        },
+        {
+          "media_ref": null,
+          "ref": "y-gas",
+          "texto": "Vapor",
+          "texto_alternativo": null,
+          "tramos": [
+            {
+              "cursiva": false,
+              "matematica": false,
+              "negrita": false,
+              "texto": "Vapor"
+            }
+          ],
+          "url": null
+        }
+      ],
+      "enunciado": "Ordena lo que pasa al calentar un cubo de hielo durante mucho tiempo.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Ordena lo que pasa al calentar un cubo de hielo durante mucho tiempo."
+        }
+      ],
+      "medios": [],
+      "nivel_cognitivo": null,
+      "pregunta_ref": "l3-q11",
+      "puntos": 2,
+      "referencias_curriculares": [],
+      "tema_ref": "t-changes",
+      "tipo": "ordering"
+    },
+    {
+      "componente": "abierta",
+      "credito_parcial": false,
+      "dificultad": 4,
+      "duracion_estimada_seg": 150,
+      "enunciado": "Explica por qué en Bogotá el agua hierve a menos temperatura que en Cartagena.",
+      "enunciado_tramos": [
+        {
+          "cursiva": false,
+          "matematica": false,
+          "negrita": false,
+          "texto": "Explica por qué en Bogotá el agua hierve a menos temperatura que en Cartagena."
+        }
+      ],
+      "formato_respuesta": "text",
+      "longitud_maxima": 600,
+      "medios": [],
+      "nivel_cognitivo": null,
+      "pregunta_ref": "l3-q12",
+      "puntos": 3,
+      "referencias_curriculares": [],
+      "tema_ref": "t-changes",
+      "tipo": "open"
+    }
+  ],
+  "respondidas": {},
+  "servidor_en": 1790000000000,
+  "titulo": "Examen de estados de la materia",
+  "version": "1.0.0"
+}

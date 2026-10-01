@@ -1,0 +1,17 @@
+{
+  "codigo": "confirmacion_requerida",
+  "detail": "Te faltan 11 pregunta(s) por responder: confirma la entrega para continuar.",
+  "faltan": [
+    "l3-q2",
+    "l3-q3",
+    "l3-q4",
+    "l3-q5",
+    "l3-q6",
+    "l3-q7",
+    "l3-q8",
+    "l3-q9",
+    "l3-q10",
+    "l3-q11",
+    "l3-q12"
+  ]
+}

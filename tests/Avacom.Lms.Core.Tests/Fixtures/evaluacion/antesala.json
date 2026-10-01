@@ -1,0 +1,37 @@
+{
+  "admision": null,
+  "asignacion": {
+    "curso_rotulo": "Estados de la materia y sus cambios",
+    "duracion_seg": 900,
+    "estado": "activa",
+    "id": "521ae26c-6516-464f-a33e-ad7d2021d5d7",
+    "intentos_permitidos": 1,
+    "intentos_usados": 0,
+    "limite_en": null,
+    "permite_retroceso": true,
+    "plazo": "blando",
+    "preguntas": 12,
+    "resultados": "tras_liberar",
+    "titulo": "Examen de estados de la materia"
+  },
+  "condiciones": {
+    "nivel": "supervisado",
+    "registra": [
+      "Los materiales que consultas",
+      "Salidas de la aplicación",
+      "Tus respuestas y el tiempo que tomaste"
+    ],
+    "texto": "Puedes consultar los materiales que tu profesor dejó disponibles. Quedará registrado qué consultaste.",
+    "titulo": "Examen supervisado"
+  },
+  "dispositivo": {
+    "alcanza": true,
+    "capacidad": "supervisado",
+    "id": "252694d2-18a2-4328-9309-21047723eed2",
+    "nivel_exigido": "supervisado"
+  },
+  "mi_intento": null,
+  "motivo": "",
+  "puede_comenzar": true,
+  "servidor_en": 1790000000000
+}
