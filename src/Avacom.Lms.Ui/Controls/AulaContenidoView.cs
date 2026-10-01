@@ -32,6 +32,14 @@ public sealed class AulaContenidoView : ContentView
     private readonly List<WebView> _webs = [];
     private string? _hostPermitido;
 
+    // Espacio útil para un medio (video o imagen de un bloque) según lo que mide el visor AHORA. Se mide en `_cuerpo`
+    // y no en el contenedor del medio: el medio vive dentro de un ScrollView y su alto cambia el alto de la página, pero
+    // no el tamaño del visor, así que no hay realimentación (medio → barra de desplazamiento → ancho → medio…) que dé
+    // «Layout cycle detected» ni deje la capa del video con un tamaño viejo. Ver 02-classroom-engine/responsive.md.
+    private double _anchoUtil, _altoUtil;
+    private readonly List<Action> _ajustes = [];
+    private int _versionAjuste;
+
     /// <summary>Esquema con el que el HTML de un reproductor avisa a MAUI (`avacom-aula://fallo?tipo=audio&codigo=3`).</summary>
     public const string EsquemaAviso = "avacom-aula";
 
@@ -46,7 +54,28 @@ public sealed class AulaContenidoView : ContentView
         _raiz.Add(_cuerpo, 0, 0);
         _raiz.Add(_mandos, 0, 1);
         Content = _raiz;
+        _cuerpo.SizeChanged += (_, _) => AlCambiarElVisor();
+        // El perfil de pantalla (selector de OPS) acota los medios en todos los visores abiertos; se suelta al salir de pantalla.
+        Loaded += (_, _) => AjustesDePantalla.Cambio += AlCambiarElPerfil;
+        Unloaded += (_, _) => AjustesDePantalla.Cambio -= AlCambiarElPerfil;
         MostrarVacio();
+    }
+
+    private void AlCambiarElPerfil(object? sender, PerfilDePantalla perfil) => Dispatcher.Dispatch(AjustarMedios);
+
+    /// <summary>El visor cambió de tamaño (ventana, escala de Windows, reorientación): se recalcula el espacio útil y, ya asentado, se reajustan los medios.</summary>
+    private void AlCambiarElVisor()
+    {
+        _anchoUtil = Math.Max(0, _cuerpo.Width - 2 * 28 * Escala);
+        _altoUtil = Math.Max(0, _cuerpo.Height - PerfilDePantalla.MargenVertical);
+        // Arrastrar el borde de la ventana dispara decenas de cambios por segundo: sólo cuenta el último, 120 ms después.
+        var version = ++_versionAjuste;
+        Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(120), () => { if (version == _versionAjuste) AjustarMedios(); });
+    }
+
+    private void AjustarMedios()
+    {
+        foreach (var ajuste in _ajustes.ToArray()) ajuste();
     }
 
     /// <summary>Convierte una ruta relativa del backend (`/api/aula/…`) en URL absoluta.</summary>
@@ -265,7 +294,7 @@ public sealed class AulaContenidoView : ContentView
                 StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioTarjeta },
                 Content = imagen,
             };
-            pila.Add(ConProporcion(marco, b.Ancho, b.Alto));
+            pila.Add(CajaAjustada(marco, b.Ancho, b.Alto));
         }
         else
         {
@@ -281,22 +310,28 @@ public sealed class AulaContenidoView : ContentView
         if (Absoluta is null || string.IsNullOrWhiteSpace(b.Url))
             return Ds.Alerta_("Video no disponible", b.Pie, Ds.InfoSuave, Ds.Tinta);
         var url = Absoluta(b.Url!).AbsoluteUri;
-        var fragmento = b.DesdeSeg is not null || b.HastaSeg is not null ? $"#t={b.DesdeSeg ?? 0},{(b.HastaSeg is null ? string.Empty : b.HastaSeg.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))}" : string.Empty;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var fragmento = b.DesdeSeg is not null || b.HastaSeg is not null ? $"#t={b.DesdeSeg ?? 0},{(b.HastaSeg is null ? string.Empty : b.HastaSeg.Value.ToString(inv))}" : string.Empty;
         var pista = !string.IsNullOrWhiteSpace(b.SubtitulosUrl) ? $"<track kind=\"subtitles\" srclang=\"es\" label=\"Español\" src=\"{Absoluta(b.SubtitulosUrl!).AbsoluteUri}\" default>" : string.Empty;
+        // Recuadro de tamaño fijo, calculado en C# (AjusteDeMedio): el documento llena exactamente la WebView y el video se
+        // escala «contain» dentro (cualquier proporción, sin recortar). Nada de flex ni de desplazamiento propio.
+        // Además WebView2 debe arrancar sin las superposiciones de video de DirectComposition (WebViewAjustes): con ellas el
+        // fotograma se presentaba a (recuadro ÷ pantalla) de su tamaño, arriba a la izquierda, con el resto en negro.
         var html = $$$"""
             <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>html,body{margin:0;height:100%;background:#111;color:#fff;font-family:Segoe UI,Arial,sans-serif;display:flex;flex-direction:column}
-            video{flex:1;width:100%;background:#000;outline:none}.aviso{display:none;flex:1;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:20px}</style></head>
+            <style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Segoe UI,Arial,sans-serif}
+            video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;outline:none}
+            .aviso{display:none;position:absolute;inset:0;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:20px;background:#111}</style></head>
             <body><video id="v" controls {{{(b.Autoplay == true ? "autoplay" : "")}}} playsinline preload="metadata" src="{{{url}}}{{{fragmento}}}">{{{pista}}}</video>
             <div class="aviso" id="a">Este video no está en el equipo del aula todavía.<br>Lo servirá AVACOM Biblioteca.</div>
-            <script>var v=document.getElementById('v');var fin={{{(b.HastaSeg is null ? "null" : b.HastaSeg.Value.ToString(System.Globalization.CultureInfo.InvariantCulture))}}};
+            <script>var v=document.getElementById('v');var fin={{{(b.HastaSeg is null ? "null" : b.HastaSeg.Value.ToString(inv))}}};
             v.addEventListener('error',function(){v.style.display='none';document.getElementById('a').style.display='flex';
               try{location.href='{{{EsquemaAviso}}}://fallo?tipo=video&codigo='+(v.error?v.error.code:0)+'&estado='+v.networkState;}catch(x){}});
             v.addEventListener('timeupdate',function(){if(fin!==null&&v.currentTime>=fin){v.pause();}});</script></body></html>
             """;
         var avisos = new VerticalStackLayout { Spacing = 6 };
         var web = Web(html, null, uri => AvisarFallo("video", b, uri, avisos));
-        pila.Add(ConProporcion(web, b.Ancho, b.Alto));
+        pila.Add(CajaAjustada(web, b.Ancho, b.Alto));
         pila.Add(avisos);
         if (!string.IsNullOrWhiteSpace(b.Pie)) pila.Add(Ds.Secundario(b.Pie!, 16 * Escala));
         var detalle = string.Join(" · ", new[]
@@ -634,6 +669,33 @@ public sealed class AulaContenidoView : ContentView
     /// en cada <c>SizeChanged</c>, así que sigue el tamaño real de la pantalla que se esté usando
     /// en cada momento, incluida una reorientación o un redimensionado.
     /// </summary>
+    /// <summary>
+    /// Recuadro de un medio de bloque (video o imagen a página completa): cabe ENTERO en el espacio visible del visor —ancho
+    /// y alto—, con la proporción real del archivo (o 16∶9), centrado, y acotado además por el perfil de pantalla elegido
+    /// en OPS (<see cref="AjustesDePantalla"/>). Se reajusta solo al cambiar la ventana, la escala de Windows o el perfil.
+    /// <paramref name="aplicado"/> se llama cada vez que cambia el recuadro (la primera, al crearse).
+    /// </summary>
+    private View CajaAjustada(View medio, int? ancho, int? alto, Action<CajaDeMedio>? aplicado = null)
+    {
+        var proporcion = AjusteDeMedio.Proporcion(ancho, alto);
+        medio.HorizontalOptions = LayoutOptions.Center;
+        var contenedor = new ContentView { Content = medio };
+        var ultima = CajaDeMedio.Vacia;
+        void Ajustar()
+        {
+            var caja = AjusteDeMedio.Ajustar(_anchoUtil, _altoUtil, proporcion, AjustesDePantalla.Actual);
+            if (caja.EsVacia || (Math.Abs(caja.Ancho - ultima.Ancho) < 1 && Math.Abs(caja.Alto - ultima.Alto) < 1)) return;
+            ultima = caja;
+            medio.WidthRequest = caja.Ancho;
+            medio.HeightRequest = caja.Alto;
+            aplicado?.Invoke(caja);
+        }
+        _ajustes.Add(Ajustar);
+        Ajustar();
+        return contenedor;
+    }
+
+    /// <summary>Alto fijado por el ancho del contenedor: sólo para imágenes sueltas dentro de columnas (opciones, ítems, enunciados).</summary>
     private static View ConProporcion(View medio, int? ancho, int? alto)
     {
         var proporcion = ancho is > 0 && alto is > 0 ? (double)alto!.Value / ancho!.Value : 9.0 / 16.0;
@@ -647,7 +709,7 @@ public sealed class AulaContenidoView : ContentView
 
     private WebView Web(string html, double? alto, Action<Uri>? alAvisar = null)
     {
-        var web = NuevaWeb(alto, alAvisar);
+        var web = NuevaWeb(alto, alAvisar, desplazable: false);   // reproductores propios: llenan su recuadro y no se desplazan
         _hostPermitido = null; // HTML propio: sólo se permite el host del backend, que se fija al conocer la primera URL absoluta
         if (Absoluta is not null) _hostPermitido = Absoluta("/").GetLeftPart(UriPartial.Authority);
         web.Source = new HtmlWebViewSource { Html = html };
@@ -666,7 +728,7 @@ public sealed class AulaContenidoView : ContentView
     /// Una WebView más de la unidad en pantalla. Una página puede llevar varias (audio + video + pdf):
     /// todas viven hasta que cambia la unidad, y entonces <see cref="LimpiarWeb"/> las vacía juntas.
     /// </summary>
-    private WebView NuevaWeb(double? alto, Action<Uri>? alAvisar)
+    private WebView NuevaWeb(double? alto, Action<Uri>? alAvisar, bool desplazable = true)
     {
         var web = new WebView();
         if (alto is not null) web.HeightRequest = alto.Value;
@@ -692,7 +754,7 @@ public sealed class AulaContenidoView : ContentView
         // cualquier documento, sea nuestro o de un paquete externo, para no depender de que su propio CSS lo declare.
         web.Navigated += (_, e) =>
         {
-            if (e.Result == WebNavigationResult.Success) _ = web.EvaluateJavaScriptAsync(InyeccionDesplazamiento);
+            if (desplazable && e.Result == WebNavigationResult.Success) _ = web.EvaluateJavaScriptAsync(InyeccionDesplazamiento);
         };
         _webs.Add(web);
         return web;
@@ -713,6 +775,7 @@ public sealed class AulaContenidoView : ContentView
             try { web.Source = new HtmlWebViewSource { Html = "<html><body></body></html>" }; } catch { }
         }
         _webs.Clear();
+        _ajustes.Clear();
     }
 
     private static string Mmss(double seg) => $"{(int)seg / 60}:{(int)seg % 60:00}";

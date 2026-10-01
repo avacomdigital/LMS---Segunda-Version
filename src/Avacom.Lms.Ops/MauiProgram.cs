@@ -7,6 +7,7 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+		Avacom.Lms.Ui.Design.WebViewAjustes.Aplicar();   // antes de que exista cualquier WebView (video del aula sin superposición de DirectComposition)
 		Avacom.Lms.Core.Services.RegistroDeFallos.Observar("ops");
 		Sesion.PrepararAparato();   // MOD-019: logs locales con versión y aparato; el id del equipo persiste entre arranques
 		var builder = MauiApp.CreateBuilder();

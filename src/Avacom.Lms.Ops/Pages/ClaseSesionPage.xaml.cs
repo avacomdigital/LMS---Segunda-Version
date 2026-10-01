@@ -52,7 +52,7 @@ public partial class ClaseSesionPage : ContentPage
     private CapacidadAula? _capacidad;
     private string? _avisosLlave, _avisoCodigo, _actividadLlave;
     private ParticipanteAula? _avisoPara;
-    private Button? _bloqueoBtn, _seguimientoBtn, _actividadBtn, _avisoBtn, _terminarBtn, _reanudarBtn, _rotarBtn;
+    private Button? _bloqueoBtn, _seguimientoBtn, _actividadBtn, _avisoBtn, _pantallaBtn, _terminarBtn, _reanudarBtn, _rotarBtn;
     private readonly Button _participantesBtn;
     private Task<DistribuirSolicitud?>? _lanzamientoEnCurso;
     // MOD-010: los exámenes que ya se aplicaron en esta clase (para mostrar «Ver panel del examen» en vez de «Aplicar examen»).
@@ -66,6 +66,7 @@ public partial class ClaseSesionPage : ContentPage
         InitializeComponent();
         Proyeccion.PuedeNavegar = true;
         Proyeccion.Escala = 1.15;
+        SelectorPantalla.Cerrado += (_, _) => CerrarPantalla();
         Proyeccion.Absoluta = ruta => Sesion.Aula.Absoluta(ruta);
         Proyeccion.UnidadPedida += async (_, unidad) => { if (Proyeccion.Objeto is { } o) await ProyectarAsync(o.ObjetoRef, unidad); };
         // El botón de participantes se fabrica con el kit para compartir relieve, bisel y hundimiento con la barra de controles.
@@ -602,15 +603,33 @@ public partial class ClaseSesionPage : ContentPage
         _actividadBtn = Ds.Boton("Lanzar actividad", Ds.Rango.Secondary, async (_, _) => await LanzarOCerrarAsync(), 46);
         _terminarBtn = Ds.Boton("Terminar clase", Ds.Rango.Destructive, async (_, _) => await TerminarAsync(), 46);
 
+        _pantallaBtn = Ds.BotonIcono("🖵", false, Ds.Info, OnAlternarPantalla, "Pantalla de proyección: resolución y escala");
+
         var bloqueoYAviso = new HorizontalStackLayout { Spacing = 8 };
         bloqueoYAviso.Add(Ds.Capsula(_bloqueoBtn));
         bloqueoYAviso.Add(Ds.Capsula(_avisoBtn));
+        bloqueoYAviso.Add(Ds.Capsula(_pantallaBtn));
 
         ControlesHost.Add(bloqueoYAviso);
         ControlesHost.Add(Ds.Capsula(_seguimientoBtn));
         ControlesHost.Add(Ds.Capsula(_actividadBtn));
         ControlesHost.Add(new BoxView { WidthRequest = 14, Color = Colors.Transparent });
         ControlesHost.Add(Ds.Capsula(_terminarBtn));
+    }
+
+    /// <summary>El botón de pantalla abre la hoja del perfil de proyección (resolución × escala); comparte lugar con la hoja de avisos, así que abrir una cierra la otra.</summary>
+    private void OnAlternarPantalla(object? sender, EventArgs e)
+    {
+        if (PantallaPanel.IsVisible) { CerrarPantalla(); return; }
+        if (AvisoPanel.IsVisible) CerrarAviso();
+        PantallaPanel.IsVisible = true;
+        if (_pantallaBtn is not null) Ds.PintarInterruptor(_pantallaBtn, true, Ds.Info);
+    }
+
+    private void CerrarPantalla()
+    {
+        PantallaPanel.IsVisible = false;
+        if (_pantallaBtn is not null) Ds.PintarInterruptor(_pantallaBtn, false, Ds.Info);
     }
 
     /// <summary>El botón del aviso abre la hoja para todo el grupo; el aviso a una sola persona nace en la lista de participantes.</summary>
@@ -622,6 +641,7 @@ public partial class ClaseSesionPage : ContentPage
 
     private void AbrirAviso(ParticipanteAula? para)
     {
+        if (PantallaPanel.IsVisible) CerrarPantalla();
         _avisoPara = para;
         AvisoTitulo.Text = para is null ? "Enviar un aviso al grupo" : $"Aviso para {para.Nombre}";
         AvisoPanel.IsVisible = true;

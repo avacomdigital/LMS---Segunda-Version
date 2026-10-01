@@ -101,6 +101,10 @@
                     <FlexLayout x:Name="FrasesHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Center" />
                 </VerticalStackLayout>
             </Border>
+            <!-- Pantalla de proyección: resolución y escala de Windows contra las que se ajusta el video (responsive.md) -->
+            <Border x:Name="PantallaPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,12" Padding="18" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 20">
+                <ui:SelectorPantallaView x:Name="SelectorPantalla" />
+            </Border>
         </Grid>
 
         <!-- Barra de controles · dark glass, a lo ancho, colapsable. El único Destructive va detrás de una confirmación. -->
