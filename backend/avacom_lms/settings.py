@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "expediente",
     "classroom_engine",
     "modo_estudio",
+    "evaluacion",
     "audit",
 ]
 
@@ -177,3 +178,25 @@ AVACOM_ESTUDIO_GRACIA_MIN = int(os.environ.get("AVACOM_ESTUDIO_GRACIA_MIN", "15"
 # Tope de tamaño de UN medio al preparar un paquete: el nodo lo lee entero para medirlo y calcular su SHA-256, así que un medio
 # mayor se deja fuera del paquete (`no_incluidos`, `medio_demasiado_grande`) en vez de bloquear la petición.
 AVACOM_ESTUDIO_MEDIO_MAX_MB = int(os.environ.get("AVACOM_ESTUDIO_MEDIO_MAX_MB", "512"))
+
+# ------------------------------------------------- Evaluation & Delivery Engine (MOD-010)
+# App `evaluacion` (`/api/evaluacion/`, tablas m10_*). El examen se lee en vivo de la misma fuente de cursos del aula; aquí sólo se guarda lo que
+# el alumno hizo con él. Ver spec-driven/06-evaluation-delivery/backend.md §8.
+# Silencio de la tableta tras el cual el intento se pausa y su reloj se congela en el último latido (INV-010: reconexión en 30 s).
+AVACOM_EVAL_LATIDO_VENCIDO_MS = int(os.environ.get("AVACOM_EVAL_LATIDO_VENCIDO_MS", "30000"))
+# Cadencia de latido que se recomienda a la tableta: el punto de recuperación es de 5 s (INV-010).
+AVACOM_EVAL_LATIDO_SEG = int(os.environ.get("AVACOM_EVAL_LATIDO_SEG", "5"))
+# DEC-019: minutos de gracia por defecto de una asignación nueva (el profesor puede cambiarlos por asignación).
+AVACOM_EVAL_GRACIA_MIN = int(os.environ.get("AVACOM_EVAL_GRACIA_MIN", "15"))
+# "0" desactiva el programador (pausa por falta de latido, entrega por tiempo o plazo, activación y archivado).
+AVACOM_EVAL_PROGRAMADOR = os.environ.get("AVACOM_EVAL_PROGRAMADOR", "1") == "1"
+# "0" no pasa los intentos abiertos a `restaurando` al arrancar el nodo (BR-051).
+AVACOM_EVAL_DETECTAR_REINICIO = os.environ.get("AVACOM_EVAL_DETECTAR_REINICIO", "1") == "1"
+# Horas que una asignación cerrada espera antes de pasar a `archivada`.
+AVACOM_EVAL_ARCHIVADO_H = int(os.environ.get("AVACOM_EVAL_ARCHIVADO_H", "24"))
+# Tope de respuestas por envío (lo que sale de la cola local de una tableta).
+AVACOM_EVAL_MAX_RESPUESTAS = int(os.environ.get("AVACOM_EVAL_MAX_RESPUESTAS", "200"))
+# Desfase del reloj de la tableta a partir del cual se registra el incidente `reloj_desfasado` (INV-017).
+AVACOM_EVAL_DESFASE_RELOJ_MS = int(os.environ.get("AVACOM_EVAL_DESFASE_RELOJ_MS", "5000"))
+# Combinaciones que prueba el armado `random_balanced` antes de quedarse con la mejor.
+AVACOM_EVAL_ARMADO_INTENTOS = int(os.environ.get("AVACOM_EVAL_ARMADO_INTENTOS", "200"))

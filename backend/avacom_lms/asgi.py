@@ -18,6 +18,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from audit.infraestructura import verificador  # noqa: E402
 from classroom_engine.infraestructura import programador  # noqa: E402
 from classroom_engine.interfaces.websockets import websocket_urlpatterns  # noqa: E402
+from evaluacion.infraestructura import programador as programador_evaluacion  # noqa: E402
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
@@ -25,5 +26,7 @@ application = ProtocolTypeRouter({
 })
 
 programador.iniciar()
+# MOD-010: pausa a quien dejó de dar señal, entrega por tiempo o plazo y restaura los exámenes abiertos tras un reinicio del nodo.
+programador_evaluacion.iniciar()
 # MOD-019: verifica la cadena de la bitácora cada hora (fuera de clase no hay diferencia: verifica por bloques) y rota por tamaño.
 verificador.iniciar()
