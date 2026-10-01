@@ -24,7 +24,9 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("reports.student.view", "reportes", "Ver el informe nominal de un alumno", O, True),
     ("content.read", "contenido", "Ver cursos de la biblioteca", O, False),
     ("content.project", "aula", "Proyectar en la pantalla del aula", G, False),
-    ("audit.read", "auditoria", "Leer auditoría", O, True),
+    ("audit.read", "auditoria", "Leer la bitácora de auditoría (MOD-019, FUN-197)", O, True),
+    ("audit.export", "auditoria", "Exportar un tramo firmado de la bitácora (FUN-200, BR-105); exige autorización de salida por operación", O, True),
+    ("diagnostics.read", "auditoria", "Leer los logs de diagnóstico del nodo y de los equipos, sin datos personales (MOD-019 §4.2)", O, False),
     # --- MOD-001 · identity ---
     ("identity.user.read", "acceso", "Ver usuarios y sus datos personales", O, True),
     ("identity.user.create", "acceso", "Crear una cuenta de usuario local (FUN-001)", O, True),
@@ -139,8 +141,9 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "identity.password.change_own": S, "identity.session.read": S, "identity.session.revoke_own": S,
     }),
     "TECHNICIAN": ("Técnico AVACOM", Menu.TECHNICIAN, 2, {
-        # Diagnóstico, red, dispositivos y respaldos. Sin acceso a datos personales ni evidencias (BR-097).
-        "identity.device.manage": O, "identity.role.read": O, "identity.session.read": O,
+        # Diagnóstico, red, dispositivos y respaldos. Sin acceso a datos personales ni evidencias (BR-097): lee los logs
+        # (`diagnostics.read`, sólo identificadores y cifras) pero NUNCA la bitácora (`audit.read`) ni la exporta (`audit.export`).
+        "identity.device.manage": O, "identity.role.read": O, "identity.session.read": O, "diagnostics.read": O,
         "identity.password.change_own": S, "identity.session.revoke_own": S,
     }),
 }

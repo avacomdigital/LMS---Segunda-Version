@@ -19,7 +19,7 @@ urlpatterns = [
     path("resultados/", views.ResultadosView.as_view(), name="resultados"),
     path("resultados/<int:pk>/", views.ResultadoDetalleView.as_view(), name="resultado-detalle"),
     path("cursos/<str:curso_ref>/consolidado/", views.ConsolidadoView.as_view(), name="consolidado"),
-    path("auditoria/", views.AuditoriaView.as_view(), name="auditoria"),
+    # /api/auditoria/ vive en MOD-019 (app audit): consulta filtrada por permiso, cursor y asiento por consulta.
     # Rutas de administración retiradas: responden rechazo explicativo, no 404.
     re_path(
         r"^(courses|curriculum-frameworks|course-versions|sections|lessons|lesson-items|"

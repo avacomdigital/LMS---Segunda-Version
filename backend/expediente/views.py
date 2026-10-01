@@ -16,7 +16,7 @@ from biblioteca import cliente
 from biblioteca.views import respuesta_de_error
 
 from . import servicios
-from .models import AperturaMaterial, Auditoria, Inscripcion, Intento, ProgresoLeccion
+from .models import AperturaMaterial, Inscripcion, Intento, ProgresoLeccion
 
 
 def _texto(datos, clave, obligatorio=False, maximo=250) -> str:
@@ -459,19 +459,6 @@ class ConsolidadoView(VistaExpediente):
         salida["estructura_disponible"] = detalle is not None
         salida["titulo"] = (detalle or {}).get("titulo")
         return Response(salida)
-
-
-class AuditoriaView(VistaExpediente):
-    def get(self, request):
-        filas = Auditoria.objects.all()
-        accion = request.query_params.get("accion")
-        if accion:
-            filas = filas.filter(accion=accion)
-        return Response([
-            {"id": a.id, "actor_id": a.actor_id, "accion": a.accion, "objeto_tabla": a.objeto_tabla,
-             "objeto_id": a.objeto_id, "valor_anterior": a.valor_anterior, "valor_nuevo": a.valor_nuevo, "momento": a.momento}
-            for a in filas[:500]
-        ])
 
 
 # ---------------------------------------------------------------- rechazos
