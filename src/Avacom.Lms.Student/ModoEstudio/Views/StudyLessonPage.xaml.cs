@@ -70,7 +70,8 @@ public partial class StudyLessonPage : ContentPage, IStudyLessonNavigation
 
     // ------------------------------------------------------------------------- IStudyLessonNavigation
     public Task BackAsync() => Shell.Current.GoToAsync("..");
-    public Task OpenPracticeAsync(string lessonId) => Shell.Current.GoToAsync($"estudio-practica?asignacion={Uri.EscapeDataString(lessonId)}&nueva=0");
+    public Task OpenPracticeAsync(string lessonId, string? objetoRef) =>
+        Shell.Current.GoToAsync($"estudio-practica?asignacion={Uri.EscapeDataString(lessonId)}&nueva=0" + (string.IsNullOrEmpty(objetoRef) ? string.Empty : $"&objeto={Uri.EscapeDataString(objetoRef)}"));
     public Task ShowInfoAsync(string title, string message) => DisplayAlertAsync(title, message, "Entendido");
 
     private async void OnCerrar(object? sender, EventArgs e) => await Shell.Current.GoToAsync("..");

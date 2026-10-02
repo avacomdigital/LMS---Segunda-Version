@@ -74,7 +74,7 @@ Set-StrictMode -Version Latest
 # comprobación que falla no sirve para nada. Cada bloque maneja su error.
 $ErrorActionPreference = 'Continue'
 
-$VersionDiagnostico = '2.1.0'
+$VersionDiagnostico = '2.2.0'
 $RaizDatos = Join-Path $env:ProgramData 'AVACOM\OPS Master'
 $RutaEnlace = Join-Path $env:ProgramData 'AVACOM\content\link.json'
 $NombreServicio = 'AVACOMOPSBackend'
@@ -930,13 +930,41 @@ if (@($ArchivosDeLog).Count -eq 0) {
     $Tracebacks = New-Object System.Collections.Generic.List[object]
     $Reinicios = 0
 
+    # Desde MOD-019 el backend escribe JSON Lines (backend-errores.log, backend-app.log...): cada error
+    # es UNA línea con la traza dentro del campo «traza». Esos errores se leen primero y por su campo, y
+    # el mismo error que Daphne escribió también como texto en servicio.log no se cuenta dos veces.
+    $FirmasJson = New-Object 'System.Collections.Generic.HashSet[string]'
+    $ArchivosDeLog = @($ArchivosDeLog | Sort-Object { if ($_.Name -like 'backend-*') { 0 } else { 1 } }, Name)
+
     foreach ($archivo in $ArchivosDeLog) {
         $lineas = @()
         try { $lineas = @(Get-Content $archivo.FullName -Encoding UTF8 -ErrorAction Stop) } catch { continue }
+        $esJson = $archivo.Name -like 'backend-*'
 
         for ($i = 0; $i -lt @($lineas).Count; $i++) {
             $cruda = $lineas[$i]
             if ($cruda -match 'El backend termino con codigo') { $Reinicios++ }
+
+            if ($esJson) {
+                if (-not $cruda.StartsWith('{') -or $cruda -notmatch '"traza"\s*:\s*"') { continue }
+                try {
+                    $registroJson = $cruda | ConvertFrom-Json
+                    $traza = [string](Prop $registroJson 'traza' '')
+                    if (-not $traza.Trim()) { continue }
+                    $momentoJson = [datetimeoffset]::Parse([string](Prop $registroJson 'ts' '')).LocalDateTime
+                    if ($momentoJson -lt $desde) { continue }
+                    $bloqueJson = @($traza -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 40)
+                    $ultimaJson = $bloqueJson[$bloqueJson.Count - 1]
+                    [void]$FirmasJson.Add("$ultimaJson|$($momentoJson.ToString('yyyyMMddHHmm'))")
+                    $Tracebacks.Add([pscustomobject]@{
+                        Archivo   = $archivo.Name
+                        Fecha     = $momentoJson
+                        Excepcion = $ultimaJson
+                        Texto     = ($bloqueJson -join "`n")
+                    })
+                } catch { }
+                continue
+            }
 
             if ($cruda -notmatch 'Traceback \(most recent call last\)') { continue }
 
@@ -958,12 +986,21 @@ if (@($ArchivosDeLog).Count -eq 0) {
                 if ($j -gt $i -and $texto -match '^\S' -and $texto -notmatch '^Traceback') { break }
             }
 
-            $Tracebacks.Add([pscustomobject]@{
-                Archivo   = $archivo.Name
-                Fecha     = $fecha
-                Excepcion = $bloque[$bloque.Count - 1]
-                Texto     = ($bloque -join "`n")
-            })
+            # El mismo error ya contado desde el registro JSON del backend (misma excepción, mismo minuto).
+            $repetido = $false
+            if ($fecha) {
+                foreach ($desfase in -1, 0, 1) {
+                    if ($FirmasJson.Contains("$($bloque[$bloque.Count - 1])|$($fecha.AddMinutes($desfase).ToString('yyyyMMddHHmm'))")) { $repetido = $true; break }
+                }
+            }
+            if (-not $repetido) {
+                $Tracebacks.Add([pscustomobject]@{
+                    Archivo   = $archivo.Name
+                    Fecha     = $fecha
+                    Excepcion = $bloque[$bloque.Count - 1]
+                    Texto     = ($bloque -join "`n")
+                })
+            }
             $i = $j
         }
     }

@@ -3,8 +3,7 @@ Los bloques de una lección y el avance del alumno sobre ellos (D-4, FUN-087). D
 
 Un «bloque» es la unidad de avance de una lección, en el orden en que se ve: cada lámina de una presentación (`lecture`), cada página
 de una lectura (`explanation`), cada laboratorio (`simulation_lab`) y cada actividad (`activity`, la práctica). El examen NO es bloque:
-es evaluación formal y queda fuera (BR-055). Todos los bloques son obligatorios mientras el esquema de curso 1.0 no tenga una marca
-`required` (Q-66).
+es evaluación formal y queda fuera (BR-055). Con práctica, sólo las prácticas son obligatorias (ver `con_obligatorios`); sin práctica, todos (Q-66).
 
 «Atendido» significa: lámina o página VISTA; laboratorio ABIERTO; práctica TERMINADA al menos una vez (no se exige nota). Una lección
 se completa cuando todos los bloques obligatorios fueron atendidos, no cuando el alumno sale de la pantalla.
@@ -107,8 +106,17 @@ def bloque_de(bloques: Iterable[dict], ref: str) -> dict | None:
     return next((b for b in bloques if b["ref"] == ref), None)
 
 
+def con_obligatorios(bloques: Iterable[dict]) -> list[dict]:
+    """Marca qué bloques son obligatorios. Decisión del CTO (2026-10-01): en una lección con práctica, SÓLO las prácticas lo son, y con terminar
+    cada una al menos una vez basta (sin nota); láminas, páginas y laboratorios se pueden recorrer o saltar. Sin ninguna práctica, todos lo son
+    (si no, la lección se completaría sin ver nada). Se calcula aquí y no del `obligatorio` guardado: las asignaciones ya creadas lo guardaron en true."""
+    bloques = list(bloques)
+    hay_practica = any(b.get("tipo") == cat.PRACTICA for b in bloques)
+    return [{**b, "obligatorio": b.get("tipo") == cat.PRACTICA if hay_practica else True} for b in bloques]
+
+
 def obligatorios(bloques: Iterable[dict]) -> list[dict]:
-    return [b for b in bloques if b.get("obligatorio", True)]
+    return [b for b in con_obligatorios(bloques) if b["obligatorio"]]
 
 
 def atendidos(bloques: Iterable[dict], vistos: Iterable[str]) -> list[dict]:

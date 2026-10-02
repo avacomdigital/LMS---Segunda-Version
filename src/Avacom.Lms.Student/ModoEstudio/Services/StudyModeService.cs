@@ -691,7 +691,8 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
                     break;
             }
         }
-        return lista;
+        // Obligatorias: sólo las prácticas (terminarlas una vez basta); sin práctica, todos los bloques (la misma regla del aula).
+        return lista.Any(b => b.Tipo == "practica") ? lista.Select(b => b with { Obligatorio = b.Tipo == "practica" }).ToList() : lista;
     }
 
     private StudyLessonSession NuevaSesion(string lessonId, AsignacionAlumno? asignacion, LeccionAula leccion, IReadOnlyList<BloqueEstudio> bloques,
@@ -732,7 +733,7 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
 
     // ============================================================================== abrir una práctica
 
-    public async Task<StudyPracticeOpen> OpenPracticeAsync(string lessonId, bool retry, CancellationToken ct = default)
+    public async Task<StudyPracticeOpen> OpenPracticeAsync(string lessonId, bool retry, string? objetoRef = null, CancellationToken ct = default)
     {
         try
         {
@@ -740,7 +741,7 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
             if (!identidad.Ok) return FallaPractica("Todavía no podemos abrir la práctica", identidad.Aviso);
             var alumno = Alumno;
             var conocida = Conocida(lessonId);
-            var objetoRef = conocida?.Practica?.ObjetoRef;
+            objetoRef ??= conocida?.Practica?.ObjetoRef;
             var local = LeerTarea(lessonId);
 
             // En línea: la práctica en curso (o la siguiente) la lleva el aula y califica en ≤ 2 s.

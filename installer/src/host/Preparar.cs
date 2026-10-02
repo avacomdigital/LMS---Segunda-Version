@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 
 namespace Avacom.Ops.Host;
 
@@ -23,7 +24,27 @@ internal static class Preparar
     public static string ArchivoAviso => Path.Combine(Rutas.CarpetaLogs, "preparacion-aviso.txt");
 
     private const string ImportacionesDelRuntime =
-        "import django, rest_framework, channels, daphne, twisted, autobahn, zoneinfo, sqlite3; print(django.get_version())";
+        "import django, rest_framework, channels, daphne, twisted, autobahn, zoneinfo, sqlite3, argon2, cryptography, jwt; " +
+        "print(django.get_version())";
+
+    // Lo que Django ve DE VERDAD tras leer backend.env: base de datos, carpeta de registros, fuente de
+    // cursos... Importar settings crea la carpeta de registros y comprueba que se puede escribir en ella.
+    private const string ConfiguracionEfectiva =
+        "import os, json, django\n" +
+        "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'avacom_lms.settings')\n" +
+        "django.setup()\n" +
+        "from django.conf import settings as s\n" +
+        "print(json.dumps({\n" +
+        "  'db': str(s.DATABASES['default']['NAME']),\n" +
+        "  'entorno': getattr(s, 'AVACOM_LMS_ENTORNO', None),\n" +
+        "  'logs': getattr(s, 'AVACOM_LMS_DIR_LOGS_EFECTIVO', None),\n" +
+        "  'aviso_logs': getattr(s, 'AVACOM_LMS_AVISO_LOGS', None),\n" +
+        "  'debug': bool(s.DEBUG),\n" +
+        "  'ejemplo': bool(getattr(s, 'AVACOM_AULA_PERMITIR_EJEMPLO', False)),\n" +
+        "  'fuente': getattr(s, 'AVACOM_AULA_FUENTE_CURSOS', None),\n" +
+        "  'enlace': getattr(s, 'AVACOM_CONTENIDO_ENLACE', None),\n" +
+        "  'enlace_v2': getattr(s, 'AVACOM_CONTENIDO_ENLACE_V2', None),\n" +
+        "}))\n";
 
     // Cuenta las personas guardadas sin abrir Django: solo lee la tabla si existe.
     private const string ContarPersonas =
@@ -58,6 +79,11 @@ internal static class Preparar
             registro.Escribir($"Politica de datos de esta version: {politica}.");
             var nueva = Configuracion.CrearSiFalta(registro);
 
+            // Una configuracion que ya existia (de la 2.0.0, o tocada a mano) se lleva a lo que el
+            // producto exige: carpeta de registros, fuente de cursos en la biblioteca, sin notas de
+            // enlace de pruebas. No toca las claves de acceso (ver CompletarClavesDeAcceso).
+            avisos.AddRange(Configuracion.Normalizar(registro));
+
             if (!File.Exists(Rutas.PythonExe))
             {
                 return Terminar(registro, 2, "No se encontro el runtime del backend en la carpeta de instalacion.");
@@ -88,6 +114,21 @@ internal static class Preparar
                 return Terminar(registro, 5, "La configuracion del backend no paso la revision de Django.");
             }
             registro.Escribir("Revision de configuracion de Django correcta.");
+
+            // 3b. La configuracion EFECTIVA: lo que Django ve de verdad despues de leer backend.env.
+            //     Una variable ajena o una linea mal puesta no puede dejar al nodo apuntando a otra
+            //     base de datos, con los cursos fuera de la biblioteca o escribiendo sus registros
+            //     donde nadie los va a buscar.
+            var efectiva = Python(registro, ["-c", ConfiguracionEfectiva]);
+            if (efectiva.Codigo != 0)
+            {
+                return Terminar(registro, 5, "No se pudo leer la configuracion efectiva del backend.");
+            }
+            var rechazo = RevisarConfiguracionEfectiva(registro, efectiva.Salida, avisos);
+            if (rechazo is not null)
+            {
+                return Terminar(registro, 8, rechazo);
+            }
 
             // 4. Base de datos. Crea el archivo si no existe y aplica solo lo que
             //    falte si ya venia de una version anterior. Si no migra:
@@ -147,7 +188,9 @@ internal static class Preparar
                 registro.Escribir(propio
                     ? $"El puerto {puerto} lo esta usando un backend de AVACOM OPS que ya estaba corriendo."
                     : $"El puerto {puerto} esta ocupado por otro programa.");
-                if (!propio)
+                // En un ensayo (AVACOM_OPS_DATOS) el puerto se cambia despues de preparar: que el 8000
+                // este ocupado en el equipo de desarrollo no es un fallo del paquete.
+                if (!propio && !Rutas.EsEnsayo)
                 {
                     return Terminar(registro, 7,
                         $"El puerto {puerto} esta ocupado por otro programa. " +
@@ -175,6 +218,93 @@ internal static class Preparar
     private static void AnotarAviso(List<string> avisos, string? texto)
     {
         if (!string.IsNullOrWhiteSpace(texto)) avisos.Add(texto);
+    }
+
+    /// <summary>
+    /// Compara lo que Django ve con lo que el producto exige. Devuelve el motivo si no se puede
+    /// continuar (otra base de datos, el curso de ejemplo encendido) o null; lo demas son avisos.
+    /// Los textos van sin acentos: los lee el asistente como ANSI.
+    /// </summary>
+    private static string? RevisarConfiguracionEfectiva(Registro registro, string salida, List<string> avisos)
+    {
+        var linea = salida.Split('\n').Select(l => l.Trim()).LastOrDefault(l => l.StartsWith('{'));
+        if (linea is null)
+        {
+            registro.Escribir("La configuracion efectiva no devolvio datos legibles; se continua.");
+            return null;
+        }
+
+        try
+        {
+            using var documento = JsonDocument.Parse(linea);
+            var raiz = documento.RootElement;
+            string? Texto(string nombre) =>
+                raiz.TryGetProperty(nombre, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+            bool Si(string nombre) => raiz.TryGetProperty(nombre, out var v) && v.ValueKind == JsonValueKind.True;
+
+            var baseDeDatos = Texto("db");
+            var carpetaLogs = Texto("logs");
+            registro.Escribir(
+                $"Configuracion efectiva: entorno={Texto("entorno")}, base de datos={baseDeDatos}, " +
+                $"registros={carpetaLogs}, fuente de cursos={Texto("fuente")}, curso de ejemplo={(Si("ejemplo") ? "ENCENDIDO" : "apagado")}, " +
+                $"depuracion={(Si("debug") ? "ENCENDIDA" : "apagada")}.");
+
+            if (!MismaRuta(baseDeDatos, Rutas.BaseDeDatos))
+            {
+                return $"El backend apunta a otra base de datos ({baseDeDatos}) y no a la de este nodo ({Rutas.BaseDeDatos}). " +
+                       "Revisa AVACOM_LMS_DB en la configuracion.";
+            }
+            if (Si("ejemplo") || !string.Equals(Texto("fuente"), "biblioteca", StringComparison.OrdinalIgnoreCase))
+            {
+                return "El backend no tiene los cursos fijados en AVACOM Contenido: el curso de ejemplo esta encendido. " +
+                       "Revisa AVACOM_AULA_PERMITIR_EJEMPLO y AVACOM_AULA_FUENTE_CURSOS en la configuracion.";
+            }
+
+            if (Texto("aviso_logs") is { Length: > 0 } avisoDeLogs)
+            {
+                registro.Escribir($"ADVERTENCIA: {avisoDeLogs}");
+                AnotarAviso(avisos,
+                    "El backend no pudo escribir en la carpeta de registros y los guarda en la carpeta temporal del sistema. " +
+                    $"Revisa los permisos de {Rutas.CarpetaLogs}.");
+            }
+            else if (carpetaLogs is not null && !MismaRuta(carpetaLogs, RegistrosDelNodo.CarpetaDelBackend()))
+            {
+                registro.Escribir($"ADVERTENCIA: los registros iran a {carpetaLogs} y no a la carpeta del nodo.");
+                AnotarAviso(avisos, $"Los registros del backend se guardan en {carpetaLogs} y no en la carpeta del nodo.");
+            }
+
+            if (Si("debug"))
+            {
+                AnotarAviso(avisos,
+                    "La depuracion del backend esta encendida (AVACOM_LMS_DEBUG=1): la API muestra trazas de error a la red del aula. " +
+                    "Apagala cuando termines de diagnosticar.");
+            }
+            if (Texto("enlace") is { Length: > 0 } || Texto("enlace_v2") is { Length: > 0 })
+            {
+                AnotarAviso(avisos,
+                    "El backend usa una nota de enlace de AVACOM Contenido distinta a la normal (modo de pruebas): " +
+                    "el aula puede quedar sin cursos aunque la biblioteca este abierta.");
+            }
+        }
+        catch (JsonException)
+        {
+            registro.Escribir("La configuracion efectiva no tiene el formato esperado; se continua.");
+        }
+        return null;
+    }
+
+    private static bool MismaRuta(string? a, string? b)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return false;
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(a).TrimEnd('\\'), Path.GetFullPath(b).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     /// <summary>true/false segun la base guarde o no personas; null si no se pudo saber.</summary>

@@ -179,7 +179,7 @@ internal sealed class MockStudyModeService : IStudyModeService
         return Task.FromResult(new StudyLessonOpen(new MockLessonSession(this, dato), null, null));
     }
 
-    public Task<StudyPracticeOpen> OpenPracticeAsync(string lessonId, bool retry, CancellationToken ct = default)
+    public Task<StudyPracticeOpen> OpenPracticeAsync(string lessonId, bool retry, string? objetoRef = null, CancellationToken ct = default)
     {
         var dato = _almacen.Find(lessonId);
         if (dato is null) return Task.FromResult(new StudyPracticeOpen(null, "No encontramos la práctica", "Vuelve a la lista e inténtalo de nuevo."));

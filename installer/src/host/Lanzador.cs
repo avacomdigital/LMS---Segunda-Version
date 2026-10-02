@@ -72,14 +72,10 @@ internal static class Lanzador
             // al crear la primera WebView falla y el proceso se cierra sin avisar.
             // Se le da una carpeta propia y escribible. Es una variable de
             // entorno que WebView2 ya lee: no cambia el producto.
-            var perfilWeb = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "AVACOM", "OPS Master", "WebView2");
-            Directory.CreateDirectory(perfilWeb);
-            inicio.Environment["WEBVIEW2_USER_DATA_FOLDER"] = perfilWeb;
+            AsegurarPerfilDeWebView(inicio, registro);
 
-            Process.Start(inicio);
-            registro.Escribir("Interfaz de AVACOM OPS Master abierta.");
+            var proceso = Process.Start(inicio);
+            registro.Escribir($"Interfaz de AVACOM OPS Master abierta (pid {proceso?.Id}).");
             return 0;
         }
         catch (Exception error)
@@ -90,11 +86,92 @@ internal static class Lanzador
         }
     }
 
+    /// <summary>
+    /// Decide donde guarda WebView2 su perfil (cache, cookies, almacenamiento). Nunca
+    /// impide abrir la aplicacion: si ninguna carpeta propia se puede escribir, se deja
+    /// a WebView2 con su carpeta por defecto, que el instalador deja escribible junto a la
+    /// aplicacion como red de seguridad.
+    ///
+    /// Orden: 1) lo que ya diga el entorno (soporte, depuracion), 2) el perfil de Windows de
+    /// quien da la clase, 3) la carpeta temporal de esa persona.
+    /// </summary>
+    private static void AsegurarPerfilDeWebView(ProcessStartInfo inicio, Registro registro)
+    {
+        const string variable = "WEBVIEW2_USER_DATA_FOLDER";
+
+        if (Environment.GetEnvironmentVariable(variable) is { Length: > 0 } indicada)
+        {
+            registro.Escribir($"WebView2 usa el perfil que indica el entorno: {indicada}");
+            return;
+        }
+
+        var candidatas = new[]
+        {
+            Rutas.PerfilWebViewDelUsuario,
+            Path.Combine(Path.GetTempPath(), "AVACOM", "OPS Master", "WebView2"),
+        };
+        foreach (var carpeta in candidatas)
+        {
+            if (!PuedeEscribir(carpeta, registro)) continue;
+            inicio.Environment[variable] = carpeta;
+            registro.Escribir($"WebView2 guarda su perfil en {carpeta}");
+            return;
+        }
+
+        registro.Escribir(
+            "ADVERTENCIA: ninguna carpeta de perfil de WebView2 se puede escribir; se deja la de por defecto " +
+            $"({Rutas.PerfilWebViewJuntoAlExe}). Si la aplicacion se cierra al abrir una leccion, es por esto.");
+    }
+
+    private static bool PuedeEscribir(string carpeta, Registro registro)
+    {
+        try
+        {
+            Directory.CreateDirectory(carpeta);
+            var prueba = Path.Combine(carpeta, $".escritura-{Environment.ProcessId}");
+            File.WriteAllText(prueba, "ok");
+            File.Delete(prueba);
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            registro.Escribir($"No se puede escribir en {carpeta}", error);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// ¿Ya esta abierta la aplicacion INSTALADA? Un segundo toque en el icono no debe abrir una
+    /// segunda ventana. Se compara la ruta del ejecutable: una compilacion de desarrollo abierta en
+    /// otro sitio no es esta aplicacion y no debe impedir que el icono abra la instalada.
+    /// Si no se puede leer la ruta de un proceso (permisos), se toma por la instalada: lo
+    /// peor que pasa es no abrir una segunda ventana.
+    /// </summary>
     private static bool YaEstaAbierta()
     {
         try
         {
-            return Process.GetProcessesByName("Avacom.Lms.Ops").Length > 0;
+            var instalada = Path.GetFullPath(Rutas.AppExe);
+            foreach (var proceso in Process.GetProcessesByName("Avacom.Lms.Ops"))
+            {
+                try
+                {
+                    var ruta = proceso.MainModule?.FileName;
+                    if (ruta is null || string.Equals(Path.GetFullPath(ruta), instalada, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception error) when (error is System.ComponentModel.Win32Exception or InvalidOperationException)
+                {
+                    return true;
+                }
+                finally
+                {
+                    proceso.Dispose();
+                }
+            }
+            return false;
         }
         catch (Exception)
         {

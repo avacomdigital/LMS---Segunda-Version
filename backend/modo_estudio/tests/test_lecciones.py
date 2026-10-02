@@ -101,7 +101,7 @@ class AbrirLeccionTests(BaseEstudio):
         fila = m.Asignacion.objects.get(pk=a["id"])
         self.assertEqual((fila.curso_version, len(fila.bloques)), ("1.1.0", 7))
         tarea = m.Tarea.objects.get(asignacion_id=a["id"])
-        self.assertEqual((tarea.bloques_vistos, tarea.ultimo_bloque_ref, float(tarea.avance_pct)), (["l1-lecture:l1-lecture-s1", "l1-activity"], "", 28.57))
+        self.assertEqual((tarea.bloques_vistos, tarea.ultimo_bloque_ref, float(tarea.avance_pct)), (["l1-lecture:l1-lecture-s1", "l1-activity"], "", 100.0))
 
 
 class ProgresoTests(BaseEstudio):
@@ -112,12 +112,14 @@ class ProgresoTests(BaseEstudio):
     def test_registrar_bloques_es_monotono_y_recalcula_el_avance(self):
         r = self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[:1]))
         self.assertEqual((r["aceptados"], r["desconocidos"]), (BLOQUES_L1[:1], []))
-        self.assertEqual((r["tarea"]["avance_pct"], r["tarea"]["bloques_atendidos"], r["tarea"]["estado"]), (14.29, 1, "en_curso"))
+        self.assertEqual((r["tarea"]["avance_pct"], r["tarea"]["bloques_atendidos"], r["tarea"]["estado"]), (0.0, 1, "en_curso"))     # sólo la práctica cuenta para el avance
         r = self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[:3]))
-        self.assertEqual((r["tarea"]["avance_pct"], r["tarea"]["bloques_atendidos"]), (42.86, 3))
+        self.assertEqual((r["tarea"]["avance_pct"], r["tarea"]["bloques_atendidos"]), (0.0, 3))
         r = self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[:1]))                    # un aparato atrasado no desatiende lo ya atendido
-        self.assertEqual((r["tarea"]["avance_pct"], r["tarea"]["bloques_atendidos"]), (42.86, 3))
+        self.assertEqual((r["tarea"]["avance_pct"], r["tarea"]["bloques_atendidos"]), (0.0, 3))
         self.assertEqual(m.Tarea.objects.get(asignacion_id=self.a["id"]).bloques_vistos, BLOQUES_L1[:3])
+        r = self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[6:]))                     # la práctica terminada una vez completa lo obligatorio
+        self.assertEqual((r["tarea"]["avance_pct"], r["tarea"]["bloques_atendidos"]), (100.0, 4))
 
     def test_una_referencia_que_no_existe_se_informa_y_no_se_guarda(self):
         r = self.json_ok(self.bloques(self.a["id"], [BLOQUES_L1[0], "l1-lecture:no-existe"]))
@@ -146,10 +148,12 @@ class ProgresoTests(BaseEstudio):
 
     def test_el_avance_pasa_al_expediente_y_es_monotono_alli_tambien(self):
         self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[:3]))
+        self.assertFalse(ProgresoLeccion.objects.filter(persona_id=self.estudiante_id, leccion_codigo=LECCION_1).exists())   # 0 %: aún nada que sellar
+        self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[6:]))
         fila = ProgresoLeccion.objects.get(curso_ref=CURSO, persona_id=self.estudiante_id, leccion_codigo=LECCION_1)
-        self.assertEqual((float(fila.porcentaje), fila.estado, fila.leccion_rotulo), (42.86, "en_curso", "Los tres estados de la materia"))
-        self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[:5]))
-        self.assertEqual(float(ProgresoLeccion.objects.get(pk=fila.pk).porcentaje), 71.43)
+        self.assertEqual((float(fila.porcentaje), fila.leccion_rotulo), (100.0, "Los tres estados de la materia"))
+        self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[:3]))                         # y no baja
+        self.assertEqual(float(ProgresoLeccion.objects.get(pk=fila.pk).porcentaje), 100.0)
 
     def test_lo_mal_formado_es_400_y_una_asignacion_cerrada_es_409(self):
         for cuerpo in ({"bloques_vistos": "l1"}, {"posicion_seg": -3}, {"posicion_seg": "a mitad"}, {"capturado_en": -1}):
@@ -200,14 +204,13 @@ class CompletarTests(BaseEstudio):
         self.json_ok(self.bloques(self.a["id"], BLOQUES_L1[:5]))
         r = self.completar()
         self.assertEqual((r.status_code, r.json()["codigo"]), (409, "bloques_pendientes"))
-        self.assertEqual(r.json()["faltan"], [{"ref": "l1-lab-phet", "indice": 6, "titulo": "Laboratorio: partículas en movimiento"},
-                                             {"ref": "l1-activity", "indice": 7, "titulo": "Practica: los tres estados"}])
+        self.assertEqual(r.json()["faltan"], [{"ref": "l1-activity", "indice": 7, "titulo": "Practica: los tres estados"}])
         self.assertEqual(m.Tarea.objects.get(asignacion_id=self.a["id"]).estado, "en_curso")
         self.assertEqual(self.eventos("estudio.leccion.completada.v1"), [])
 
     def test_sin_ningun_bloque_atendido_faltan_todos(self):
         r = self.completar()
-        self.assertEqual((r.status_code, len(r.json()["faltan"])), (409, 7))
+        self.assertEqual((r.status_code, len(r.json()["faltan"])), (409, 1))     # sólo la práctica es obligatoria
         self.assertEqual(m.Tarea.objects.count(), 0)          # no se completó nada: no queda ni la tarea
 
     def test_con_todos_atendidos_se_completa_se_sella_en_el_expediente_y_es_idempotente(self):

@@ -1,7 +1,7 @@
 ﻿AVACOM OPS Master
 
-This wizard will install AVACOM OPS Master
-and its required local services on this computer.
+Este asistente instalará AVACOM OPS Master y los servicios
+locales que necesita en este equipo.
 
 ------------------------------------------------------------------------
 
@@ -13,6 +13,9 @@ Qué queda instalado en este equipo
     · La API local del aula (y su canal en tiempo real), que se instala como
       un servicio de Windows y arranca sola cada vez que se enciende el equipo.
     · Un icono de AVACOM OPS Master en el escritorio y en el menú Inicio.
+    · Los registros y la auditoría del aula, en la carpeta de datos del
+      equipo (fuera de la carpeta del programa), con los permisos que el
+      servicio necesita para guardarlos.
 
 Todo lo que la API necesita para funcionar viaja dentro de este instalador.
 No hace falta internet, ni instalar nada más, ni escribir ningún comando.

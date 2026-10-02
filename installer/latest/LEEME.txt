@@ -1,17 +1,23 @@
-﻿AVACOM OPS Master 2.1.0 (revision 724124db)
+﻿AVACOM OPS Master 2.2.0 (revision ae8eefd4)
 
 Esta carpeta es lo que se sube como release de GitHub:
 
-  AVACOM-OPS-Master-Setup-2.1.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
-  SHA256.txt                            la huella del instalador; si se versiona
-  AVACOM-Verificar-Instalador.bat       revisa el equipo y el instalador SIN instalar nada
+  AVACOM-OPS-Master-Setup-2.2.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
+  SHA256.txt                            la huella del instalador y del codigo que lleva
+  AVACOM-Verificar-Instalador.bat       revisa el equipo, el instalador y lo ya instalado, y busca
+                                        el error exacto cuando algo falla. NO modifica nada.
+  AVACOM-Probar-Comunicacion.bat        el diagnostico a fondo de la comunicacion con AVACOM
+                                        Contenido (por que el aula no ve cursos). NO modifica nada.
   LEEME.txt                             este archivo
 
-Antes de instalar en un equipo del aula, toca AVACOM-Verificar-Instalador.bat:
-comprueba la descarga (SHA256), ejecuta las diez comprobaciones del asistente y
-enseña el estado de lo ya instalado. No modifica el equipo.
+PARA INSTALAR: toca el instalador. Todo se maneja con toques: no hay que escribir nada.
+Python, .NET y todo lo que la API necesita van dentro; no hace falta internet.
 
-Para instalar, toca el instalador. Todo se maneja con toques: no hay que escribir
-nada. Python, .NET y todo lo que la API necesita van dentro; no hace falta internet.
+ANTES DE INSTALAR en un equipo del aula, o SI ALGO FALLA despues (por ejemplo, la aplicacion se
+cierra al abrir una leccion): toca AVACOM-Verificar-Instalador.bat. Comprueba la descarga (SHA256),
+ejecuta las diez comprobaciones del asistente, revisa permisos, servicio, registros y la
+comunicacion con AVACOM Contenido, y recoge los errores de la aplicacion (registro de fallos y
+Visor de eventos de Windows). Deja un informe y un .zip con las evidencias en el escritorio.
 
+Esta version incluye: Modo Estudio, Evaluacion y entrega, y Auditoria y registros del nodo.
 Politica de datos de esta version: reemplazables.

@@ -28,8 +28,8 @@ def curso_de(asignacion: dict) -> dict:
 def bloques_del_alumno(asignacion: dict, tarea: dict | None) -> list[dict]:
     """La estructura de bloques con lo que el alumno ya atendió. Las referencias de medios no salen: son del servidor."""
     vistos = set(tarea["bloques_vistos"]) if tarea else set()
-    return [{"ref": b["ref"], "indice": b["indice"], "tipo": b["tipo"], "titulo": b["titulo"], "obligatorio": b.get("obligatorio", True),
-             "atendido": b["ref"] in vistos, "objeto_ref": b.get("objeto_ref") or None} for b in asignacion["bloques"]]
+    return [{"ref": b["ref"], "indice": b["indice"], "tipo": b["tipo"], "titulo": b["titulo"], "obligatorio": b["obligatorio"],
+             "atendido": b["ref"] in vistos, "objeto_ref": b.get("objeto_ref") or None} for b in bloques_dom.con_obligatorios(asignacion["bloques"])]
 
 
 def ultimo_bloque(asignacion: dict, tarea: dict | None) -> dict | None:
@@ -136,7 +136,7 @@ def asignacion_estable(asignacion: dict) -> dict:
         "asignatura": asignacion["asignatura_rotulo"], "unidad": asignacion["unidad_rotulo"],
         "curso": curso_de(asignacion), "leccion_ref": asignacion["leccion_ref"],
         "bloques": [{"ref": b["ref"], "indice": b["indice"], "tipo": b["tipo"], "titulo": b["titulo"],
-                     "obligatorio": b.get("obligatorio", True), "objeto_ref": b.get("objeto_ref") or None} for b in asignacion["bloques"]],
+                     "obligatorio": b["obligatorio"], "objeto_ref": b.get("objeto_ref") or None} for b in bloques_dom.con_obligatorios(asignacion["bloques"])],
         "practica": ({"disponible": True, **asignacion["practica"]} if asignacion.get("practica") else None),
         "evaluacion": asignacion.get("evaluacion") or None,
     }

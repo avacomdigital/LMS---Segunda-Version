@@ -64,8 +64,8 @@ class BloquesTests(SimpleTestCase):
     def test_el_avance_es_obligatorios_atendidos_sobre_obligatorios_y_no_es_una_nota(self):
         bloques = bloques_dom.bloques_de_leccion(leccion())
         self.assertEqual(bloques_dom.avance_pct(bloques, []), 0.0)
-        self.assertEqual(bloques_dom.avance_pct(bloques, ["lec:s1"]), 20.0)
-        self.assertEqual(bloques_dom.avance_pct(bloques, ["lec:s1", "lab", "no-existe"]), 40.0)     # lo que no existe no cuenta
+        self.assertEqual(bloques_dom.avance_pct(bloques, ["lec:s1", "lab", "no-existe"]), 0.0)      # láminas y laboratorio no son obligatorios; lo que no existe no cuenta
+        self.assertEqual(bloques_dom.avance_pct(bloques, ["act", "no-existe"]), 100.0)              # la única práctica terminada una vez
         self.assertEqual(bloques_dom.avance_pct(bloques, [b["ref"] for b in bloques]), 100.0)
         self.assertEqual(bloques_dom.avance_pct([], ["x"]), 0.0)
         siete = [{"ref": str(i), "indice": i, "titulo": "", "obligatorio": True} for i in range(7)]
@@ -73,13 +73,14 @@ class BloquesTests(SimpleTestCase):
 
     def test_completar_exige_todos_los_obligatorios_y_dice_cuales_faltan(self):
         bloques = bloques_dom.bloques_de_leccion(leccion())
-        vistos = ["lec:s1", "exp:p1", "act"]
-        self.assertFalse(bloques_dom.esta_completa(bloques, vistos))
-        self.assertEqual(bloques_dom.faltan(bloques, vistos), [{"ref": "lec:s2", "indice": 2, "titulo": "Presentación · 2"},
-                                                               {"ref": "lab", "indice": 4, "titulo": "Laboratorio"}])
+        vistos = ["lec:s1", "exp:p1", "lab"]
+        self.assertFalse(bloques_dom.esta_completa(bloques, vistos))                     # sin terminar la práctica no se completa, por mucho que se haya visto
+        self.assertEqual(bloques_dom.faltan(bloques, vistos), [{"ref": "act", "indice": 5, "titulo": "Practica"}])
+        self.assertTrue(bloques_dom.esta_completa(bloques, ["act"]))                     # sólo la práctica es obligatoria: láminas, páginas y laboratorio se pueden saltar
         self.assertTrue(bloques_dom.esta_completa(bloques, [b["ref"] for b in bloques]))
-        opcionales = [{**b, "obligatorio": b["ref"] != "lab"} for b in bloques]
-        self.assertTrue(bloques_dom.esta_completa(opcionales, ["lec:s1", "lec:s2", "exp:p1", "act"]))     # un bloque opcional no impide completar
+        sin_practica = [b for b in bloques if b["tipo"] != "practica"]                   # sin práctica, todos son obligatorios
+        self.assertFalse(bloques_dom.esta_completa(sin_practica, ["lec:s1"]))
+        self.assertTrue(bloques_dom.esta_completa(sin_practica, [b["ref"] for b in sin_practica]))
 
     def test_el_progreso_es_monotono_y_las_referencias_desconocidas_se_separan(self):
         bloques = bloques_dom.bloques_de_leccion(leccion())

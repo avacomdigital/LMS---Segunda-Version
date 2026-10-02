@@ -54,7 +54,10 @@ PrivilegesRequiredOverridesAllowed=
 
 ArchitecturesAllowed=x64os
 ArchitecturesInstallIn64BitMode=x64os
-MinVersion=10.0
+; La aplicacion lleva el Windows App SDK autocontenido, que pide Windows 10
+; version 1809 (compilacion 17763). Con una version mas vieja el asistente se
+; abriria y la aplicacion no.
+MinVersion=10.0.17763
 
 OutputDir={#CarpetaSalida}
 OutputBaseFilename=AVACOM-OPS-Master-Setup-{#VersionProducto}
@@ -100,7 +103,11 @@ Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Messages]
 es.WelcomeLabel1=Bienvenido a la instalación de [name]
-es.WelcomeLabel2=Este asistente instalará [name/ver] en este equipo.%n%nToca Siguiente para continuar.
+es.WelcomeLabel2=Este asistente instalará [name/ver] en este equipo.
+; Textos para tocar, no para hacer clic. Sin esto salen los de fabrica («Haga clic en...»), y la pantalla de bienvenida
+; repetia dos veces la instruccion de continuar.
+es.ClickNext=Toca Siguiente para continuar, o Cancelar para salir de la instalación.
+es.ReadyLabel2a=Toca Instalar para continuar, o Atrás si quieres revisar o cambiar algo.
 es.WizardInfoBefore=Información de AVACOM LMS 2.0
 es.InfoBeforeLabel=Lee esta información antes de continuar.
 es.InfoBeforeClickLabel=Cuando estés listo, toca Siguiente.
@@ -133,15 +140,40 @@ es.EjecutarAhora=Abrir {#NombreProducto} ahora
 ; borran al desinstalar: solo se borra lo que este instalador creo, y el
 ; expediente se borra unicamente si se pide expresamente.
 ; --------------------------------------------------------------------------
+;
+; Permisos. El servicio corre como SYSTEM y es quien escribe la base de datos y
+; los registros; el instalador y el mantenimiento los hace un administrador. Se
+; les concede control total de forma EXPLICITA en cada carpeta de estado, en
+; lugar de fiarse de lo que herede de ProgramData: si una carpeta ya existia con
+; una lista de permisos rara (un intento anterior, una copia de otro equipo),
+; sin esto el servicio no podria escribir y el nodo funcionaria sin guardar nada.
+; Los demas usuarios conservan lo que hereden (leer), salvo en Logs.
+; --------------------------------------------------------------------------
 Name: "{commonappdata}\AVACOM"; Flags: uninsneveruninstall
-Name: "{commonappdata}\AVACOM\{#NombreCorto}"; Flags: uninsneveruninstall
-Name: "{commonappdata}\AVACOM\{#NombreCorto}\Config"; Flags: uninsneveruninstall
-Name: "{commonappdata}\AVACOM\{#NombreCorto}\Data"; Flags: uninsneveruninstall
+Name: "{commonappdata}\AVACOM\{#NombreCorto}"; Permissions: system-full admins-full; Flags: uninsneveruninstall
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\Config"; Permissions: system-full admins-full; Flags: uninsneveruninstall
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\Data"; Permissions: system-full admins-full; Flags: uninsneveruninstall
 ; Copias de seguridad previas a cada actualizacion (las ultimas cinco).
-Name: "{commonappdata}\AVACOM\{#NombreCorto}\Respaldos"; Flags: uninsneveruninstall
-; El lanzador escribe su diagnostico como el usuario del aula, no como
-; administrador: necesita poder escribir aqui.
-Name: "{commonappdata}\AVACOM\{#NombreCorto}\Logs"; Permissions: users-modify; Flags: uninsneveruninstall
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\Respaldos"; Permissions: system-full admins-full; Flags: uninsneveruninstall
+; Registros del nodo (JSON Lines del backend, auditoria en archivo, y los del
+; instalador y el lanzador). El lanzador escribe su diagnostico como el usuario
+; del aula, no como administrador: necesita poder escribir aqui.
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\Logs"; Permissions: users-modify system-full admins-full; Flags: uninsneveruninstall
+; La bitacora rota y exportada va aqui (la crea el backend; existir desde ya
+; evita que la primera exportacion dependa de un permiso de creacion).
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\Logs\auditoria"; Permissions: system-full admins-full; Flags: uninsneveruninstall
+
+; --------------------------------------------------------------------------
+; WebView2 (audio, video, PDF y laboratorios de las lecciones) guarda su perfil
+; por defecto JUNTO AL EJECUTABLE: <App>\Avacom.Lms.Ops.exe.WebView2. La
+; aplicacion vive en Program Files, donde quien da la clase no puede escribir, y
+; al abrir una leccion WebView2 no puede crear su perfil: la aplicacion se cierra.
+; El lanzador ya le da una carpeta propia en el perfil de Windows de la persona
+; (WEBVIEW2_USER_DATA_FOLDER), pero la aplicacion tambien se puede abrir sin pasar
+; por el lanzador. Esta carpeta, y solo esta, queda escribible para los usuarios:
+; el resto de App sigue siendo de solo lectura y los binarios no se pueden cambiar.
+; --------------------------------------------------------------------------
+Name: "{app}\App\Avacom.Lms.Ops.exe.WebView2"; Permissions: users-modify
 
 [Files]
 ; Interfaz .NET MAUI, con el runtime de .NET y el Windows App SDK dentro: el
@@ -197,10 +229,12 @@ Type: filesandordirs; Name: "{app}\Runtime\Python"
 Type: filesandordirs; Name: "{app}\Runtime\*.py"
 
 [UninstallDelete]
-; Lo que crea la ejecucion y no el instalador (cachés de Python, restos de una
+; Lo que crea la ejecucion y no el instalador (cachés de Python, el perfil de
+; WebView2 que la aplicacion deja dentro de su carpeta, restos de una
 ; actualizacion cortada).
 Type: filesandordirs; Name: "{app}\Backend"
 Type: filesandordirs; Name: "{app}\Runtime\Python"
+Type: filesandordirs; Name: "{app}\App"
 Type: filesandordirs; Name: "{app}\Anterior"
 Type: dirifempty; Name: "{app}"
 

@@ -63,12 +63,12 @@ class IntegrarEventosTests(BaseSync):
         self.assertEqual(r["resumen"], {"integrados": 1, "duplicados": 0, "rechazados": 0, "pendientes_decision": 0})
         self.assertEqual([x["id"] for x in r["asignaciones"]], [self.a["id"]])
         tarea = r["asignaciones"][0]["tarea"]
-        self.assertEqual((tarea["estado"], tarea["avance_pct"], tarea["bloques_atendidos"], tarea["ultimo_bloque"]["ref"]), ("en_curso", 28.57, 2, BLOQUES_L1[1]))
+        self.assertEqual((tarea["estado"], tarea["avance_pct"], tarea["bloques_atendidos"], tarea["ultimo_bloque"]["ref"]), ("en_curso", 0.0, 2, BLOQUES_L1[1]))
         self.assertEqual(r["veredictos"], [])
         fila = m.Sincronizacion.objects.get(emisor_id=EMISOR, secuencia=1)
         self.assertEqual((fila.estado, fila.alumno_id, fila.dispositivo_id, fila.tipo, fila.asignacion_id, fila.recibido_en, fila.ocurrido_en),
                          ("integrado", self.estudiante_id, self.propia["id"], "study.block.viewed", self.a["id"], T0, T0))
-        self.assertEqual(float(ProgresoLeccion.objects.get(persona_id=self.estudiante_id, leccion_codigo=LECCION_1).porcentaje), 28.57)   # y pasa al expediente
+        self.assertFalse(ProgresoLeccion.objects.filter(persona_id=self.estudiante_id, leccion_codigo=LECCION_1).exists())   # sin práctica terminada el avance es 0 %: nada pasa al expediente
 
     def test_un_evento_por_envio_resume_lo_integrado(self):
         with self.reloj(T0):
@@ -113,7 +113,7 @@ class IntegrarEventosTests(BaseSync):
     def test_completar_sin_todos_los_bloques_se_rechaza_y_con_ellos_se_integra(self):
         r = self.ok([self.vistos(1, BLOQUES_L1[:3]), self.completada(2)])
         self.assertEqual(self.estados(r), [(1, "integrado", ""), (2, "rechazado", "bloques_pendientes")])
-        self.assertEqual([x["ref"] for x in r["resultados"][1]["detalle"]["faltan"]], BLOQUES_L1[3:])
+        self.assertEqual([x["ref"] for x in r["resultados"][1]["detalle"]["faltan"]], ["l1-activity"])
         self.assertEqual(m.Tarea.objects.get().estado, "en_curso")
         self.assertEqual(self.eventos("estudio.leccion.completada.v1"), [])
         r = self.ok([self.vistos(3, BLOQUES_L1), self.completada(4)])
@@ -342,7 +342,7 @@ class ForaDeLoNormalTests(BaseSync):
         self.assertEqual(m.Sincronizacion.objects.count(), 6)                          # el sin secuencia no se puede registrar
         again = self.ok([{"secuencia": 2, "tipo": "study.otra.cosa", "carga": {"asignacion_id": self.a["id"]}}])
         self.assertEqual(self.estados(again), [(2, "duplicado", "datos_invalidos")])
-        self.assertEqual(float(m.Tarea.objects.get().avance_pct), 28.57)
+        self.assertEqual(float(m.Tarea.objects.get().avance_pct), 0.0)
 
     def test_la_asignacion_de_otro_grupo_se_rechaza_como_inexistente(self):
         ajena = self.crear_asignacion(grupo_id=self.otro_grupo["id"])

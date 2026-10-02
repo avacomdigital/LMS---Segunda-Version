@@ -19,11 +19,25 @@
     dist\staging, que es la "version instalable" antes de empaquetarla.
 
     Lo que se empaqueta es SIEMPRE lo que hay ahora en el repositorio: el
-    script publica desde el codigo fuente y no reutiliza binarios sueltos.
+    script publica desde el codigo fuente y no reutiliza binarios sueltos. Y lo
+    DEMUESTRA: antes de empezar toma la huella del codigo que va a empaquetar
+    (backend, aplicacion, asistente), comprueba al terminar que el paquete
+    contiene exactamente eso y que nada cambio mientras se compilaba, y deja las
+    huellas en manifiesto.json y SHA256.txt.
 
 .PARAMETER OmitirPruebas
     Salta la suite del backend. Solo para iterar; una entrega no deberia
     empaquetarse sin haberla pasado.
+
+.PARAMETER OmitirApp
+    Reutiliza la publicacion de la app de dist\staging, que es la etapa lenta.
+    Solo se acepta si esa publicacion corresponde al codigo actual (su huella
+    coincide con la del codigo fuente): una app vieja dentro de un instalador
+    nuevo fue justo lo que ya paso una vez.
+
+.PARAMETER OmitirEnsayo
+    Salta el ensayo del paquete (Ensayar-Paquete.ps1), que levanta el backend
+    empaquetado en un puerto libre y lo valida como lo haria el aula.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File installer\build\Build-Installer.ps1
@@ -40,7 +54,14 @@ param(
     # Al llegar el modulo de progreso y calificaciones, cambiar a 'protegidos'.
     [ValidateSet('reemplazables', 'protegidos')] [string] $PoliticaDatos = 'reemplazables',
     [switch] $OmitirPruebas,
-    [switch] $OmitirApp
+    [switch] $OmitirApp,
+    [switch] $OmitirEnsayo,
+    # Carpeta con Backend\ y Runtime\ de la version anterior (p. ej. copiada de un dist\staging viejo):
+    # el ensayo la usa para probar la actualizacion sobre una base de datos de esa version.
+    [string] $VersionAnterior = '',
+    # Por defecto, si el codigo cambia mientras se compila, la compilacion se aborta: lo que se
+    # empaqueto ya no seria lo que hay en el repositorio.
+    [switch] $PermitirCambiosDuranteLaCompilacion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -62,6 +83,77 @@ function Paso([string] $texto) {
 }
 
 function Fallar([string] $texto) { throw $texto }
+
+<#
+    Huella de un conjunto de carpetas: SHA-256 del listado ordenado de
+    "ruta relativa | SHA-256 del contenido". Sirve para DEMOSTRAR que lo que se
+    empaqueto es el codigo que habia al empezar, y que el paquete contiene
+    exactamente lo que debe (ni un archivo de mas ni de menos).
+
+    No se desciende a las carpetas excluidas: bin y obj de una app MAUI pesan
+    cientos de MB y no son codigo.
+#>
+function Huella-Carpetas {
+    param(
+        [Parameter(Mandatory)] [string[]] $Raices,
+        [string[]] $ExcluirCarpetas = @('bin', 'obj', '.venv', '__pycache__', 'node_modules', '.vs'),
+        [string[]] $ExcluirArchivos = @(),
+        # Rutas completas de carpetas que no cuentan (p. ej. backend\logs).
+        [string[]] $ExcluirRutas = @()
+    )
+
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $lineas = New-Object System.Collections.Generic.List[string]
+    $excluidas = @($ExcluirRutas | ForEach-Object { [IO.Path]::GetFullPath($_).TrimEnd('\') })
+
+    function Recorrer([string] $carpeta, [string] $base) {
+        foreach ($archivo in [IO.Directory]::EnumerateFiles($carpeta)) {
+            $nombre = [IO.Path]::GetFileName($archivo)
+            $omitir = $false
+            foreach ($patron in $ExcluirArchivos) { if ($nombre -like $patron) { $omitir = $true; break } }
+            if ($omitir) { continue }
+            $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($archivo))).Replace('-', '')
+            $lineas.Add(($archivo.Substring($base.Length)).ToLowerInvariant() + '|' + $hash)
+        }
+        foreach ($sub in [IO.Directory]::EnumerateDirectories($carpeta)) {
+            $nombre = [IO.Path]::GetFileName($sub)
+            if ($ExcluirCarpetas -contains $nombre) { continue }
+            if ($excluidas -contains $sub.TrimEnd('\')) { continue }
+            Recorrer $sub $base
+        }
+    }
+
+    foreach ($raiz in $Raices) {
+        if (-not (Test-Path $raiz)) { continue }
+        $completa = (Resolve-Path $raiz).Path.TrimEnd('\')
+        # La base es el PADRE: asi la raiz forma parte de la ruta relativa y dos raices
+        # distintas con un archivo del mismo nombre no se confunden.
+        Recorrer $completa ((Split-Path $completa -Parent).TrimEnd('\') + '\')
+    }
+
+    $texto = (($lineas | Sort-Object) -join "`n")
+    return [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($texto))).Replace('-', '').ToLowerInvariant()
+}
+
+# Lo que el instalador de OPS empaqueta y de lo que depende su contenido. Student queda fuera: no viaja aqui.
+$ArchivosDeLog = @('*.log', '*.log.*', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.pyc', '.escritura')
+function Huella-Backend([string] $carpeta) {
+    Huella-Carpetas -Raices @($carpeta) -ExcluirArchivos $ArchivosDeLog -ExcluirRutas @((Join-Path $carpeta 'logs'))
+}
+function Huella-App {
+    Huella-Carpetas -Raices @(
+        (Join-Path $raiz 'src\Avacom.Lms.Ops'), (Join-Path $raiz 'src\Avacom.Lms.Core'),
+        (Join-Path $raiz 'src\Avacom.Lms.Ui'), (Join-Path $raiz 'assets')) -ExcluirArchivos @('*.user', '*.log')
+}
+function Huella-Instalador {
+    # El asistente, el host, el verificador y los scripts de compilacion: todo lo que decide que hay
+    # dentro del .exe y de los .bat. Se excluye lo que la propia compilacion genera (los .bat, el arnes).
+    $codigo = Huella-Carpetas -ExcluirArchivos @('*.log', '*.bat', '*.exe') -Raices @(
+        (Join-Path $raiz 'installer\src'), (Join-Path $raiz 'installer\tools'), (Join-Path $raiz 'installer\build'))
+    $version = (Get-FileHash (Join-Path $raiz 'installer\version.json') -Algorithm SHA256).Hash
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes("$codigo|$version"))).Replace('-', '').ToLowerInvariant()
+}
 
 <#
     Ejecuta un programa externo y devuelve su codigo de salida.
@@ -137,6 +229,37 @@ try {
 } catch { $revision = 'sin-revision' }
 Write-Host "  Revision del repositorio: $revision"
 
+# El instalador se compila de lo que hay en disco, este o no confirmado en git.
+# Se anota cuanto hay sin confirmar para que un instalador no pueda hacerse pasar por
+# una revision que no es del todo (el manifiesto lo lleva). Los registros y la base de
+# desarrollo, y las propias salidas de esta compilacion, no cuentan.
+$cambiosSinConfirmar = @()
+try {
+    $porcelana = @(git -C $raiz status --porcelain 2>$null)
+    if ($LASTEXITCODE -eq 0) {
+        $cambiosSinConfirmar = @($porcelana |
+            ForEach-Object { if ($_.Length -gt 3) { $_.Substring(3).Trim('"') } } |
+            Where-Object { $_ -and $_ -notmatch '^(backend/logs/|backend/db\.sqlite3|dist/|installer/latest/|installer/src/host/(bin|obj)/|installer/build/PruebaAsistente\.exe)' })
+    }
+} catch { $cambiosSinConfirmar = @() }
+$arbolLimpio = (@($cambiosSinConfirmar).Count -eq 0)
+if ($arbolLimpio) {
+    Write-Host '  Arbol de trabajo limpio: el instalador es exactamente esa revision.'
+} else {
+    Write-Host "  AVISO: hay $(@($cambiosSinConfirmar).Count) archivo(s) sin confirmar en git; se empaquetan tal como estan:" -ForegroundColor Yellow
+    $cambiosSinConfirmar | Select-Object -First 12 | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+    if (@($cambiosSinConfirmar).Count -gt 12) { Write-Host "    ... y $(@($cambiosSinConfirmar).Count - 12) mas" -ForegroundColor Yellow }
+}
+
+# Huellas del codigo AL EMPEZAR. Al final se vuelven a tomar: si no coinciden, el codigo
+# cambio mientras se compilaba (otro proceso editando el repositorio) y el instalador
+# ya no es lo que hay en disco.
+Write-Host '  Tomando la huella del codigo que se va a empaquetar ...'
+$huellaBackendInicial = Huella-Backend (Join-Path $raiz 'backend')
+$huellaAppInicial = Huella-App
+$huellaInstaladorInicial = Huella-Instalador
+Write-Host "  backend $($huellaBackendInicial.Substring(0, 12)) · app $($huellaAppInicial.Substring(0, 12)) · asistente $($huellaInstaladorInicial.Substring(0, 12))"
+
 # ------------------------------------------------------------------ 2. Pruebas
 if ($OmitirPruebas) {
     Write-Host ''
@@ -160,9 +283,18 @@ New-Item -ItemType Directory -Force $staging | Out-Null
 New-Item -ItemType Directory -Force $salida | Out-Null
 
 # ------------------------------------------------------- 4. AVACOM OPS Master
+$selloApp = Join-Path $staging 'huella-app.txt'
 if ($OmitirApp -and (Test-Path (Join-Path $staging 'App\Avacom.Lms.Ops.exe'))) {
     Write-Host ''
     Write-Host '==> 4/8  Publicacion de la app OMITIDA: se reutiliza la de dist\staging' -ForegroundColor Yellow
+    # Una app vieja dentro de un instalador nuevo ya paso una vez (se empaqueto una publicacion de
+    # hacia semanas). Solo se reutiliza si es de ESTE codigo: su huella lo dice.
+    $huellaPublicada = if (Test-Path $selloApp) { (Get-Content $selloApp -Raw).Trim() } else { '(sin huella)' }
+    if ($huellaPublicada -ne $huellaAppInicial) {
+        Fallar ("La app de dist\staging no corresponde al codigo actual (huella publicada $huellaPublicada; " +
+                "huella del codigo $huellaAppInicial). Vuelve a compilar sin -OmitirApp.")
+    }
+    Write-Host '  La publicacion reutilizada es de este mismo codigo (la huella coincide).'
 } else {
     Paso '4/8  Publicando AVACOM OPS Master (.NET MAUI, con runtime incluido)'
     # -f solo el destino Windows. Las propiedades de RID y autocontenido se
@@ -187,7 +319,22 @@ if ($OmitirApp -and (Test-Path (Join-Path $staging 'App\Avacom.Lms.Ops.exe'))) {
         Fallar 'La publicacion no incluyo el Windows App SDK autocontenido.'
     }
     Write-Host "  App publicada: $([math]::Round(((Get-ChildItem -Recurse -File (Join-Path $staging 'App') | Measure-Object -Sum Length).Sum / 1MB),0)) MB"
+
+    # El sello va en la raiz de dist\staging y NO dentro de App\: no viaja en el instalador.
+    Set-Content -Path $selloApp -Value $huellaAppInicial -Encoding ascii
 }
+
+# Compilada hace un momento y no antes del ultimo cambio de codigo: el binario de la app es mas
+# nuevo que cualquier archivo que lo produce.
+$ultimoCodigo = Get-ChildItem (Join-Path $raiz 'src\Avacom.Lms.Ops'), (Join-Path $raiz 'src\Avacom.Lms.Core'), (Join-Path $raiz 'src\Avacom.Lms.Ui') `
+    -Recurse -File -Include '*.cs', '*.xaml', '*.csproj', '*.svg', '*.png' -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$dllApp = Get-Item (Join-Path $staging 'App\Avacom.Lms.Ops.dll') -ErrorAction SilentlyContinue
+if ($dllApp -and $ultimoCodigo -and $dllApp.LastWriteTime -lt $ultimoCodigo.LastWriteTime.AddSeconds(-2)) {
+    Fallar ("La app empaquetada ($($dllApp.LastWriteTime)) es anterior al ultimo cambio de codigo " +
+            "($($ultimoCodigo.Name), $($ultimoCodigo.LastWriteTime)): no es la version actual.")
+}
+if ($dllApp) { Write-Host "  Avacom.Lms.Ops.dll compilada el $($dllApp.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss')), despues del ultimo cambio de codigo." }
 
 # La plantilla de .NET MAUI trae el logotipo de Microsoft como icono y como
 # pantalla de arranque. Si vuelve a colarse, se para aqui y no se distribuye un
@@ -242,11 +389,14 @@ New-Item -ItemType Directory -Force $destinoBackend | Out-Null
 #   db.sqlite3*  base de datos de desarrollo (con su -wal y su -shm); el nodo
 #                crea la suya vacia
 #   __pycache__  bytecode del interprete del desarrollador
+#   logs         los registros del desarrollador (backend-app.log, ...): el nodo
+#                escribe los suyos en ProgramData, y los de otro equipo no se
+#                reparten por las aulas
 # robocopy usa 0-7 para exitos (1 = se copiaron archivos) y 8+ para fallos.
 $codigo = Nativo -Ejecutable 'robocopy' -Argumentos @(
     (Join-Path $raiz 'backend'), $destinoBackend, '/E'
-    '/XD', '.venv', '__pycache__'
-    '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm'
+    '/XD', '.venv', '__pycache__', (Join-Path $raiz 'backend\logs')
+    '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.log', '*.log.*', '*.pyc', '.escritura'
     '/NFL', '/NDL', '/NJH', '/NJS', '/NP'
 ) -Silencioso
 if ($codigo -ge 8) { Fallar "robocopy fallo al copiar el backend (codigo $codigo)." }
@@ -267,6 +417,36 @@ foreach ($obligatorio in @('avacom_lms\asgi.py', 'classroom_engine\interfaces\we
 if (Get-ChildItem $destinoBackend -Recurse -Include '*.pyc' -ErrorAction SilentlyContinue) {
     Fallar 'Hay bytecode compilado (.pyc) dentro del backend a empaquetar.'
 }
+if (Test-Path (Join-Path $destinoBackend 'logs')) {
+    Fallar 'Los registros de desarrollo (backend\logs) se colaron en el paquete.'
+}
+
+# Integridad: el backend empaquetado ES, archivo por archivo, el del repositorio (menos lo que
+# se excluye a proposito). Si falta uno, sobra uno o difiere un byte, el paquete no sale.
+$huellaBackendPaquete = Huella-Backend $destinoBackend
+if ($huellaBackendPaquete -ne $huellaBackendInicial) {
+    Fallar ("El backend empaquetado no coincide con el del repositorio (paquete $huellaBackendPaquete; " +
+            "repositorio $huellaBackendInicial). O la copia fallo, o el codigo cambio mientras se copiaba.")
+}
+Write-Host "  El backend empaquetado es el del repositorio (huella $($huellaBackendPaquete.Substring(0, 12)))."
+
+# Toda app de Django que settings.py instala viaja completa, con sus migraciones: una app
+# nueva (auditoria, evaluacion, modo de estudio...) que no llegara al paquete daria un nodo
+# que arranca y falla en la primera ruta que la usa.
+$textoAjustes = Get-Content (Join-Path $raiz 'backend\avacom_lms\settings.py') -Raw -Encoding UTF8
+$bloqueApps = [regex]::Match($textoAjustes, '(?s)INSTALLED_APPS\s*=\s*\[(.*?)\n\]').Groups[1].Value
+$modulosBackend = @([regex]::Matches($bloqueApps, '(?m)^\s*"([A-Za-z0-9_]+)"\s*,') |
+    ForEach-Object { $_.Groups[1].Value } | Where-Object { $_ -notin @('daphne', 'rest_framework', 'channels') })
+if (@($modulosBackend).Count -lt 8) { Fallar "No se pudieron leer las apps de INSTALLED_APPS (salieron $(@($modulosBackend).Count))." }
+foreach ($modulo in $modulosBackend) {
+    if (-not (Test-Path (Join-Path $destinoBackend "$modulo\__init__.py"))) {
+        Fallar "La app $modulo esta en INSTALLED_APPS pero no llego al paquete."
+    }
+    if ((Test-Path (Join-Path $raiz "backend\$modulo\migrations")) -and -not (Test-Path (Join-Path $destinoBackend "$modulo\migrations"))) {
+        Fallar "La app $modulo perdio sus migraciones al empaquetarse."
+    }
+}
+Write-Host "  Apps del backend en el paquete ($(@($modulosBackend).Count)): $($modulosBackend -join ', ')"
 
 $paquetes = Get-ChildItem (Join-Path $staging 'Runtime\Python\Lib\site-packages') -Directory -Filter '*.dist-info' |
     ForEach-Object { $_.Name -replace '\.dist-info$', '' } | Sort-Object
@@ -275,6 +455,11 @@ $manifiesto = [ordered]@{
     producto            = 'AVACOM OPS Master'
     version             = $Version
     revision            = $revision
+    arbol_limpio        = $arbolLimpio
+    archivos_sin_confirmar = @($cambiosSinConfirmar | Select-Object -First 40)
+    huella_backend      = $huellaBackendPaquete
+    huella_app          = $huellaAppInicial
+    huella_asistente    = $huellaInstaladorInicial
     empaquetado         = (Get-Date).ToString('o')
     servicio            = 'AVACOMOPSBackend'
     escucha             = '0.0.0.0:8000'
@@ -284,6 +469,9 @@ $manifiesto = [ordered]@{
     runtime_python      = $VersionPython
     paquetes_python     = @($paquetes)
     runtime_dotnet      = 'incluido en la aplicacion (autocontenido)'
+    modulos_backend     = @($modulosBackend)
+    carpeta_registros   = '%ProgramData%\AVACOM\OPS Master\Logs'
+    fuente_de_cursos    = 'AVACOM Contenido (biblioteca); el curso de ejemplo esta apagado'
     administra_cursos   = $false
     dueno_de_los_cursos = 'AVACOM Contenido'
 }
@@ -311,11 +499,18 @@ Lo que cambia con el uso NO esta en esta carpeta, esta en:
   %ProgramData%\AVACOM\OPS Master\Data      base de datos del nodo (organizacion, personas,
                                             tabletas, clases, expediente)
   %ProgramData%\AVACOM\OPS Master\Respaldos  copias de seguridad previas a cada actualizacion
-  %ProgramData%\AVACOM\OPS Master\Logs      registros para diagnostico
+  %ProgramData%\AVACOM\OPS Master\Logs      registros del nodo (backend, auditoria en archivo,
+                                            instalador y lanzador) para diagnostico
+
+El servicio (cuenta SYSTEM) escribe ahi la base de datos y los registros; el
+instalador les da los permisos que necesitan. La aplicacion del profesor guarda
+el perfil de WebView2 (audio, video, PDF y laboratorios de las lecciones) en el
+perfil de Windows de quien da la clase, nunca dentro de esta carpeta.
 
 Los cursos no viven aqui: son de AVACOM Contenido, que se instala aparte y
 tiene su propia carpeta. AVACOM OPS Master los consulta y guarda solo el
-expediente: inscripcion, progreso, intentos y notas.
+expediente: inscripcion, progreso, intentos y notas. Si AVACOM Contenido no
+esta abierto, el aula arranca igual y los cursos aparecen cuando lo este.
 
 Para quitar el producto, usa "Aplicaciones instaladas" de Windows. La
 desinstalacion pregunta si quieres conservar los datos y su configuracion (van
@@ -335,14 +530,34 @@ Paso '7/8  Verificando el codigo del asistente en este Windows'
 # no llega a dar un veredicto.
 & (Join-Path $PSScriptRoot 'Verificar-Asistente.ps1') -Iscc $iscc
 
-# El probador de comunicacion (un .bat con el PowerShell dentro) se regenera
-# desde su fuente para que no se quede atras.
+# Los dos .bat (un solo archivo cada uno, con el PowerShell dentro) se regeneran
+# desde sus fuentes para que no se queden atras:
+#   AVACOM-Verificar-Instalador.bat    revisa el equipo, el instalador y lo instalado, y busca el
+#                                      error exacto cuando algo falla (installer\latest)
+#   AVACOM-Probar-Comunicacion.bat     diagnostico a fondo de la comunicacion con AVACOM Contenido
 & (Join-Path $PSScriptRoot 'New-ProbadorBat.ps1') | Out-Null
+& (Join-Path $PSScriptRoot 'New-VerificadorBat.ps1') | Out-Null
+# La carpeta de entrega (la release) lleva todo junto: el diagnostico de Contenido se copia junto al instalador.
+Copy-Item (Join-Path $raiz 'installer\tools\AVACOM-Probar-Comunicacion.bat') (Join-Path $salida 'AVACOM-Probar-Comunicacion.bat') -Force
+
+# ----------------------------------------------------- 7b. Ensayo del paquete
+if ($OmitirEnsayo) {
+    Write-Host ''
+    Write-Host '==> 7b  Ensayo del paquete OMITIDO por parametro' -ForegroundColor Yellow
+} else {
+    Paso '7b  Ensayando el paquete como lo haria el aula (en una carpeta de pruebas, sin tocar este equipo)'
+    $argumentosEnsayo = @{ Staging = $staging }
+    if ($VersionAnterior) { $argumentosEnsayo.VersionAnterior = $VersionAnterior }
+    & (Join-Path $PSScriptRoot 'Ensayar-Paquete.ps1') @argumentosEnsayo
+    if ($LASTEXITCODE -ne 0) { Fallar 'El ensayo del paquete fallo: no se compila el instalador.' }
+}
 
 # ------------------------------------------------------------ 8. Inno Setup
 Paso '8/8  Compilando el asistente con Inno Setup'
 
-Get-ChildItem $salida -Filter 'AVACOM-OPS-Master-Setup-*.exe' -ErrorAction SilentlyContinue |
+# Una compilacion interrumpida deja un .tmp a medias y, peor, puede dejar el .exe de la version
+# anterior como si fuera el de esta: se retira todo antes de compilar.
+Get-ChildItem $salida -Filter 'AVACOM-OPS-Master-Setup-*' -ErrorAction SilentlyContinue |
     Remove-Item -Force
 
 $codigo = Nativo -Ejecutable $iscc -Argumentos @(
@@ -357,6 +572,41 @@ if ($codigo -ne 0) { Fallar 'Inno Setup no pudo compilar el asistente.' }
 
 $instalador = Get-ChildItem $salida -Filter 'AVACOM-OPS-Master-Setup-*.exe' | Select-Object -First 1
 if (-not $instalador) { Fallar 'Inno Setup termino sin producir el instalador.' }
+if (Get-ChildItem $salida -Filter '*.tmp' -ErrorAction SilentlyContinue) {
+    Fallar 'Quedo un archivo temporal de Inno Setup en installer\latest: la compilacion no termino bien.'
+}
+
+# El .exe producido es de esta version: lo dice el propio archivo, no el script.
+$infoExe = (Get-Item $instalador.FullName).VersionInfo
+if ($infoExe.FileVersion -notlike "$Version*") {
+    Remove-Item $instalador.FullName -Force
+    Fallar "El instalador producido dice ser la version $($infoExe.FileVersion) y se compilo la $Version."
+}
+if ($instalador.Name -ne "AVACOM-OPS-Master-Setup-$Version.exe") {
+    Remove-Item $instalador.FullName -Force
+    Fallar "El instalador se llama $($instalador.Name) y deberia llamarse AVACOM-OPS-Master-Setup-$Version.exe."
+}
+
+# El codigo no cambio mientras se compilaba (otro proceso editando el repositorio): el
+# instalador es lo que habia en disco al empezar, y eso es lo que el paquete contiene.
+$huellaBackendFinal = Huella-Backend (Join-Path $raiz 'backend')
+$huellaAppFinal = Huella-App
+$huellaInstaladorFinal = Huella-Instalador
+$cambiaron = @()
+if ($huellaBackendFinal -ne $huellaBackendInicial) { $cambiaron += 'el backend' }
+if ($huellaAppFinal -ne $huellaAppInicial) { $cambiaron += 'la aplicacion' }
+if ($huellaInstaladorFinal -ne $huellaInstaladorInicial) { $cambiaron += 'el asistente' }
+if ($cambiaron.Count -gt 0) {
+    if ($PermitirCambiosDuranteLaCompilacion) {
+        Write-Host "  AVISO: cambio $($cambiaron -join ', ') mientras se compilaba; se acepto por parametro." -ForegroundColor Yellow
+    } else {
+        Remove-Item $instalador.FullName -Force
+        Fallar ("Cambio $($cambiaron -join ', ') mientras se compilaba: el instalador ya no es lo que hay en el repositorio " +
+                'y se descarto. Vuelve a compilar con el repositorio quieto.')
+    }
+} else {
+    Write-Host '  El codigo no cambio durante la compilacion: el instalador es lo que habia al empezar.'
+}
 
 # Huella para poder verificar el archivo que se distribuye.
 $huella = (Get-FileHash $instalador.FullName -Algorithm SHA256).Hash
@@ -365,13 +615,19 @@ $($instalador.Name)
 SHA256  $huella
 Version $Version
 Revision $revision
+Arbol-limpio $(if ($arbolLimpio) { 'si' } else { 'no (' + @($cambiosSinConfirmar).Count + ' archivos sin confirmar; ver manifiesto.json)' })
+Huella-backend $huellaBackendPaquete
+Huella-app $huellaAppInicial
+Huella-asistente $huellaInstaladorInicial
 Empaquetado $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss zzz'))
 "@ | Set-Content -Path (Join-Path $salida 'SHA256.txt') -Encoding utf8
 
-# El verificador se versiona junto al instalador (installer\latest) y no se
-# genera: si falta, la carpeta de entrega esta incompleta.
+# Los dos .bat los acaba de generar el paso 7: tienen que estar.
 if (-not (Test-Path (Join-Path $salida 'AVACOM-Verificar-Instalador.bat'))) {
     Fallar 'Falta installer\latest\AVACOM-Verificar-Instalador.bat: la carpeta de entrega esta incompleta.'
+}
+if (-not (Test-Path (Join-Path $salida 'AVACOM-Probar-Comunicacion.bat'))) {
+    Fallar 'Falta installer\latest\AVACOM-Probar-Comunicacion.bat: la carpeta de entrega esta incompleta.'
 }
 
 @"
@@ -380,17 +636,23 @@ AVACOM OPS Master $Version (revision $revision)
 Esta carpeta es lo que se sube como release de GitHub:
 
   $($instalador.Name)   el instalador (no se versiona: supera los 100 MB de GitHub)
-  SHA256.txt                            la huella del instalador; si se versiona
-  AVACOM-Verificar-Instalador.bat       revisa el equipo y el instalador SIN instalar nada
+  SHA256.txt                            la huella del instalador y del codigo que lleva
+  AVACOM-Verificar-Instalador.bat       revisa el equipo, el instalador y lo ya instalado, y busca
+                                        el error exacto cuando algo falla. NO modifica nada.
+  AVACOM-Probar-Comunicacion.bat        el diagnostico a fondo de la comunicacion con AVACOM
+                                        Contenido (por que el aula no ve cursos). NO modifica nada.
   LEEME.txt                             este archivo
 
-Antes de instalar en un equipo del aula, toca AVACOM-Verificar-Instalador.bat:
-comprueba la descarga (SHA256), ejecuta las diez comprobaciones del asistente y
-enseña el estado de lo ya instalado. No modifica el equipo.
+PARA INSTALAR: toca el instalador. Todo se maneja con toques: no hay que escribir nada.
+Python, .NET y todo lo que la API necesita van dentro; no hace falta internet.
 
-Para instalar, toca el instalador. Todo se maneja con toques: no hay que escribir
-nada. Python, .NET y todo lo que la API necesita van dentro; no hace falta internet.
+ANTES DE INSTALAR en un equipo del aula, o SI ALGO FALLA despues (por ejemplo, la aplicacion se
+cierra al abrir una leccion): toca AVACOM-Verificar-Instalador.bat. Comprueba la descarga (SHA256),
+ejecuta las diez comprobaciones del asistente, revisa permisos, servicio, registros y la
+comunicacion con AVACOM Contenido, y recoge los errores de la aplicacion (registro de fallos y
+Visor de eventos de Windows). Deja un informe y un .zip con las evidencias en el escritorio.
 
+Esta version incluye: Modo Estudio, Evaluacion y entrega, y Auditoria y registros del nodo.
 Politica de datos de esta version: $PoliticaDatos.
 "@ | Set-Content -Path (Join-Path $salida 'LEEME.txt') -Encoding utf8
 
@@ -398,4 +660,5 @@ Write-Host ''
 Write-Host 'Instalador listo' -ForegroundColor Green
 Write-Host "  $($instalador.FullName)"
 Write-Host "  $([math]::Round($instalador.Length / 1MB, 1)) MB"
+Write-Host "  Version $Version · revision $revision · $(if ($arbolLimpio) { 'arbol limpio' } else { "$(@($cambiosSinConfirmar).Count) archivos sin confirmar" })"
 Write-Host "  SHA256 $huella"

@@ -162,7 +162,7 @@ class ListarYDetalleDelProfesorTests(BaseEstudio):
         self.assertEqual((d["destinatarios_total"], d["en_curso"], d["completaron"], d["pendientes"]), (2, 1, 0, 1))
         filas = {f["alumno_id"]: f for f in d["alumnos"]}
         juan, ana = filas[self.estudiante_id], filas[ana_id]
-        self.assertEqual((juan["rotulo"], juan["estado"], juan["avance_pct"], juan["bloques_atendidos"], juan["bloques_total"]), ("Juan P.", "en_curso", 28.57, 2, 7))
+        self.assertEqual((juan["rotulo"], juan["estado"], juan["avance_pct"], juan["bloques_atendidos"], juan["bloques_total"]), ("Juan P.", "en_curso", 0.0, 2, 7))
         self.assertEqual((ana["estado"], ana["avance_pct"], ana["bloques_atendidos"], ana["completada_en"], ana["ultimo_avance_en"]), ("pendiente", 0.0, 0, None, None))
         self.assertEqual((juan["dispositivo"]["nombre"], juan["dispositivo"]["perfil"]), ("Tableta de Juan", "asignado"))
         self.assertEqual((ana["practica"], ana["paquete"], ana["pendientes_decision"], ana["vencida"], ana["fuera_de_plazo"]),

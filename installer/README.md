@@ -6,12 +6,14 @@ profesor y la API local del aula, sin pedirle al usuario que escriba nada.
 ```text
 installer/
 ├── build/
-│   ├── Build-Installer.ps1     Un comando: del código fuente al .exe
+│   ├── Build-Installer.ps1     Un comando: del código fuente al .exe (y demuestra que es el actual)
 │   ├── Get-PythonRuntime.ps1   Ensambla el Python embebido con Django/DRF/Channels/Daphne
 │   ├── Distribucion.props      Propiedades de publicación (no toca ningún .csproj)
 │   ├── New-ImagenesAsistente.ps1  Imágenes de marca de las pantallas del asistente
-│   ├── New-ProbadorBat.ps1     Empaqueta el diagnóstico en un .bat autocontenido
+│   ├── New-VerificadorBat.ps1  Empaqueta el verificador en AVACOM-Verificar-Instalador.bat
+│   ├── New-ProbadorBat.ps1     Empaqueta el diagnóstico de Contenido en un .bat autocontenido
 │   ├── Verificar-Asistente.ps1 Ejecuta las comprobaciones del asistente de verdad
+│   ├── Ensayar-Paquete.ps1     Levanta el paquete como lo haría el aula, sin tocar este equipo
 │   └── PruebaAsistente.iss     Arnés: la misma lógica, sin nada que instalar
 ├── src/
 │   ├── AvacomOpsMaster.iss     El asistente (Inno Setup 6): 8 pantallas, +1 de datos
@@ -24,13 +26,15 @@ installer/
 │       └── requirements-runtime.txt    Dependencias que viajan en el paquete
 ├── version.json                Fuente única de la versión del producto
 ├── tools/
-│   ├── AVACOM-Probar-Comunicacion.bat  Diagnóstico en UN archivo (lo que se distribuye)
+│   ├── Verificar-Instalador.ps1        El verificador (código fuente del .bat de latest)
+│   ├── AVACOM-Probar-Comunicacion.bat  Diagnóstico de Contenido en UN archivo (se distribuye)
 │   └── Probar-Comunicacion.ps1         Su código fuente
-└── latest/
+└── latest/                                 Lo que se sube como release (todo junto)
     ├── AVACOM-OPS-Master-Setup-<versión>.exe
-    ├── SHA256.txt
+    ├── SHA256.txt                          Huella del .exe y del código que lleva (versión, revisión, árbol)
     ├── LEEME.txt
-    └── AVACOM-Verificar-Instalador.bat   Revisa el equipo y el instalador, sin instalar
+    ├── AVACOM-Verificar-Instalador.bat     Revisa el equipo, el instalador y lo instalado; busca el error exacto
+    └── AVACOM-Probar-Comunicacion.bat      Copia del de tools\: diagnóstico de la comunicación con Contenido
 ```
 
 ## Construirlo
@@ -44,18 +48,44 @@ Inno Setup 6 (`winget install JRSoftware.InnoSetup`), y acceso a internet la
 primera vez, para descargar el runtime de Python que después viaja dentro del
 paquete.
 
-El script pasa las pruebas del backend, publica la app, ensambla el runtime,
-copia el backend, escribe el manifiesto, **verifica el asistente** y lo compila.
-Si algo falla, se detiene: no produce un instalador a medias. Con `-OmitirApp`
-reutiliza la publicación anterior de la app, que es la etapa lenta.
+El script toma la **huella del código** que va a empaquetar, pasa las pruebas
+del backend, publica la app, ensambla el runtime, copia el backend, escribe el
+manifiesto, **verifica el asistente**, **ensaya el paquete** (ver abajo) y lo
+compila. Si algo falla, se detiene: no produce un instalador a medias.
+
+**Cómo demuestra que el instalador es el de la versión actual.** Una vez se
+empaquetó una publicación de la app de hacía semanas, y es el tipo de error que
+no se ve hasta el aula. Ahora:
+
+- La huella (SHA-256 de cada archivo) de `backend/`, de la app (`src/Avacom.Lms.Ops`,
+  `Core`, `Ui` y `assets/`) y del asistente se toma **al empezar** y se vuelve a
+  tomar **al terminar**; si no coinciden, el código cambió mientras se compilaba
+  y el `.exe` se descarta.
+- El backend empaquetado se compara archivo por archivo con el del repositorio
+  (menos lo que se excluye a propósito: `.venv`, `__pycache__`, la base de
+  desarrollo y **`backend/logs`**, los registros del desarrollador) y todas las
+  apps de `INSTALLED_APPS` tienen que haber llegado con sus migraciones.
+- `-OmitirApp` reutiliza la publicación de la app **solo si su huella es la del
+  código actual** (queda en `dist\staging\huella-app.txt`); si no, aborta.
+- La app publicada tiene que ser más nueva que el último archivo de código.
+- El `.exe` producido tiene que declarar la versión de `installer\version.json`.
+- Un árbol de trabajo con cambios sin confirmar se **avisa** (no se impide) y
+  queda escrito en `manifiesto.json` y `SHA256.txt`: el instalador no puede
+  hacerse pasar por una revisión de git que no es del todo.
+- Una compilación interrumpida no deja nada: se borran los `.exe` y `.tmp` de
+  `installer\latest` antes de compilar y se comprueba que no quede ningún `.tmp`.
+
+`-OmitirPruebas`, `-OmitirApp` y `-OmitirEnsayo` existen solo para iterar.
+`-VersionAnterior <carpeta con Backend\ y Runtime\ de la versión anterior>` añade
+al ensayo la **actualización sobre datos reales** de esa versión.
 
 ## Comprobar un equipo sin instalar nada
 
 El propio instalador sabe diagnosticar sin tocar el equipo. Con `/VOLCADO`
-ejecuta sus nueve comprobaciones, las escribe en un archivo y aborta:
+ejecuta sus diez comprobaciones, las escribe en un archivo y aborta:
 
 ```powershell
-.\AVACOM-OPS-Master-Setup-2.0.0.exe /VERYSILENT /VOLCADO=C:	emp\diagnostico.txt
+.\AVACOM-OPS-Master-Setup-2.2.0.exe /VERYSILENT /VOLCADO=C:\temp\diagnostico.txt
 ```
 
 Eso es también lo que usa `Verificar-Asistente.ps1` en cada compilación: un
@@ -70,10 +100,11 @@ AVACOM OPS Master
 │
 ├── App\        Aplicación .NET MAUI, con el runtime de .NET y el
 │               Windows App SDK dentro (no hay prerrequisitos)
+│   └── Avacom.Lms.Ops.exe.WebView2\   perfil de WebView2 escribible por los usuarios (red de seguridad)
 ├── Backend\    Django + Django REST Framework, tal cual está en backend\
 ├── Runtime\    Python 3.12 embebido + Django + DRF + Channels + Daphne
 │               + Avacom.Ops.Host.exe (servicio, lanzador, preparación)
-├── manifiesto.json   versión, revisión de git, servidor, política de datos, paquetes
+├── manifiesto.json   versión, revisión, huellas del código, módulos, política de datos, paquetes
 └── LEEME.txt
 ```
 
@@ -83,7 +114,8 @@ Y fuera de la carpeta del programa, porque cambia con el uso:
 %ProgramData%\AVACOM\OPS Master\Config      backend.env (claves de este nodo)
 %ProgramData%\AVACOM\OPS Master\Data        ops-master.sqlite3 (+ -wal y -shm): la base del nodo
 %ProgramData%\AVACOM\OPS Master\Respaldos   copias previas a cada actualización (las últimas 5)
-%ProgramData%\AVACOM\OPS Master\Logs        instalacion, servicio, backend, lanzador
+%ProgramData%\AVACOM\OPS Master\Logs        registros del nodo (ver «Registros»)
+%LOCALAPPDATA%\AVACOM\OPS Master\WebView2   perfil de WebView2 de cada usuario (lo crea el icono)
 ```
 
 La base no es sólo el expediente: guarda la organización, el administrador, las
@@ -129,6 +161,37 @@ Para parar, el host le cierra al backend la entrada estándar: el backend detien
 Twisted, cierra Django y vuelca el WAL de SQLite, de modo que el expediente queda
 en un solo archivo. Sólo si no cierra en 15 s se termina el proceso.
 
+Esa misma parada ocurre sola si **el host muere de golpe** (se cierra a la
+fuerza, falla, lo mata el sistema): el backend ve cerrarse su entrada y se detiene
+sin dejar el puerto ocupado. En la 2.1 esto fallaba: con el host muerto la salida
+estaba rota, el primer `print` del hilo vigilante lanzaba una excepción y nunca se
+pedía la parada, así que el backend quedaba huérfano. Ahora nada de lo que
+escribe puede impedirla, y si tras cerrar el expediente el intérprete no termina,
+sale a los 10 s (`Ensayar-Paquete.ps1` lo comprueba matando el host).
+
+### El backend solo obedece a `backend.env`
+
+El nodo se configura **únicamente** con `%ProgramData%\AVACOM\OPS Master\Config\backend.env`:
+
+- Toda variable `AVACOM_*` que traiga Windows —del usuario o del equipo— se
+  **descarta** antes de lanzar Python. Una base de pruebas, el curso de ejemplo
+  encendido o una nota de enlace de pruebas, olvidados por un técnico o un
+  desarrollador, no cambian lo que hace el aula (el ensayo del paquete los
+  envenena a propósito y comprueba que no cuentan).
+- Al instalar y al actualizar, `preparar` lleva ese archivo a lo que el producto
+  exige, **sin tocar las claves de acceso**: agrega lo que falta (entorno
+  `instalado`, carpeta de registros, fuente de cursos), corrige sólo lo que no
+  admite otro valor (la base que miran las copias, la fuente de cursos siempre
+  `biblioteca`, el curso de ejemplo apagado, la escucha en `0.0.0.0:8000`) y
+  retira —dejándola comentada— cualquier `AVACOM_CONTENIDO_ENLACE`.
+- Después revisa lo que Django ve **de verdad** (`Configuracion efectiva` en
+  `instalacion.log`) y se niega a continuar si apunta a otra base de datos o con
+  el ejemplo encendido.
+- Si `backend.env` falta o no se puede leer, el servicio **no arranca el backend**
+  (y lo escribe en `servicio.log`): arrancaría con valores de desarrollo y una base
+  de datos nueva dentro de Program Files, y el aula «funcionaría» sobre un
+  expediente vacío sin que nadie lo notara.
+
 ### Verbos de `Avacom.Ops.Host.exe`
 
 | Verbo | Quién lo usa | Qué hace |
@@ -137,8 +200,8 @@ en un solo archivo. Sólo si no cierra en 15 s se termina el proceso.
 | `iniciar` | El icono del escritorio | Backend → validación → interfaz |
 | `respaldar <versión>` | El instalador | Copia base + `-wal` + `-shm` + `backend.env` a `Respaldos\` |
 | `vaciar-datos`, `restaurar-datos` | El instalador | «Empezar de cero» / volver a la copia |
-| `preparar` | El instalador | Claves, comprobación del runtime, migraciones (según la política de datos) |
-| `validar [seg]` | El instalador | `/health/` responde **y** el WebSocket acepta conexiones; escribe `Logs\resumen-nodo.txt` |
+| `preparar` | El instalador | Configuración (crea o normaliza `backend.env`), claves, comprobación del runtime, configuración efectiva, migraciones (según la política de datos) |
+| `validar [seg]` | El instalador | `/health/` responde, el WebSocket acepta conexiones, el módulo de acceso lee su base y el backend escribe sus registros; escribe `Logs\resumen-nodo.txt` (incluye el estado de AVACOM Contenido) |
 | `salud [seg]` | Diagnóstico | Espera a que `/health/` responda |
 | `puerto-libre` | Diagnóstico | 0 libre · 12 nuestro backend · 13 ajeno |
 | `instalar-servicio`, `quitar-servicio` | El instalador | Registro en el SCM |
@@ -147,6 +210,113 @@ en un solo archivo. Sólo si no cierra en 15 s se termina el proceso.
 
 Ninguno pide interacción. El único que muestra algo es `iniciar`, y solo si el
 backend no responde.
+
+## Permisos
+
+Quién escribe dónde, y por qué. El servicio corre como `SYSTEM`; la aplicación,
+como **quien da la clase** (el instalador la abre con `runasoriginaluser`: sin
+eso heredaría el token de administrador y todo lo que escribiera quedaría a nombre
+del administrador).
+
+| Carpeta | `SYSTEM` y administradores | Usuarios (quien da la clase) | Quién escribe |
+|---|---|---|---|
+| `App\`, `Backend\`, `Runtime\` (Program Files) | control total | **solo lectura** | nadie en uso; solo el instalador |
+| `App\Avacom.Lms.Ops.exe.WebView2\` | control total | **modificar** | WebView2, solo si la aplicación se abre sin el icono |
+| `%ProgramData%\AVACOM\OPS Master\Config`, `Data`, `Respaldos` | **control total, explícito** | lo que hereden (leer) | el servicio y el instalador |
+| `…\Logs` y `Logs\auditoria` | **control total, explícito** | modificar | el servicio (registros y bitácora), el lanzador |
+| `%LOCALAPPDATA%\AVACOM\OPS Master\WebView2` | — | su propio perfil | WebView2, vía el icono |
+| `%LOCALAPPDATA%\AVACOM\lms` | — | su propio perfil | la aplicación (`fallos-ops.log` y `logs\ops-*.log`) |
+
+Control total para `SYSTEM` y administradores va **explícito** en cada carpeta
+de estado, en lugar de fiarse de lo que herede de ProgramData: si una carpeta ya
+existía con una lista de permisos rara (un intento anterior, una copia de otro
+equipo), sin eso el servicio no podría escribir y el nodo funcionaría sin guardar
+nada. El servicio, además, puede arrancarlo y detenerlo quien da la clase sin
+credenciales (`sc sdset`, solo sobre este servicio).
+
+**Por qué la aplicación se cerraba al abrir una lección.** Las lecciones con
+audio, video, PDF o laboratorio usan **WebView2** (el motor de Microsoft Edge).
+WebView2 guarda su perfil —caché, cookies, almacenamiento— por defecto *junto al
+ejecutable*, `App\Avacom.Lms.Ops.exe.WebView2`, y la aplicación está en Program
+Files, donde quien da la clase no puede escribir. Al crear la primera WebView el
+perfil no se puede crear y el proceso se cierra sin avisar. En el equipo de
+desarrollo no se ve: corre desde `bin\Debug`, que sí es escribible. Se resuelve
+en dos capas, ninguna toca el código del producto:
+
+1. **El icono** (`Avacom.Ops.Host.exe iniciar`) abre la aplicación con
+   `WEBVIEW2_USER_DATA_FOLDER` apuntando a `%LOCALAPPDATA%\AVACOM\OPS Master\WebView2`,
+   dentro del perfil de Windows de quien da la clase. Antes comprueba que se puede
+   escribir (crea y borra un archivo); si no, prueba su carpeta temporal; y si
+   tampoco, abre la aplicación igual con la carpeta por defecto —un fallo aquí no
+   puede impedir abrirla—. Respeta la variable si el entorno ya la trae (soporte,
+   depuración).
+2. **Red de seguridad:** el instalador crea `App\Avacom.Lms.Ops.exe.WebView2` con
+   permiso de modificar para los usuarios, y solo esa carpeta. Cubre abrir
+   `Avacom.Lms.Ops.exe` directamente. El resto de `App\` sigue siendo de solo
+   lectura: nadie puede reemplazar binarios.
+
+Un cambio de 3 líneas en el arranque de OPS y de Student (poner esa misma
+variable si falta) lo resolvería también dentro del producto y cubriría Student
+en Windows; es un cambio de código y queda **pendiente de que se pida**.
+
+## Registros
+
+Todo lo del nodo queda en `%ProgramData%\AVACOM\OPS Master\Logs`, fuera de la
+carpeta del programa (que se borra al actualizar) y con la marca de no
+desinstalar:
+
+| Archivo | Lo escribe | Contenido |
+|---|---|---|
+| `backend-app.log` | el backend | una línea JSON por petición (`ruta` happy/sad/bad), con `corr` para seguirla |
+| `backend-errores.log` | el backend | solo WARNING o más, con la traza |
+| `backend-auditoria.log` | el backend | un renglón por asiento de la bitácora |
+| `backend-clientes.log` | el backend | lo que suben OPS y Student |
+| `auditoria\` | el backend | tramos rotados y exportaciones de la bitácora (copias firmadas: las filas nunca se borran) |
+| `servicio.log` | el host | arranques, reinicios del backend y **toda la salida de Python** (donde cae un error de importación) |
+| `instalacion.log` | el host **y** el backend | pasos de la instalación, configuración efectiva, validación (texto) y arranque, migraciones y siembra del backend (JSON) |
+| `lanzador.log` | el host | qué hizo el icono: perfil de WebView2, pid de la aplicación |
+| `instalador-ultimo.log`, `instalador-anterior.log` | el asistente | la bitácora de Inno Setup, copiada desde `%TEMP%` de quien instaló |
+| `resumen-nodo.txt`, `preparacion-*.txt`, `respaldo-ultimo.txt` | el host | lo que la pantalla final lee |
+
+Rotación: 2 MB × 5 archivos, el mismo criterio en el host y en el backend. Los
+dos escriben el mismo `instalacion.log`, así que el host lo abre **compartiendo
+lectura y escritura** y reintenta unos instantes: ninguna línea se pierde porque
+el backend lo tenga abierto. Un fallo de permisos al registrar nunca tumba nada.
+
+**Que el nodo pueda guardar registros y auditoría es parte de la instalación,
+no un deseo**: `validar` comprueba, con el servicio ya en marcha, que
+`backend-app.log` tiene un renglón de los últimos minutos. Si no (el servicio no
+puede escribir en `Logs` y el backend se ha desviado a su carpeta temporal), la
+pantalla final lo dice. Y `preparar` comprueba antes que Django esté usando la
+carpeta del nodo y no otra.
+
+Los registros de **la aplicación** (OPS y Student) viven en el perfil de cada
+usuario, `%LOCALAPPDATA%\AVACOM\lms`: `fallos-ops.log` (cada excepción no
+controlada, justo antes de cerrarse) y `logs\ops-app.log` / `ops-errores.log`
+(JSON Lines; los avisos y errores se suben al nodo cada minuto). Ahí está el error
+exacto cuando OPS se cierra, y es lo primero que busca el verificador.
+
+## AVACOM Contenido: lo que puede fallar y lo que no
+
+La comunicación con la biblioteca es **de ida y por loopback**: el backend lee
+`%ProgramData%\AVACOM\content\link.json` (puertos y token) **en cada petición** y
+habla con su API v2. El instalador nunca la toca, no depende de ella, y ninguna
+falla suya puede romper la instalación ni dejar el nodo inservible:
+
+| Situación | Qué pasa |
+|---|---|
+| AVACOM Contenido no está instalado | Se instala y arranca igual. La comprobación 9 del asistente es informativa; el aula no tiene cursos |
+| Está instalado pero cerrado, o `link.json` es de una sesión anterior | Igual. `/api/aula/fuente/` nunca falla (dice `disponible: false` y por qué); al abrir la biblioteca el aula recupera los cursos **sin reiniciar nada** |
+| Se está reconstruyendo su índice | Igual: «vuelve a intentarlo en unos segundos» |
+| La instalación es una actualización y `backend.env` traía una nota de enlace de pruebas | Se retira, y se avisa en la pantalla final: dejaba al aula sin cursos aunque la biblioteca estuviera abierta |
+| El curso de ejemplo estaba encendido | Se apaga: los cursos salen **siempre** de AVACOM Contenido |
+| Una variable `AVACOM_CONTENIDO_*` o `AVACOM_AULA_*` en Windows | Se ignora (el backend solo lee `backend.env`) |
+
+La pantalla final dice cómo ve el aula a AVACOM Contenido (*conectado, N cursos*
+o *no está abierto ahora*), preguntándoselo al propio backend (`/api/aula/fuente/`);
+`/health/` ya no se usa para eso porque su campo `biblioteca` habla del contrato
+anterior de la biblioteca. Si Contenido contesta y el aula no, el problema está en
+el backend (configuración, permiso para leer `link.json`): lo dice el verificador.
 
 ## Las pantallas
 
@@ -160,14 +330,16 @@ backend no responde.
 | 5 | Listo para instalar | Resumen de lo que se va a hacer |
 | 6 | Instalando | Copia de archivos |
 | 7 | Configuración del backend | Copia de seguridad, claves, migraciones, servicio, firewall, validación |
-| 8 | Instalación completada | Las direcciones para las tabletas en letra grande, aviso si falta la organización, casilla para abrir el producto |
+| 8 | Instalación completada | Las direcciones para las tabletas en letra grande, aviso si falta la organización, cómo ve el aula a AVACOM Contenido, aviso si el servicio no guarda sus registros, lo que se corrigió de la configuración, casilla para abrir el producto |
 
 ### Pantalla 4 · qué se comprueba
 
-Windows 10/11 · arquitectura de 64 bits · espacio en disco · permisos de
-administrador · **puerto 8000** · instalación previa · aplicación abierta (no
-bloquea: el asistente la cierra) · dependencias del backend · AVACOM Contenido
-(`link.json`) · red del aula (avisa si Windows la marca como pública).
+Windows 10 **versión 1809 (compilación 17763)** o 11 —el Windows App SDK
+autocontenido de la aplicación no corre en una más antigua— · arquitectura de 64
+bits · espacio en disco · permisos de administrador · **puerto 8000** ·
+instalación previa · aplicación abierta (no bloquea: el asistente la cierra) ·
+dependencias del backend y runtime de WebView2 (avisa si falta) · AVACOM
+Contenido (`link.json`) · red del aula (avisa si Windows la marca como pública).
 
 Sobre el puerto 8000, el asistente distingue dos casos que se parecen y no son
 lo mismo:
@@ -191,7 +363,32 @@ El nodo principal del aula se maneja solo con toques, así que:
 - el icono del escritorio **no es una casilla**: se crea siempre (y el del menú
   Inicio), porque un toque accidental no puede dejar la OPS sin icono;
 - actualizar y desinstalar cierran solos la aplicación propia;
-- cualquier aviso se cierra con un solo toque.
+- cualquier aviso se cierra con un solo toque;
+- los textos dicen «Toca», no «Haga clic» (`ClickNext` y `ReadyLabel2a` están
+  sobreescritos en `[Messages]`).
+
+### Las pantallas se comprobaron viéndolas
+
+Un compilador y las pruebas de lógica no ven que un botón tape a otro. Por eso las
+pantallas del asistente se condujeron de verdad —con una **copia de pruebas** del
+asistente (sin administrador, con un host de mentira que devuelve 0, sin accesos
+directos ni entrada de desinstalación y con otro nombre de aplicación, para no
+cerrar la OPS de quien desarrolla), mensajes de Windows para tocar los botones y
+`PrintWindow` para capturar— en cinco escenarios (todo bien, el peor caso de avisos,
+datos ya existentes, falla `validar`, falla `preparar`). Salieron seis defectos, que
+ya estaban en la 2.1:
+
+| Defecto | Arreglo (en `codigo.iss`) |
+|---|---|
+| Atrás, Siguiente y Cancelar se montaban uno sobre otro | `DistribuirBotonesDeNavegacion`: desde el borde derecho, mismo tamaño, con hueco |
+| «Examinar…» quedaba debajo de la caja de la ruta | `AjustarExaminar`: junto a la caja, que cede el espacio |
+| «Volver a comprobar» se cortaba por el pie | Anclado al pie de su página; el resumen toma lo que sobra |
+| Las opciones de «Datos del aula» salían de ≈ 24 px, no de 64 | El alto mínimo se fija **antes** de agregarlas |
+| La pantalla final **cortaba el texto** (la dirección para las tabletas no se veía) | `DisponerPantallaFinal`: tres bloques medidos por separado, direcciones en letra grande, la casilla baja, y si no cabe se baja la letra o se resume el aviso |
+| `informacion.txt` empezaba en inglés | En español |
+
+Esas capturas son un **ensayo de las pantallas**, no una instalación: no prueban
+permisos de administrador, la reversión de una actualización ni la desinstalación.
 
 ## Actualizar sobre una versión anterior
 
@@ -204,9 +401,10 @@ actualización. El orden:
 3  Apartar App\, Backend\ y Runtime\ a  <instalación>\Anterior\
 4  Copiar lo nuevo sobre carpetas vacías
 5  Copia de seguridad de los datos (base + -wal + -shm + backend.env)
-6  Preparar: claves, revisión, migraciones
+6  Preparar: configuración (se normaliza), claves, revisión, configuración efectiva,
+   migraciones
 7  Volver a registrar el servicio y la regla de firewall
-8  Arrancar y validar: /health/ y el canal en tiempo real
+8  Arrancar y validar: /health/, canal en tiempo real, base de datos y registros
 9  Bien → se borra Anterior\.  Fallo en 5–8 → se restauran datos y programa anteriores
 ```
 
@@ -253,12 +451,12 @@ Todo lo que se ve lleva el símbolo de AVACOM, y todo sale de un único archivo:
 
 | Dónde se ve | De dónde sale |
 |---|---|
-| Icono del instalador | `appicon.ico`, que MAUI genera de `Resources\AppIconppicon.svg` (placa blanca) + `appiconfg.svg` (el símbolo) |
+| Icono del instalador | `appicon.ico`, que MAUI genera de `Resources\AppIcon\appicon.svg` (placa blanca) + `appiconfg.svg` (el símbolo) |
 | Icono del escritorio y del menú inicio | El mismo `appicon.ico` |
 | Panel izquierdo de Bienvenido y de Instalación completada | `WizardImageFile` |
 | Esquina superior derecha del resto de pantallas | `WizardSmallImageFile` |
 | Pantalla de arranque de la aplicación | `Resources\Splash\splash.svg` |
-| Tablero de AVACOM OPS Master | `Resources\Imagesvacom_mark.svg`, enlazado al asset |
+| Tablero de AVACOM OPS Master | `Resources\Images\avacom_mark.svg`, enlazado al asset |
 
 Las dos imágenes del asistente las genera `New-ImagenesAsistente.ps1` en cada
 compilación, a partir del símbolo que ya rasterizó la compilación de la
@@ -272,14 +470,46 @@ compilación ahora **falla** si el icono de la plantilla vuelve a aparecer.
 
 ## Verificar el instalador y el equipo (sin instalar)
 
-`latest/AVACOM-Verificar-Instalador.bat` es un solo archivo, se toca y no
-modifica nada. Revisa: (1) que el instalador está completo (SHA256 contra
-`SHA256.txt`); (2) las diez comprobaciones del asistente, ejecutadas de verdad
-con `/VOLCADO` (Windows pide permiso de administrador una vez); (3) el estado de
-lo ya instalado: versión, servicio, puerto 8000, `/health/`, base, `backend.env`,
-copias de seguridad, una carpeta `Anterior` que quedó de una actualización
-cortada y las últimas líneas del registro. Termina con un veredicto y devuelve
-`0` (se puede instalar) o `1` (hay problemas).
+`latest/AVACOM-Verificar-Instalador.bat` es **un solo archivo**: se toca y no
+cambia la configuración, los datos ni el servicio (para probar los permisos
+crea y borra al instante un archivo temporal). Sirve **antes** de instalar y
+**después**, cuando algo falla en el aula —por ejemplo, la aplicación se cierra
+al abrir una lección—. Lo genera `build\New-VerificadorBat.ps1` desde
+[`tools/Verificar-Instalador.ps1`](tools/Verificar-Instalador.ps1), que es la
+única fuente (misma técnica que el diagnóstico de Contenido: el PowerShell va
+dentro del `.bat`, detrás de un marcador, y se ejecuta con la directiva en
+Bypass; el generador lo pasa por el analizador de PowerShell y por una prueba de
+extracción antes de dar el archivo por bueno).
+
+| # | Revisa |
+|---|---|
+| 1 · El instalador | Huella SHA256 contra `SHA256.txt` (y que ese archivo sea de **este** instalador), versión que declara el `.exe`, si Windows lo marcó como descargado (SmartScreen) |
+| 2 · El equipo | Las diez comprobaciones del asistente, ejecutadas de verdad con `/VOLCADO` (Windows pide permiso de administrador **una** vez). Sin instalador junto al `.bat`, se omite |
+| 3 · Lo instalado | Versión y manifiesto, piezas del programa, servicio (inicio automático, cuenta, que los usuarios puedan arrancarlo), quién escucha en el 8000, `/health/` (con el error del módulo de acceso si no puede usar su base), WebSocket, módulo de auditoría, `backend.env` **sin mostrar secretos** (depuración, ejemplo, notas de enlace de pruebas, claves), base y copias, firewall, red pública, direcciones para las tabletas |
+| 4 · Permisos | Control total de `SYSTEM` y administradores en `Config`, `Data`, `Respaldos` y `Logs`; escritura **real** (crea y borra un archivo) de quien lo ejecuta en `Logs` y en el perfil de WebView2 junto a la aplicación; que `App\` sea de solo lectura; que el icono ya haya creado el perfil de WebView2; versión del runtime de WebView2 |
+| 5 · Registros | Archivos de `Logs`, que el backend esté escribiendo, errores del backend agrupados (`backend-errores.log`), reinicios y negativas a arrancar del servicio (`servicio.log`) |
+| 6 · La aplicación | Si OPS está abierta; los **cierres inesperados que Windows registró** (Visor de eventos: ids 1000, 1002, 1026, filtrados por proveedor e id, no por el texto, que sale en el idioma de Windows) **unidos a la excepción exacta que la aplicación anotó** en `fallos-ops.log` de **cada usuario de Windows**; `ops-errores.log`; y la causa probable si apunta a WebView2 |
+| 7 · AVACOM Contenido | `link.json` (el token no se muestra), si su proceso vive, si contesta directamente, qué ve el aula de ella (`/api/aula/fuente/`) y si SYSTEM puede leer `link.json`. Si Contenido contesta y el aula no, lo dice: el problema está en el backend |
+
+**Por qué hace falta el cruce de la sección 6.** Un cierre por una excepción no
+controlada de la interfaz queda en el Visor como `0xc000027b` en
+`Microsoft.UI.Xaml.dll`, **la misma firma para cualquier causa**: el Visor nunca
+dice cuál fue. La causa exacta la anota la propia aplicación en
+`%LOCALAPPDATA%\AVACOM\lms\fallos-ops.log` un instante antes de morir, en el
+perfil de quien la ejecutó. El verificador empareja cada cierre con lo que se
+anotó en los segundos anteriores y lo muestra debajo.
+
+Termina con un veredicto —*todo en orden*, *avisos* o *problemas*, cada uno con
+«qué hacer»— y deja en el **escritorio** un informe y un `.zip` con las
+evidencias, **sin claves ni tokens** (`backend.env` y `link.json` salen con los
+valores secretos ocultos), para poder diagnosticar sin tocar el equipo. Los
+permisos se prueban con la cuenta de quien lo ejecuta: **no hay que ejecutarlo
+como administrador** (solo si hace falta leer el perfil de *otro* usuario de
+Windows, y entonces las pruebas de escritura dejan de representar a quien da la
+clase; lo dice).
+
+Códigos de salida: `0` todo en orden · `1` hay algo que bloquea · `2` solo
+avisos. Con `/silencioso` no abre el informe ni espera un toque al final.
 
 ## Diagnosticar la comunicación con AVACOM Contenido
 
@@ -366,6 +596,14 @@ y marca con `Hilo ·` los de esa clase: SQLite usado desde otro hilo,
 `Exception inside application` de Daphne y bucles de eventos ausentes. De cada
 grupo dice qué es y qué hacer.
 
+Lee los dos formatos: el **texto** de `servicio.log` (lo que Python escribió en
+pantalla) y el **JSON Lines** del backend (`backend-errores.log`, desde MOD-019:
+la traza va dentro del campo `traza`). El mismo error, que aparece en los dos, se
+cuenta una vez.
+
+Para saber por qué se cierra **la aplicación** (no el backend), el diagnóstico
+es otro: `AVACOM-Verificar-Instalador.bat` (sección 6).
+
 Para analizar registros traídos de otro equipo, sin tocar ese equipo:
 
 ```powershell
@@ -412,23 +650,39 @@ carpeta (`SHA256.txt`, `LEEME.txt` y `AVACOM-Verificar-Instalador.bat`) sí se
 versiona y se adjunta:
 
 ```bash
-gh release create v2.1.0 installer/latest/AVACOM-OPS-Master-Setup-2.1.0.exe installer/latest/SHA256.txt installer/latest/AVACOM-Verificar-Instalador.bat installer/tools/AVACOM-Probar-Comunicacion.bat --title "AVACOM OPS Master 2.1.0" --notes-file installer/latest/LEEME.txt
+gh release create v2.2.0 installer/latest/AVACOM-OPS-Master-Setup-2.2.0.exe installer/latest/SHA256.txt installer/latest/AVACOM-Verificar-Instalador.bat installer/latest/AVACOM-Probar-Comunicacion.bat --title "AVACOM OPS Master 2.2.0" --notes-file installer/latest/LEEME.txt
 ```
 
 Los dos `.bat` se adjuntan para poder revisar un nodo sin clonar el repositorio
 en él: se descargan y se tocan. Para verificar el `.exe` descargado:
 
 ```powershell
-Get-FileHash .\AVACOM-OPS-Master-Setup-2.1.0.exe -Algorithm SHA256
+Get-FileHash .\AVACOM-OPS-Master-Setup-2.2.0.exe -Algorithm SHA256
 ```
+
+**Versión 2.2.0.** La 2.1.0 se compiló el 2026-09-29, antes de Modo Estudio,
+Evaluación y Auditoría; el contrato de red entre Student y el backend cambió
+(`/api/modo-estudio/`, `/api/evaluacion/`, `/api/auditoria/`, `/api/logs/`), y
+`version.json` dice que la versión sube cuando eso ocurre. Una OPS con la 2.1.0 y
+una Student nueva (o al revés) no son compatibles.
 
 ## Pendiente
 
 - **El instalador de AVACOM Student** (Windows y Android) no está construido:
   tendrá su propio `AppId`, carpeta, versión y desinstalador, sin servicio ni
-  firewall, y leerá `version.json`.
+  firewall, y leerá `version.json`. Student en Windows tiene **el mismo riesgo de
+  WebView2** que tenía OPS si se instala en Program Files.
 - La pantalla de primer arranque de OPS que cree la organización y el primer
   administrador es una tarea de la aplicación.
+- El perfil de WebView2 dentro del propio producto (3 líneas en el arranque de OPS
+  y de Student, junto a `WebViewAjustes`): hoy lo resuelve el instalador.
+- **WebView2 Runtime en un Windows 10 limpio**: el asistente solo lo avisa; no lo
+  instala (el instalador sin conexión pesa unos 170 MB).
 - Firma de código: sin ella, SmartScreen advertirá de un editor desconocido.
 - Firewall en red pública y OPS abriéndose sola al iniciar sesión: decisiones sin
   cerrar (ver `spec-driven/08-instalador.md`, artículo 11).
+- Probar en una instalación real (equipo de aula): la instalación con permisos de
+  administrador, abrir una lección y que la aplicación **no se cierre**, la
+  reversión de una actualización y la desinstalación. El ensayo del paquete cubre el
+  host, el backend y la configuración; las pantallas del asistente se vieron en una
+  copia de pruebas, sin administrador (ver «Las pantallas se comprobaron viéndolas»).

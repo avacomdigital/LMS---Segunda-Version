@@ -111,7 +111,7 @@ public interface IStudyModeService
     Task<StudyLessonOpen> OpenLessonAsync(string lessonId, CancellationToken ct = default);
 
     /// <summary>Abre (o reanuda) una práctica. Con <paramref name="retry"/> empieza un intento nuevo.</summary>
-    Task<StudyPracticeOpen> OpenPracticeAsync(string lessonId, bool retry, CancellationToken ct = default);
+    Task<StudyPracticeOpen> OpenPracticeAsync(string lessonId, bool retry, string? objetoRef = null, CancellationToken ct = default);
 
     /// <summary>
     /// «Salir» (FUN-089, BR-053): cierra la sesión de estudio en el aula (si contesta, con un tope corto) y suelta lo que la pantalla tenía en

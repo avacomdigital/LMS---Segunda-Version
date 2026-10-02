@@ -21,6 +21,7 @@ var
   BotonRevalidar: TNewButton;
   BotonRutaRecomendada: TNewButton;
   ValidacionSuperada: Boolean;
+  InstalacionIniciada: Boolean;
   AvisoConfiguracion: String;
   AvisoInformativo: String;
   { La actualizacion aparta el programa anterior a <app>\Anterior mientras la
@@ -222,6 +223,53 @@ begin
   Boton.Font.Size := 11;
 end;
 
+{ Los tres botones de navegacion crecen hacia la izquierda y hacia arriba para
+  poder tocarlos con el dedo; si cada uno crece sobre su sitio, pisa al de su
+  izquierda (Atras tapaba a Siguiente y este a Cancelar). Se colocan desde el
+  borde derecho, uno junto al otro, todos del mismo tamano. }
+procedure DistribuirBotonesDeNavegacion(Ancho, Alto: Integer);
+var
+  Derecha, Hueco, Arriba: Integer;
+begin
+  Hueco := ScaleX(10);
+  Derecha := WizardForm.CancelButton.Left + WizardForm.CancelButton.Width;
+  Arriba := WizardForm.CancelButton.Top - (Alto - WizardForm.CancelButton.Height);
+
+  WizardForm.CancelButton.Width := Ancho;
+  WizardForm.CancelButton.Height := Alto;
+  WizardForm.CancelButton.Left := Derecha - Ancho;
+  WizardForm.CancelButton.Top := Arriba;
+
+  WizardForm.NextButton.Width := Ancho;
+  WizardForm.NextButton.Height := Alto;
+  WizardForm.NextButton.Left := WizardForm.CancelButton.Left - Hueco - Ancho;
+  WizardForm.NextButton.Top := Arriba;
+
+  WizardForm.BackButton.Width := Ancho;
+  WizardForm.BackButton.Height := Alto;
+  WizardForm.BackButton.Left := WizardForm.NextButton.Left - Hueco - Ancho;
+  WizardForm.BackButton.Top := Arriba;
+
+  WizardForm.NextButton.Font.Size := 11;
+  WizardForm.BackButton.Font.Size := 11;
+  WizardForm.CancelButton.Font.Size := 11;
+end;
+
+{ «Examinar...» crecia hacia la izquierda por debajo de la caja de la ruta y la
+  tapaba. Se alinea con la caja, a su derecha, y la caja cede el espacio. }
+procedure AjustarExaminar;
+var
+  Derecha: Integer;
+begin
+  Derecha := WizardForm.DirBrowseButton.Left + WizardForm.DirBrowseButton.Width;
+  WizardForm.DirBrowseButton.Width := ScaleX(150);
+  WizardForm.DirBrowseButton.Height := ScaleY(38);
+  WizardForm.DirBrowseButton.Font.Size := 11;
+  WizardForm.DirBrowseButton.Left := Derecha - WizardForm.DirBrowseButton.Width;
+  WizardForm.DirBrowseButton.Top := WizardForm.DirEdit.Top - ((WizardForm.DirBrowseButton.Height - WizardForm.DirEdit.Height) div 2);
+  WizardForm.DirEdit.Width := WizardForm.DirBrowseButton.Left - ScaleX(10) - WizardForm.DirEdit.Left;
+end;
+
 procedure AjustarParaPantallaTactil;
 var
   Ancho, Alto, Delta: Integer;
@@ -238,10 +286,7 @@ begin
     WizardForm.OuterNotebook.Height := WizardForm.OuterNotebook.Height - Delta;
   end;
 
-  AgrandarBoton(WizardForm.NextButton, Ancho, Alto);
-  AgrandarBoton(WizardForm.BackButton, Ancho, Alto);
-  AgrandarBoton(WizardForm.CancelButton, Ancho, Alto);
-  AgrandarBoton(WizardForm.DirBrowseButton, ScaleX(150), ScaleY(38));
+  DistribuirBotonesDeNavegacion(Ancho, Alto);
 
   { Casillas y textos que hay que poder tocar sin precision de raton. }
   WizardForm.TasksList.Font.Size := 11;
@@ -256,6 +301,7 @@ begin
   WizardForm.DirEdit.ReadOnly := True;
   WizardForm.DirEdit.Font.Size := 11;
   WizardForm.DirEdit.Height := ScaleY(32);
+  AjustarExaminar;
 end;
 
 procedure UsarRutaRecomendadaClick(Sender: TObject);
@@ -308,9 +354,10 @@ begin
   Bloqueo := '';
   RequeridoMb := 1500;
 
-  { 1. Version de Windows }
+  { 1. Version de Windows. La aplicacion lleva el Windows App SDK autocontenido,
+    que pide Windows 10 version 1809 (compilacion 17763) o posterior. }
   GetWindowsVersionEx(Version);
-  if (Version.Major > 10) or ((Version.Major = 10) and (Version.Build >= 10240)) then
+  if (Version.Major > 10) or ((Version.Major = 10) and (Version.Build >= 17763)) then
   begin
     if Version.Build >= 22000 then
       PonerCheck(0, True, True, 'Windows 11 (compilación ' + IntToStr(Version.Build) + ')')
@@ -319,8 +366,9 @@ begin
   end
   else
   begin
-    PonerCheck(0, False, True, 'Se necesita Windows 10 o Windows 11');
-    Bloqueo := 'Este equipo no tiene una versión de Windows compatible.';
+    PonerCheck(0, False, True, 'Se necesita Windows 10 versión 1809 (compilación 17763) o posterior');
+    Bloqueo := 'Este equipo tiene una versión de Windows demasiado antigua para AVACOM OPS Master. ' +
+               'Se necesita Windows 10 versión 1809 o posterior; actualiza Windows y vuelve a comprobar.';
   end;
 
   { 2. Arquitectura }
@@ -486,7 +534,8 @@ begin
   BotonRevalidar := TNewButton.Create(PaginaValidacion);
   BotonRevalidar.Parent := PaginaValidacion.Surface;
   BotonRevalidar.Left := 0;
-  BotonRevalidar.Top := ResumenValidacion.Top + ResumenValidacion.Height + ScaleY(6);
+  BotonRevalidar.Top := PaginaValidacion.SurfaceHeight - ScaleY(44);
+  ResumenValidacion.Height := BotonRevalidar.Top - ResumenValidacion.Top - ScaleY(6);
   BotonRevalidar.Width := ScaleX(240);
   BotonRevalidar.Height := ScaleY(44);
   BotonRevalidar.Font.Size := 11;
@@ -507,11 +556,13 @@ begin
     'Este equipo ya guarda la organización, las personas, las tabletas y las clases del aula.',
     'Elige qué hacer con esos datos. Se hace una copia de seguridad antes de cualquier cambio.',
     True, False);
+  { El alto minimo de cada opcion se fija ANTES de agregarlas: una vez agregadas ya
+    no se recalcula, y las dos opciones quedaban apretadas, demasiado bajas para el dedo. }
+  PaginaDatos.CheckListBox.Font.Size := 12;
+  PaginaDatos.CheckListBox.MinItemHeight := ScaleY(64);
   PaginaDatos.Add('Conservar los datos (recomendado)');
   PaginaDatos.Add('Empezar de cero: hay que volver a crear la organización, importar el padrón y registrar las tabletas');
   PaginaDatos.SelectedValueIndex := 0;
-  PaginaDatos.CheckListBox.Font.Size := 12;
-  PaginaDatos.CheckListBox.MinItemHeight := ScaleY(64);
 end;
 
 function EligioEmpezarDeCero: Boolean;
@@ -620,45 +671,147 @@ begin
     end;
 end;
 
+{ Recorta un aviso largo para que la pantalla final no se desborde; el texto
+  completo queda en los registros. }
+function Recortado(const Texto: String; Maximo: Integer): String;
+begin
+  if Length(Texto) <= Maximo then
+    Result := Texto
+  else
+    Result := Copy(Texto, 1, Maximo) + '… (el detalle está en los registros)';
+end;
+
+{ La pantalla final. De fabrica, su etiqueta mide lo que mide su texto corto: un
+  texto mas largo (las direcciones para las tabletas, el estado de AVACOM
+  Contenido, los avisos) se CORTA, y lo importante -la direccion que hay que
+  escribir en las tabletas- no se ve. Aqui el contenido se reparte en tres
+  bloques que se miden con su propia letra y se apilan: la cabecera, las
+  direcciones en letra grande y las notas. La casilla de «Abrir ahora» baja con
+  ellos y, si aun asi no cabe en la pagina, se baja la letra hasta que quepa. }
+var
+  EtiquetaDirecciones, EtiquetaNotas: TNewStaticText;
+
+function NuevaEtiquetaFinal(Negrita: Boolean): TNewStaticText;
+begin
+  Result := TNewStaticText.Create(WizardForm);
+  Result.Parent := WizardForm.FinishedPage;
+  Result.Left := WizardForm.FinishedLabel.Left;
+  Result.Width := WizardForm.FinishedLabel.Width;
+  Result.AutoSize := False;
+  Result.WordWrap := True;
+  if Negrita then Result.Font.Style := [fsBold];
+  Result.Caption := '';
+end;
+
+procedure Remedir(Etiqueta: TNewStaticText);
+begin
+  Etiqueta.AutoSize := False;
+  Etiqueta.AutoSize := True;
+end;
+
+function DisponerPantallaFinal(const Cabecera, Direcciones, Notas: String; Minimo: Integer): Boolean;
+var
+  Tamano, Margen, Reservado, y: Integer;
+begin
+  if EtiquetaDirecciones = nil then EtiquetaDirecciones := NuevaEtiquetaFinal(True);
+  if EtiquetaNotas = nil then EtiquetaNotas := NuevaEtiquetaFinal(False);
+
+  WizardForm.FinishedLabel.WordWrap := True;
+  WizardForm.FinishedLabel.Caption := Cabecera;
+  EtiquetaDirecciones.Caption := Direcciones;
+  EtiquetaNotas.Caption := Notas;
+  EtiquetaDirecciones.Visible := Direcciones <> '';
+  EtiquetaNotas.Visible := Notas <> '';
+
+  Margen := ScaleY(10);
+  Reservado := ScaleY(40);   { la casilla «Abrir ahora» y un respiro }
+  Tamano := 11;
+  repeat
+    WizardForm.FinishedLabel.Font.Size := Tamano;
+    EtiquetaNotas.Font.Size := Tamano;
+    EtiquetaDirecciones.Font.Size := Tamano + 5;
+    Remedir(WizardForm.FinishedLabel);
+    Remedir(EtiquetaDirecciones);
+    Remedir(EtiquetaNotas);
+
+    y := WizardForm.FinishedLabel.Top + WizardForm.FinishedLabel.Height;
+    if Direcciones <> '' then
+    begin
+      EtiquetaDirecciones.Top := y + Margen div 2;
+      y := EtiquetaDirecciones.Top + EtiquetaDirecciones.Height;
+    end;
+    if Notas <> '' then
+    begin
+      EtiquetaNotas.Top := y + Margen;
+      y := EtiquetaNotas.Top + EtiquetaNotas.Height;
+    end;
+    Tamano := Tamano - 1;
+  until (Tamano < Minimo) or (y + Margen + Reservado <= WizardForm.FinishedPage.ClientHeight);
+
+  Result := (y + Margen + Reservado <= WizardForm.FinishedPage.ClientHeight);
+  WizardForm.RunList.Top := y + Margen;
+  WizardForm.RunList.Height := ScaleY(34);
+end;
+
 procedure ComponerPantallaFinal;
 var
-  Resumen, Direcciones, Organizacion, Texto: String;
+  Resumen, Direcciones, Organizacion, Registros, Biblioteca, Cursos, Cabecera, Notas: String;
 begin
   Resumen := LeerArchivo(CarpetaDeEstado + '\Logs\resumen-nodo.txt');
   Direcciones := ValoresDelResumen(Resumen, 'direccion');
   Organizacion := ValoresDelResumen(Resumen, 'organizacion');
+  Registros := ValoresDelResumen(Resumen, 'registros');
+  Biblioteca := ValoresDelResumen(Resumen, 'biblioteca');
+  Cursos := ValoresDelResumen(Resumen, 'biblioteca_cursos');
 
   if AvisoConfiguracion <> '' then
   begin
     if ActualizacionRevertida then
-      Texto := AvisoConfiguracion
+      Cabecera := AvisoConfiguracion
     else
-      Texto := 'AVACOM OPS Master quedó instalado, pero la configuración de la API local no terminó:'
-               + #13#10 + #13#10 + AvisoConfiguracion
-               + #13#10 + #13#10 + 'El detalle está en la carpeta de registros del producto.';
-    WizardForm.FinishedLabel.Caption := Texto;
+      Cabecera := 'AVACOM OPS Master quedó instalado, pero la configuración de la API local no terminó:'
+                  + #13#10 + #13#10 + AvisoConfiguracion
+                  + #13#10 + #13#10 + 'El detalle está en la carpeta de registros del producto.';
     WizardForm.FinishedLabel.Font.Color := clMaroon;
+    DisponerPantallaFinal(Cabecera, '', '', 8);
     Exit;
   end;
 
-  Texto := 'AVACOM OPS Master quedó instalado y la API local responde. Arranca sola con Windows.';
-
+  Cabecera := 'AVACOM OPS Master quedó instalado y la API local responde. Arranca sola con Windows.';
   if Direcciones <> '' then
-    Texto := Texto + #13#10 + #13#10 + 'En las tabletas de los estudiantes, escribe esta dirección del aula:'
-             + #13#10 + Direcciones
+    Cabecera := Cabecera + #13#10 + #13#10 + 'En las tabletas de los estudiantes, escribe esta dirección del aula:'
   else
-    Texto := Texto + #13#10 + #13#10 +
-             'No se encontró una dirección de red para las tabletas. Conecta este equipo a la red del aula.';
+    Cabecera := Cabecera + #13#10 + #13#10 +
+                'No se encontró una dirección de red para las tabletas. Conecta este equipo a la red del aula.';
 
+  Notas := '';
   if Organizacion = 'no' then
-    Texto := Texto + #13#10 + #13#10 +
-             'Falta crear la organización y el primer administrador. Ábrelos desde AVACOM OPS Master la primera vez.';
+    Notas := Notas + 'Falta crear la organización y el primer administrador. Ábrelos desde AVACOM OPS Master la primera vez.' + #13#10 + #13#10;
 
-  if AvisoInformativo <> '' then
-    Texto := Texto + #13#10 + #13#10 + AvisoInformativo;
+  { AVACOM Contenido es informativo: el aula funciona igual, solo que sin cursos
+    hasta que la biblioteca este abierta. El instalador no la toca ni depende de ella. }
+  if Biblioteca = 'conectada' then
+  begin
+    Notas := Notas + 'AVACOM Contenido conectado';
+    if (Cursos <> '') and (Cursos <> '?') then
+      Notas := Notas + ' (' + Cursos + ' cursos)';
+    Notas := Notas + '.' + #13#10 + #13#10;
+  end
+  else if Biblioteca = 'no_disponible' then
+    Notas := Notas + 'AVACOM Contenido no está abierto ahora: ábrelo para que el aula tenga cursos. ' +
+             'Esta instalación no depende de él.' + #13#10 + #13#10;
 
-  WizardForm.FinishedLabel.Caption := Texto;
-  WizardForm.FinishedLabel.Font.Size := 11;
+  if Registros = 'sin_escritura' then
+    Notas := Notas + 'Atención: el servicio no está guardando sus registros en la carpeta del nodo. ' +
+             'Revisa los permisos de la carpeta Logs.' + #13#10 + #13#10;
+
+  { Primero con los avisos de la configuracion (recortados); si asi la letra bajaria de 9,
+    se dejan solo como un renglon que remite a los registros: lo importante es que se lea. }
+  if AvisoInformativo = '' then
+    DisponerPantallaFinal(Cabecera, Direcciones, Trim(Notas), 8)
+  else if not DisponerPantallaFinal(Cabecera, Direcciones, Trim(Notas + Recortado(AvisoInformativo, 240)), 9) then
+    DisponerPantallaFinal(Cabecera, Direcciones,
+      Trim(Notas + 'Se corrigieron cosas de la configuración de este equipo: el detalle está en los registros del nodo.'), 8);
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -693,6 +846,7 @@ begin
     MemoDirInfo + NewLine + NewLine +
     'Configuración que hará el asistente, sin intervención:' + NewLine +
     Space + 'Configuración local del nodo y base de datos' + NewLine +
+    Space + 'Carpetas de datos, registros y auditoría con los permisos que el servicio necesita' + NewLine +
     Space + 'Servicio de Windows «{#NombreServicio}», con inicio automático' + NewLine +
     Space + 'Regla de Windows Defender Firewall para TCP ' + IntToStr(PuertoApi) +
             ' en redes privadas' + NewLine +
@@ -887,6 +1041,7 @@ begin
     Exit;
   end;
 
+  InstalacionIniciada := True;
   VersionAnterior := VersionInstalada;
 
   DetenerServicioPropio;
@@ -983,7 +1138,9 @@ begin
     if Codigo <> 0 then
     begin
       if Codigo = 14 then
-        Motivo := 'la API respondió, pero el canal en tiempo real no acepta conexiones.'
+        Motivo := 'la API respondió, aunque el canal en tiempo real no acepta conexiones.'
+      else if Codigo = 15 then
+        Motivo := 'la API respondió, aunque no puede usar su base de datos (revisa los permisos de la carpeta Data).'
       else
         Motivo := 'la API local no respondió durante la instalación.';
       if Actualizando then RevertirActualizacion(Motivo)
@@ -1001,6 +1158,32 @@ begin
   end;
 end;
 
+{ La bitacora de Inno Setup (SetupLogging=yes) queda en %TEMP% de quien instala,
+  donde nadie la busca. Una copia en la carpeta de registros del nodo deja el
+  detalle de cada instalacion junto a los demas registros (y el verificador la
+  recoge). Se conservan la ultima y la anterior. Solo si la instalacion llego a
+  empezar: abrir el asistente y cancelar no debe borrar el registro de la
+  instalacion que si se hizo. }
+procedure GuardarBitacoraDelInstalador;
+var
+  Origen, Carpeta, Ultima, Anterior: String;
+begin
+  if not InstalacionIniciada then Exit;
+  Origen := ExpandConstant('{log}');
+  if (Origen = '') or (not FileExists(Origen)) then Exit;
+  Carpeta := CarpetaDeEstado + '\Logs';
+  if not DirExists(Carpeta) then Exit;
+
+  Ultima := Carpeta + '\instalador-ultimo.log';
+  Anterior := Carpeta + '\instalador-anterior.log';
+  if FileExists(Ultima) then
+  begin
+    DeleteFile(Anterior);
+    RenameFile(Ultima, Anterior);
+  end;
+  CopyFile(Origen, Ultima, False);
+end;
+
 { Si la instalacion se interrumpe despues de apartar la version anterior (falla
   la copia de archivos, se acaba el disco, alguien cancela), Inno Setup deshace
   lo que instalo pero no sabe de <app>\Anterior: sin esto el equipo se quedaria
@@ -1010,6 +1193,7 @@ begin
   if HayProgramaApartado then
     if DirExists(ExpandConstant('{app}\Anterior')) then
       RevertirActualizacion('la instalación se interrumpió antes de terminar.');
+  GuardarBitacoraDelInstalador;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

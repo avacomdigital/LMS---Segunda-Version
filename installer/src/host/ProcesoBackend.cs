@@ -27,8 +27,20 @@ internal sealed class ProcesoBackend : IDisposable
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            // Python escribe en UTF-8 (PYTHONIOENCODING, abajo): se lee igual para que los
+            // acentos de los mensajes de Django no salgan rotos en los registros.
+            StandardOutputEncoding = new System.Text.UTF8Encoding(false),
+            StandardErrorEncoding = new System.Text.UTF8Encoding(false),
         };
         foreach (var argumento in argumentos) inicio.ArgumentList.Add(argumento);
+
+        // El backend se configura SOLO con backend.env. Todo AVACOM_* que traiga el entorno de
+        // Windows (del usuario o del equipo: una base de pruebas, el curso de ejemplo, una nota
+        // de enlace de pruebas) se descarta antes: lo que no esta en backend.env no cuenta.
+        foreach (var heredada in inicio.Environment.Keys.Where(Configuracion.EsDeAvacom).ToList())
+        {
+            inicio.Environment.Remove(heredada);
+        }
 
         // La configuracion del nodo, tal cual la lee settings.py.
         foreach (var (clave, valor) in Configuracion.Leer())

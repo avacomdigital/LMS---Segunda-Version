@@ -12,6 +12,7 @@ namespace Avacom.Lms.Student.ModoEstudio.Views;
 /// </summary>
 [QueryProperty(nameof(Asignacion), "asignacion")]
 [QueryProperty(nameof(Nueva), "nueva")]
+[QueryProperty(nameof(Objeto), "objeto")]
 public partial class StudyPracticePage : ContentPage
 {
     private const double AnchoMaximo = 1050, FraccionAncho = 0.88, FraccionAlto = 0.90;
@@ -27,6 +28,9 @@ public partial class StudyPracticePage : ContentPage
     /// <summary>«1»: «Intentar nuevamente» (empieza un intento nuevo).</summary>
     public string Nueva { get; set; } = "0";
 
+    /// <summary>La actividad del bloque desde el que se abrió (una lección puede tener varias prácticas); vacío: la primera.</summary>
+    public string Objeto { get; set; } = string.Empty;
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
@@ -41,7 +45,7 @@ public partial class StudyPracticePage : ContentPage
         Practica.IsVisible = false;
         try
         {
-            var abierta = await _servicio.OpenPracticeAsync(Asignacion, reintento);
+            var abierta = await _servicio.OpenPracticeAsync(Asignacion, reintento, string.IsNullOrEmpty(Objeto) ? null : Objeto);
             if (carga != _cargas) return;
             if (!abierta.Ok || abierta.Session is null)
             {

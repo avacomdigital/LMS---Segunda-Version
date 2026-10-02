@@ -23,8 +23,12 @@ internal static class Salud
 
     public sealed record Resultado(bool Correcto, string Detalle);
 
-    /// <summary>Lo que /health/ dice del nodo: si tiene organizacion y si las claves son las derivadas.</summary>
-    public sealed record EstadoDelNodo(bool? Instalado, bool? ClavesDerivadas);
+    /// <summary>
+    /// Lo que /health/ dice del nodo: si tiene organizacion, si las claves son las derivadas y,
+    /// si el modulo de acceso no pudo leer su base de datos, el error (permisos de Data, base
+    /// bloqueada o corrupta). <c>Error</c> es null cuando todo va bien.
+    /// </summary>
+    public sealed record EstadoDelNodo(bool? Instalado, bool? ClavesDerivadas, string? Error = null);
 
     /// <summary>
     /// Pregunta a /health/ por el estado del modulo de acceso. Sin organizacion
@@ -39,11 +43,45 @@ internal static class Salud
             var cuerpo = await cliente.GetStringAsync(UrlSalud(puerto)).ConfigureAwait(false);
             using var documento = JsonDocument.Parse(cuerpo);
             if (!documento.RootElement.TryGetProperty("acceso", out var acceso)) return new EstadoDelNodo(null, null);
-            return new EstadoDelNodo(Booleano(acceso, "instalado"), Booleano(acceso, "claves_derivadas"));
+
+            var error = acceso.TryGetProperty("error", out var texto) && texto.ValueKind == JsonValueKind.String
+                ? texto.GetString()
+                : null;
+            return new EstadoDelNodo(Booleano(acceso, "instalado"), Booleano(acceso, "claves_derivadas"), error);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException)
         {
             return new EstadoDelNodo(null, null);
+        }
+    }
+
+    /// <summary>
+    /// Lo que el aula ve de AVACOM Contenido (la biblioteca de cursos), preguntandoselo al propio backend:
+    /// /api/aula/fuente/ no falla nunca, dice si hay contenido y cuantos cursos. Es informativo: sin
+    /// biblioteca el aula instala y arranca igual, solo que sin cursos hasta que se abra. El instalador
+    /// no habla con AVACOM Contenido ni lee su nota de enlace: eso es del backend.
+    /// </summary>
+    public sealed record EstadoDeBiblioteca(bool? Disponible, string Motivo, int? Cursos, string? VersionApp);
+
+    public static async Task<EstadoDeBiblioteca> BibliotecaAsync(int puerto)
+    {
+        try
+        {
+            using var cliente = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            var cuerpo = await cliente.GetStringAsync($"http://127.0.0.1:{puerto}/api/aula/fuente/").ConfigureAwait(false);
+            using var documento = JsonDocument.Parse(cuerpo);
+            var raiz = documento.RootElement;
+
+            var motivo = raiz.TryGetProperty("motivo", out var m) && m.ValueKind == JsonValueKind.String ? m.GetString() ?? "" : "";
+            int? cursos = raiz.TryGetProperty("cursos_instalados", out var c) && c.ValueKind == JsonValueKind.Array
+                ? c.GetArrayLength()
+                : null;
+            var version = raiz.TryGetProperty("version_app", out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+            return new EstadoDeBiblioteca(Booleano(raiz, "disponible"), motivo, cursos, version);
+        }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return new EstadoDeBiblioteca(null, "no se pudo consultar", null, null);
         }
     }
 
@@ -152,11 +190,11 @@ internal static class Salud
         return resultado.Correcto;
     }
 
-    private static string Resumir(string cuerpo)
-    {
-        var disponible = cuerpo.Contains("\"disponible\":true", StringComparison.Ordinal);
-        return disponible
-            ? "backend operativo y AVACOM Biblioteca disponible"
-            : "backend operativo; AVACOM Biblioteca no esta abierta en este equipo";
-    }
+    /// <summary>
+    /// De la salud del backend solo se afirma lo que /health/ dice del propio nodo. Antes aqui se
+    /// decia tambien si la biblioteca estaba abierta, pero ese campo de /health/ habla del contrato
+    /// anterior de la biblioteca (enlace.json) y daba "no esta abierta" con AVACOM Contenido
+    /// funcionando: la biblioteca se consulta con <see cref="BibliotecaAsync"/>.
+    /// </summary>
+    private static string Resumir(string cuerpo) => "backend operativo";
 }

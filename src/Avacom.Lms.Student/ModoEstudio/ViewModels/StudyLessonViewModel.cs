@@ -10,7 +10,7 @@ namespace Avacom.Lms.Student.ModoEstudio.ViewModels;
 public interface IStudyLessonNavigation
 {
     Task BackAsync();
-    Task OpenPracticeAsync(string lessonId);
+    Task OpenPracticeAsync(string lessonId, string? objetoRef);
     Task ShowInfoAsync(string title, string message);
 }
 
@@ -62,7 +62,7 @@ public sealed class StudyLessonViewModel : ObservableObject
         PrevCommand = new AsyncCommand(() => IrAsync(_indice - 1), () => CanPrev);
         NextCommand = new AsyncCommand(() => IrAsync(_indice + 1), () => CanNext);
                 CompleteCommand = new AsyncCommand(CompletarAsync, () => CanComplete);
-        OpenPracticeCommand = new AsyncCommand(() => _sesion is null ? Task.CompletedTask : _navegacion.OpenPracticeAsync(_sesion.LessonId));
+        OpenPracticeCommand = new AsyncCommand(() => _sesion is null ? Task.CompletedTask : _navegacion.OpenPracticeAsync(_sesion.LessonId, CurrentBlock is { IsPractice: true } b ? b.Ref : null));
         BackCommand = new AsyncCommand(() => _navegacion.BackAsync());
     }
 

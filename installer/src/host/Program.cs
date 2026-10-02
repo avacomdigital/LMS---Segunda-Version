@@ -69,11 +69,16 @@ internal static class Program
     }
 
     /// <summary>
-    /// La validacion final de una instalacion o actualizacion: /health/ responde y
-    /// el canal en tiempo real acepta conexiones. Deja en Logs/resumen-nodo.txt lo
+    /// La validacion final de una instalacion o actualizacion: /health/ responde, el
+    /// canal en tiempo real acepta conexiones, el modulo de acceso lee su base de datos y
+    /// el backend esta escribiendo sus registros donde debe. Deja en Logs/resumen-nodo.txt lo
     /// que la pantalla final muestra (direcciones para las tabletas, si falta la
-    /// organizacion).
-    /// 0 correcto, 11 el backend no responde, 14 el WebSocket no acepta conexiones.
+    /// organizacion, si los registros se escriben, el estado de AVACOM Contenido).
+    ///
+    /// 0 correcto · 11 el backend no responde · 14 el WebSocket no acepta conexiones ·
+    /// 15 el backend responde pero no puede leer su base de datos (permisos de Data).
+    /// Que los registros no se escriban o que AVACOM Contenido no este abierto NO falla la
+    /// validacion: se anota y se avisa, porque el aula funciona igual (sin registros o sin cursos).
     /// </summary>
     private static int Validar(string[] argumentos)
     {
@@ -81,7 +86,7 @@ internal static class Program
         var puerto = Configuracion.PuertoConfigurado();
         var registro = new Registro("instalacion.log");
         var resumen = Path.Combine(Rutas.CarpetaLogs, "resumen-nodo.txt");
-        File.Delete(resumen);
+        try { File.Delete(resumen); } catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
 
         var salud = Salud.EsperarAsync(puerto, segundos).GetAwaiter().GetResult();
         registro.Escribir($"Validacion de salud en {Salud.UrlSalud(puerto)}: {salud.Detalle}");
@@ -92,7 +97,26 @@ internal static class Program
         if (!socket.Correcto) return 14;
 
         var estado = Salud.EstadoAsync(puerto).GetAwaiter().GetResult();
+        if (estado.Error is not null)
+        {
+            registro.Escribir($"El backend responde pero su modulo de acceso no puede usar la base de datos: {estado.Error}");
+            return 15;
+        }
         static string SiNo(bool? v) => v is null ? "desconocido" : v.Value ? "si" : "no";
+
+        var registros = RegistrosDelNodo.ComprobarEscrituraDelBackend(registro);
+        var biblioteca = Salud.BibliotecaAsync(puerto).GetAwaiter().GetResult();
+        var estadoBiblioteca = biblioteca.Disponible switch
+        {
+            true => "conectada",
+            false => "no_disponible",
+            _ => "desconocida",
+        };
+        registro.Escribir(
+            $"AVACOM Contenido visto desde el aula: {estadoBiblioteca}" +
+            (biblioteca.Cursos is { } n ? $", {n} curso(s)" : "") +
+            (biblioteca.VersionApp is { Length: > 0 } v ? $", version {v}" : "") +
+            (biblioteca.Motivo.Length > 0 ? $" ({biblioteca.Motivo})" : "") + ".");
 
         var lineas = new List<string>
         {
@@ -100,10 +124,14 @@ internal static class Program
             "websocket=ok",
             $"organizacion={SiNo(estado.Instalado)}",
             $"claves_derivadas={SiNo(estado.ClavesDerivadas)}",
+            $"registros={(registros ? "ok" : "sin_escritura")}",
+            $"biblioteca={estadoBiblioteca}",
+            $"biblioteca_cursos={(biblioteca.Cursos is { } c ? c.ToString() : "?")}",
         };
         lineas.AddRange(Direcciones.Listar(puerto).Select(d => $"direccion={d}"));
         File.WriteAllLines(resumen, lineas);
-        registro.Escribir($"Estado del nodo: organizacion={SiNo(estado.Instalado)}, claves derivadas={SiNo(estado.ClavesDerivadas)}.");
+        registro.Escribir($"Estado del nodo: organizacion={SiNo(estado.Instalado)}, claves derivadas={SiNo(estado.ClavesDerivadas)}, " +
+                          $"registros={(registros ? "ok" : "sin escritura")}.");
         return 0;
     }
 

@@ -1,5 +1,5 @@
 {
   "producto": "AVACOM LMS",
-  "version": "2.1.0",
-  "nota": "Fuente unica de la version del producto. Build-Installer.ps1 la lee para el instalador de OPS Master, y el instalador de Student debe leerla tambien: los dos se publican por separado pero salen de aqui, para que se pueda saber si un OPS y un Student son compatibles. Sube la version cuando cambie el contrato de red entre Student y el backend."
+  "version": "2.2.0",
+  "nota": "Fuente unica de la version del producto. Build-Installer.ps1 la lee para el instalador de OPS Master, y el instalador de Student debe leerla tambien: los dos se publican por separado pero salen de aqui, para que se pueda saber si un OPS y un Student son compatibles. Sube la version cuando cambie el contrato de red entre Student y el backend. 2.2.0: el backend suma Modo Estudio (/api/modo-estudio/), Evaluacion (/api/evaluacion/) y Auditoria y logs (/api/auditoria/, /api/logs/)."
 }

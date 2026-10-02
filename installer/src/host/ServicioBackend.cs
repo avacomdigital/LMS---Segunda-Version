@@ -28,6 +28,28 @@ internal sealed class ServicioBackend : BackgroundService
         var intento = 0;
         while (!cancelacion.IsCancellationRequested)
         {
+            // Sin configuracion no se arranca: el backend usaria los valores de desarrollo y
+            // abriria una base de datos NUEVA dentro de Program Files. El aula seguiria
+            // "funcionando" sobre un expediente vacio sin que nadie lo notara. Se espera y se
+            // reintenta (con la espera creciente de siempre) por si es algo pasajero.
+            if (!Configuracion.EsUtilizable(out var motivo))
+            {
+                _registro.Escribir(
+                    $"No se arranca el backend: {motivo}. Se reintentara. " +
+                    "Si persiste, vuelve a ejecutar la instalacion de AVACOM OPS Master.");
+                var esperaSinConfig = EsperasSegundos[Math.Min(intento, EsperasSegundos.Length - 1)];
+                intento++;
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(esperaSinConfig), cancelacion).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                continue;
+            }
+
             if (!Salud.PuertoLibre(puerto) && !await Salud.EsNuestroBackendAsync(puerto).ConfigureAwait(false))
             {
                 _registro.Escribir(
