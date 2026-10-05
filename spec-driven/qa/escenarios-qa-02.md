@@ -9,7 +9,7 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 | Estado de cada paso | `OK` · `FALLA` (anota el QA-nn si ya es conocido) · `BLOQ` (no se pudo probar) · `N/A` |
 | Datos de prueba | Grupos **Quinto A** (Ana, Beto, Carla) y **Sexto B** (Diego). Tabletas **T-A** (asignada a Ana) y **T-C** (compartida). Curso: *Estados de la materia y sus cambios* |
 
-**Índice:** HP-01 (ESC-01-01 a 08) · HP-02 (ESC-02-01 a 07) · HP-03 (ESC-03-01 a 06) · HP-04 (ESC-04-01 a 07) · [Tabla consolidada de resultados](#tabla-consolidada-de-resultados)
+**Índice:** HP-01 (ESC-01-01 a 08) · HP-02 (ESC-02-01 a 07) · HP-03 (ESC-03-01 a 06) · HP-04 (ESC-04-01 a 07) · [Transversal: red y carga con 25 a 35 tabletas (ESC-05-01)](#transversal--red-y-carga) · [Tabla consolidada de resultados](#tabla-consolidada-de-resultados)
 
 ---
 
@@ -416,6 +416,63 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 ---
 
+## Transversal · Red y carga
+
+### ESC-05-01 · Ancho de banda del router y transmisión de objetos pesados con 25 y 35 tabletas
+
+**Para qué sirve.** Saber cuántas tabletas aguanta el router del aula con la clase en vivo y cuánto tarda en llegar un objeto pesado (video) a todas a la vez. Hasta ahora nunca se ha probado con más de un equipo ni con tabletas reales (`happy-path-01.md`, sección 3). El nodo admite 50 tabletas en uso normal y 100 en pico (`AVACOM_AULA_DISPOSITIVOS_NORMAL` y `_PICO`), así que 35 debe caber.
+
+**Cómo viaja un objeto.** Cada tableta pide el video al **nodo** (no a la biblioteca) y lo recibe por tramos (`Range`). El nodo lo lee de AVACOM Contenido y lo reenvía, de modo que el equipo del profesor y el router comparten la carga. Los videos instalados más pesados son los de *Teoremas de Pitágoras y Tales* (de 3,5 a 4 MB cada uno); los de los otros cursos pesan unos 150 KB.
+
+**Cuenta rápida para anotar la expectativa.** Tiempo aproximado = (tabletas × MB × 8) ÷ Mbps reales del router. Ejemplo: 35 tabletas × 4 MB × 8 = 1.120 Mb; con 30 Mbps reales compartidos, unos 37 s si todas piden a la vez.
+
+| Entradas esperadas | Salidas esperadas |
+|---|---|
+| **Red:** modelo del router, banda (2,4 o 5 GHz), canal, ancho de canal (20/40/80 MHz), si hay más de un punto de acceso, si el nodo va por cable o por Wi-Fi, y el «aislamiento de clientes» del Wi-Fi apagado. | **Conexión:** las 25 y luego las 35 tabletas entran, OPS cuenta «25 conectados» y «35 conectados» y se mantienen 10 minutos sin «reconectando» sostenido. No aparece «Aula en pico» ni «Aula llena». |
+| **Nodo:** equipo del profesor con el nodo en el puerto 8000, el puerto abierto en el cortafuegos (la red Wi-Fi no puede estar en perfil Público, QA-21) y AVACOM Contenido abierto. | **Selector:** cada cambio de lámina llega a las tabletas en 3 s o menos (BR-049) en el 95 % de ellas, con 25 y con 35. |
+| **Tabletas:** 25 y 35 con Student, cada una con **nombre de equipo distinto** (dos con el mismo nombre se registran como una, QA-20) y una persona distinta por tableta. Mismo modelo en lo posible; anotar los que sean distintos. | **Video pesado:** el video de 4 MB se ve en las 25 y en las 35 sin errores. Se anotan el tiempo hasta el primer fotograma (mediana y peor caso) y los cortes. Criterio propuesto, a confirmar con producto: peor caso de 15 s o menos y ningún corte de más de 5 s. |
+| **Contenido:** un curso con videos pesados (Pitágoras y Tales) y uno con videos livianos (*Estados de la materia*). | **Saltos y reanudación:** al saltar a otro punto del video las tabletas piden sólo el tramo nuevo y siguen. |
+| **Herramientas:** cronómetro o cámara de teléfono para filmar las tabletas, `GET /api/aula/tiempo-real/` (sockets y demora p50/p95/máximo del aviso), Administrador de tareas del equipo del nodo (CPU y red), `netsh wlan show interfaces` en una tableta Windows y los logs del nodo. | **Carga del nodo y logs:** sin errores 5xx ni tiempos agotados en los logs del nodo durante la prueba; la CPU del equipo del profesor no se queda al 100 % sostenido. |
+| **Opcional:** `iperf3` entre el nodo y una tableta para medir el Mbps real antes de empezar. Si no hay, usar la descarga de un video grande y calcular Mbps = MB × 8 ÷ segundos. | **Resultado de capacidad:** una frase final: «con este router caben N tabletas y el video de X MB llega en Y s», y qué cambiar si no alcanza (banda de 5 GHz, otro canal, más puntos de acceso, cable para el nodo). |
+
+| # | Paso | Salida esperada | Resultado obtenido | Estado |
+|---|---|---|---|---|
+| 1 | Anotar los datos de la red (router, banda, canal, ancho, puntos de acceso, nodo por cable o Wi-Fi) en la tabla de mediciones | Datos completos antes de empezar | | |
+| 2 | Comprobar que el Wi-Fi no aísla clientes y que el puerto 8000 responde desde una tableta | `http://IP-del-nodo:8000/health/` abre en la tableta | | |
+| 3 | Medir la velocidad real entre el nodo y una tableta cercana y una lejana (iperf3 o descarga) | Dos valores de Mbps anotados | | |
+| 4 | Prueba base con **1 tableta**: abrir la clase de *Pitágoras y Tales* con un video de 4 MB y medir el tiempo hasta el primer fotograma | Referencia anotada (sin carga) | | |
+| 5 | Conectar **25 tabletas** de 5 en 5 («Clase en vivo» con el código), esperando 1 minuto entre grupos | OPS cuenta 5, 10, 15, 20 y 25 conectados | | |
+| 6 | Dejar las 25 conectadas y quietas 10 minutos; mirar OPS y `GET /api/aula/tiempo-real/` | Sin «reconectando» sostenido; sockets y demora p50/p95 anotados | | |
+| 7 | OPS: pasar 10 láminas seguidas; medir en 5 tabletas de muestra (la más cercana, la más lejana, una de esquina, una del centro y la más antigua) | Cada cambio llega en 3 s o menos; las demás tabletas se anotan como OK o no | | |
+| 8 | OPS: proyectar el video de 4 MB (seguimiento activo) para que las 25 lo pidan a la vez; medir en las 5 de muestra | Todas lo reproducen; tiempos anotados (mediana y peor caso) | | |
+| 9 | Durante el video, saltar a otro punto desde OPS | Las tabletas siguen sin volver a bajar el video entero | | |
+| 10 | Repetir el paso 8 con el video de *Estados de la materia* (150 KB) | Referencia de objeto liviano; casi inmediato | | |
+| 11 | OPS: lanzar la actividad a las 25 y pedir que todas **entreguen a la vez** | «25 de 25 entregaron»; ninguna respuesta se pierde; sin errores en los logs | | |
+| 12 | Sumar **10 tabletas** hasta tener 35 conectadas y repetir los pasos 6, 7, 8 y 11 | Mismos resultados; anotar qué empeoró | | |
+| 13 | Con las 35: abrir el modo estudio y descargar el paquete de una lección en 5 tabletas asignadas al mismo tiempo (opcional) | Las descargas terminan; el tope de 15 s del cliente puede cortarlas con medios grandes (QA-18 y la lista de riesgos) | | |
+| 14 | Degradar la red a propósito: alejar 5 tabletas o pasar el router a 2,4 GHz y repetir el video | Anotar cómo se ve («Sin conexión», «Reconectando», video con cortes) y si vuelve solo | | |
+| 15 | Revisar los logs del nodo y las tabletas (`AVACOM_LMS_DIR_LOGS` o `backend\logs`, y «Exportar diagnóstico» en Student) | Sin 5xx ni tiempos agotados; anotar los avisos que aparezcan | | |
+| 16 | Cerrar la clase y escribir la conclusión de capacidad | Frase final con N tabletas, tamaño del objeto y tiempo | | |
+
+**Tabla de mediciones** (se llena durante la prueba; una fila por corrida).
+
+| Corrida | Tabletas conectadas | Objeto y tamaño | Banda y Mbps medidos | Tiempo hasta el primer fotograma (mediana) | Peor caso | Cortes o fallos | Selector en 3 s o menos (de 5 de muestra) | CPU y red del nodo | Observaciones |
+|---|---|---|---|---|---|---|---|---|---|
+| Base | 1 | Video 4 MB | | | | | | | |
+| 25 · quietas | 25 | Ninguno | | | | | | | |
+| 25 · láminas | 25 | Láminas con imagen | | | | | | | |
+| 25 · video pesado | 25 | Video 4 MB | | | | | | | |
+| 25 · video liviano | 25 | Video 150 KB | | | | | | | |
+| 25 · entrega simultánea | 25 | Actividad | | | | | | | |
+| 35 · quietas | 35 | Ninguno | | | | | | | |
+| 35 · láminas | 35 | Láminas con imagen | | | | | | | |
+| 35 · video pesado | 35 | Video 4 MB | | | | | | | |
+| 35 · video liviano | 35 | Video 150 KB | | | | | | | |
+| 35 · entrega simultánea | 35 | Actividad | | | | | | | |
+| 35 · red degradada | 35 | Video 4 MB | | | | | | | |
+
+---
+
 ## Tabla consolidada de resultados
 
 Se llena al terminar cada escenario.
@@ -450,3 +507,4 @@ Se llena al terminar cada escenario.
 | ESC-04-05 · Sesión única | HP-04 | | | | |
 | ESC-04-06 · Alumno en OPS | HP-04 | | | | |
 | ESC-04-07 · Modo por defecto | HP-04 | | | | |
+| ESC-05-01 · Red y carga con 25 y 35 tabletas | Transversal | | | | |
