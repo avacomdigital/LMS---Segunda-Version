@@ -49,6 +49,10 @@
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudySyncState.cs" Link="Student\Models\StudySyncState.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudyFormat.cs" Link="Student\Models\StudyFormat.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Models\StudyPractice.cs" Link="Student\Models\StudyPractice.cs" />
+    <!-- El acceso del alumno (RF-20…RF-28): la lógica de los pasos, sin interfaz. -->
+    <Compile Include="..\..\src\Avacom.Lms.Student\Acceso\FlujoDeAcceso.cs" Link="Student\Acceso\FlujoDeAcceso.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\Acceso\DobleMarcado.cs" Link="Student\Acceso\DobleMarcado.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\Acceso\Avatares.cs" Link="Student\Acceso\Avatares.cs" />
   </ItemGroup>
 
 </Project>
