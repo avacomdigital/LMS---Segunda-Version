@@ -41,6 +41,8 @@ public partial class StudentMenuPage : ContentPage
     /// <summary>«Exámenes» (MOD-010): lo que el profesor aplicó a esta persona. Sin sesión de usuario pregunta quién eres, sin código ni contraseña.</summary>
     private async void OnEvaluaciones(object? sender, EventArgs e) => await Shell.Current.GoToAsync("evaluaciones");
     private async void OnCourses(object? sender, EventArgs e) => await Shell.Current.GoToAsync("asignaturas");
+    /// <summary>«Ayuda» todavía es maqueta: mientras tanto abre el «Diagnóstico de red» (rendimiento del equipo y de la red del aula, para depurar pruebas).</summary>
+    private async void OnDiagnosticoRed(object? sender, EventArgs e) => await Shell.Current.GoToAsync("diagnostico-red");
     private async void OnClaseEnVivo(object? sender, EventArgs e) => await Shell.Current.GoToAsync("clase-unirse");
 
     /// <summary>

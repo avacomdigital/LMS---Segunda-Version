@@ -89,6 +89,7 @@
                             </Border>
                             <Label x:Name="NotaDemo" Text="También puedes entrar en modo demo sin conexión." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="11" LineBreakMode="WordWrap"/>
                             <!-- MOD-019 §3.6: un ZIP con los logs del aparato, la versión y la configuración no sensible, para entregarlo a soporte. Sin datos personales. -->
+                            <Button x:Name="DiagnosticoRedButton" Text="Diagnóstico de red" BackgroundColor="Transparent" TextColor="#52525B" FontSize="12" HeightRequest="36" Clicked="OnDiagnosticoRed" AutomationId="DiagnosticoDeRed"/>
                             <Button x:Name="DiagnosticoButton" Text="Exportar diagnóstico" BackgroundColor="Transparent" TextColor="#52525B" FontSize="12" HeightRequest="36" Clicked="OnDiagnostico" AutomationId="ExportarDiagnostico"/>
                         </VerticalStackLayout>
                     </ScrollView>

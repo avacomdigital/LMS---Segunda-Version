@@ -17,7 +17,7 @@ namespace Avacom.Lms.Ops.Pages;
 /// </summary>
 public partial class BitacoraPage : ContentPage
 {
-    private enum Pestana { Comportamiento, Integridad, Exportaciones, Tecnico, Errores, Equipo }
+    private enum Pestana { Comportamiento, Integridad, Exportaciones, Tecnico, Errores, Equipo, Rendimiento }
 
     private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
     private static readonly Color TintaExito = Color.FromArgb("#017A48");
@@ -61,7 +61,8 @@ public partial class BitacoraPage : ContentPage
             SubtituloLabel.Text = "Escritura, red y dispositivos, sin datos de alumnos. La bitácora de auditoría no se ve desde el perfil técnico.";
             Agregar(Pestana.Equipo, "Estado del equipo");
             Agregar(Pestana.Errores, "Errores");
-            if (_actual is not (Pestana.Equipo or Pestana.Errores)) _actual = Pestana.Equipo;
+            Agregar(Pestana.Rendimiento, "Rendimiento");
+            if (_actual is not (Pestana.Equipo or Pestana.Errores or Pestana.Rendimiento)) _actual = Pestana.Equipo;
         }
         else
         {
@@ -73,6 +74,7 @@ public partial class BitacoraPage : ContentPage
             Agregar(Pestana.Exportaciones, "Exportaciones");
             Agregar(Pestana.Tecnico, "Accesos del técnico");
             Agregar(Pestana.Errores, "Errores");
+            Agregar(Pestana.Rendimiento, "Rendimiento");
             if (_actual == Pestana.Equipo) _actual = Pestana.Comportamiento;
         }
         PintarPestanas();
@@ -118,6 +120,7 @@ public partial class BitacoraPage : ContentPage
                 Pestana.Exportaciones => await ExportacionesAsync(),
                 Pestana.Tecnico => await AccesosDelTecnicoAsync(),
                 Pestana.Errores => await ErroresAsync(),
+                Pestana.Rendimiento => await RendimientoAsync(),
                 _ => await EstadoDelEquipoAsync(),
             };
             if (version != _version) return;

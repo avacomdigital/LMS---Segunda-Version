@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
@@ -11,7 +12,7 @@ namespace Avacom.Lms.Student;
 /// </summary>
 public static class Sesion
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
+    private static readonly HttpClient Http = new(new HandlerDeMedicion()) { Timeout = TimeSpan.FromSeconds(15) };
     private static IBibliotecaDeContenido? _biblioteca;
     private static IAulaApi? _aula;
     private static IAccesoApi? _acceso;
@@ -274,6 +275,25 @@ public static class Sesion
             }
             return _logs;
         }
+    }
+
+    /// <summary>
+    /// Arranca (una sola vez) la medición de rendimiento de esta tableta contra el aula: CPU, RAM, red, disco, latencia y errores. Es de sólo lectura.
+    /// En Android el espacio libre se lee con <c>StatFs</c> (<c>DriveInfo</c> no sirve allí).
+    /// </summary>
+    public static MonitorDeRendimiento IniciarMonitor()
+    {
+        var monitor = MonitorDeRendimiento.Global;
+        monitor.RutaDeDatos = FileSystem.AppDataDirectory;
+#if ANDROID
+        monitor.LectorDeDisco ??= () =>
+        {
+            var estado = new Android.OS.StatFs(FileSystem.AppDataDirectory);
+            return (estado.TotalBytes, estado.AvailableBytes);
+        };
+#endif
+        monitor.Iniciar(BaseUri);
+        return monitor;
     }
 
     /// <summary>Sube al nodo, cada minuto y cuando hay red del aula, los renglones WARNING+ del registro local (§2.4 de MOD-019). Sin red, espera.</summary>

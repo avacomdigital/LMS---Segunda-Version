@@ -87,7 +87,7 @@
                 <Button x:Name="DockEstudio" Text="Estudio" ImageSource="dock_study.png" ContentLayout="Top,3" Style="{StaticResource DockButton}" Clicked="OnEstudio" AutomationId="dock-estudio"/>
                 <Button x:Name="DockEvaluaciones" Text="Exámenes" ImageSource="dock_exam.png" ContentLayout="Top,3" Style="{StaticResource DockButton}" Clicked="OnEvaluaciones" AutomationId="dock-evaluaciones"/>
                 <Button Text="Asignaturas" ImageSource="dock_courses.png" ContentLayout="Top,3" Style="{StaticResource DockButton}" Clicked="OnCourses"/>
-                <Button Text="Ayuda" ImageSource="dock_help.png" ContentLayout="Top,3" Style="{StaticResource DockButton}"/>
+                <Button Text="Ayuda" ImageSource="dock_help.png" ContentLayout="Top,3" Style="{StaticResource DockButton}" Clicked="OnDiagnosticoRed" AutomationId="dock-ayuda"/>
                 <Button Text="Salir" ImageSource="dock_logout.png" ContentLayout="Top,3" Style="{StaticResource DockButton}" Clicked="OnLogout"/>
             </HorizontalStackLayout>
         </Border>

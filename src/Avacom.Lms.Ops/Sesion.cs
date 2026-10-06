@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
@@ -10,7 +11,7 @@ namespace Avacom.Lms.Ops;
 /// </summary>
 public static class Sesion
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
+    private static readonly HttpClient Http = new HttpClient(new HandlerDeMedicion()) { Timeout = TimeSpan.FromSeconds(15) };
     private static IBibliotecaDeContenido? _biblioteca;
     private static IAulaApi? _aula;
     private static IDispositivosApi? _dispositivos;
@@ -192,6 +193,33 @@ public static class Sesion
             }
             return _logs;
         }
+    }
+
+    private static DiagnosticoApi? _diagnostico;
+    private static Uri? _baseDiagnostico;
+
+    /// <summary>El cliente del diagnóstico del canal en tiempo real (alumnos conectados, demora de los avisos) para el panel «Rendimiento».</summary>
+    public static DiagnosticoApi Diagnostico
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_diagnostico is null || _baseDiagnostico != actual)
+            {
+                _diagnostico = new DiagnosticoApi(Http, actual);
+                _baseDiagnostico = actual;
+            }
+            return _diagnostico;
+        }
+    }
+
+    /// <summary>Arranca (una sola vez) la medición de rendimiento de este equipo contra el nodo actual: CPU, RAM, red, disco y latencias.</summary>
+    public static MonitorDeRendimiento IniciarMonitor()
+    {
+        var monitor = MonitorDeRendimiento.Global;
+        monitor.RutaDeDatos = FileSystem.AppDataDirectory;
+        monitor.Iniciar(BaseUri, ct => Diagnostico.AlumnosConectadosAsync(ct));
+        return monitor;
     }
 
     /// <summary>Sube al nodo, cada minuto y de mejor esfuerzo, los renglones WARNING+ del registro local de OPS (§2.4 de MOD-019).</summary>

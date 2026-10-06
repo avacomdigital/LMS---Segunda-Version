@@ -7,6 +7,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("menu", typeof(Pages.StudentMenuPage));
         Routing.RegisterRoute("course", typeof(Pages.CoursePage));
         Routing.RegisterRoute("quiz", typeof(Pages.QuizPage));
+        Routing.RegisterRoute("diagnostico-red", typeof(Pages.DiagnosticoRedPage));   // depuración: panel de rendimiento y red
         Routing.RegisterRoute("asignaturas", typeof(Pages.AsignaturasPage));
         Routing.RegisterRoute("curso-biblioteca", typeof(Pages.CursoBibliotecaPage));
         // MOD-007 · Classroom Engine: reflejo de la clase en la tableta (S1 → S2)

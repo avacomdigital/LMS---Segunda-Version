@@ -59,6 +59,9 @@ public partial class ConnectionPage : ContentPage
         finally { CheckButton.IsEnabled = true; }
     }
 
+    /// <summary>Depuración: el panel de rendimiento y red (CPU, RAM, Mbps, latencia, errores…), disponible aun antes de entrar al aula.</summary>
+    private async void OnDiagnosticoRed(object? sender, EventArgs e) => await Shell.Current.GoToAsync("diagnostico-red");
+
     /// <summary>MOD-019 §3.6: «Exportar diagnóstico», un ZIP con los logs del aparato (sin datos personales), la versión y la configuración no sensible.</summary>
     private void OnDiagnostico(object? sender, EventArgs e)
     {

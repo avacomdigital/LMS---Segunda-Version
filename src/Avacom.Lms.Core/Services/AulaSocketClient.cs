@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Models;
 
 namespace Avacom.Lms.Core.Services;
@@ -156,9 +157,11 @@ public sealed class AulaSocketClient : IAsyncDisposable
                 socket = nuevo;
                 await nuevo.ConnectAsync(uri, ct);
                 abierto = true;
+                MedidorDeAplicacion.Global.CanalAbierto();
                 if (huboCaida)
                 {
                     huboCaida = false;
+                    MedidorDeAplicacion.Global.RegistrarReconexion();
                     RegistroLocal.Info(Canal.Comunicacion, "socket.recuperado", "El canal del aula volvió",
                                        new { sesion_id = sesionId, rol = Rol, duracion_ms = sinCanal.ElapsedMilliseconds }, corr: corr);
                 }
@@ -177,6 +180,7 @@ public sealed class AulaSocketClient : IAsyncDisposable
             finally
             {
                 socket = null;
+                if (abierto) MedidorDeAplicacion.Global.CanalCerrado();
             }
             if (ct.IsCancellationRequested || Rechazado) break;
             if (abierto)

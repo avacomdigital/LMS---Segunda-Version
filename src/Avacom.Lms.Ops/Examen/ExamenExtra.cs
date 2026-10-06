@@ -67,7 +67,7 @@ internal sealed class ExamenExtraApi(HttpClient http, Uri baseUri) : ClienteJson
 /// <summary>Una instancia del cliente extra por dirección del nodo, como <c>Sesion</c> hace con los demás.</summary>
 internal static class ExamenExtra
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
+    private static readonly HttpClient Http = new(new Avacom.Lms.Core.Diagnostico.HandlerDeMedicion()) { Timeout = TimeSpan.FromSeconds(15) };
     private static ExamenExtraApi? _api;
     private static Uri? _base;
 
