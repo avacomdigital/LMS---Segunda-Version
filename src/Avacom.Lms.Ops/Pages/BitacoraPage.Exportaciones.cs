@@ -59,8 +59,8 @@ public partial class BitacoraPage
         // Si quien autoriza es de administración, el nodo pide además el PIN maestro: teclado propio de seis puntos (el equipo no tiene teclado). Mientras
         // se marca, el documento y la clave siguen en sus campos; al terminar, la clave se borra pase lo que pase.
         var teclado = Avacom.Lms.Ops.Controls.MarcoDeAcceso.TecladoMaestro();
-        var cancelarPin = Ds.Boton("Cancelar", Ds.Rango.Quiet, null, 46);
-        cancelarPin.MinimumWidthRequest = 150;
+        var cancelarPin = Ds.Boton("Cancelar", Ds.Rango.Quiet, null, 40);
+        cancelarPin.MinimumWidthRequest = 110;
         cancelarPin.HorizontalOptions = LayoutOptions.Center;
         var pinGrupo = new VerticalStackLayout
         {

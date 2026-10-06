@@ -30,7 +30,7 @@
             <HorizontalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
                 <!-- RF-08: «Seguridad del aula» (PIN maestro, profesores registrados con él y puertas de entrada), sólo para la administración. Es un botón
                      y no una tesela para que se toque igual que el resto de la cabecera (y lo encuentre UI Automation). -->
-                <Button x:Name="SeguridadButton" IsVisible="False" Text="Seguridad del aula" HeightRequest="46" MinimumWidthRequest="150" Padding="16,0" Margin="0,0,10,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnSeguridadClicked" />
+                <Button x:Name="SeguridadButton" IsVisible="False" Text="Seguridad del aula" HeightRequest="40" MinimumWidthRequest="120" Padding="16,0" Margin="0,0,10,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnSeguridadClicked" />
                 <Border BackgroundColor="#977528" HeightRequest="48" StrokeThickness="0" WidthRequest="48">
                     <Label x:Name="InicialesLabel" FontAttributes="Bold" HorizontalOptions="Center" Text="EC" TextColor="White" VerticalOptions="Center" />
                 </Border>
@@ -49,7 +49,7 @@
             <Border x:Name="PinBanner" IsVisible="False" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label x:Name="PinBannerLabel" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
-                    <Button x:Name="PinBannerButton" Grid.Column="1" Text="Cambiar ahora" HeightRequest="46" MinimumWidthRequest="150" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnSeguridadClicked" />
+                    <Button x:Name="PinBannerButton" Grid.Column="1" Text="Cambiar ahora" HeightRequest="40" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnSeguridadClicked" />
                 </Grid>
             </Border>
             <Border x:Name="AvisoBanner" IsVisible="False" HorizontalOptions="Center" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">

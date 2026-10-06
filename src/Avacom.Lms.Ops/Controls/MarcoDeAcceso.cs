@@ -120,7 +120,7 @@ public sealed class MarcoDeAcceso : Grid
     {
         var boton = new Button
         {
-            Text = texto, Style = Recurso<Style>("PrimaryButton"), CornerRadius = 12, BorderWidth = 0, MinimumWidthRequest = 150, MinimumHeightRequest = 46,
+            Text = texto, Style = Recurso<Style>("PrimaryButton"), CornerRadius = 12, BorderWidth = 0, MinimumWidthRequest = 120, MinimumHeightRequest = 44,
             Background = new LinearGradientBrush([new GradientStop(Color.FromArgb("#F25055"), 0f), new GradientStop(Color.FromArgb("#E5262B"), 0.55f), new GradientStop(Color.FromArgb("#B81C21"), 1f)], new Point(0, 0), new Point(0, 1)),
         };
         boton.Clicked += alPulsar;
@@ -137,7 +137,7 @@ public sealed class MarcoDeAcceso : Grid
     {
         var boton = new Button
         {
-            Text = texto, Style = Recurso<Style>("DarkButton"), CornerRadius = 12, BorderWidth = 0, MinimumWidthRequest = 150, MinimumHeightRequest = 46,
+            Text = texto, Style = Recurso<Style>("DarkButton"), CornerRadius = 12, BorderWidth = 0, MinimumWidthRequest = 120, MinimumHeightRequest = 44,
             Background = new LinearGradientBrush([new GradientStop(Color.FromArgb("#3A3A40"), 0f), new GradientStop(Color.FromArgb("#232326"), 0.55f), new GradientStop(Color.FromArgb("#0E0E10"), 1f)], new Point(0, 0), new Point(0, 1)),
         };
         boton.Clicked += alPulsar;
@@ -149,24 +149,24 @@ public sealed class MarcoDeAcceso : Grid
         return (capsula, boton);
     }
 
-    /// <summary>Acción discreta (texto gris, sin relieve), con el objetivo táctil del nodo: 150 × 46 px o más.</summary>
+    /// <summary>Acción discreta (texto gris, sin relieve), más baja que los botones del acceso para no competir con la acción principal.</summary>
     public static Button Discreta(string texto, EventHandler alPulsar)
     {
         var b = new Button
         {
-            Text = texto, BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#52525B"), FontSize = 14, HeightRequest = 46,
-            MinimumWidthRequest = 150, Padding = new Thickness(12, 0),
+            Text = texto, BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#52525B"), FontSize = 14, HeightRequest = 40,
+            MinimumWidthRequest = 110, Padding = new Thickness(12, 0),
         };
         b.Clicked += alPulsar;
         return b;
     }
 
-    /// <summary>Una ficha tocable (país, idioma, grupo): blanca en reposo, roja si está elegida. 150 × 46 px o más.</summary>
+    /// <summary>Una ficha tocable (país, idioma, grupo): blanca en reposo, roja si está elegida. Del orden de los botones del acceso, nunca más alta.</summary>
     public static Button Ficha(string texto, bool elegida, EventHandler alPulsar)
     {
         var b = new Button
         {
-            Text = texto, HeightRequest = 46, MinimumWidthRequest = 150, CornerRadius = 12, BorderWidth = 1, Padding = new Thickness(14, 0), FontSize = 15,
+            Text = texto, HeightRequest = 40, MinimumWidthRequest = 96, CornerRadius = 12, BorderWidth = 1, Padding = new Thickness(12, 0), FontSize = 14,
             Margin = new Thickness(0, 0, 8, 8),
         };
         PintarFicha(b, elegida);
@@ -181,8 +181,8 @@ public sealed class MarcoDeAcceso : Grid
         b.BorderColor = elegida ? Color.FromArgb("#B81C21") : Color.FromArgb("#17000000");
     }
 
-    /// <summary>El teclado del PIN maestro con las medidas del nodo táctil (teclas de 150 × 46 px, seis puntos).</summary>
-    public static TecladoPinView TecladoMaestro() => new() { Longitud = 6, TeclaAncho = 150, TeclaAlto = 46, Separacion = 10, HorizontalOptions = LayoutOptions.Center };
+    /// <summary>El teclado del PIN maestro: seis puntos y las teclas por defecto del control (68 × 52), del orden de los botones del acceso.</summary>
+    public static TecladoPinView TecladoMaestro() => new() { Longitud = 6, Separacion = 10, HorizontalOptions = LayoutOptions.Center };
 
     /// <summary>El recuadro de estado del acceso: el texto dice lo que pasa; el color sólo acompaña.</summary>
     public sealed class Estado : Border

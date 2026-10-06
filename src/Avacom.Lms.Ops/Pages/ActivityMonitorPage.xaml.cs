@@ -48,8 +48,8 @@ public partial class ActivityMonitorPage : ContentPage
         titulo.Add(textos, 0, 0);
         if (_visitantes is not null)
             titulo.Add(Ds.Pildora(_visitantes.Count == 1 ? "1 ahora" : $"{_visitantes.Count} ahora", _visitantes.Count > 0 ? Ds.AlertaSuave : Ds.Lienzo, Ds.Tinta, 15), 1, 0);
-        var actualizar = Ds.Boton("Actualizar", Ds.Rango.Quiet, async (_, _) => { _aviso = null; await CargarVisitantesAsync(); }, 46);
-        actualizar.MinimumWidthRequest = 150;
+        var actualizar = Ds.Boton("Actualizar", Ds.Rango.Quiet, async (_, _) => { _aviso = null; await CargarVisitantesAsync(); }, 40);
+        actualizar.MinimumWidthRequest = 110;
         titulo.Add(actualizar, 2, 0);
         VisitantesHost.Add(titulo);
 
@@ -83,9 +83,9 @@ public partial class ActivityMonitorPage : ContentPage
             _vinculando = abierto ? null : v.UsuarioId;
             if (_vinculando is not null && _alumnos is null) await CargarAlumnosAsync();
             PintarVisitantes();
-        }, 46);
+        }, 40);
         vincular.FontSize = 14;
-        vincular.MinimumWidthRequest = 150;
+        vincular.MinimumWidthRequest = 110;
         AutomationProperties.SetName(vincular, abierto ? "Cancelar" : $"Vincular {v.Alias} a un alumno");
         fila.Add(Ds.Capsula(vincular), 1, 0);
         pila.Add(fila);
@@ -115,9 +115,9 @@ public partial class ActivityMonitorPage : ContentPage
             var fichas = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
             foreach (var (_, alumno) in grupo)
             {
-                var b = Ds.Boton(alumno.Alias, Ds.Rango.Secondary, async (_, _) => await VincularAsync(visita, alumno), 46);
+                var b = Ds.Boton(alumno.Alias, Ds.Rango.Secondary, async (_, _) => await VincularAsync(visita, alumno), 40);
                 b.FontSize = 14;
-                b.MinimumWidthRequest = 150;
+                b.MinimumWidthRequest = 96;
                 var c = Ds.Capsula(b);
                 c.Margin = new Thickness(0, 0, 8, 8);
                 fichas.Add(c);

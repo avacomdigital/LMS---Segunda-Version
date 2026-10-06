@@ -244,14 +244,14 @@ public partial class GruposPage : ContentPage
         var id = est.Id;
         if (!est.Confirmado)
         {
-            var confirmar = Ds.Boton("Confirmar", Ds.Rango.Secondary, async (_, _) => await ConfirmarAsync(id, est.Alias), 46, 150);
+            var confirmar = Ds.Boton("Confirmar", Ds.Rango.Secondary, async (_, _) => await ConfirmarAsync(id, est.Alias), 40, 110);
             confirmar.FontSize = 14;
             AutomationProperties.SetName(confirmar, $"Confirmar a {est.Alias}");
             acciones.Add(Ds.Capsula(confirmar));
         }
         if (!est.PinPendiente)
         {
-            var nuevoPin = Ds.Boton("Nuevo PIN", Ds.Rango.Secondary, async (_, _) => await NuevoPinAsync(id, est.Alias), 46, 150);
+            var nuevoPin = Ds.Boton("Nuevo PIN", Ds.Rango.Secondary, async (_, _) => await NuevoPinAsync(id, est.Alias), 40, 110);
             nuevoPin.FontSize = 14;
             AutomationProperties.SetName(nuevoPin, $"Nuevo PIN para {est.Alias}");
             acciones.Add(Ds.Capsula(nuevoPin));
@@ -259,7 +259,7 @@ public partial class GruposPage : ContentPage
         fila.Add(acciones, 1, 0);
         var quitar = Ds.Boton("Quitar del grupo", Ds.Rango.Quiet, async (_, _) => await RetirarAsync(g.Id, id, est.Alias), 46);
         quitar.FontSize = 14;
-        quitar.MinimumWidthRequest = 150;
+        quitar.MinimumWidthRequest = 110;
         fila.Add(quitar, 2, 0);
         var envoltura = new VerticalStackLayout { Spacing = 6 };
         envoltura.Add(fila);

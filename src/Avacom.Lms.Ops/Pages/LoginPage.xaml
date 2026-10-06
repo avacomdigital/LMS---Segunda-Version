@@ -73,18 +73,18 @@
                                 </Border>
                                 <!-- RF-05 · RN-03: sin PIN maestro configurado no se ofrecen (y la nota dice qué sigue); con el PIN vencido siguen ahí y explican qué pasó. -->
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                    <Button x:Name="CrearUsuarioButton" Text="Crear mi usuario" BackgroundColor="#B3FFFFFF" TextColor="{StaticResource Ink}" BorderColor="#17000000" BorderWidth="1" CornerRadius="12" FontSize="14" HeightRequest="46" MinimumWidthRequest="150" Clicked="OnCrearMiUsuario"/>
-                                    <Button x:Name="OlvideButton" Grid.Column="1" Text="Olvidé mi contraseña" BackgroundColor="#B3FFFFFF" TextColor="{StaticResource Ink}" BorderColor="#17000000" BorderWidth="1" CornerRadius="12" FontSize="14" HeightRequest="46" MinimumWidthRequest="150" Clicked="OnOlvideMiContrasena"/>
+                                    <Button x:Name="CrearUsuarioButton" Text="Crear mi usuario" BackgroundColor="#B3FFFFFF" TextColor="{StaticResource Ink}" BorderColor="#17000000" BorderWidth="1" CornerRadius="12" FontSize="14" HeightRequest="40" MinimumWidthRequest="110" Clicked="OnCrearMiUsuario"/>
+                                    <Button x:Name="OlvideButton" Grid.Column="1" Text="Olvidé mi contraseña" BackgroundColor="#B3FFFFFF" TextColor="{StaticResource Ink}" BorderColor="#17000000" BorderWidth="1" CornerRadius="12" FontSize="14" HeightRequest="40" MinimumWidthRequest="110" Clicked="OnOlvideMiContrasena"/>
                                 </Grid>
                                 <Label x:Name="CuentaNotaLabel" IsVisible="False" Style="{StaticResource Muted}" FontSize="12" LineBreakMode="WordWrap"/>
-                                <Button x:Name="CambiarServidorButton" Text="Cambiar la dirección del servidor" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="13" HeightRequest="46" Clicked="OnCambiarServidor"/>
+                                <Button x:Name="CambiarServidorButton" Text="Cambiar la dirección del servidor" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="13" HeightRequest="40" Clicked="OnCambiarServidor"/>
                             </VerticalStackLayout>
                             <!-- La administración entra además con el PIN maestro: el nodo lo pide DESPUÉS de comprobar la contraseña. Teclado propio (RF-00a):
                                  el equipo del aula no tiene teclado y el PIN nunca pasa por el del sistema. -->
                             <VerticalStackLayout x:Name="PinGrupo" IsVisible="False" Spacing="10">
                                 <Label Text="PIN maestro de la escuela" FontSize="15" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
-                                <controls:TecladoPinView x:Name="PinTeclado" Longitud="6" TeclaAncho="150" TeclaAlto="46" Separacion="10" HorizontalOptions="Center" PinCompleto="OnPinMaestroCompleto"/>
-                                <Button x:Name="PinVolverButton" Text="Volver" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="14" HeightRequest="46" MinimumWidthRequest="150" HorizontalOptions="Center" Clicked="OnPinVolver"/>
+                                <controls:TecladoPinView x:Name="PinTeclado" Longitud="6" Separacion="10" HorizontalOptions="Center" PinCompleto="OnPinMaestroCompleto"/>
+                                <Button x:Name="PinVolverButton" Text="Volver" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="14" HeightRequest="40" MinimumWidthRequest="110" HorizontalOptions="Center" Clicked="OnPinVolver"/>
                             </VerticalStackLayout>
                         </VerticalStackLayout>
                         <VerticalStackLayout x:Name="AccionesGrupo" Spacing="14">

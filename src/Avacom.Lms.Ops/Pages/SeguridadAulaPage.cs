@@ -43,9 +43,9 @@ public sealed class SeguridadAulaPage : ContentPage
         encabezado.Add(new Label { Text = "SEGURIDAD", FontFamily = "InterRegular", FontSize = 12, TextColor = Color.FromArgb("#52525B"), CharacterSpacing = 2.5 });
         encabezado.Add(new Label { Text = "Seguridad del aula", FontFamily = "InterMedium", FontSize = 30, TextColor = Color.FromArgb("#18181B") });
         encabezado.Add(_subtitulo);
-        var actualizar = Ds.Boton("Actualizar", Ds.Rango.Secondary, async (_, _) => await CargarAsync(), 56);
-        var volver = Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 56);
-        foreach (var b in new[] { actualizar, volver }) { b.FontSize = 16; b.MinimumWidthRequest = 150; }
+        var actualizar = Ds.Boton("Actualizar", Ds.Rango.Secondary, async (_, _) => await CargarAsync(), 48);
+        var volver = Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 48);
+        foreach (var b in new[] { actualizar, volver }) { b.FontSize = 15; b.MinimumWidthRequest = 120; }
         var acciones = new HorizontalStackLayout { Spacing = 12, VerticalOptions = LayoutOptions.Center, Children = { Ds.Capsula(actualizar), volver } };
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, HorizontalOptions = LayoutOptions.Center, WidthRequest = 1280 };
         cabecera.Add(encabezado, 0, 0);
@@ -62,8 +62,8 @@ public sealed class SeguridadAulaPage : ContentPage
 
         _pin.PinConfirmado += async (_, pin) => await CambiarPinAsync(pin);
         _cambioHost.Add(_pin);
-        var cancelar = Ds.Boton("Cancelar", Ds.Rango.Quiet, (_, _) => { _cambiando = false; _pin.Reiniciar(); Pintar(); }, 46);
-        cancelar.MinimumWidthRequest = 150;
+        var cancelar = Ds.Boton("Cancelar", Ds.Rango.Quiet, (_, _) => { _cambiando = false; _pin.Reiniciar(); Pintar(); }, 40);
+        cancelar.MinimumWidthRequest = 110;
         cancelar.HorizontalOptions = LayoutOptions.Center;
         _cambioHost.Add(cancelar);
     }
@@ -180,9 +180,9 @@ public sealed class SeguridadAulaPage : ContentPage
                 _pin.Reiniciar();
                 _pin.Habilitado = true;
                 Pintar();
-            }, 56);
-            boton.FontSize = 16;
-            boton.MinimumWidthRequest = 150;
+            }, 48);
+            boton.FontSize = 15;
+            boton.MinimumWidthRequest = 120;
             boton.HorizontalOptions = LayoutOptions.Start;
             pila.Add(Ds.Capsula(boton));
         }
@@ -225,7 +225,7 @@ public sealed class SeguridadAulaPage : ContentPage
         texto.Add(Ds.Secundario(detalle, 14));
         var boton = new Button
         {
-            Text = encendido ? "Encendido" : "Apagado", HeightRequest = 46, WidthRequest = 150, CornerRadius = 12, BorderWidth = 1, FontSize = 15,
+            Text = encendido ? "Encendido" : "Apagado", HeightRequest = 40, WidthRequest = 120, CornerRadius = 12, BorderWidth = 1, FontSize = 14,
             BackgroundColor = encendido ? Ds.Exito : Colors.White, TextColor = encendido ? Colors.White : Ds.Tinta,
             BorderColor = encendido ? Color.FromArgb("#017A4B") : Ds.Filo, VerticalOptions = LayoutOptions.Center,
         };
@@ -280,8 +280,8 @@ public sealed class SeguridadAulaPage : ContentPage
         texto.Add(Ds.Secundario($"Grupos: {grupos}", 14));
 
         var estado = d.Suspendido ? Ds.Pildora("Suspendido", Ds.PeligroSuave, TintaPeligro, 13) : Ds.Pildora("Activo", Ds.ExitoSuave, Glass.TintaExito, 13);
-        var boton = Ds.Boton(d.Suspendido ? "Reactivar" : "Suspender", Ds.Rango.Secondary, null, 46, 150);
-        boton.FontSize = 15;
+        var boton = Ds.Boton(d.Suspendido ? "Reactivar" : "Suspender", Ds.Rango.Secondary, null, 40, 120);
+        boton.FontSize = 14;
         var id = d.Id;
         boton.Clicked += async (_, _) =>
         {
