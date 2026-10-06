@@ -19,12 +19,14 @@ def estudiante(codigo: str, grupo_id: str | None = None, **extra) -> dict:
 
 class CrearUsuarioTests(BaseAcceso):
     def test_docente_crea_estudiante_en_su_grupo_y_recibe_pin_generado_una_vez(self):
+        # Con `POST /usuarios/` el nodo sigue generando el PIN (de 4 dígitos, RN-31); el padrón y la importación, en cambio, lo dejan pendiente (RB-26).
         r = self.docente.post("/api/acceso/usuarios/", estudiante("130001", self.grupo["id"]), format="json")
         self.assertEqual(r.status_code, 201, r.content)
         datos = r.json()
-        self.assertRegex(datos["secreto_inicial"], r"^\d{6}$")
+        self.assertRegex(datos["secreto_inicial"], r"^\d{4}$")
         self.assertTrue(datos["debe_cambiar_credencial"])
         self.assertEqual(datos["grupos"][0]["codigo"], "8A")
+        self.assertEqual((datos["origen"], datos["confirmado"]), ("PROFESOR", True))
         self.assertEqual(datos["roles"][0]["rol"], "STUDENT")
         ficha = self.docente.get(f"/api/acceso/usuarios/{datos['id']}/").json()
         self.assertNotIn("secreto_inicial", ficha)
@@ -51,7 +53,7 @@ class CrearUsuarioTests(BaseAcceso):
         self.assertEqual((r.status_code, r.json()["codigo"]), (403, "sin_permiso"))
 
     def test_pin_debil_y_identificador_duplicado(self):
-        r = self.docente.post("/api/acceso/usuarios/", estudiante("130005", self.grupo["id"], secreto="123456"), format="json")
+        r = self.docente.post("/api/acceso/usuarios/", estudiante("130005", self.grupo["id"], secreto="12"), format="json")   # RN-31: 4 a 6 dígitos
         self.assertEqual((r.status_code, r.json()["codigo"]), (400, "secreto_debil"))
         self.assertTrue(r.json()["reglas"])
         r = self.docente.post("/api/acceso/usuarios/", estudiante(self.ESTUDIANTE_CODIGO, self.grupo["id"]), format="json")
@@ -92,7 +94,9 @@ class ImportacionTests(BaseAcceso):
         self.assertEqual(datos["existentes"][0]["identificador"], self.ESTUDIANTE_CODIGO)
         self.assertEqual(datos["rechazadas"][0]["fila"], 4)
         creados = {c["identificador"]: c for c in datos["creados"]}
-        self.assertRegex(creados["150001"]["secreto_inicial"], r"^\d{6}$")
+        # RB-26 / RN-35: un alumno importado sin PIN queda «pendiente»: no se genera ni se entrega ningún número.
+        self.assertIsNone(creados["150001"]["secreto_inicial"])
+        self.assertFalse(m.Credencial.objects.filter(usuario_id=creados["150001"]["id"]).exists())
         self.assertEqual(creados["150001"]["alias"], "Carlos T.")
         self.assertEqual(creados["150002"]["grupo"], "9B")
         self.assertIsNone(creados["90111222"]["secreto_inicial"])
@@ -132,25 +136,39 @@ class AdmisionNominalTests(BaseAcceso):
 
 
 class CredencialTests(BaseAcceso):
-    def test_restablecer_devuelve_secreto_una_vez_y_obliga_a_cambiarlo(self):
+    def test_restablecer_a_un_profesor_devuelve_secreto_una_vez_y_obliga_a_cambiarlo(self):
+        abierta = self.docente
+        r = self.admin.post(f"/api/acceso/usuarios/{self.docente_id}/credencial/restablecer/", {}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        provisional = r.json()["secreto_provisional"]
+        self.assertGreaterEqual(len(provisional), 8)
+        self.assertFalse(r.json()["pin_pendiente"])
+        self.assertEqual(r.json()["sesiones_revocadas"], 1)
+        self.assertEqual(abierta.get("/api/acceso/yo/").status_code, 401)
+        self.assertEqual(self.login(self.DOCENTE_DNI, self.DOCENTE_PASS).status_code, 401)
+
+        entrada = self.login(self.DOCENTE_DNI, provisional)
+        self.assertTrue(entrada.json()["usuario"]["debe_cambiar_credencial"])
+        prof = self.con_token(entrada.json()["token"])
+        r = prof.get("/api/acceso/usuarios/")
+        self.assertEqual((r.status_code, r.json()["codigo"]), (403, "debe_cambiar_credencial"))
+        r = prof.put("/api/acceso/yo/credencial/", {"secreto_actual": provisional, "secreto_nuevo": "NuevaClave.2026!"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(prof.get("/api/acceso/yo/").status_code, 200)
+        self.assertEqual(self.login(self.DOCENTE_DNI, "NuevaClave.2026!").status_code, 200)
+
+    def test_restablecer_a_un_alumno_lo_deja_en_pin_pendiente_sin_entregar_ningun_numero(self):
+        # RB-23 / RN-35 / AC-A17: el profesor nunca ve un número; el alumno elige uno nuevo al tocar su nombre.
         abierta = self.sesion(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN)
         r = self.docente.post(f"/api/acceso/usuarios/{self.estudiante_id}/credencial/restablecer/", {}, format="json")
         self.assertEqual(r.status_code, 200, r.content)
-        provisional = r.json()["secreto_provisional"]
-        self.assertRegex(provisional, r"^\d{6}$")
+        self.assertIsNone(r.json()["secreto_provisional"])
+        self.assertTrue(r.json()["pin_pendiente"])
         self.assertEqual(r.json()["sesiones_revocadas"], 1)
         self.assertEqual(abierta.get("/api/acceso/yo/").status_code, 401)
         self.assertEqual(self.login(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN).status_code, 401)
-
-        entrada = self.login(self.ESTUDIANTE_CODIGO, provisional)
-        self.assertTrue(entrada.json()["usuario"]["debe_cambiar_credencial"])
-        est = self.con_token(entrada.json()["token"])
-        r = est.get("/api/acceso/usuarios/")
-        self.assertEqual((r.status_code, r.json()["codigo"]), (403, "debe_cambiar_credencial"))
-        r = est.put("/api/acceso/yo/credencial/", {"secreto_actual": provisional, "secreto_nuevo": "480215"}, format="json")
-        self.assertEqual(r.status_code, 200, r.content)
-        self.assertEqual(est.get("/api/acceso/yo/").status_code, 200)
-        self.assertEqual(self.login(self.ESTUDIANTE_CODIGO, "480215").status_code, 200)
+        self.assertFalse(m.Credencial.objects.filter(usuario_id=self.estudiante_id, activa=True).exists())
+        self.assertEqual(self.docente.get(f"/api/acceso/usuarios/{self.estudiante_id}/").json()["tiene_credencial"], False)
 
     def test_no_se_reutiliza_una_credencial_anterior(self):
         est = self.sesion(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN)
@@ -229,7 +247,7 @@ class RolesTests(BaseAcceso):
                             {"rol": "ADMIN", "alcance_tipo": "LEVEL", "alcance_id": "secundaria"}, format="json")
         self.assertEqual(r.status_code, 201, r.content)
         coord = self.sesion(self.DOCENTE_DNI, self.DOCENTE_PASS)
-        coord = self.con_token(self.login(self.DOCENTE_DNI, self.DOCENTE_PASS, rol="ADMIN").json()["token"])
+        coord = self.con_token(self.login(self.DOCENTE_DNI, self.DOCENTE_PASS, rol="ADMIN", pin_maestro=self.PIN_MAESTRO).json()["token"])
         yo = coord.get("/api/acceso/yo/").json()
         self.assertEqual(yo["rol_efectivo"]["alcance_asignacion"], "LEVEL")
         self.assertEqual(coord.get(f"/api/acceso/usuarios/{de_noveno['id']}/").status_code, 200)   # 9B es de secundaria

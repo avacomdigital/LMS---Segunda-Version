@@ -20,6 +20,8 @@ class BaseAcceso(TestCase):
     ESTUDIANTE_CODIGO = "122499"
     ESTUDIANTE_PIN = "691302"
     TABLETA = "tableta-07-hw-id"
+    PIN_MAESTRO = "482915"          # RN-03: sin PIN maestro no se instala; la administración entra además con él mientras esté vigente
+    MASTER = "ops-master-hw-id"     # el equipo del profesor (MOD-009, tipo MASTER): el PIN maestro no se acepta desde una tableta (RN-11)
 
     def setUp(self):
         self.api = APIClient()
@@ -27,6 +29,7 @@ class BaseAcceso(TestCase):
             "organizacion": {"codigo": "IE-SANJOSE", "nombre": "IE San José", "pais": "CO", "idioma": "es", "locale": "es-CO"},
             "administrador": {"alias": "Rectoría", "nombres": "Ana", "apellidos": "Pérez", "dni": self.ADMIN_DNI,
                               "password": self.ADMIN_PASS},
+            "pin_maestro": self.PIN_MAESTRO,
         }, format="json")
         assert r.status_code == 201, r.content
         self.admin_id = r.json()["administrador"]["id"]
@@ -65,9 +68,18 @@ class BaseAcceso(TestCase):
         self.tableta = r.json()
 
     # ------------------------------------------------------------- utilidades
-    def login(self, identificador: str, secreto: str, dispositivo: str | None = None, rol: str | None = None):
-        return self.api.post("/api/acceso/sesiones/", {"identificador": identificador, "secreto": secreto,
-                                                        "dispositivo": dispositivo or "", "rol": rol or ""}, format="json")
+    def registrar_equipo_master(self, identificador: str | None = None, nombre: str = "ops-master") -> dict:
+        """El equipo del profesor (MOD-009, tipo MASTER): desde él sí se acepta el PIN maestro (RN-11). Sólo lo registran las pruebas que lo necesitan."""
+        r = self.api.post("/api/dispositivos/", {"identificador": identificador or self.MASTER, "nombre": nombre, "tipo": "MASTER"}, format="json")
+        assert r.status_code == 201, r.content
+        return r.json()
+
+    def login(self, identificador: str, secreto: str, dispositivo: str | None = None, rol: str | None = None, **extra):
+        cuerpo = {"identificador": identificador, "secreto": secreto, "dispositivo": dispositivo or "", "rol": rol or "", **extra}
+        # La administración exige además el PIN maestro: las pruebas que sólo quieren «entrar como administrador» lo ponen solas.
+        if identificador == self.ADMIN_DNI and "pin_maestro" not in extra:
+            cuerpo["pin_maestro"] = self.PIN_MAESTRO
+        return self.api.post("/api/acceso/sesiones/", cuerpo, format="json")
 
     def sesion(self, identificador: str, secreto: str, dispositivo: str | None = None) -> APIClient:
         r = self.login(identificador, secreto, dispositivo)

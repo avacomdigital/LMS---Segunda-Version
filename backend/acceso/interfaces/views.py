@@ -11,7 +11,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..aplicacion import casos_uso as cu
+from ..aplicacion import estudiantes as est
 from ..aplicacion import padron as pad
+from ..aplicacion import pin_maestro as pm
 from ..dominio import errores
 from ..infraestructura.contenedor import servicios
 from . import serializers as s
@@ -26,6 +28,13 @@ def _validar(serializer_cls, datos, parcial: bool = False) -> dict:
 
 def _bandera(valor) -> bool:
     return str(valor or "").lower() in ("1", "true", "si", "sí", "yes")
+
+
+def _dispositivo_de(request) -> tuple[str | None, str | None]:
+    """El equipo que habla, de las dos formas en que lo conoce el aparato: su huella (`?dispositivo=`, la del login) y el id que aprendió del
+    nodo (`X-Avacom-Dispositivo`, ya validado por el middleware de MOD-019)."""
+    from audit import contexto  # módulo puro, sin modelos
+    return (request.query_params.get("dispositivo") or None), contexto.actual().dispositivo_id
 
 
 class VistaAcceso(APIView):
@@ -84,7 +93,7 @@ class ConfiguracionView(VistaPublica):
 class InstalacionView(VistaPublica):
     def post(self, request):
         datos = _validar(s.InstalacionEntrada, request.data)
-        return Response(cu.InstalarNodo(self.s).ejecutar(datos["organizacion"], datos["administrador"]), status=201)
+        return Response(cu.InstalarNodo(self.s).ejecutar(datos["organizacion"], datos["administrador"], datos["pin_maestro"]), status=201)
 
 
 class SesionesView(VistaPublica):
@@ -92,8 +101,9 @@ class SesionesView(VistaPublica):
 
     def post(self, request):
         datos = _validar(s.LoginEntrada, request.data)
-        return Response(cu.AutenticarUsuario(self.s).ejecutar(datos["identificador"], datos["secreto"],
-                                                               datos["dispositivo"] or None, datos["rol"] or None))
+        return Response(cu.AutenticarUsuario(self.s).ejecutar(
+            datos["identificador"], datos["secreto"], datos["dispositivo"] or None, datos["rol"] or None,
+            usuario_id=datos["usuario_id"] or None, pin_maestro=datos["pin_maestro"] or None))
 
     def get(self, request):
         principal = _exigir_principal(request)
@@ -143,7 +153,7 @@ class UsuariosView(VistaAcceso):
     def get(self, request):
         q = request.query_params
         return Response(cu.ListarUsuarios(self.s).ejecutar(request.user, q.get("grupo") or None, q.get("rol") or None,
-                                                            q.get("estado") or None))
+                                                            q.get("estado") or None, q.get("origen") or None))
 
     def post(self, request):
         datos = _validar(s.UsuarioEntrada, request.data)
@@ -360,3 +370,100 @@ class PadronMatriculaView(VistaPadron):
     def delete(self, request, pk: str, usuario_id: str):
         pad.RetirarEstudiante(self.s).ejecutar(self.actor(request), pk, usuario_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ================================================================ PIN maestro y profesores
+
+
+class PinMaestroView(VistaAcceso):
+    """RB-11 y RB-12. Nunca devuelve el PIN ni su huella (RN-04). No existe un «verificar»: el PIN se comprueba dentro de la operación que autoriza (D-A6)."""
+
+    def get(self, request):
+        return Response(pm.ConsultarEstadoPinMaestro(self.s).ejecutar(request.user))
+
+    def put(self, request):
+        datos = _validar(s.PinMaestroCambioEntrada, request.data)
+        return Response(pm.CambiarPinMaestro(self.s).ejecutar(request.user, datos["pin_nuevo"]))
+
+
+class DocentesRegistroView(VistaPublica):
+    """RB-13: sin sesión; autoriza el PIN maestro. Es la excepción deliberada a «toda ruta declara permiso» (02 · Endpoints)."""
+
+    def post(self, request):
+        datos = _validar(s.DocenteRegistroEntrada, request.data)
+        return Response(pm.RegistrarDocente(self.s).ejecutar(datos), status=201)
+
+
+class DocentesRestablecerView(VistaPublica):
+    """RB-14: sin sesión; autoriza el PIN maestro."""
+
+    def post(self, request):
+        datos = _validar(s.DocenteRestablecerEntrada, request.data)
+        return Response(pm.RestablecerContrasenaDocente(self.s).ejecutar(datos))
+
+
+class DocentesView(VistaAcceso):
+    """RB-15: `?origen=PIN_MAESTRO` (por defecto). Requiere identity.user.read con alcance de organización."""
+
+    def get(self, request):
+        return Response(pm.ListarDocentesPorPinMaestro(self.s).ejecutar(request.user, request.query_params.get("origen") or "PIN_MAESTRO"))
+
+
+# ========================================================= alumnos y visitantes (la tableta)
+
+
+class AulaGruposView(VistaPublica):
+    """RB-16: sin sesión (PAN-002), sólo desde un equipo registrado (BR-056). `?para=docente`: todos los grupos activos."""
+
+    def get(self, request):
+        huella, id_equipo = _dispositivo_de(request)
+        return Response(est.ListarGruposDelAula(self.s).ejecutar(huella, id_equipo, para_docente=request.query_params.get("para") == "docente"))
+
+
+class AulaEstudiantesView(VistaPublica):
+    def get(self, request, pk: str):
+        huella, id_equipo = _dispositivo_de(request)
+        return Response(est.ListarEstudiantesDelGrupo(self.s).ejecutar(pk, huella, id_equipo))
+
+
+class EstudiantesRegistroView(VistaPublica):
+    """RB-17: el alumno crea su propio usuario."""
+
+    def post(self, request):
+        datos = _validar(s.EstudianteRegistroEntrada, request.data)
+        from audit import contexto
+        return Response(est.RegistrarEstudiante(self.s).ejecutar({**datos, "dispositivo_id": contexto.actual().dispositivo_id}), status=201)
+
+
+class EstudiantePinView(VistaPublica):
+    """RB-18: sólo si la cuenta está en «PIN pendiente»."""
+
+    def post(self, request, pk: str):
+        datos = _validar(s.EstudiantePinEntrada, request.data)
+        from audit import contexto
+        return Response(est.EstablecerPinAlumno(self.s).ejecutar(pk, datos["pin"], datos["dispositivo"] or None,
+                                                                 contexto.actual().dispositivo_id))
+
+
+class SesionVisitanteView(VistaPublica):
+    """RB-19: entrar como visitante, sin sesión previa ni PIN."""
+
+    def post(self, request):
+        datos = _validar(s.VisitanteEntrada, request.data)
+        from audit import contexto
+        return Response(est.AbrirSesionVisitante(self.s).ejecutar(datos["dispositivo"] or None, contexto.actual().dispositivo_id,
+                                                                  datos["grupo_id"] or None))
+
+
+class VisitantesView(VistaAcceso):
+    """RN-46: las visitas que están dentro ahora, con su tableta."""
+
+    def get(self, request):
+        return Response(est.ListarVisitantes(self.s).ejecutar(request.user))
+
+
+class UsuarioConfirmarView(VistaAcceso):
+    """RB-20."""
+
+    def post(self, request, pk: str):
+        return Response(est.ConfirmarEstudiante(self.s).ejecutar(request.user, pk))

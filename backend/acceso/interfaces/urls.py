@@ -8,7 +8,19 @@ urlpatterns = [
     path("instalacion/", views.InstalacionView.as_view(), name="acceso-instalacion"),
     # los dispositivos viven en MOD-009: /api/dispositivos/ (app device_manager)
     path("sesiones/", views.SesionesView.as_view(), name="acceso-sesiones"),
+    path("sesiones/visitante/", views.SesionVisitanteView.as_view(), name="acceso-sesion-visitante"),
     path("autorizaciones-temporales/canjear/", views.CanjeView.as_view(), name="acceso-canjear"),
+    # PIN maestro y profesores (requisitos de acceso 2026-10-05). Registro y restablecimiento van SIN sesión: los autoriza el PIN maestro.
+    path("pin-maestro/", views.PinMaestroView.as_view(), name="acceso-pin-maestro"),
+    path("docentes/registro/", views.DocentesRegistroView.as_view(), name="acceso-docentes-registro"),
+    path("docentes/restablecer/", views.DocentesRestablecerView.as_view(), name="acceso-docentes-restablecer"),
+    path("docentes/", views.DocentesView.as_view(), name="acceso-docentes"),
+    # la tableta del alumno: grupos, nombres, alta propia, PIN pendiente y visitantes
+    path("aula/grupos/", views.AulaGruposView.as_view(), name="acceso-aula-grupos"),
+    path("aula/grupos/<str:pk>/estudiantes/", views.AulaEstudiantesView.as_view(), name="acceso-aula-estudiantes"),
+    path("estudiantes/registro/", views.EstudiantesRegistroView.as_view(), name="acceso-estudiantes-registro"),
+    path("estudiantes/<str:pk>/pin/", views.EstudiantePinView.as_view(), name="acceso-estudiante-pin"),
+    path("visitantes/", views.VisitantesView.as_view(), name="acceso-visitantes"),
     # identidad propia
     path("yo/", views.YoView.as_view(), name="acceso-yo"),
     path("yo/credencial/", views.CredencialPropiaView.as_view(), name="acceso-yo-credencial"),
@@ -19,6 +31,7 @@ urlpatterns = [
     path("usuarios/importar/", views.ImportarUsuariosView.as_view(), name="acceso-usuarios-importar"),
     path("usuarios/<str:pk>/", views.UsuarioView.as_view(), name="acceso-usuario"),
     path("usuarios/<str:pk>/vincular/", views.UsuarioVincularView.as_view(), name="acceso-usuario-vincular"),
+    path("usuarios/<str:pk>/confirmar/", views.UsuarioConfirmarView.as_view(), name="acceso-usuario-confirmar"),
     path("usuarios/<str:pk>/roles/", views.UsuarioRolesView.as_view(), name="acceso-usuario-roles"),
     path("usuarios/<str:pk>/roles/<str:asignacion_id>/", views.UsuarioRolView.as_view(), name="acceso-usuario-rol-asignacion"),
     path("usuarios/<str:pk>/rol/", views.UsuarioRolesView.as_view(), name="acceso-usuario-rol"),

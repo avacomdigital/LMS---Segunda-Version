@@ -32,7 +32,10 @@ class BaseApiAuditoria(BaseAcceso):
             "rol": "ADMIN", "alias": "Coordinación", "persona": {"nombres": "Carla", "apellidos": "Coord"},
             "identificadores": [{"tipo": "DNI", "valor": "52.000.111", "es_login": True}], "secreto": "Coordina.2026!Aula", "secreto_definitivo": True}, format="json")
         self.assertEqual(r.status_code, 201, r.content)
-        return self.sesion("52.000.111", "Coordina.2026!Aula")
+        # Toda cuenta de administración entra además con el PIN maestro mientras esté vigente.
+        r = self.login("52.000.111", "Coordina.2026!Aula", pin_maestro=self.PIN_MAESTRO)
+        self.assertEqual(r.status_code, 200, r.content)
+        return self.con_token(r.json()["token"])
 
     def escalar(self, usuario_id: str, permiso: str, horas: float = 1):
         """Otra identidad concede la escalada (OtorgarEscalada prohíbe la autoconcesión)."""

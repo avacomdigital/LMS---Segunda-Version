@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 
 from ..dominio import errores
 from ..dominio.entidades import Principal
+from ..dominio.politicas import PoliticaPinMaestro
 from ..dominio.valores import Alcance, ClaseSesion
 from . import casos_uso as cu
 
@@ -75,7 +76,9 @@ class EstadoPadron(_Padron):
             con_grupo.update(m["usuario_id"] for m in estudiantes)
             grupos.append({**{k: g[k] for k in ("id", "codigo", "nombre", "periodo", "nivel_clave", "activo")},
                            "estudiantes": [{"id": m["usuario_id"], "alias": m["alias"], "estado": m["estado"],
-                                            "provisional": m["provisional"]} for m in estudiantes],
+                                            "provisional": m["provisional"], "origen": m.get("origen"),
+                                            "confirmado": m.get("confirmado", True), "pin_pendiente": m.get("pin_pendiente", False)}
+                                           for m in estudiantes],
                            "docentes": sum(1 for m in miembros if m["papel"] == "DOCENTE")})
         try:
             todos = cu.ListarUsuarios(self.s).ejecutar(actor, None, ROL_ESTUDIANTE, "ACTIVO")
@@ -96,8 +99,9 @@ class RegistrarGrupo(_Padron):
 
 
 class RegistrarEstudiante(_Padron):
-    """Persona + identificador + PIN + pertenencia al grupo, en una sola transacción (`CrearUsuario`). Si no se da documento el nodo emite una
-    clave de instalación; si no se da PIN lo genera según el reglamento del perfil y se devuelve UNA vez en `secreto_inicial`."""
+    """Persona + identificador + pertenencia al grupo, en una sola transacción (`CrearUsuario`). Si no se da documento el nodo emite una clave de
+    instalación. Si no se da PIN la cuenta queda en «PIN pendiente» (RB-26, RN-35): no se genera ni se imprime ningún número, y el alumno elige el
+    suyo la primera vez que toca su nombre en la tableta."""
 
     def ejecutar(self, principal: Principal | None, datos: dict) -> dict:
         actor = self.actor(principal)
@@ -113,16 +117,14 @@ class RegistrarEstudiante(_Padron):
             "persona": {"nombres": nombres, "apellidos": apellidos},
             "identificadores": [{"tipo": "CODIGO_ESTUDIANTIL", "valor": documento, "es_login": True}] if documento else [],
             "secreto": str(datos.get("pin") or ""), "secreto_definitivo": bool(datos.get("pin")),
+            "pin_pendiente": not datos.get("pin"),
             "grupo_id": str(datos["grupo_id"]).strip(),
         }
         usuario = cu.CrearUsuario(self.s).ejecutar(actor, entrada)
         identificadores = usuario.get("identificadores") or []
         principal_id = next((i for i in identificadores if i.get("principal")), identificadores[0] if identificadores else {})
-        salida = {"id": usuario["id"], "alias": usuario["alias"], "grupo_id": entrada["grupo_id"],
-                  "identificador": principal_id.get("valor") or ""}
-        if "secreto_inicial" in usuario:
-            salida["secreto_inicial"] = usuario["secreto_inicial"]
-        return salida
+        return {"id": usuario["id"], "alias": usuario["alias"], "grupo_id": entrada["grupo_id"],
+                "identificador": principal_id.get("valor") or "", "pin_pendiente": entrada["pin_pendiente"]}
 
 
 class MatricularEstudiante(_Padron):
@@ -137,10 +139,14 @@ class RetirarEstudiante(_Padron):
 
 class PrepararAulaDePrueba(cu.Base):
     """El «día cero» mínimo para probar sin pasar por el instalador: organización de prueba y una cuenta de administración (con la clave
-    generada, que NO se devuelve: nadie entra con ella; el aula de prueba no exige sesión). Sólo con el nodo vacío; si ya está instalado es 409."""
+    y el PIN maestro generados al azar, que NO se devuelven: nadie entra con ellos; el aula de prueba no exige sesión). Sólo con el nodo vacío;
+    si ya está instalado es 409."""
 
     def ejecutar(self) -> dict:
+        pin = self.s.azar.pin(6)
+        while PoliticaPinMaestro.es_trivial(pin):
+            pin = self.s.azar.pin(6)
         salida = cu.InstalarNodo(self.s).ejecutar(
             {"codigo": "AULA-PRUEBA", "nombre": "Aula de prueba", "pais": "CO", "idioma": "es", "locale": "es-CO"},
-            {"alias": "Administración", "nombres": "Administración", "apellidos": "del aula de prueba", "dni": "ADMIN-PRUEBA"})
+            {"alias": "Administración", "nombres": "Administración", "apellidos": "del aula de prueba", "dni": "ADMIN-PRUEBA"}, pin)
         return {"organizacion": salida["organizacion"]}

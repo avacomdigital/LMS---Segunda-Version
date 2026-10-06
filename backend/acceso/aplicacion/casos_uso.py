@@ -36,6 +36,7 @@ from ..dominio.entidades import (
     Organizacion,
     Permiso,
     Persona,
+    PinMaestro,
     PoliticaCredencial,
     Principal,
     Rol,
@@ -53,11 +54,13 @@ from ..dominio.politicas import (
     PoliticaAutorizacion,
     PoliticaBloqueo,
     PoliticaFortaleza,
+    PoliticaPinMaestro,
     SinObjetivo,
     politica_aplicable,
 )
 from ..dominio.valores import (
     Alcance,
+    BloqueoAlcance,
     ClaseSesion,
     CountryCode,
     DocumentNumber,
@@ -67,10 +70,12 @@ from ..dominio.valores import (
     Menu,
     MotivoCierre,
     NivelEducativo,
+    OrigenCuenta,
     PapelGrupo,
     PermissionCode,
     ResultadoIntento,
     TipoAutorizacion,
+    TipoDispositivo,
     TipoIdentificador,
     TipoSecreto,
     UserId,
@@ -266,6 +271,8 @@ class Base:
             "estado": usuario.estado.value,
             "provisional": usuario.provisional,
             "vinculado_a": usuario.vinculado_a,
+            "origen": usuario.origen.value,
+            "confirmado": usuario.confirmado_en is not None,
             "bloqueado_hasta": bloqueo.hasta if bloqueo.bloqueado else None,
             "intentos_fallidos": bloqueo.fallos,
             "tiene_credencial": credencial is not None,
@@ -327,6 +334,7 @@ class Base:
                 "ventana_intentos_min": p.ventana_intentos_min, "bloqueo_minutos": p.bloqueo_minutos,
                 "duracion_sesion_min": p.duracion_sesion_min, "inactividad_min": p.inactividad_min,
                 "vigencia_credencial_dias": p.vigencia_credencial_dias, "permite_acceso_temporal": p.permite_acceso_temporal,
+                "autoregistro": p.autoregistro, "bloqueo_alcance": p.bloqueo_alcance.value,
                 "actualizado_en": p.actualizado_en}
 
     @staticmethod
@@ -355,9 +363,10 @@ class Base:
         raise errores.Conflicto("No se pudo generar una clave que cumpla la política.")
 
     def establecer_credencial(self, uow: UnidadDeTrabajo, usuario: Usuario, politica: PoliticaCredencial, secreto: str,
-                              creado_por: str | None, debe_cambiar: bool) -> Credencial:
+                              creado_por: str | None, debe_cambiar: bool, revisar_historial: bool = True) -> Credencial:
         PoliticaFortaleza.exigir(secreto, politica)
-        for anterior in uow.credenciales.historial(usuario.id, plantillas.CREDENCIALES_NO_REUTILIZABLES):
+        # El PIN de un alumno reconoce, no protege (RN-31): quien eligió «1234» y tras un restablecimiento vuelve a elegirlo no debe toparse con una regla.
+        for anterior in (uow.credenciales.historial(usuario.id, plantillas.CREDENCIALES_NO_REUTILIZABLES) if revisar_historial else []):
             if self.s.hasher.verificar(anterior.hash, secreto):
                 raise errores.SecretoDebil("No puede reutilizar una clave anterior.", reglas=["Elija una clave distinta de las últimas usadas."])
         ahora = self.ahora()
@@ -380,6 +389,18 @@ class Base:
         uow.sesiones.guardar(sesion)
         self.auditar(uow, actor_id or sesion.usuario_id, "identidad.sesion.cerrada", "m01_sesion", sesion.id, {"motivo": motivo.value})
         self.evento(uow, "sesion", sesion.id, "sesion_cerrada", {"usuario_id": sesion.usuario_id, "motivo": motivo.value})
+        if sesion.clase is ClaseSesion.VISITANTE:
+            self.retirar_visita(uow, sesion.usuario_id, actor_id)
+
+    def retirar_visita(self, uow: UnidadDeTrabajo, usuario_id: str, actor_id: str | None = None) -> None:
+        """RN-45: la cuenta efímera de una visita se RETIRA al cerrar la sesión (o a las 24 h); nunca se borra (CV-05)."""
+        visita = uow.usuarios.por_id(usuario_id)
+        if visita is None or visita.origen is not OrigenCuenta.VISITANTE or visita.estado is EstadoUsuario.RETIRADO:
+            return
+        visita.estado = EstadoUsuario.RETIRADO
+        visita.actualizado_en = self.ahora()
+        uow.usuarios.guardar(visita)
+        self.auditar(uow, actor_id or visita.id, "identidad.visita.retirada", "m01_usuario", visita.id)
 
     def abrir_sesion(self, uow: UnidadDeTrabajo, usuario: Usuario, rol: Rol, politica: PoliticaCredencial,
                      dispositivo: Dispositivo | None, clase: ClaseSesion, debe_cambiar: bool,
@@ -400,9 +421,12 @@ class Base:
             for ajena in uow.sesiones.abiertas_en_dispositivo(dispositivo.id, ahora):
                 if ajena.usuario_id != usuario.id:
                     self.cerrar_sesion(uow, ajena, MotivoCierre.DISPOSITIVO_COMPARTIDO, actor_id=usuario.id)
+        duracion_min = politica.duracion_sesion_min
+        if clase is ClaseSesion.VISITANTE:
+            duracion_min = min(duracion_min, plantillas.HORAS_VIDA_VISITANTE * 60)   # RN-45: una visita no pasa de 24 h
         sesion = Sesion(
             id=_nuevo_id(), usuario_id=usuario.id, clase=clase, emitida_en=ahora,
-            expira_en=ahora + politica.duracion_sesion_min * MINUTO_MS,
+            expira_en=ahora + duracion_min * MINUTO_MS,
             dispositivo_id=dispositivo.id if dispositivo else None, evaluacion_ref=evaluacion_ref, rol_id=rol.id,
         )
         uow.sesiones.guardar(sesion)
@@ -421,7 +445,8 @@ class Base:
             "sesion_anterior": anterior,
             "usuario": {"id": usuario.id, "alias": usuario.alias, "rol": rol.codigo, "menu": rol.menu_principal.value,
                         "nivel": rol.nivel, "debe_cambiar_credencial": debe_cambiar, "clase_sesion": clase.value,
-                        "evaluacion_ref": evaluacion_ref, "provisional": usuario.provisional},
+                        "evaluacion_ref": evaluacion_ref, "provisional": usuario.provisional,
+                        "origen": usuario.origen.value, "confirmado": usuario.confirmado_en is not None},
         }
 
     def dispositivo_por_identificador(self, uow: UnidadDeTrabajo, organizacion_id: str, identificador: str | None) -> Dispositivo | None:
@@ -477,7 +502,10 @@ class InstalarNodo(Base):
     con `manage.py acceso_instalar`.
     """
 
-    def ejecutar(self, organizacion: dict, administrador: dict) -> dict:
+    def ejecutar(self, organizacion: dict, administrador: dict, pin_maestro: str | None = None) -> dict:
+        # RN-03 y RB-21: el PIN maestro se configura en el primer arranque y sin él no se instala. Se valida ANTES de abrir la carpeta de
+        # trabajo: un PIN trivial no deja un colegio a medias.
+        pin = PoliticaPinMaestro.exigir_fuerte(pin_maestro)
         # Toda la instalación ocurre dentro de UNA sola «carpeta de trabajo»: o queda el colegio
         # completo con su administrador y su reglamento, o no queda nada.
         with self.s.uow() as uow:
@@ -516,9 +544,12 @@ class InstalarNodo(Base):
             }
             # La única persona a la que no la creó nadie. Si la contraseña se genera, nace provisional.
             creado = CrearUsuario(self.s)._crear(uow, org, rol_admin, datos_admin, creado_por=None,
-                                                 provisional=not administrador.get("password"))
+                                                 provisional=not administrador.get("password"),
+                                                 origen=OrigenCuenta.INSTALACION, confirmado=True)
             self.auditar(uow, creado["id"], "identidad.instalacion", "m01_organizacion", org.id, {"codigo": org.codigo})
             self.evento(uow, "organizacion", org.id, "organizacion_instalada", {"codigo": org.codigo})
+            # RB-10: la primera versión del PIN maestro nace aquí, sin creador (aún no hay quien pueda serlo). Nunca se devuelve ni se escribe en claro.
+            crear_version_pin_maestro(self, uow, org, pin, creado_por=None, motivo="instalacion")
             salida = {"organizacion": dto_organizacion(org),
                       "administrador": {"id": creado["id"], "alias": creado["alias"]}}
             # La contraseña generada se devuelve AQUÍ Y NADA MÁS QUE AQUÍ (PAN-204: hoja de un solo uso).
@@ -530,6 +561,26 @@ class InstalarNodo(Base):
 def dto_organizacion(org: Organizacion) -> dict:
     return {"id": org.id, "codigo": org.codigo, "nombre": org.nombre, "pais": org.pais, "idioma": org.idioma,
             "locale": org.locale, "zona_horaria": org.zona_horaria}
+
+
+def crear_version_pin_maestro(caso: Base, uow: UnidadDeTrabajo, org: Organizacion, pin: str, creado_por: str | None, motivo: str) -> PinMaestro:
+    """Nace una versión nueva del PIN maestro: la anterior se sustituye (y se conserva), el reloj de 365 días arranca de cero (RN-07)
+    y queda el evento y el asiento de auditoría. Sólo guarda la huella Argon2id (RN-04). `pin` ya viene validado."""
+    ahora = caso.ahora()
+    anterior = uow.pines_maestros.activo(org.id)
+    if anterior is not None:
+        uow.pines_maestros.sustituir_activo(org.id, ahora)
+    version = PinMaestro(id=_nuevo_id(), organizacion_id=org.id, hash=caso.s.hasher.hash(pin), activa=True, creado_en=ahora,
+                         vence_en=PoliticaPinMaestro.vence_en(ahora), creado_por=creado_por)
+    uow.pines_maestros.guardar(version)
+    clave = "pin_maestro_configurado" if anterior is None else "pin_maestro_cambiado"
+    carga = {"vence_en": version.vence_en}
+    if anterior is not None:
+        carga["motivo"] = "vencimiento" if PoliticaPinMaestro.esta_vencido(anterior.vence_en, ahora) else motivo
+    caso.evento(uow, "pin_maestro", version.id, clave, carga)
+    caso.auditar(uow, creado_por or "sistema", f"identidad.pin_maestro.{'configurado' if anterior is None else 'cambiado'}",
+                 "m01_pin_maestro", version.id, carga)
+    return version
 
 
 class ConsultarConfiguracion(Base):
@@ -545,10 +596,14 @@ class ConsultarConfiguracion(Base):
                 return {"instalado": False, "claves_derivadas": self.s.cifrador.claves_derivadas()}
             perfiles: dict[str, dict] = {}
             duracion, inactividad = 240, 20
+            registro_propio: dict[str, bool] = {}
             for p in uow.politicas.por_organizacion(org.id):
                 resumen = {"tipo_identificador": p.tipo_identificador.value, "tipo_secreto": p.tipo_secreto.value,
                            "longitud_minima": p.longitud_minima, "permite_acceso_temporal": p.permite_acceso_temporal,
-                           "inactividad_min": p.inactividad_min}
+                           "inactividad_min": p.inactividad_min, "autoregistro": p.autoregistro,
+                           "bloqueo_alcance": p.bloqueo_alcance.value}
+                if not p.nivel_clave:
+                    registro_propio[p.perfil.value] = p.autoregistro
                 destino = perfiles.setdefault(p.perfil.value, {"niveles": {}})
                 if p.nivel_clave:
                     destino["niveles"][p.nivel_clave] = resumen
@@ -556,9 +611,19 @@ class ConsultarConfiguracion(Base):
                     destino.update(resumen)
                     if p.perfil is Menu.STUDENT:
                         duracion, inactividad = p.duracion_sesion_min, p.inactividad_min
+            # RB-24: sin datos personales ni fechas: el estado fino del PIN maestro es de la administración.
+            pin = uow.pines_maestros.activo(org.id)
+            # `por_vencer` (a 30 días o menos) sólo enciende la banda del tablero para administración y técnico (RN-08); sin cifras ni fechas.
+            estado_pin = {"configurado": pin is not None,
+                          "vencido": pin is not None and PoliticaPinMaestro.esta_vencido(pin.vence_en, self.ahora()),
+                          "por_vencer": pin is not None and PoliticaPinMaestro.en_aviso(pin.vence_en, self.ahora())}
             return {"instalado": True, "organizacion": dto_organizacion(org), "perfiles": perfiles,
                     "duracion_sesion_min": duracion, "inactividad_min": inactividad,
                     "niveles_educativos": [n.value for n in NivelEducativo],
+                    "pin_maestro": estado_pin,
+                    "autoregistro_alumnos": registro_propio.get("student", False),
+                    "autoregistro_docentes": registro_propio.get("teacher", False),
+                    "visitante": org.visitante,
                     "claves_derivadas": self.s.cifrador.claves_derivadas()}
 
 
@@ -569,9 +634,95 @@ class ConsultarConfiguracion(Base):
 # ============================================================ autenticación
 
 
+class VerificadorPinMaestro(Base):
+    """Verifica el PIN maestro DENTRO de la operación que autoriza (D-A6: no existe un endpoint «verificar», sería el oráculo perfecto
+    para quien prueba combinaciones). Aplica, en este orden:
+
+      · RN-11: no se acepta desde una tableta de alumno (`m09_dispositivo.tipo` = TABLETA).
+      · RN-10: 5 fallos en 15 min desde un mismo equipo lo bloquean 15 min (60 tras tres bloqueos seguidos) y hay un tope de 20 fallos por
+        hora en todo el nodo. Se calcula sobre `m01_intento_acceso`, igual que el bloqueo de las cuentas (RB-32).
+      · RN-09: vencido, no autoriza nada.
+      · RB-34: con o sin versión activa se paga el mismo coste (hash señuelo): el tiempo no delata el estado.
+
+    Quien llama debe hacerlo dentro de `ejecutar_registrando`: los fallos y los bloqueos tienen que quedar escritos aunque la respuesta sea un error.
+    """
+
+    _hash_senuelo: str | None = None
+
+    def _senuelo(self) -> str:
+        if VerificadorPinMaestro._hash_senuelo is None:
+            VerificadorPinMaestro._hash_senuelo = self.s.hasher.hash(self.s.azar.token_url(16))
+        return VerificadorPinMaestro._hash_senuelo
+
+    def estado_de_bloqueo(self, uow: UnidadDeTrabajo, dispositivo_id: str | None, ahora: int):
+        equipo = PoliticaPinMaestro.evaluar_bloqueo_equipo(uow.intentos.pin_maestro_del_equipo(dispositivo_id, ahora - DIA_MS), ahora)
+        general = PoliticaPinMaestro.evaluar_bloqueo_global(uow.intentos.pin_maestro_fallos_globales(ahora - HORA_MS), ahora)
+        if general.bloqueado and (not equipo.bloqueado or (general.hasta or 0) > (equipo.hasta or 0)):
+            return general
+        return equipo
+
+    @staticmethod
+    def _minutos(segundos: int) -> int:
+        return max(1, (segundos + 59) // 60)
+
+    def exigir(self, uow: UnidadDeTrabajo, org: Organizacion, pin: str, dispositivo: Dispositivo | None, operacion: str) -> PinMaestro:
+        ahora = self.ahora()
+        disp_id = dispositivo.id if dispositivo else None
+        if dispositivo is not None and dispositivo.tipo is TipoDispositivo.TABLETA:
+            self.auditar(uow, "", "identidad.pin_maestro.rechazado_en_tableta", "m09_dispositivo", dispositivo.id, {"operacion": operacion})
+            raise errores.DispositivoNoAutorizado("Esto se hace desde el equipo del profesor.")
+        bloqueo = self.estado_de_bloqueo(uow, disp_id, ahora)
+        if bloqueo.bloqueado:
+            uow.intentos.registrar(IntentoAcceso("", ResultadoIntento.BLOQUEADO, "pin_maestro", ahora, None, disp_id))
+            segundos = bloqueo.segundos_restantes(ahora)
+            raise errores.PinMaestroBloqueado(
+                f"Demasiados intentos desde este equipo. Vuelve a probar en {self._minutos(segundos)} minutos.",
+                reintentar_en_seg=segundos, bloqueado_hasta=bloqueo.hasta)
+        activo = uow.pines_maestros.activo(org.id)
+        if activo is None:
+            self.s.hasher.verificar(self._senuelo(), str(pin or ""))
+            raise errores.PinMaestroNoConfigurado("Este equipo todavía no tiene PIN maestro. Pídele a la administración que lo configure.")
+        pin = PoliticaPinMaestro.validar_formato(pin)   # una forma inválida no es un intento de adivinar: no gasta uno
+        if PoliticaPinMaestro.esta_vencido(activo.vence_en, ahora):
+            if not uow.outbox.ya_publicado("pin_maestro", activo.id, EV["pin_maestro_vencido"]):
+                self.evento(uow, "pin_maestro", activo.id, "pin_maestro_vencido", {"vence_en": activo.vence_en})
+            raise errores.PinMaestroVencido("El PIN maestro venció. Pídele a administración que lo cambie y vuelve a intentarlo.")
+        if not self.s.hasher.verificar(activo.hash, pin):
+            uow.intentos.registrar(IntentoAcceso("", ResultadoIntento.FALLO, "pin_maestro", ahora, None, disp_id))
+            carga = {"dispositivo_id": disp_id, "operacion": operacion}   # nunca el PIN intentado
+            self.evento(uow, "pin_maestro", activo.id, "pin_maestro_fallido", carga)
+            self.auditar(uow, "", "identidad.pin_maestro.fallido", "m01_pin_maestro", activo.id, carga)
+            despues = self.estado_de_bloqueo(uow, disp_id, ahora)
+            if despues.bloqueado:
+                escalado = (not despues.global_) and despues.episodios >= PoliticaPinMaestro.BLOQUEOS_PARA_ESCALAR
+                aviso = {**carga, "hasta": despues.hasta, "tope_global": despues.global_, "avisar_administrador": escalado}
+                self.evento(uow, "pin_maestro", activo.id, "pin_maestro_bloqueado", aviso)
+                self.auditar(uow, "", "identidad.pin_maestro.bloqueado", "m01_pin_maestro", activo.id, aviso)
+                segundos = despues.segundos_restantes(ahora)
+                raise errores.PinMaestroBloqueado(
+                    f"Demasiados intentos desde este equipo. Vuelve a probar en {self._minutos(segundos)} minutos.",
+                    reintentar_en_seg=segundos, bloqueado_hasta=despues.hasta)
+            restantes = max(0, PoliticaPinMaestro.INTENTOS_POR_EQUIPO - despues.fallos)
+            raise errores.PinMaestroInvalido(
+                "Ese PIN no es. " + (f"Te quedan {restantes} intentos." if restantes != 1 else "Te queda 1 intento."),
+                intentos_restantes=restantes)
+        uow.intentos.registrar(IntentoAcceso("", ResultadoIntento.EXITO, "pin_maestro", ahora, None, disp_id))
+        return activo
+
+
 class AutenticarUsuario(Base):
     """FUN-004 y FUN-005: identificador + secreto → sesión. Mismo error y mismo coste para «no existe» y
-    «clave incorrecta». Si la persona tiene varios roles vigentes, elige uno al entrar (BR-021)."""
+    «clave incorrecta». Si la persona tiene varios roles vigentes, elige uno al entrar (BR-021).
+
+    Tres formas de identificarse, un solo caso de uso (el sistema decide quién es por la cuenta, no por la pantalla):
+      · `identificador` + `secreto`: el personal con su documento y su contraseña; el alumno con su código.
+      · `usuario_id` + `secreto` (RB-22, PAN-002): el alumno toca su nombre en la lista del grupo y marca su PIN o su avatar. Sólo desde
+        una tableta registrada (BR-056) y sólo para alumnos: ninguna otra cuenta se abre por su nombre.
+      · La administración, además, exige el PIN maestro mientras esté vigente (`pin_maestro`): se contesta `pin_maestro_requerido` DESPUÉS
+        de comprobar la contraseña, para no revelar a quien no la conoce qué cuentas son de administración. Un PIN vencido no se exige:
+        sólo la sesión del administrador puede reemplazarlo (RN-09).
+
+    El castigo por equivocarse recae en la cuenta (personal) o en la tableta (alumnos, RN-33), según `bloqueo_alcance` de la política."""
 
     _hash_senuelo: str | None = None
 
@@ -580,28 +731,39 @@ class AutenticarUsuario(Base):
             AutenticarUsuario._hash_senuelo = self.s.hasher.hash(self.s.azar.token_url(16))
         return AutenticarUsuario._hash_senuelo
 
-    def ejecutar(self, identificador: str, secreto: str, dispositivo: str | None = None, rol: str | None = None) -> dict:
+    def ejecutar(self, identificador: str, secreto: str, dispositivo: str | None = None, rol: str | None = None,
+                 usuario_id: str | None = None, pin_maestro: str | None = None) -> dict:
         identificador = str(identificador or "").strip()
+        usuario_id = str(usuario_id or "").strip() or None
         secreto = str(secreto or "")
-        if not identificador or not secreto:
+        if (not identificador and not usuario_id) or not secreto:
             raise errores.DatosInvalidos("Faltan identificador o clave.")
         # Los intentos fallidos deben quedar escritos aunque la respuesta sea un error.
-        return self.ejecutar_registrando(lambda uow: self._autenticar(uow, identificador, secreto, dispositivo, rol))
+        return self.ejecutar_registrando(lambda uow: self._autenticar(uow, identificador, usuario_id, secreto, dispositivo, rol, pin_maestro))
 
-    def _autenticar(self, uow: UnidadDeTrabajo, identificador: str, secreto: str, dispositivo: str | None,
-                    rol_codigo: str | None) -> dict:
+    def _autenticar(self, uow: UnidadDeTrabajo, identificador: str, usuario_id: str | None, secreto: str, dispositivo: str | None,
+                    rol_codigo: str | None, pin_maestro: str | None) -> dict:
         org = uow.organizaciones.unica()
         if org is None:
             raise errores.CredencialesInvalidas()
         ahora = self.ahora()
-        como_documento, como_email = DocumentNumber.normalizar_entrada(identificador)
-        hmac_doc = self.s.cifrador.indice(como_documento)
-        encontrado = uow.usuarios.por_identificador(hmac_doc)
-        if encontrado is None and "@" in identificador:
-            hmac_doc = self.s.cifrador.indice(como_email)
-            encontrado = uow.usuarios.por_identificador(hmac_doc)
         disp = self.dispositivo_por_identificador(uow, org.id, dispositivo)
         disp_id = disp.id if disp else None
+        hmac_doc = ""
+        encontrado = None
+        if usuario_id:
+            if disp is None:
+                raise errores.DispositivoNoAutorizado("Esta tableta no está registrada en el aula. Pídele ayuda al profesor.")
+            candidato = uow.usuarios.por_id(usuario_id)
+            if candidato is not None and candidato.organizacion_id == org.id:
+                encontrado = (candidato, None)
+        else:
+            como_documento, como_email = DocumentNumber.normalizar_entrada(identificador)
+            hmac_doc = self.s.cifrador.indice(como_documento)
+            encontrado = uow.usuarios.por_identificador(hmac_doc)
+            if encontrado is None and "@" in identificador:
+                hmac_doc = self.s.cifrador.indice(como_email)
+                encontrado = uow.usuarios.por_identificador(hmac_doc)
 
         def fallo(usuario_id: str | None, motivo: str, resultado=ResultadoIntento.FALLO):
             uow.intentos.registrar(IntentoAcceso(hmac_doc, resultado, motivo, ahora, usuario_id, disp_id))
@@ -635,15 +797,40 @@ class AutenticarUsuario(Base):
             raise errores.Conflicto("La persona no tiene ningún rol vigente.")
 
         politica = self.politica_de(uow, usuario, rol)
-        if not ident.es_login or not politica.admite_identificador(ident.tipo):
+        if ident is None:
+            # Por nombre (RB-22): sólo alumnos y sólo con PIN o avatar; cualquier otra cuenta se trata como si no existiera.
+            if rol.menu_principal is not Menu.STUDENT or politica.tipo_secreto is TipoSecreto.PASSWORD                     or usuario.origen is OrigenCuenta.VISITANTE:   # una visita no tiene clave: entra por su botón, nunca por su nombre
+                self.s.hasher.verificar(self._senuelo(), secreto)
+                fallo(usuario.id, "login_por_nombre_no_permitido")
+                raise errores.CredencialesInvalidas()
+            if uow.credenciales.activa(usuario.id) is None:
+                # RN-35: todavía no eligió su PIN. No es un intento fallido: se le manda a elegirlo.
+                raise errores.PinPendiente("Todavía no tienes PIN. Elige uno de 4 números que recuerdes.", usuario_id=usuario.id)
+        elif not ident.es_login or not politica.admite_identificador(ident.tipo):
             self.s.hasher.verificar(self._senuelo(), secreto)
             fallo(usuario.id, "identificador_no_permitido")
             raise errores.CredencialesInvalidas()
 
         ventana = max(politica.ventana_intentos_min, politica.bloqueo_minutos) * MINUTO_MS
-        bloqueo = PoliticaBloqueo.evaluar(uow.intentos.recientes(usuario.id, ahora - ventana), politica, ahora)
+        # RN-33: con `bloqueo_alcance = DISPOSITIVO` el castigo recae en la tableta; la cuenta no se bloquea nunca por intentos.
+        por_tableta = politica.bloqueo_alcance is BloqueoAlcance.DISPOSITIVO and disp is not None
+
+        def evaluar_bloqueo():
+            if por_tableta:
+                return PoliticaBloqueo.evaluar_dispositivo(uow.intentos.de_dispositivo(disp.id, ahora - ventana), politica, ahora)
+            return PoliticaBloqueo.evaluar(uow.intentos.recientes(usuario.id, ahora - ventana), politica, ahora)
+
+        def en_pausa(estado):
+            segundos = estado.segundos_restantes(ahora)
+            return errores.DispositivoEnPausa(
+                f"Esperemos un momento: vuelve a probar en {max(1, (segundos + 59) // 60)} minutos, o entra como visitante.",
+                reintentar_en_seg=segundos, bloqueado_hasta=estado.hasta)
+
+        bloqueo = evaluar_bloqueo()
         if bloqueo.bloqueado:
-            fallo(usuario.id, "bloqueo_automatico", ResultadoIntento.BLOQUEADO)
+            fallo(usuario.id, "dispositivo_en_pausa" if por_tableta else "bloqueo_automatico", ResultadoIntento.BLOQUEADO)
+            if por_tableta:
+                raise en_pausa(bloqueo)
             raise errores.UsuarioBloqueado("Demasiados intentos. Espere o pida al docente que lo desbloquee.",
                                            reintentar_en_seg=bloqueo.segundos_restantes(ahora), bloqueado_hasta=bloqueo.hasta)
 
@@ -652,8 +839,12 @@ class AutenticarUsuario(Base):
             if credencial is None:
                 self.s.hasher.verificar(self._senuelo(), secreto)
             fallo(usuario.id, "sin_credencial" if credencial is None else "secreto_invalido")
-            despues = PoliticaBloqueo.evaluar(uow.intentos.recientes(usuario.id, ahora - ventana), politica, ahora)
+            despues = evaluar_bloqueo()
             if despues.bloqueado:
+                if por_tableta:
+                    self.auditar(uow, usuario.id, "identidad.dispositivo.en_pausa", "m09_dispositivo", disp.id,
+                                 {"fallos": despues.fallos, "hasta": despues.hasta})
+                    raise en_pausa(despues)
                 # FUN-007: bloquear la cuenta tras intentos fallidos consecutivos.
                 self.auditar(uow, usuario.id, "identidad.cuenta.bloqueada", "m01_usuario", usuario.id,
                              {"fallos": despues.fallos, "hasta": despues.hasta})
@@ -662,6 +853,15 @@ class AutenticarUsuario(Base):
                                                reintentar_en_seg=despues.segundos_restantes(ahora), bloqueado_hasta=despues.hasta)
             restantes = max(0, politica.intentos_maximos - despues.fallos)
             raise errores.CredencialesInvalidas(intentos_restantes=restantes)
+
+        # La administración, además de su contraseña, exige el PIN maestro mientras esté vigente (y si no lo está, el administrador entra
+        # para poder reemplazarlo). La contraseña ya es correcta: aquí sí se puede decir qué falta.
+        if rol.menu_principal is Menu.ADMIN:
+            vigente = uow.pines_maestros.activo(org.id)
+            if vigente is not None and not PoliticaPinMaestro.esta_vencido(vigente.vence_en, ahora):
+                if not str(pin_maestro or "").strip():
+                    raise errores.PinMaestroRequerido("La administración entra además con el PIN maestro. Escríbelo para continuar.")
+                VerificadorPinMaestro(self.s).exigir(uow, org, str(pin_maestro), disp, "inicio_sesion_administracion")
 
         if self.s.hasher.necesita_rehash(credencial.hash):
             credencial.hash = self.s.hasher.hash(secreto)
@@ -895,10 +1095,16 @@ class CrearUsuario(Base):
                     raise errores.NoEncontrado("No existe ese grupo.")
                 if alcance is Alcance.ORGANIZATION:
                     self.exigir(ctx, "identity.group.member.manage", ObjetivoGrupo(grupo.id, grupo.organizacion_id))
-            return self._crear(uow, org, rol, datos, creado_por=principal.usuario_id, provisional=True, grupo=grupo)
+            # RB-03: quien la creó decide el origen (un profesor, o la administración por padrón o archivo).
+            origen = OrigenCuenta.PROFESOR if principal.menu is Menu.TEACHER else OrigenCuenta.IMPORTACION
+            return self._crear(uow, org, rol, datos, creado_por=principal.usuario_id, provisional=True, grupo=grupo, origen=origen,
+                               confirmado=True, pin_pendiente=bool(datos.get("pin_pendiente")) and rol.nivel == 1)
 
     def _crear(self, uow: UnidadDeTrabajo, org: Organizacion, rol: Rol, datos: dict, creado_por: str | None,
-               provisional: bool, grupo: Grupo | None = None) -> dict:
+               provisional: bool, grupo: Grupo | None = None, origen: OrigenCuenta = OrigenCuenta.IMPORTACION,
+               confirmado: bool = True, pin_pendiente: bool = False) -> dict:
+        """`confirmado`: quien la creó (o la instalación) respalda que es quien dice ser; las altas propias nacen «sin confirmar» (RB-03).
+        `pin_pendiente` (RN-35): la cuenta nace SIN credencial: la persona elige su PIN la primera vez que toca su nombre."""
         ahora = self.ahora()
         persona_datos = datos.get("persona") or {}
         nominal = bool(datos.get("provisional"))
@@ -907,6 +1113,7 @@ class CrearUsuario(Base):
             alias=_texto(datos.get("alias"), "el alias", 64),
             idioma=str(LanguageCode(datos.get("idioma") or org.idioma)),
             creado_en=ahora, actualizado_en=ahora, creado_por=creado_por, provisional=nominal,
+            origen=origen, confirmado_en=ahora if confirmado else None,
         )
         identificadores = self._identificadores(uow, usuario.id, datos.get("identificadores") or [], ahora, org)
         if not any(i.es_login for i in identificadores):
@@ -940,16 +1147,21 @@ class CrearUsuario(Base):
         politica = self.politica_de(uow, usuario, rol)
         secreto = str(datos.get("secreto") or "")
         generado = False
-        if not secreto:
-            secreto = self.generar_secreto(politica)
-            generado = True
-        # Quien crea la cuenta puede marcar el secreto como definitivo (colegios que prefieren PIN asignado
-        # por el docente); si no, la primera entrada obliga a cambiarlo.
-        debe_cambiar = provisional and not (bool(datos.get("secreto_definitivo")) and not generado)
-        self.establecer_credencial(uow, usuario, politica, secreto, creado_por=creado_por, debe_cambiar=debe_cambiar)
+        if pin_pendiente and not secreto:
+            debe_cambiar = False   # sin credencial: no hay nada que cambiar; el alumno elegirá su PIN al tocar su nombre
+        else:
+            if not secreto:
+                secreto = self.generar_secreto(politica)
+                generado = True
+            # Quien crea la cuenta puede marcar el secreto como definitivo (colegios que prefieren PIN asignado
+            # por el docente); si no, la primera entrada obliga a cambiarlo.
+            debe_cambiar = provisional and not (bool(datos.get("secreto_definitivo")) and not generado)
+            self.establecer_credencial(uow, usuario, politica, secreto, creado_por=creado_por, debe_cambiar=debe_cambiar,
+                                       revisar_historial=rol.nivel != 1)
         self.auditar(uow, creado_por or usuario.id, "identidad.usuario.creado", "m01_usuario", usuario.id,
-                     {"rol": rol.codigo, "provisional": nominal})
-        self.evento(uow, "usuario", usuario.id, "usuario_creado", {"rol": rol.codigo, "organizacion_id": org.id, "provisional": nominal})
+                     {"rol": rol.codigo, "provisional": nominal, "origen": origen.value})
+        self.evento(uow, "usuario", usuario.id, "usuario_creado", {"rol": rol.codigo, "organizacion_id": org.id, "provisional": nominal,
+                                                                    "origen": origen.value})
         salida = self.dto_usuario(uow, usuario, rol, incluir_pii=True, incluir_grupos=grupo is not None)
         if generado:
             salida["secreto_inicial"] = secreto
@@ -1056,7 +1268,10 @@ class ImportarUsuarios(Base):
         datos = {"rol": rol.codigo, "alias": alias, "persona": {"nombres": nombres, "apellidos": apellidos},
                  "identificadores": [{"tipo": tipo.value, "valor": identificador, "es_login": True, "principal": True}],
                  "secreto": fila.get("secreto") or ""}
-        creado = CrearUsuario(self.s)._crear(uow, org, rol, datos, creado_por=principal.usuario_id, provisional=True, grupo=grupo)
+        # RB-26 / RN-35: un alumno importado sin PIN queda en «PIN pendiente»: lo elegirá él la primera vez que toque su nombre.
+        creado = CrearUsuario(self.s)._crear(uow, org, rol, datos, creado_por=principal.usuario_id, provisional=True, grupo=grupo,
+                                             origen=OrigenCuenta.IMPORTACION, confirmado=True,
+                                             pin_pendiente=rol.nivel == 1 and not datos["secreto"])
         return {"existente": False, "id": creado["id"], "alias": creado["alias"], "identificador": identificador,
                 "grupo": grupo.codigo if grupo else None, "secreto_inicial": creado.get("secreto_inicial")}
 
@@ -1069,7 +1284,14 @@ class VincularUsuarioProvisional(Base):
     def ejecutar(self, principal: Principal, provisional_id: str, definitivo_id: str) -> dict:
         with self.s.uow() as uow:
             ctx = self.contexto(uow, principal)
-            provisional, _ = self.usuario_objetivo(uow, ctx, provisional_id, "identity.user.update")
+            visita = uow.usuarios.por_id(provisional_id)
+            if visita is not None and visita.origen is OrigenCuenta.VISITANTE and visita.organizacion_id == principal.organizacion_id:
+                # RN-44: una visita no pertenece a ningún grupo, así que el profesor no la «alcanza» por grupo: basta con que pueda
+                # actualizar al alumno al que la vincula (se exige abajo) y con tener el permiso con algún alcance.
+                self.exigir_alcance(ctx, "identity.user.update")
+                provisional = visita
+            else:
+                provisional, _ = self.usuario_objetivo(uow, ctx, provisional_id, "identity.user.update")
             definitivo, _ = self.usuario_objetivo(uow, ctx, definitivo_id, "identity.user.update")
             if not provisional.provisional:
                 raise errores.Conflicto("Esa cuenta no es provisional.")
@@ -1089,7 +1311,7 @@ class VincularUsuarioProvisional(Base):
 
 class ListarUsuarios(Base):
     def ejecutar(self, principal: Principal, grupo_id: str | None = None, rol: str | None = None,
-                 estado: str | None = None) -> list[dict]:
+                 estado: str | None = None, origen: str | None = None) -> list[dict]:
         with self.s.uow() as uow:
             ctx = self.contexto(uow, principal)
             alcance = self.exigir_alcance(ctx, "identity.user.read")
@@ -1097,7 +1319,8 @@ class ListarUsuarios(Base):
                 self.grupo_objetivo(uow, ctx, grupo_id, "identity.user.read")
             consulta = Alcance.ASSIGNED_GROUPS if alcance is Alcance.LEVEL else alcance
             usuarios = uow.usuarios.listar(principal.organizacion_id, consulta, principal.usuario_id, ctx.grupos_docente,
-                                           principal.nivel, grupo_id, (rol or "").upper() or None, (estado or "").upper() or None)
+                                           principal.nivel, grupo_id, (rol or "").upper() or None, (estado or "").upper() or None,
+                                           (origen or "").upper() or None)
             roles = {r.id: r for r in uow.roles.listar(principal.organizacion_id)}
             return [self.dto_usuario(uow, u, roles.get(u.rol_id), incluir_pii=True) for u in usuarios]
 
@@ -1334,16 +1557,22 @@ class RestablecerCredencial(Base):
             ctx = self.contexto(uow, principal)
             usuario, rol = self.usuario_objetivo(uow, ctx, usuario_id, "identity.password.reset")
             politica = self.politica_de(uow, usuario, rol)
-            provisional = str(secreto or "") or self.generar_secreto(politica)
-            self.establecer_credencial(uow, usuario, politica, provisional, creado_por=principal.usuario_id, debe_cambiar=True)
             ahora = self.ahora()
+            if rol.nivel == 1 and not secreto:
+                # RN-35: a un alumno no se le entrega ni se le imprime un número. La cuenta queda en PIN pendiente y él elige uno nuevo la
+                # próxima vez que toque su nombre; ni el profesor lo ve.
+                uow.credenciales.desactivar(usuario.id, ahora)
+                provisional = None
+            else:
+                provisional = str(secreto or "") or self.generar_secreto(politica)
+                self.establecer_credencial(uow, usuario, politica, provisional, creado_por=principal.usuario_id, debe_cambiar=True)
             revocadas = uow.sesiones.revocar_de_usuario(usuario.id, MotivoCierre.CREDENCIAL_RESTABLECIDA.value, ahora)
             uow.intentos.registrar(IntentoAcceso("", ResultadoIntento.DESBLOQUEO, "credencial_restablecida", ahora, usuario.id))
             self.auditar(uow, principal.usuario_id, "identidad.credencial.restablecida", "m01_credencial", usuario.id,
-                         {"sesiones_revocadas": revocadas, "tipo": politica.tipo_secreto.value})
+                         {"sesiones_revocadas": revocadas, "tipo": politica.tipo_secreto.value, "pin_pendiente": provisional is None})
             self.evento(uow, "credencial", usuario.id, "credencial_restablecida", {})
-            return {"secreto_provisional": provisional, "tipo_secreto": politica.tipo_secreto.value,
-                    "debe_cambiar": True, "sesiones_revocadas": revocadas}
+            return {"secreto_provisional": provisional, "tipo_secreto": politica.tipo_secreto.value, "pin_pendiente": provisional is None,
+                    "debe_cambiar": provisional is not None, "sesiones_revocadas": revocadas}
 
 
 class DesbloquearUsuario(Base):
@@ -1582,7 +1811,7 @@ class ConfigurarPolitica(Base):
     """BR-023 y BR-024: el reglamento de acceso se configura por perfil y, si el colegio quiere, por nivel
     educativo (preescolar con avatar, primaria con clave corta). Con `nivel` se crea o edita la excepción."""
 
-    CAMPOS_BOOL = ("exige_mayuscula", "exige_minuscula", "exige_digito", "exige_simbolo", "permite_acceso_temporal")
+    CAMPOS_BOOL = ("exige_mayuscula", "exige_minuscula", "exige_digito", "exige_simbolo", "permite_acceso_temporal", "autoregistro")
     CAMPOS_INT = ("longitud_minima", "intentos_maximos", "ventana_intentos_min", "bloqueo_minutos", "duracion_sesion_min",
                   "inactividad_min")
 
@@ -1608,6 +1837,8 @@ class ConfigurarPolitica(Base):
                 politica.tipo_identificador = _enum(TipoIdentificador, cambios["tipo_identificador"], "Tipo de identificador")
             if "tipo_secreto" in cambios:
                 politica.tipo_secreto = _enum(TipoSecreto, cambios["tipo_secreto"], "Tipo de secreto")
+            if "bloqueo_alcance" in cambios:
+                politica.bloqueo_alcance = _enum(BloqueoAlcance, cambios["bloqueo_alcance"], "Alcance del bloqueo")
             for campo in self.CAMPOS_BOOL:
                 if campo in cambios:
                     setattr(politica, campo, bool(cambios[campo]))
@@ -1626,10 +1857,19 @@ class ConfigurarPolitica(Base):
                 raise errores.PoliticaInvalida(str(error))
             politica.actualizado_en = self.ahora()
             uow.politicas.guardar(politica)
+            salida = self.dto_politica(politica)
+            # RN-47: el interruptor de la entrada como visitante es de la institución, no de un perfil: se enciende y apaga desde el perfil de estudiantes.
+            if "visitante" in cambios:
+                if menu is not Menu.STUDENT or nivel:
+                    raise errores.DatosInvalidos("El interruptor de visitantes se configura en la política general de estudiantes.")
+                org = self.organizacion(uow)
+                org.visitante = bool(cambios["visitante"])
+                uow.organizaciones.guardar(org)
+            salida["visitante"] = self.organizacion(uow).visitante
             self.auditar(uow, principal.usuario_id, "identidad.politica.configurada", "m01_politica_credencial", politica.id,
                          {"perfil": menu.value, "nivel": politica.nivel_clave, "campos": sorted(cambios.keys())})
             self.evento(uow, "politica", politica.id, "politica_configurada", {"perfil": menu.value, "nivel": politica.nivel_clave})
-            return self.dto_politica(politica)
+            return salida
 
 
 # =================================================================== grupos
@@ -1668,7 +1908,8 @@ class VerGrupo(Base):
                 if u is None:
                     continue
                 fila = {"usuario_id": u.id, "alias": u.alias, "papel": m.papel.value, "desde": m.desde, "estado": u.estado.value,
-                        "provisional": u.provisional}
+                        "provisional": u.provisional, "origen": u.origen.value, "confirmado": u.confirmado_en is not None,
+                        "pin_pendiente": m.papel is PapelGrupo.ESTUDIANTE and uow.credenciales.activa(u.id) is None}
                 if puede_ver_usuarios is not None and (puede_ver_usuarios is not Alcance.SELF or u.id == principal.usuario_id):
                     fila["rol"] = self.rol_de(uow, u).codigo
                 miembros.append(fila)
@@ -1680,7 +1921,11 @@ class CrearGrupo(Base):
     def ejecutar(self, principal: Principal, datos: dict) -> dict:
         with self.s.uow() as uow:
             ctx = self.contexto(uow, principal)
-            self.exigir(ctx, "identity.group.manage", ObjetivoOrganizacion(principal.organizacion_id))
+            # RB-28: la administración crea grupos de toda la organización; el profesor (alcance de sus grupos) crea los suyos y queda como
+            # su docente: así un nodo recién instalado sirve sin esperar a la administración (PA-03).
+            alcance = self.exigir_alcance(ctx, "identity.group.manage")
+            if alcance is Alcance.ORGANIZATION:
+                self.exigir(ctx, "identity.group.manage", ObjetivoOrganizacion(principal.organizacion_id))
             politica_id = str(datos.get("politica_credencial_id") or "").strip() or None
             if politica_id:
                 politica = uow.politicas.por_id(politica_id)
@@ -1697,6 +1942,8 @@ class CrearGrupo(Base):
                 if existente.codigo == grupo.codigo and existente.periodo == grupo.periodo:
                     raise errores.Conflicto("Ya existe un grupo con ese código en ese periodo.")
             uow.grupos.guardar(grupo)
+            if alcance is not Alcance.ORGANIZATION:
+                uow.grupos.guardar_miembro(MiembroGrupo(_nuevo_id(), grupo.id, principal.usuario_id, PapelGrupo.DOCENTE, self.ahora()))
             self.auditar(uow, principal.usuario_id, "identidad.grupo.creado", "m01_grupo", grupo.id, {"codigo": grupo.codigo})
             self.evento(uow, "grupo", grupo.id, "grupo_creado", {"codigo": grupo.codigo, "nivel_clave": grupo.nivel_clave})
             return self.dto_grupo(grupo)

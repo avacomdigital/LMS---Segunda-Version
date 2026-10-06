@@ -63,7 +63,8 @@ class PadronPrototipoTests(TestCase):
         e = r.json()
         self.assertEqual(e["alias"], "Juan Pérez")
         self.assertTrue(e["identificador"].startswith("AULA-PRUEBA-"))   # la clave la emite el nodo (DEC-049)
-        self.assertTrue(e["secreto_inicial"])                            # el PIN generado se entrega una sola vez
+        self.assertNotIn("secreto_inicial", e)                           # RB-26: no se genera ni se entrega ningún PIN
+        self.assertTrue(e["pin_pendiente"])                              # el alumno lo elige al tocar su nombre (RN-35)
         estado = self.api.get("/api/acceso/padron/").json()
         grupo = estado["grupos"][0]
         self.assertEqual([x["alias"] for x in grupo["estudiantes"]], ["Juan Pérez"])
@@ -166,9 +167,16 @@ class PadronConSesionTests(BaseAcceso):
         r = self.docente.post("/api/acceso/padron/estudiantes/", {"nombres": "Luisa", "grupo_id": self.otro_grupo["id"]}, format="json")
         self.assertEqual(r.status_code, 403, r.content)
 
-    def test_el_docente_no_crea_grupos_la_administracion_si(self):
-        self.assertEqual(self.docente.post("/api/acceso/padron/grupos/", {"nombre": "Décimo"}, format="json").status_code, 403)
-        self.assertEqual(self.admin.post("/api/acceso/padron/grupos/", {"nombre": "Décimo"}, format="json").status_code, 201)
+    def test_el_docente_crea_sus_grupos_y_queda_como_su_docente_pero_no_toca_los_ajenos(self):
+        """RB-28 (PA-03): el profesor crea grupos y queda como docente de ellos; los que no son suyos no los puede editar."""
+        r = self.docente.post("/api/acceso/padron/grupos/", {"nombre": "Décimo"}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        suyo = r.json()["id"]
+        grupos = {g["id"]: g for g in self.docente.get("/api/acceso/grupos/").json()}
+        self.assertEqual(grupos[suyo]["papel"], "DOCENTE")
+        self.assertEqual(self.docente.patch(f"/api/acceso/grupos/{suyo}/", {"nombre": "Décimo B"}, format="json").status_code, 200)
+        self.assertEqual(self.docente.patch(f"/api/acceso/grupos/{self.otro_grupo['id']}/", {"nombre": "x"}, format="json").status_code, 403)
+        self.assertEqual(self.admin.post("/api/acceso/padron/grupos/", {"nombre": "Undécimo"}, format="json").status_code, 201)
 
     def test_el_padron_del_docente_muestra_solo_sus_grupos(self):
         estado = self.docente.get("/api/acceso/padron/").json()

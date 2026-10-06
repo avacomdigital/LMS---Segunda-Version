@@ -67,9 +67,12 @@ class HealthView(VistaExpediente):
             from acceso.aplicacion.casos_uso import ConsultarConfiguracion
             from acceso.infraestructura.contenedor import servicios
             configuracion = ConsultarConfiguracion(servicios()).ejecutar()
-            return {"instalado": configuracion["instalado"], "claves_derivadas": configuracion["claves_derivadas"]}
+            # RB-42: el estado del PIN maestro sin fechas (`configurado | vencido | sin_configurar`); el instalador lo muestra en su resumen final.
+            pin = configuracion.get("pin_maestro") or {}
+            estado_pin = "sin_configurar" if not pin.get("configurado") else ("vencido" if pin.get("vencido") else "configurado")
+            return {"instalado": configuracion["instalado"], "claves_derivadas": configuracion["claves_derivadas"], "pin_maestro": estado_pin}
         except Exception as error:  # el health nunca falla por el módulo de acceso
-            return {"instalado": False, "claves_derivadas": None, "error": str(error)}
+            return {"instalado": False, "claves_derivadas": None, "pin_maestro": "sin_configurar", "error": str(error)}
 
 
 # ------------------------------------------------------------- inscripción

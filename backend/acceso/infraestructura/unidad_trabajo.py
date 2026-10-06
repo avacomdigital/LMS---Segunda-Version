@@ -36,6 +36,7 @@ class UnidadDeTrabajoDjango:
         self.roles = r.RolesDjango()
         self.usuarios = r.UsuariosDjango(self._cifrador)
         self.credenciales = r.CredencialesDjango()
+        self.pines_maestros = r.PinesMaestrosDjango()
         self.grupos = r.GruposDjango()
         self.dispositivos = r.DispositivosDjango()
         self.sesiones = r.SesionesDjango()

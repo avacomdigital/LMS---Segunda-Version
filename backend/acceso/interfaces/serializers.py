@@ -36,14 +36,26 @@ class AdministradorEntrada(serializers.Serializer):
 class InstalacionEntrada(serializers.Serializer):
     organizacion = OrganizacionEntrada()
     administrador = AdministradorEntrada()
+    # RN-03: sin PIN maestro no se instala. La forma (seis dígitos, nada trivial) la valida el dominio, con el mensaje que explica la regla.
+    pin_maestro = serializers.CharField(max_length=32, trim_whitespace=False)
 
 
 class LoginEntrada(serializers.Serializer):
-    identificador = serializers.CharField(max_length=128)
+    """Tres formas de identificarse: documento o código + clave; o (alumnos) `usuario_id` + PIN, tocando el nombre en la lista (RB-22).
+    La administración añade el PIN maestro (`pin_maestro`) cuando el nodo lo exige."""
+
+    identificador = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+    usuario_id = serializers.CharField(max_length=36, required=False, allow_blank=True, default="")
     secreto = serializers.CharField(max_length=128, trim_whitespace=False)
     dispositivo = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
     # BR-021: si la persona tiene varios roles, elige con cuál trabaja en esta sesión.
     rol = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
+    pin_maestro = serializers.CharField(max_length=32, required=False, allow_blank=True, default="", trim_whitespace=False)
+
+    def validate(self, datos):
+        if not datos.get("identificador") and not datos.get("usuario_id"):
+            raise serializers.ValidationError("Envíe el identificador o el usuario_id.")
+        return datos
 
 
 class CanjeEntrada(serializers.Serializer):
@@ -91,6 +103,8 @@ class UsuarioEntrada(serializers.Serializer):
     grupo_id = serializers.CharField(max_length=36, required=False, allow_blank=True, default="")
     # Admisión nominal (JRN-007): el profesor deja entrar «por su nombre» y vincula después.
     provisional = serializers.BooleanField(required=False, default=False)
+    # RN-35: el alumno nace sin PIN y lo elige él al tocar su nombre (nadie imprime ni dicta un número).
+    pin_pendiente = serializers.BooleanField(required=False, default=False)
 
     def validate(self, datos):
         if not datos.get("provisional") and not datos.get("persona", {}).get("nombres"):
@@ -185,6 +199,10 @@ class PoliticaCambios(serializers.Serializer):
     inactividad_min = serializers.IntegerField(required=False, min_value=5, max_value=1440)
     vigencia_credencial_dias = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     permite_acceso_temporal = serializers.BooleanField(required=False)
+    # RB-27: registro propio (RN-37), castigo a la cuenta o a la tableta (RN-33) y el interruptor institucional de visitantes (RN-47).
+    autoregistro = serializers.BooleanField(required=False)
+    bloqueo_alcance = serializers.ChoiceField(choices=["CUENTA", "DISPOSITIVO"], required=False)
+    visitante = serializers.BooleanField(required=False)
 
 
 class GrupoEntrada(serializers.Serializer):
@@ -228,3 +246,50 @@ class EstudiantePadronEntrada(serializers.Serializer):
 
 class MatriculaEntrada(serializers.Serializer):
     usuario_id = serializers.CharField(max_length=36)
+
+
+# ----------------------------------------------------- PIN maestro, profesores y alumnos (requisitos de acceso 2026-10-05)
+
+
+class PinMaestroCambioEntrada(serializers.Serializer):
+    pin_nuevo = serializers.CharField(max_length=32, trim_whitespace=False)
+
+
+class DocenteRegistroEntrada(serializers.Serializer):
+    """RB-13: la autorización la da el PIN maestro, no una sesión."""
+
+    pin_maestro = serializers.CharField(max_length=32, trim_whitespace=False)
+    documento = serializers.CharField(max_length=64)
+    nombres = serializers.CharField(max_length=120)
+    apellidos = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    secreto = serializers.CharField(max_length=128, trim_whitespace=False)
+    grupos = serializers.ListField(child=serializers.CharField(max_length=36), required=False, default=list, max_length=50)
+    dispositivo = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+
+
+class DocenteRestablecerEntrada(serializers.Serializer):
+    pin_maestro = serializers.CharField(max_length=32, trim_whitespace=False)
+    documento = serializers.CharField(max_length=64)
+    secreto_nuevo = serializers.CharField(max_length=128, trim_whitespace=False)
+    dispositivo = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+
+
+class EstudianteRegistroEntrada(serializers.Serializer):
+    """RB-17: el alumno se crea solo con grupo, nombre y PIN."""
+
+    grupo_id = serializers.CharField(max_length=36)
+    nombres = serializers.CharField(max_length=120)
+    apellidos = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    alias = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
+    pin = serializers.CharField(max_length=128, trim_whitespace=False)
+    dispositivo = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+
+
+class EstudiantePinEntrada(serializers.Serializer):
+    pin = serializers.CharField(max_length=128, trim_whitespace=False)
+    dispositivo = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+
+
+class VisitanteEntrada(serializers.Serializer):
+    dispositivo = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+    grupo_id = serializers.CharField(max_length=36, required=False, allow_blank=True, default="")

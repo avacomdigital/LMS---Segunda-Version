@@ -14,9 +14,11 @@ from ..aplicacion.puertos import Cifrador
 from ..dominio import entidades as e
 from ..dominio.valores import (
     Alcance,
+    BloqueoAlcance,
     ClaseSesion,
     EstadoUsuario,
     Menu,
+    OrigenCuenta,
     PapelGrupo,
     ResultadoIntento,
     TipoAutorizacion,
@@ -44,11 +46,11 @@ class OrganizacionesDjango:
     def guardar(self, o: e.Organizacion) -> None:
         m.Organizacion.objects.update_or_create(id=o.id, defaults=dict(
             codigo=o.codigo, nombre=o.nombre, pais=o.pais, idioma=o.idioma, locale=o.locale,
-            zona_horaria=o.zona_horaria, creado_en=o.creado_en))
+            zona_horaria=o.zona_horaria, creado_en=o.creado_en, visitante=o.visitante))
 
     @staticmethod
     def _a_entidad(f: m.Organizacion) -> e.Organizacion:
-        return e.Organizacion(f.id, f.codigo, f.nombre, f.pais, f.idioma, f.locale, f.zona_horaria, f.creado_en)
+        return e.Organizacion(f.id, f.codigo, f.nombre, f.pais, f.idioma, f.locale, f.zona_horaria, f.creado_en, f.visitante)
 
 
 class PoliticasDjango:
@@ -78,6 +80,7 @@ class PoliticasDjango:
             bloqueo_minutos=p.bloqueo_minutos, duracion_sesion_min=p.duracion_sesion_min,
             vigencia_credencial_dias=p.vigencia_credencial_dias, permite_acceso_temporal=p.permite_acceso_temporal,
             nivel_clave=p.nivel_clave, inactividad_min=p.inactividad_min,
+            autoregistro=p.autoregistro, bloqueo_alcance=p.bloqueo_alcance.value,
             creado_en=p.creado_en, actualizado_en=p.actualizado_en))
 
     @staticmethod
@@ -90,7 +93,8 @@ class PoliticasDjango:
             ventana_intentos_min=f.ventana_intentos_min, bloqueo_minutos=f.bloqueo_minutos,
             duracion_sesion_min=f.duracion_sesion_min, vigencia_credencial_dias=f.vigencia_credencial_dias,
             permite_acceso_temporal=f.permite_acceso_temporal, creado_en=f.creado_en, actualizado_en=f.actualizado_en,
-            nivel_clave=f.nivel_clave, inactividad_min=f.inactividad_min)
+            nivel_clave=f.nivel_clave, inactividad_min=f.inactividad_min, autoregistro=f.autoregistro,
+            bloqueo_alcance=BloqueoAlcance(f.bloqueo_alcance))
 
 
 # ------------------------------------------------------------ permisos/roles
@@ -166,7 +170,8 @@ class UsuariosDjango:
         m.Usuario.objects.update_or_create(id=u.id, defaults=dict(
             organizacion_id=u.organizacion_id, rol_id=u.rol_id, estado=u.estado.value, alias=u.alias, idioma=u.idioma,
             creado_en=u.creado_en, actualizado_en=u.actualizado_en, creado_por_id=u.creado_por,
-            ultimo_acceso_en=u.ultimo_acceso_en, provisional=u.provisional, vinculado_a_id=u.vinculado_a))
+            ultimo_acceso_en=u.ultimo_acceso_en, provisional=u.provisional, vinculado_a_id=u.vinculado_a,
+            origen=u.origen.value, confirmado_en=u.confirmado_en))
 
     def asignaciones(self, usuario_id: str) -> list[e.UsuarioRol]:
         return [e.UsuarioRol(f.id, f.usuario_id, f.rol_id, Alcance(f.alcance_tipo), f.desde, f.alcance_id, f.hasta,
@@ -236,7 +241,7 @@ class UsuariosDjango:
 
     def listar(self, organizacion_id: str, alcance: Alcance, actor_id: str, grupos_docente: Iterable[str],
                nivel_maximo: int, grupo_id: str | None = None, rol_codigo: str | None = None,
-               estado: str | None = None) -> list[e.Usuario]:
+               estado: str | None = None, origen: str | None = None) -> list[e.Usuario]:
         base = m.Usuario.objects.filter(organizacion_id=organizacion_id)
         vigente = Q(membresias__hasta__isnull=True)
         if alcance is Alcance.SELF:
@@ -252,8 +257,17 @@ class UsuariosDjango:
             base = base.filter(rol__codigo=rol_codigo)
         if estado:
             base = base.filter(estado=estado)
+        if origen:
+            base = base.filter(origen=origen)
         return [self._a_entidad(f) for f in base.distinct().order_by("alias")]
 
+    def visitantes_activos(self, organizacion_id: str, creados_antes_de: int | None = None) -> list[e.Usuario]:
+        """Las cuentas efímeras de visita (RN-45) que siguen activas; con `creados_antes_de`, sólo las que ya pasaron su día."""
+        consulta = m.Usuario.objects.filter(organizacion_id=organizacion_id, origen=OrigenCuenta.VISITANTE.value,
+                                            estado=EstadoUsuario.ACTIVO.value)
+        if creados_antes_de is not None:
+            consulta = consulta.filter(creado_en__lt=creados_antes_de)
+        return [self._a_entidad(f) for f in consulta.order_by("creado_en")]
     def _ident(self, f: m.IdentificadorUsuario) -> e.Identificador:
         return e.Identificador(f.id, f.usuario_id, TipoIdentificador(f.tipo), self.c.descifrar(f.valor_cifrado, CTX_IDENT),
                                f.es_login, f.creado_en, f.verificado_en, f.emisor, f.principal, f.retirado_en)
@@ -263,7 +277,8 @@ class UsuariosDjango:
         return e.Usuario(id=f.id, organizacion_id=f.organizacion_id, rol_id=f.rol_id, estado=EstadoUsuario(f.estado),
                          alias=f.alias, idioma=f.idioma, creado_en=f.creado_en, actualizado_en=f.actualizado_en,
                          creado_por=f.creado_por_id, ultimo_acceso_en=f.ultimo_acceso_en,
-                         provisional=f.provisional, vinculado_a=f.vinculado_a_id)
+                         provisional=f.provisional, vinculado_a=f.vinculado_a_id,
+                         origen=OrigenCuenta(f.origen), confirmado_en=f.confirmado_en)
 
 
 class CredencialesDjango:
@@ -286,6 +301,31 @@ class CredencialesDjango:
     def _a_entidad(f: m.Credencial) -> e.Credencial:
         return e.Credencial(f.id, f.usuario_id, TipoSecreto(f.tipo), f.hash, f.activa, f.debe_cambiar, f.creado_en,
                             f.expira_en, f.sustituida_en, f.creado_por_id)
+
+
+class PinesMaestrosDjango:
+    """Las versiones del PIN maestro de la institución (D-A5). Sólo la huella; nada se borra."""
+
+    def activo(self, organizacion_id: str) -> e.PinMaestro | None:
+        f = m.PinMaestro.objects.filter(organizacion_id=organizacion_id, activa=True).first()
+        return self._a_entidad(f) if f else None
+
+    def ultimos(self, organizacion_id: str, cantidad: int) -> list[e.PinMaestro]:
+        """Las últimas versiones (la vigente incluida), de la más reciente a la más antigua: lo que RN-05 no deja reutilizar."""
+        filas = m.PinMaestro.objects.filter(organizacion_id=organizacion_id).order_by("-creado_en")[:cantidad]
+        return [self._a_entidad(f) for f in filas]
+
+    def sustituir_activo(self, organizacion_id: str, ahora: int) -> None:
+        m.PinMaestro.objects.filter(organizacion_id=organizacion_id, activa=True).update(activa=False, sustituida_en=ahora)
+
+    def guardar(self, p: e.PinMaestro) -> None:
+        m.PinMaestro.objects.update_or_create(id=p.id, defaults=dict(
+            organizacion_id=p.organizacion_id, hash=p.hash, activa=p.activa, creado_en=p.creado_en,
+            creado_por_id=p.creado_por, vence_en=p.vence_en, sustituida_en=p.sustituida_en))
+
+    @staticmethod
+    def _a_entidad(f: m.PinMaestro) -> e.PinMaestro:
+        return e.PinMaestro(f.id, f.organizacion_id, f.hash, f.activa, f.creado_en, f.vence_en, f.creado_por_id, f.sustituida_en)
 
 
 # ------------------------------------------------------------------- grupos
@@ -317,6 +357,15 @@ class GruposDjango:
             usuario_id=usuario_id, papel=PapelGrupo.ESTUDIANTE.value, hasta__isnull=True, grupo__activo=True,
             grupo__nivel_clave__isnull=False).select_related("grupo").order_by("desde").first()
         return f.grupo.nivel_clave if f else None
+
+    def estudiantes_activos(self, grupo_id: str) -> list[tuple[e.Usuario, bool]]:
+        """Los alumnos vigentes y activos del grupo, con si su cuenta ya tiene PIN (credencial activa): alimenta «toca tu nombre» (RB-16)."""
+        filas = m.MiembroGrupo.objects.filter(
+            grupo_id=grupo_id, papel=PapelGrupo.ESTUDIANTE.value, hasta__isnull=True, grupo__activo=True,
+            usuario__estado=EstadoUsuario.ACTIVO.value).select_related("usuario").order_by("usuario__alias")
+        con_credencial = set(m.Credencial.objects.filter(
+            usuario_id__in=[f.usuario_id for f in filas], activa=True).values_list("usuario_id", flat=True))
+        return [(UsuariosDjango._a_entidad(f.usuario), f.usuario_id in con_credencial) for f in filas]
 
     def miembros(self, grupo_id: str, vigentes: bool = True) -> list[e.MiembroGrupo]:
         consulta = m.MiembroGrupo.objects.filter(grupo_id=grupo_id)
@@ -449,6 +498,37 @@ class IntentosDjango:
         return [e.IntentoAcceso(f.identificador_hmac, ResultadoIntento(f.resultado), f.motivo, f.momento, f.usuario_id,
                                 f.dispositivo_id, f.autorizacion_id, f.id) for f in filas]
 
+    def de_dispositivo(self, dispositivo_id: str, desde: int) -> list[e.IntentoAcceso]:
+        """RN-33: los intentos de PIN hechos desde la tableta (de cualquier alumno), del más reciente al más antiguo. Deja fuera los del PIN maestro."""
+        filas = m.IntentoAcceso.objects.filter(dispositivo_id=dispositivo_id, momento__gte=desde, usuario__isnull=False) \
+            .exclude(motivo__startswith="pin_maestro").exclude(resultado__in=[ResultadoIntento.TEMPORAL_EXITO.value, ResultadoIntento.TEMPORAL_FALLO.value]) \
+            .order_by("-momento", "-id")[:200]
+        return [self._a_entidad(f) for f in filas]
+
+    def pin_maestro_del_equipo(self, dispositivo_id: str | None, desde: int) -> list[e.IntentoAcceso]:
+        """RN-10: los intentos del PIN maestro hechos desde un equipo (o, sin equipo, los que no dijeron cuál), del más reciente al más antiguo."""
+        consulta = m.IntentoAcceso.objects.filter(motivo="pin_maestro", momento__gte=desde)
+        consulta = consulta.filter(dispositivo_id=dispositivo_id) if dispositivo_id else consulta.filter(dispositivo__isnull=True)
+        return [self._a_entidad(f) for f in consulta.order_by("-momento", "-id")[:200]]
+
+    def pin_maestro_fallos_globales(self, desde: int) -> list[int]:
+        """RN-10: los momentos de los fallos del PIN maestro en todo el nodo, del más reciente al más antiguo."""
+        return list(m.IntentoAcceso.objects.filter(motivo="pin_maestro", resultado=ResultadoIntento.FALLO.value, momento__gte=desde)
+                    .order_by("-momento").values_list("momento", flat=True)[:100])
+
+    def altas_recientes(self, dispositivo_id: str, desde: int) -> int:
+        """RB-17: cuántas cuentas propias nacieron desde esta tableta desde `desde` (cada alta deja una fila ALTA, que el bloqueo no cuenta como fallo ni acierto)."""
+        return m.IntentoAcceso.objects.filter(dispositivo_id=dispositivo_id, resultado=ResultadoIntento.ALTA.value, momento__gte=desde).count()
+
+    def ultima_alta(self, usuario_id: str) -> e.IntentoAcceso | None:
+        f = m.IntentoAcceso.objects.filter(usuario_id=usuario_id, resultado=ResultadoIntento.ALTA.value).order_by("-momento", "-id").first()
+        return self._a_entidad(f) if f else None
+
+    @staticmethod
+    def _a_entidad(f: m.IntentoAcceso) -> e.IntentoAcceso:
+        return e.IntentoAcceso(f.identificador_hmac, ResultadoIntento(f.resultado), f.motivo, f.momento, f.usuario_id,
+                               f.dispositivo_id, f.autorizacion_id, f.id)
+
     def fallos_de_autorizacion(self, autorizacion_id: str) -> int:
         return m.IntentoAcceso.objects.filter(autorizacion_id=autorizacion_id, resultado=ResultadoIntento.TEMPORAL_FALLO.value).count()
 
@@ -496,6 +576,9 @@ class OutboxDjango:
         fila = m.EventoSalida.objects.create(agregado_tipo=ev.agregado_tipo, agregado_id=ev.agregado_id,
                                              tipo_evento=ev.tipo_evento, carga=ev.carga, creado_en=ev.creado_en)
         ev.id = fila.id
+
+    def ya_publicado(self, agregado_tipo: str, agregado_id: str, tipo_evento: str) -> bool:
+        return m.EventoSalida.objects.filter(agregado_tipo=agregado_tipo, agregado_id=agregado_id, tipo_evento=tipo_evento).exists()
 
 
 class AuditoriaExpediente:

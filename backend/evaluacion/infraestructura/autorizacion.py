@@ -51,6 +51,10 @@ class AutorizacionEvaluacion:
         base = acu.Base(s)
         with s.uow() as uow:
             ctx = base.contexto(uow, actor.principal)
-            if base.politica.transversal(ctx, permiso) is not None:
+            previa = base.politica.transversal(ctx, permiso)
+            if previa is not None:
+                # RN-43: a una sesión de visitante se le dice qué es (`sesion_visitante_limitada`), no sólo que «su rol no lo tiene».
+                if previa.codigo == "sesion_visitante_limitada":
+                    previa.exigir()
                 return False
             return base.politica.alcance_concedido(ctx, permiso) is not None

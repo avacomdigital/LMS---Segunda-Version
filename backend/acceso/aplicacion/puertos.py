@@ -19,6 +19,7 @@ from ..dominio.entidades import (
     Organizacion,
     Permiso,
     Persona,
+    PinMaestro,
     PoliticaCredencial,
     Rol,
     Sesion,
@@ -74,7 +75,17 @@ class RepositorioUsuarios(Protocol):
     def guardar_asignacion(self, asignacion: UsuarioRol) -> None: ...
     def listar(self, organizacion_id: str, alcance: Alcance, actor_id: str, grupos_docente: Iterable[str],
                nivel_maximo: int, grupo_id: str | None = None, rol_codigo: str | None = None,
-               estado: str | None = None) -> list[Usuario]: ...
+               estado: str | None = None, origen: str | None = None) -> list[Usuario]: ...
+    def visitantes_activos(self, organizacion_id: str, creados_antes_de: int | None = None) -> list[Usuario]:
+        """Las cuentas efímeras de visita aún activas (RN-45); con `creados_antes_de`, sólo las que ya pasaron su día."""
+
+
+class RepositorioPinesMaestros(Protocol):
+    def activo(self, organizacion_id: str) -> PinMaestro | None: ...
+    def ultimos(self, organizacion_id: str, cantidad: int) -> list[PinMaestro]:
+        """Las últimas versiones, la vigente incluida, de la más reciente a la más antigua."""
+    def sustituir_activo(self, organizacion_id: str, ahora: int) -> None: ...
+    def guardar(self, pin: PinMaestro) -> None: ...
 
 
 class RepositorioCredenciales(Protocol):
@@ -90,6 +101,8 @@ class RepositorioGrupos(Protocol):
     def guardar(self, grupo: Grupo) -> None: ...
     def miembros(self, grupo_id: str, vigentes: bool = True) -> list[MiembroGrupo]: ...
     def membresias(self, usuario_id: str, vigentes: bool = True) -> list[MiembroGrupo]: ...
+    def estudiantes_activos(self, grupo_id: str) -> list[tuple[Usuario, bool]]:
+        """Los alumnos vigentes y activos del grupo, con si su cuenta ya tiene credencial activa (False = PIN pendiente)."""
     def guardar_miembro(self, miembro: MiembroGrupo) -> None: ...
     def ids_grupos(self, usuario_id: str, papel: PapelGrupo | None, ahora: int) -> frozenset[str]: ...
     def ids_grupos_por_nivel(self, organizacion_id: str, nivel_clave: str) -> frozenset[str]:
@@ -124,6 +137,16 @@ class RepositorioIntentos(Protocol):
     def recientes(self, usuario_id: str, desde: int) -> list[IntentoAcceso]:
         """Del más reciente al más antiguo."""
     def fallos_de_autorizacion(self, autorizacion_id: str) -> int: ...
+    def de_dispositivo(self, dispositivo_id: str, desde: int) -> list[IntentoAcceso]:
+        """RN-33: los intentos de PIN hechos desde la tableta, del más reciente al más antiguo."""
+    def pin_maestro_del_equipo(self, dispositivo_id: str | None, desde: int) -> list[IntentoAcceso]:
+        """RN-10: los intentos del PIN maestro desde un equipo (o, sin equipo, los anónimos), del más reciente al más antiguo."""
+    def pin_maestro_fallos_globales(self, desde: int) -> list[int]:
+        """RN-10: momentos de los fallos del PIN maestro en todo el nodo, del más reciente al más antiguo."""
+    def altas_recientes(self, dispositivo_id: str, desde: int) -> int:
+        """RB-17: altas propias hechas desde la tableta desde `desde`."""
+    def ultima_alta(self, usuario_id: str) -> IntentoAcceso | None:
+        """La fila ALTA de la cuenta: desde qué equipo se registró (RB-15)."""
 
 
 class RepositorioAutorizaciones(Protocol):
@@ -136,6 +159,8 @@ class RepositorioAutorizaciones(Protocol):
 
 class Outbox(Protocol):
     def publicar(self, evento: EventoSalida) -> None: ...
+    def ya_publicado(self, agregado_tipo: str, agregado_id: str, tipo_evento: str) -> bool:
+        """¿Ya salió este hecho para este agregado? Evita repetir los eventos que sólo deben salir la primera vez (p. ej. el vencimiento del PIN maestro)."""
 
 
 class RegistroAuditoria(Protocol):
@@ -176,6 +201,7 @@ class UnidadDeTrabajo(Protocol):
     roles: RepositorioRoles
     usuarios: RepositorioUsuarios
     credenciales: RepositorioCredenciales
+    pines_maestros: RepositorioPinesMaestros
     grupos: RepositorioGrupos
     dispositivos: RepositorioDispositivos
     sesiones: RepositorioSesiones

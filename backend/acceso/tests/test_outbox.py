@@ -42,6 +42,6 @@ class OutboxTests(BaseAcceso):
         r = self.docente.post("/api/acceso/usuarios/", {
             "rol": "STUDENT", "alias": "Fallido", "persona": {"nombres": "F"},
             "identificadores": [{"tipo": "CODIGO_ESTUDIANTIL", "valor": "150001"}],
-            "secreto": "111111", "grupo_id": self.grupo["id"]}, format="json")
+            "secreto": "11", "grupo_id": self.grupo["id"]}, format="json")   # demasiado corto: el reglamento lo rechaza con la cuenta ya escrita
         self.assertEqual(r.status_code, 400)
         self.assertEqual((m.Usuario.objects.count(), m.EventoSalida.objects.count(), m.Credencial.objects.count()), antes)

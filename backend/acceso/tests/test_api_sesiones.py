@@ -10,7 +10,7 @@ class InstalacionYConfiguracionTests(BaseAcceso):
     def test_la_instalacion_es_unica(self):
         r = self.api.post("/api/acceso/instalacion/", {
             "organizacion": {"codigo": "OTRA", "nombre": "Otra"},
-            "administrador": {"nombres": "X", "dni": "1", "password": "Otra.Clave.2026!"}}, format="json")
+            "administrador": {"nombres": "X", "dni": "1", "password": "Otra.Clave.2026!"}, "pin_maestro": "739104"}, format="json")
         self.assertEqual(r.status_code, 409)
         self.assertEqual(r.json()["codigo"], "ya_instalado")
 
@@ -21,8 +21,11 @@ class InstalacionYConfiguracionTests(BaseAcceso):
         self.assertTrue(datos["instalado"])
         self.assertEqual(datos["organizacion"]["locale"], "es-CO")
         student = datos["perfiles"]["student"]
+        # RN-31 y D-A3: el PIN es para todos los alumnos y es de 4 dígitos por defecto.
         self.assertEqual((student["tipo_identificador"], student["tipo_secreto"], student["longitud_minima"]),
-                         ("CODIGO_ESTUDIANTIL", "PIN", 6))
+                         ("CODIGO_ESTUDIANTIL", "PIN", 4))
+        self.assertEqual((student["autoregistro"], student["bloqueo_alcance"]), (True, "DISPOSITIVO"))   # RN-37 y RN-33
+        self.assertEqual(datos["perfiles"]["admin"]["bloqueo_alcance"], "CUENTA")
         self.assertEqual(student["niveles"], {})
         self.assertEqual(datos["perfiles"]["teacher"]["tipo_secreto"], "PASSWORD")
         self.assertEqual(set(datos["perfiles"]), {"student", "teacher", "admin", "reports", "technician"})
