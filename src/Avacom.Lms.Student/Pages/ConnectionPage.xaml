@@ -33,47 +33,57 @@
                     <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#4DFFFFFF" Offset="0"/><GradientStop Color="#00FFFFFF" Offset="1"/></LinearGradientBrush></Border.Background>
                 </Border>
                 <Grid x:Name="Contenido" RowDefinitions="1*,2*">
-                    <!-- Tercio superior de la tarjeta: identidad + mensaje. Se apoya sobre la línea divisoria. -->
-                    <VerticalStackLayout Grid.Row="0" Padding="40,0,40,18" Spacing="8" VerticalOptions="End">
-                        <!-- El SVG lleva aire dentro de su viewBox (≈6% a la izquierda, ≈24% abajo); el margen negativo alinea el dibujo con el texto -->
-                        <Image x:Name="Logo" Source="avacom_lms_kit_logo.png" Aspect="AspectFit" HeightRequest="100" HorizontalOptions="Start" Margin="-8,0,0,-18"/>
-                        <Label Text="Conéctate a tu aula" FontSize="22" FontAttributes="Bold"/>
-                        <Label x:Name="Descripcion" Text="Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor." Style="{StaticResource Muted}" LineBreakMode="WordWrap"/>
-                    </VerticalStackLayout>
+                    <!-- Tercio superior de la tarjeta: identidad + mensaje. Se apoya sobre la línea divisoria. En los pasos del acceso
+                         (grupo, nombre, PIN…) el título y la descripción dicen qué hacer, y «Aviso» dice qué pasó y qué sigue (§5). -->
+                    <Grid Grid.Row="0" Padding="40,0,40,18">
+                        <VerticalStackLayout x:Name="Cabecera" Spacing="8" VerticalOptions="End">
+                            <!-- El SVG lleva aire dentro de su viewBox (≈6% a la izquierda, ≈24% abajo); el margen negativo alinea el dibujo con el texto -->
+                            <Image x:Name="Logo" Source="avacom_lms_kit_logo.png" Aspect="AspectFit" HeightRequest="100" HorizontalOptions="Start" Margin="-8,0,0,-18"/>
+                            <Label x:Name="Titulo" Text="Conéctate a tu aula" FontSize="22" FontAttributes="Bold" LineBreakMode="TailTruncation" AutomationId="acceso-titulo"/>
+                            <Label x:Name="Descripcion" Text="Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor." Style="{StaticResource Muted}" LineBreakMode="WordWrap"/>
+                            <Label x:Name="Aviso" IsVisible="False" FontSize="15" FontFamily="InterMedium" TextColor="#18181B" LineBreakMode="WordWrap" MaxLines="3" AutomationId="acceso-aviso"/>
+                        </VerticalStackLayout>
+                        <!-- Un paso atrás (grupo ← nombre ← PIN). Del orden de los botones del acceso. -->
+                        <Button x:Name="VolverButton" IsVisible="False" Text="‹  Volver" HorizontalOptions="End" VerticalOptions="Start" Margin="0,22,-12,0" HeightRequest="48" MinimumWidthRequest="104"
+                                BackgroundColor="Transparent" BorderWidth="0" TextColor="#27272A" FontSize="17" Padding="14,0" Clicked="OnVolver" AutomationId="acceso-volver"/>
+                    </Grid>
                     <!-- Dos tercios inferiores: acción. La línea divisoria cae exactamente a 1/3 de la altura de la tarjeta. El
                          ScrollView sólo actúa si el contenido no cabe (ventana baja o teclado en pantalla en la tableta); en una
-                         ventana amplia no se nota. -->
-                    <ScrollView Grid.Row="1">
+                         ventana amplia no se nota. Debajo, fuera del desplazamiento, las dos acciones que el acceso del alumno deja
+                         SIEMPRE a la vista (RF-20, RN-40): «No estoy en la lista · soy nuevo» y «Entrar como visitante». -->
+                    <Grid Grid.Row="1" RowDefinitions="*,Auto">
+                    <ScrollView x:Name="PasoScroll" IsVisible="False">
+                        <VerticalStackLayout x:Name="PasoHost" Padding="40,0,40,4" Spacing="12" VerticalOptions="Start"/>
+                    </ScrollView>
+                    <Grid x:Name="Pie" Grid.Row="1" IsVisible="False" ColumnDefinitions="*,*" ColumnSpacing="10" Padding="40,4,40,14">
+                        <Button x:Name="NuevoButton" Text="No estoy en la lista · soy nuevo" HeightRequest="52" CornerRadius="14" BackgroundColor="White" TextColor="#18181B" BorderColor="#26000000" BorderWidth="1"
+                                FontSize="13" LineBreakMode="WordWrap" Padding="8,0" Clicked="OnSoyNuevo" AutomationId="acceso-nuevo"/>
+                        <Button x:Name="VisitanteButton" Grid.Column="1" Text="Entrar como visitante" HeightRequest="52" CornerRadius="14" BackgroundColor="#FEF9E6" TextColor="#18181B" BorderColor="#F3C701" BorderWidth="1.5"
+                                FontSize="13" LineBreakMode="WordWrap" Padding="8,0" Clicked="OnVisitante" AutomationId="acceso-visitante"/>
+                    </Grid>
+                    <ScrollView x:Name="FormularioScroll">
                         <VerticalStackLayout x:Name="Formulario" Padding="40,0,40,16" Spacing="14" VerticalOptions="Start">
                             <BoxView HeightRequest="1" Color="#14000000"/>
-                            <!-- Sin sesión obligatoria (prototipo) se escribe el nombre; cuando el aula pide sesión (007-10) el nombre libre se
-                                 cambia por «Tu código» y «Tu clave». Los tres bloques ocupan el mismo lugar; el code-behind muestra uno u otro. -->
+                            <!-- Sin sesión obligatoria (prototipo) se escribe el nombre. Cuando el aula pide sesión (007-10) este paso sólo pide la
+                                 dirección; quién eres se elige después, en los pasos del acceso del alumno (grupo, nombre y PIN). -->
                             <VerticalStackLayout x:Name="NombreBox" Spacing="6" Margin="0,4,0,0">
                                 <Label Text="Tu nombre" FontSize="13"/>
-                                <Entry x:Name="NameEntry" Text="Ethan Martínez" Placeholder="Nombre y apellido"/>
-                            </VerticalStackLayout>
-                            <VerticalStackLayout x:Name="CodigoBox" Spacing="6" Margin="0,4,0,0" IsVisible="False">
-                                <Label Text="Tu código" FontSize="13"/>
-                                <Entry x:Name="CodigoEntry" Keyboard="Plain" ReturnType="Next" Placeholder="Tu código de estudiante"/>
-                            </VerticalStackLayout>
-                            <VerticalStackLayout x:Name="ClaveBox" Spacing="6" IsVisible="False">
-                                <Label Text="Tu clave" FontSize="13"/>
-                                <Entry x:Name="ClaveEntry" IsPassword="True" ReturnType="Done" Placeholder="Tu clave" Completed="OnEnter"/>
+                                <Entry x:Name="NameEntry" AutomationId="acceso-nombre" Text="Ethan Martínez" Placeholder="Nombre y apellido"/>
                             </VerticalStackLayout>
                             <VerticalStackLayout Spacing="6">
                                 <Label Text="Dirección del aula" FontSize="13"/>
-                                <Entry x:Name="ServerEntry" Text="http://192.168.1.10:8000" Keyboard="Url" Placeholder="192.168.1.10:8000"/>
+                                <Entry x:Name="ServerEntry" AutomationId="acceso-direccion" Text="http://192.168.1.10:8000" Keyboard="Url" Placeholder="192.168.1.10:8000"/>
                             </VerticalStackLayout>
                             <Border x:Name="StatusCard" BackgroundColor="#E6F6FC" Padding="14" StrokeThickness="0"><Label x:Name="StatusLabel" Text="●  Lista para comprobar la red local" TextColor="{StaticResource BrandBlue}"/></Border>
                             <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource Ink}" Margin="0,4,0,0">
                                 <Border.Shadow><Shadow Brush="#66000000" Offset="0,8" Radius="18"/></Border.Shadow>
-                                <Button x:Name="CheckButton" Text="Comprobar conexión" Style="{StaticResource DarkButton}" CornerRadius="12" BorderWidth="0" Clicked="OnCheck">
+                                <Button x:Name="CheckButton" AutomationId="acceso-comprobar" Text="Comprobar conexión" Style="{StaticResource DarkButton}" CornerRadius="12" BorderWidth="0" Clicked="OnCheck">
                                     <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#3A3A40" Offset="0"/><GradientStop Color="#232326" Offset="0.55"/><GradientStop Color="#0E0E10" Offset="1"/></LinearGradientBrush></Button.Background>
                                 </Button>
                             </Border>
                             <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,4,0,0">
                                 <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
-                                <Button x:Name="EntrarButton" Text="Entrar al aula" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEnter">
+                                <Button x:Name="EntrarButton" AutomationId="acceso-entrar" Text="Entrar al aula" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEnter">
                                     <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
                                 </Button>
                             </Border>
@@ -82,6 +92,7 @@
                             <Button x:Name="DiagnosticoButton" Text="Exportar diagnóstico" BackgroundColor="Transparent" TextColor="#52525B" FontSize="12" HeightRequest="36" Clicked="OnDiagnostico" AutomationId="ExportarDiagnostico"/>
                         </VerticalStackLayout>
                     </ScrollView>
+                    </Grid>
                 </Grid>
             </Grid>
         </controls:GlassBorder>

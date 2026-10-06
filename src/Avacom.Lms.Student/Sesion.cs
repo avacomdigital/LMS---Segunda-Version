@@ -42,6 +42,12 @@ public static class Sesion
     /// <summary>Verdadero si el nodo exige sesión (<c>AVACOM_LMS_EXIGIR_SESION</c>); se conoce al identificarse.</summary>
     public static bool SesionObligatoria { get; set; }
 
+    /// <summary>
+    /// RN-40…RN-47: quien está al frente entró como visitante. Puede seguir la clase, responder sus actividades en vivo, leer y practicar; no rinde
+    /// evaluaciones, no ve progreso ni perfil, y lo que hace no entra al expediente de nadie. Mientras dure, la banda amarilla lo recuerda (RF-23).
+    /// </summary>
+    public static bool EsVisitante => Usuario?.EsVisitante == true;
+
     public static string Nombre => Usuario?.Alias is { Length: > 0 } alias ? alias : Preferences.Default.Get("student_name", ConnectionOptions.Default.StudentName);
     /// <summary>Con sesión, la identidad es la de MOD-001 (la persona, nunca el aparato); sin ella, el nombre escrito pasado a slug (Q-04).</summary>
     public static string PersonaId => Usuario?.Id is { Length: > 0 } id ? id : Identidad.SlugDe(Nombre);
@@ -283,6 +289,28 @@ public static class Sesion
         AparatoRegistrado.Cargar = () => Preferences.Default.Get<string?>("student_dispositivo_id", null);
         AparatoRegistrado.Guardar = id => { if (id is null) Preferences.Default.Remove("student_dispositivo_id"); else Preferences.Default.Set("student_dispositivo_id", id); };
         RegistroLocal.Configurar("student", VersionApp, () => AparatoRegistrado.Id);
+    }
+
+    /// <summary>
+    /// La tableta se presenta ante el nodo con su latido (009-04, idempotente por su huella): la da de alta si es nueva y aprende el id con el que el nodo
+    /// la conoce (<see cref="AparatoRegistrado"/>). Sin tableta registrada el nodo no da la lista de nombres ni deja entrar por PIN (BR-056,
+    /// <c>dispositivo_no_autorizado</c>). Mejor esfuerzo, con tope de 5 s: nunca lanza.
+    /// </summary>
+    public static async Task<bool> PresentarTabletaAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var tope = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            tope.CancelAfter(TimeSpan.FromSeconds(5));
+            var equipo = await Dispositivos.LatidoAsync(Dispositivo, DeviceInfo.Current.Name, Plataforma, VersionApp, tope.Token, tipo: "TABLETA");
+            if (equipo is not null) RegistroLocal.Info(Canal.Dispositivo, "tableta.presentada", "La tableta se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado });
+            return equipo is not null;
+        }
+        catch (Exception ex)
+        {
+            RegistroLocal.Advertencia(Canal.Comunicacion, "tableta.presentacion_fallo", "La tableta no pudo presentarse ante el nodo", new { tipo = ex.GetType().Name });
+            return false;
+        }
     }
 
     /// <summary>Plataforma y versión declaradas al entrar a clase, para que el inventario sepa qué app corre cada tableta.</summary>
