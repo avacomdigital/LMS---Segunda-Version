@@ -12,10 +12,30 @@ public partial class StudentMenuPage : ContentPage
         // El nombre visible es Sesion.Nombre: el alias de quien se identificó (007-10) o, sin sesión obligatoria, el nombre escrito.
         var name = Sesion.Nombre; var primero = name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? name;
         StudentName.Text = primero; WelcomeLabel.Text = $"Bienvenido, {primero}"; Iniciales.Text = Avacom.Lms.Core.Models.Identidad.InicialesDe(name);
+        AplicarPermisos();
+    }
+
+    /// <summary>
+    /// RF-25 · RN-43: las teselas siguen los permisos de la sesión. Un visitante sigue la clase, lee sus asignaturas y practica, pero no tiene progreso, perfil ni
+    /// evaluaciones (el nodo se lo negaría con <c>sesion_visitante_limitada</c>): esas teselas se atenúan y no responden, y «Exámenes» sale del dock.
+    /// «Modo de estudio» se queda: con visitante muestra sólo la práctica y avisa que no se guarda (RF-24).
+    /// </summary>
+    private void AplicarPermisos()
+    {
+        var visitante = Sesion.EsVisitante;
+        foreach (var tesela in new View[] { TeselaPerfil, TeselaProgreso })
+        {
+            tesela.Opacity = visitante ? 0.32 : 1;
+            tesela.IsEnabled = !visitante;
+            tesela.InputTransparent = visitante;
+        }
+        DockEvaluaciones.IsVisible = !visitante;
+        RolLabel.Text = visitante ? "Visitante" : "Estudiante";
+        if (visitante) { StudentName.Text = "Visitante"; WelcomeLabel.Text = "Bienvenido"; Iniciales.Text = "V"; }
     }
     /// <summary>
-    /// «Modo de estudio» está en cualquier tableta (D-15): no pide código como «Clase en vivo»; al entrar pregunta quién eres, porque las lecciones las
-    /// asigna el profesor a un grupo y en un LMS offline nadie puede verificar quién es quién.
+    /// «Modo de estudio» está en cualquier tableta. Con sesión obligatoria estudia quien entró por el acceso (RF-24: ya no se pregunta «¿Quién eres?»); con
+    /// una visita sólo se ofrece dónde practicar. En modo prototipo (nodo sin sesión) se sigue eligiendo el nombre, como pedía D-15.
     /// </summary>
     private async void OnEstudio(object? sender, EventArgs e) => await Shell.Current.GoToAsync("estudio");
     /// <summary>«Exámenes» (MOD-010): lo que el profesor aplicó a esta persona. Sin sesión de usuario pregunta quién eres, sin código ni contraseña.</summary>

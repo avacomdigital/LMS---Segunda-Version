@@ -88,6 +88,14 @@ public sealed class EvaluacionesPage : ContentPage
         _cargando = true;
         try
         {
+            // RN-43 · AC-A15: una visita no rinde evaluaciones formales. El menú ya no las ofrece; si se llega aquí igual, se dice qué pasó y qué sigue.
+            if (Sesion.EsVisitante)
+            {
+                _quien.Text = string.Empty;
+                if (_firma != "visitante")
+                    Pintar(Mensaje("Estás como visitante", "Las evaluaciones son de quien entra con su nombre y su PIN. Si olvidaste tu PIN, pídele a tu profesor que te ayude."), "visitante");
+                return;
+            }
             if (!Sesion.SabeQuienEvalua)
             {
                 _quien.Text = string.Empty;

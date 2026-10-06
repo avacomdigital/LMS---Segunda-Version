@@ -112,4 +112,10 @@ public partial class StudyModePage : ContentPage, IStudyNavigation
 
     public Task<bool> ConfirmAsync(string title, string message, string accept, string cancel) =>
         DisplayAlertAsync(title, message, accept, cancel);
+
+    // ---------------------------------------------------------------------------- visitante (RF-24): adónde ir a practicar
+
+    private async void OnVisitanteClase(object? sender, EventArgs e) => await Shell.Current.GoToAsync("../clase-unirse");
+
+    private async void OnVisitanteAsignaturas(object? sender, EventArgs e) => await Shell.Current.GoToAsync("../asignaturas");
 }

@@ -7,6 +7,13 @@ using Avacom.Lms.Student.ModoEstudio.Services;
 namespace Avacom.Lms.Student.ModoEstudio.ViewModels;
 
 /// <summary>
+/// Quién estudia cuando el nodo exige sesión (RF-24, revisa D-15): la persona que entró por el acceso del alumno (grupo, nombre y PIN), sin volver a
+/// preguntar «¿Quién eres?». <c>EsVisitante</c>: la sesión es de una visita, que no tiene lecciones asignadas ni avance. Nulo en modo prototipo (nodo sin
+/// sesión obligatoria): ahí se sigue eligiendo el nombre como hasta ahora.
+/// </summary>
+public sealed record IdentidadDeEstudio(StudyStudent? Persona, bool EsVisitante);
+
+/// <summary>
 /// «Modo estudio · Mis lecciones» (MOD-008 · PAN-124/130). Toda la lógica de la pantalla vive aquí y en el servicio; la página sólo pinta.
 ///
 /// Reglas de la pantalla que este ViewModel hace cumplir:
@@ -23,10 +30,13 @@ public sealed class StudyModeViewModel : ObservableObject, IStudyLessonActions, 
     private readonly IStudyNavigation _navegacion;
     private readonly Dictionary<string, StudyLessonItem> _porId = new();
     private readonly CancellationTokenSource _vida = new();
+    private readonly IdentidadDeEstudio? _identidad;
     private int _cargando;
 
-    public StudyModeViewModel(IStudyModeService servicio, IDownloadService descargas, IConnectivityService conectividad, IStudyNavigation navegacion)
+    public StudyModeViewModel(IStudyModeService servicio, IDownloadService descargas, IConnectivityService conectividad, IStudyNavigation navegacion,
+                              IdentidadDeEstudio? identidad = null)
     {
+        _identidad = identidad;
         _servicio = servicio;
         _descargas = descargas;
         _conectividad = conectividad;
@@ -106,7 +116,18 @@ public sealed class StudyModeViewModel : ObservableObject, IStudyLessonActions, 
     public string Title => IsChoosingStudent ? "¿Quién eres?" : "Modo estudio";
     public string Subtitle => IsChoosingStudent
         ? "Elige tu nombre para ver las lecciones que te asignó tu profesor."
+        : IsVisitorView
+        ? "Estás como visitante: aquí no hay lecciones asignadas a tu nombre."
         : "Continúa tus lecciones asignadas incluso cuando estés sin conexión.";
+
+    // ======================================================================================= visitante (RF-24)
+    /// <summary>Una visita (RN-43) no hace el modo estudio asignado: se le dice y se le ofrece dónde practicar. Nada se pide al aula.</summary>
+    public bool IsVisitorView => _identidad?.EsVisitante == true;
+
+    public string VisitorNotice => Avacom.Lms.Core.Services.MensajesDeAcceso.AvisoVisitante;
+
+    /// <summary>La sesión del acceso ya dice quién estudia: no se pregunta ni se cambia aquí.</summary>
+    private bool PersonaFijadaPorLaSesion => _identidad?.Persona is not null;
 
     // ======================================================================================= ¿quién eres? (D-15)
     // «Modo estudio» no pide código (eso es «Clase en vivo»): las lecciones se asignan a un grupo, así que aquí la persona dice quién es. En un LMS
@@ -127,7 +148,7 @@ public sealed class StudyModeViewModel : ObservableObject, IStudyLessonActions, 
     }
 
     /// <summary>Se ve la lista de lecciones (y no el selector de nombres).</summary>
-    public bool IsStudyView => !IsChoosingStudent;
+    public bool IsStudyView => !IsChoosingStudent && !IsVisitorView;
 
     public bool IsLoadingRoster { get => _cargandoNombres; private set => SetProperty(ref _cargandoNombres, value); }
 
@@ -147,7 +168,7 @@ public sealed class StudyModeViewModel : ObservableObject, IStudyLessonActions, 
     public string ConfirmStudentText => _elegido is null ? "Elige tu nombre" : $"Continuar como {PrimerNombre(_elegido.Name)}";
 
     /// <summary>Quién está estudiando ahora (el aviso de la cabecera, con el que se puede cambiar).</summary>
-    public bool HasCurrentStudent => !IsChoosingStudent && _servicio.CurrentStudent is not null;
+    public bool HasCurrentStudent => !IsChoosingStudent && !PersonaFijadaPorLaSesion && _servicio.CurrentStudent is not null;
     public string StudyingAsText => _servicio.CurrentStudent is { } yo ? $"Estudias como {yo.Name}  ·  Cambiar" : string.Empty;
 
     private static string PrimerNombre(string nombre) => nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? nombre;
@@ -273,6 +294,7 @@ public sealed class StudyModeViewModel : ObservableObject, IStudyLessonActions, 
     /// <summary>«¿No eres tú?»: vuelve a preguntar. No borra nada: si vuelve a elegir el mismo nombre, sigue donde iba.</summary>
     private async Task CambiarEstudianteAsync()
     {
+        if (PersonaFijadaPorLaSesion || IsVisitorView) return;   // con sesión, quien estudia es quien entró: para cambiar, «Salir»
         try { await _servicio.ChangeStudentAsync(_vida.Token); }
         catch (Exception ex) { RegistroDeFallos.Escribir("student", "StudyModeViewModel.Cambiar", ex); }
         await EnHiloUi(() =>
@@ -374,12 +396,23 @@ public sealed class StudyModeViewModel : ObservableObject, IStudyLessonActions, 
     /// <summary>Pide las lecciones (al aula si contesta, a la tableta si no) y las vuelca en las tarjetas.</summary>
     public async Task LoadAsync(bool silencioso = false)
     {
+        if (IsVisitorView)
+        {
+            // RF-24: la visita no tiene lecciones ni avance; no se llama al aula (contestaría sesion_visitante_limitada).
+            await EnHiloUi(() => { IsLoading = false; IsChoosingStudent = false; });
+            return;
+        }
         if (Interlocked.Exchange(ref _cargando, 1) == 1) return;
         var primera = Lessons.Count == 0;
         try
         {
             if (primera && !silencioso) IsLoading = true;
+            // RF-24: con sesión, quien estudia es quien entró (grupo, nombre y PIN). Si la tableta recordaba a otra persona, se cambia antes de pedir nada.
+            if (_identidad?.Persona is { } persona && _servicio.CurrentStudent?.Id != persona.Id)
+                await _servicio.ChooseStudentAsync(persona, _vida.Token);
             var resultado = await _servicio.LoadAsync(_vida.Token);
+            if (resultado.NeedsIdentity && _identidad?.Persona is { } deLaSesion && await _servicio.ChooseStudentAsync(deLaSesion, _vida.Token))
+                resultado = await _servicio.LoadAsync(_vida.Token);
             if (resultado.NeedsIdentity)
             {
                 await MostrarSelectorAsync();

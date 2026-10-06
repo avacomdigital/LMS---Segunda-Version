@@ -30,8 +30,19 @@ public static class EstudioCompose
     public static StudyModeViewModel CrearViewModel(IStudyNavigation navegacion)
     {
         Asegurar();
-        return new StudyModeViewModel(_servicio!, _descargas!, _conectividad!, navegacion);
+        return new StudyModeViewModel(_servicio!, _descargas!, _conectividad!, navegacion, IdentidadDeLaSesion());
     }
+
+    /// <summary>
+    /// RF-24 (revisa D-15): con sesión obligatoria el modo estudio usa a la persona del acceso (grupo, nombre y PIN) y ya no pregunta «¿Quién eres?»; con una
+    /// visita sólo se ofrece dónde practicar. Sin sesión (modo prototipo) es nulo y todo sigue como hasta ahora.
+    /// </summary>
+    private static IdentidadDeEstudio? IdentidadDeLaSesion() => Sesion.Usuario switch
+    {
+        null => null,
+        { EsVisitante: true } => new IdentidadDeEstudio(null, true),
+        var u => new IdentidadDeEstudio(new StudyStudent(u.Id, string.IsNullOrWhiteSpace(u.Alias) ? u.Id : u.Alias), false),
+    };
 
     private static void Asegurar()
     {

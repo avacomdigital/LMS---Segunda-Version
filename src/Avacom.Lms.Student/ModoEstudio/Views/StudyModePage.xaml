@@ -192,6 +192,23 @@
                     </ScrollView>
 
                     <!-- ================================================== lista (lo único que se desplaza) -->
+                    <!-- ==================================================================== visitante (RF-24, RN-43)
+                         Una visita no tiene lecciones asignadas ni avance: el modo estudio guarda a nombre de alguien y el nodo se lo niega
+                         (sesion_visitante_limitada). Se dice qué pasó y adónde ir a practicar: la clase en vivo y las asignaturas. -->
+                    <VerticalStackLayout Grid.Row="1" Grid.RowSpan="3" IsVisible="{Binding IsVisitorView}" Padding="30,18,30,26" Spacing="18" AutomationId="estudio-visitante">
+                        <Border Style="{StaticResource StudyChip}" BackgroundColor="#FEF9E6" HorizontalOptions="Start" Padding="16,10">
+                            <Label Text="{Binding VisitorNotice}" Style="{StaticResource StudyChipLabel}" TextColor="#18181B" LineBreakMode="WordWrap" FontSize="15" />
+                        </Border>
+                        <Label Text="Puedes practicar en la clase en vivo, con las actividades que lance tu profesor, y leer las lecciones de tus asignaturas."
+                               Style="{StaticResource StudyBody}" LineBreakMode="WordWrap" />
+                        <HorizontalStackLayout Spacing="14">
+                            <Button Text="Ir a la clase en vivo" HeightRequest="52" Padding="26,0" CornerRadius="16" FontSize="17" BackgroundColor="#E5262B" TextColor="White"
+                                    Clicked="OnVisitanteClase" AutomationId="estudio-visitante-clase" />
+                            <Button Text="Leer mis asignaturas" HeightRequest="52" Padding="26,0" CornerRadius="16" FontSize="17" BackgroundColor="White" TextColor="#18181B"
+                                    BorderColor="#26000000" BorderWidth="1" Clicked="OnVisitanteAsignaturas" AutomationId="estudio-visitante-asignaturas" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
                     <Grid Grid.Row="3" IsVisible="{Binding IsStudyView}">
                         <CollectionView x:Name="Lista" ItemsSource="{Binding VisibleLessons}" SelectionMode="None" IsVisible="{Binding ShowList}"
                                         VerticalScrollBarVisibility="Default" Margin="0" AutomationId="estudio-lista">
