@@ -101,7 +101,9 @@ set AVACOM_CONTENIDO_ENLACE_V2=%TEMP%\link-pruebas.json
 | `/api/aula/sesiones/{id}/participantes/{pid}/presencia/` · `admitir/` · `rechazar/` · `expulsar/` | POST | Presencia técnica declarada por la tableta · decisiones del profesor |
 | `/api/aula/sesiones/{id}/suspender/` · `reanudar/` · `cerrar/` | POST | Caída del nodo · reanudar con el mismo código · cerrar y consolidar el **resumen** |
 | `/api/acceso/configuracion/` | GET | Qué identificador y qué secreto usa cada perfil (para pintar el login). Sin sesión |
-| `/api/acceso/instalacion/` | POST | Primer arranque: organización, políticas y primer administrador. Sólo una vez |
+| `/api/acceso/instalacion/` | POST | Primer arranque: organización, políticas, primer administrador y **PIN maestro** (obligatorio, seis dígitos). Sólo una vez |
+| `/api/acceso/pin-maestro/` | GET, PUT | Estado y cambio del PIN maestro (`identity.master_pin.manage`, administrador); nunca devuelve el PIN. Con él los profesores crean su usuario (`docentes/registro/`) y restablecen su contraseña (`docentes/restablecer/`), sin sesión |
+| `/api/acceso/aula/grupos/…` · `estudiantes/registro/` · `estudiantes/{id}/pin/` · `sesiones/visitante/` | GET, POST | La tableta del alumno, sin sesión y sólo desde un equipo registrado: grupos y nombres (sólo alias), alta propia, elegir el PIN pendiente y entrar como visitante. El login acepta `usuario_id` (tocar el nombre) y `pin_maestro` (administración). Ver [`spec-driven/01-acceso/02-Endpoints.md`](../spec-driven/01-acceso/02-Endpoints.md) §6 ter |
 | `/api/dispositivos/` | POST · GET | **MOD-009 · Device Manager** (app `device_manager`, tablas `m09_*`): registro idempotente de la tableta por su huella (`identificador_hw`, `nombre`, `plataforma`, `version_app`) · inventario con estado en vivo (`en_linea`, `bloqueado`, `sesion_abierta`; `?todos=1` incluye las retiradas) |
 | `/api/dispositivos/latido/` | POST | La tableta dice que sigue viva (registra si es nueva) y recibe si está bloqueada o retirada |
 | `/api/dispositivos/{id}/` · `bloquear/` · `desbloquear/` | GET, PATCH · POST | Ficha y alta/baja (`nombre`, `tipo`, `activo`; dar de baja cierra sus sesiones) · bloqueo reversible: una tableta bloqueada no entra a clase ni recibe lanzamientos |
@@ -178,10 +180,14 @@ La organización y el primer administrador se crean una sola vez, desde la API (
 o con el comando:
 
 ```powershell
+$env:AVACOM_LMS_PIN_MAESTRO = "482915"   # seis dígitos, nada trivial; NUNCA como argumento (se vería en el listado de procesos)
 .venv\Scripts\python manage.py acceso_instalar --codigo IE-SANJOSE --nombre "IE San José" --pais CO --admin-dni 1042888795 --admin-nombres Ana --admin-apellidos Pérez
 ```
 
-Si no se pasa `--admin-password`, se genera una y se muestra **una sola vez**.
+Si no se pasa `--admin-password`, se genera una y se muestra **una sola vez**. El **PIN maestro es obligatorio** (sin él no se instala):
+se lee de `AVACOM_LMS_PIN_MAESTRO` o, con `--pin-maestro-stdin`, de la entrada estándar. Más comandos del técnico:
+`acceso_pin_maestro` (estado) y `acceso_pin_maestro --cambiar` (reemplazarlo si el administrador lo perdió; el PIN nuevo por la entrada estándar), y
+`acceso_restablecer_admin --dni <documento>` (recuperar la contraseña del administrador).
 
 Para cargar el padrón sin red desde un archivo delimitado (FUN-003 del Documento Maestro), con las columnas
 `rol, alias, nombres, apellidos, tipo_identificador, identificador, grupo, secreto`:
