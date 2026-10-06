@@ -151,7 +151,7 @@ El reglamento de acceso (BR-023, BR-024). Una fila **general por perfil** y, opc
 | `ventana_intentos_min` | smallint | 15 |
 | `bloqueo_minutos` | smallint | 15 (30 para administración) |
 | `duracion_sesion_min` | int | **240** |
-| `inactividad_min` | smallint | **20** (30 para estudiantes). FUN-009 |
+| `inactividad_min` | smallint | **240** (igual que la duración de la sesión, para todos los perfiles; antes 20 y 30 para estudiantes cortaban la clase a medias, QA-26). FUN-009 |
 | `vigencia_credencial_dias` | int null | Null = no caduca |
 | `permite_acceso_temporal` | bool | Sólo `student` por defecto |
 | `autoregistro` | bool | **Nuevo (0010).** El propio usuario puede crear su cuenta (RN-37); sólo `student` y `teacher`. Encendido por defecto en ambos |

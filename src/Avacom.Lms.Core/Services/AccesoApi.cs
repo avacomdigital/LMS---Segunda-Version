@@ -57,6 +57,12 @@ public sealed record SesionAcceso(
     public bool CerroOtraSesion => SesionAnterior is not null;
 }
 
+/// <summary>El código de un solo uso (60 s) con el que la otra app abre esta misma sesión sin pedir la clave. <c>Menu</c> es el del rol: «student» u otro.</summary>
+public sealed record TraspasoDeSesion(
+    [property: JsonPropertyName("codigo")] string Codigo,
+    [property: JsonPropertyName("expira_en_seg")] int ExpiraEnSeg,
+    [property: JsonPropertyName("menu")] string? Menu);
+
 public sealed record SesionAnterior(
     [property: JsonPropertyName("sesion_id")] string? SesionId,
     [property: JsonPropertyName("dispositivo")] string? Dispositivo);
@@ -196,6 +202,10 @@ public interface IAccesoApi
     /// <summary>RB-19: dos toques, sin profesor, PIN ni código. Cuenta efímera con permisos mínimos.</summary>
     Task<SesionAcceso?> EntrarComoVisitanteAsync(string dispositivo, string? grupoId = null, CancellationToken ct = default);
     Task<bool> CerrarSesionAsync(CancellationToken ct = default);
+    /// <summary>Pide el código de traspaso de la sesión propia, para abrirla en la otra app (el profesorado en OPS, el alumno en Student).</summary>
+    Task<TraspasoDeSesion?> PedirTraspasoAsync(CancellationToken ct = default);
+    /// <summary>Canjea un código de traspaso por una sesión nueva en este equipo. El nodo cierra la de origen: el código sirve una sola vez.</summary>
+    Task<SesionAcceso?> CanjearTraspasoAsync(string codigo, string dispositivo, CancellationToken ct = default);
     /// <summary>
     /// <c>PUT yo/credencial/</c>: la persona identificada cambia su propia contraseña (la provisional de la hoja de acceso, <c>DebeCambiarCredencial</c>, o
     /// cuando quiera). El nodo cierra sus otras sesiones y conserva ésta. <c>secreto_debil</c> trae las reglas que no se cumplieron.
@@ -269,6 +279,17 @@ public sealed class AccesoApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
         Token = null;
         var cuerpo = string.IsNullOrWhiteSpace(grupoId) ? (object)new { dispositivo } : new { dispositivo, grupo_id = grupoId };
         var sesion = await EnviarAsync<SesionAcceso>("api/acceso/sesiones/visitante/", cuerpo, ct);
+        if (sesion is not null) Token = sesion.Token;
+        return sesion;
+    }
+
+    public Task<TraspasoDeSesion?> PedirTraspasoAsync(CancellationToken ct = default) =>
+        EnviarAsync<TraspasoDeSesion>("api/acceso/sesiones/traspaso/", new { }, ct);
+
+    public async Task<SesionAcceso?> CanjearTraspasoAsync(string codigo, string dispositivo, CancellationToken ct = default)
+    {
+        Token = null;   // el canje es público: no viaja con ningún pase anterior
+        var sesion = await EnviarAsync<SesionAcceso>("api/acceso/sesiones/traspaso/canjear/", new { codigo, dispositivo }, ct);
         if (sesion is not null) Token = sesion.Token;
         return sesion;
     }

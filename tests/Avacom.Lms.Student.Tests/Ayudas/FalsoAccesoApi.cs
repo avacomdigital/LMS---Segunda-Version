@@ -50,6 +50,18 @@ internal sealed class FalsoAccesoApi : IAccesoApi
     private static SesionAcceso Sesion(string id, string alias, string clase = "NORMAL") =>
         new($"token-{id}", 0, $"s-{id}", new UsuarioDeSesion(id, alias, "STUDENT", "student", 1, ClaseSesion: clase));
 
+    public Task<TraspasoDeSesion?> PedirTraspasoAsync(CancellationToken ct = default)
+    {
+        Llamadas.Add("traspaso");
+        return Task.FromResult(Red() ? Bien(new TraspasoDeSesion("codigo-de-traspaso", 60, "teacher")) : null);
+    }
+
+    public Task<SesionAcceso?> CanjearTraspasoAsync(string codigo, string dispositivo, CancellationToken ct = default)
+    {
+        Llamadas.Add("canje");
+        return Task.FromResult(Red() ? Bien(Sesion("traspasado", "Traspasado")) : null);
+    }
+
     public Task<ConfiguracionAcceso?> ConfiguracionAsync(CancellationToken ct = default) =>
         Task.FromResult(Red() ? Bien(new ConfiguracionAcceso(true, true, AutoregistroAlumnos: true, Visitante: Visitante)) : null);
 

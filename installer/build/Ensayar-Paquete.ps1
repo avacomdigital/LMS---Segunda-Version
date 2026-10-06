@@ -255,7 +255,7 @@ try {
     foreach ($clave in 'AVACOM_LMS_CLAVE_DATOS', 'AVACOM_LMS_CLAVE_INDICE', 'AVACOM_LMS_CLAVE_TOKENS', 'AVACOM_LMS_SECRET') {
         Comprobar ($textoConfig -match "(?m)^$clave=.{20,}") "$clave generada" "Falta $clave en backend.env"
     }
-    foreach ($par in @(@('AVACOM_LMS_ENTORNO', 'instalado'), @('AVACOM_AULA_FUENTE_CURSOS', 'biblioteca'), @('AVACOM_AULA_PERMITIR_EJEMPLO', '0'), @('AVACOM_LMS_DEBUG', '0'))) {
+    foreach ($par in @(@('AVACOM_LMS_ENTORNO', 'instalado'), @('AVACOM_AULA_FUENTE_CURSOS', 'biblioteca'), @('AVACOM_AULA_PERMITIR_EJEMPLO', '0'), @('AVACOM_LMS_DEBUG', '0'), @('AVACOM_LMS_EXIGIR_SESION', '1'))) {
         Comprobar ((Leer-Valor $configA $par[0]) -eq $par[1]) "$($par[0])=$($par[1]) en backend.env" "$($par[0]) deberia ser $($par[1]) y es $(Leer-Valor $configA $par[0])"
     }
     Comprobar ((Leer-Valor $configA 'AVACOM_LMS_DIR_LOGS') -eq (Join-Path $datosA 'Logs')) 'La carpeta de registros es la del nodo' 'AVACOM_LMS_DIR_LOGS no es la carpeta Logs del nodo'
@@ -282,12 +282,26 @@ try {
         Comprobar ($resumen -match 'websocket=ok') 'El WebSocket del aula acepta conexiones' 'El WebSocket no acepta conexiones'
         Comprobar ($resumen -match 'registros=ok') 'El servicio escribe sus registros en la carpeta del nodo' "El servicio no escribe en Logs: $resumen"
         Comprobar ($resumen -match 'organizacion=no') 'El nodo nuevo avisa que falta la organizacion' "Resumen inesperado: $resumen"
+        Comprobar ($resumen -match '(?m)^pin_maestro=sin_configurar') 'El nodo nuevo avisa que no tiene PIN maestro (lo crea el primer arranque de OPS)' "Resumen inesperado: $resumen"
+        # Lo que ve OPS al abrirse en un nodo recien instalado: sin organizacion (abre el primer arranque), sesion obligatoria
+        # y sin PIN maestro. Es la configuracion de la PRIMERA instalacion: nada se pide en el instalador, todo en el primer arranque.
+        $configAcceso = Pedir "http://127.0.0.1:$puertoA/api/acceso/configuracion/"
+        Comprobar ($configAcceso.Estado -eq 200 -and $configAcceso.Json.instalado -eq $false -and $configAcceso.Json.sesion_obligatoria -eq $true) 'Nodo nuevo: sin organizacion y con la sesion obligatoria (OPS abre el primer arranque y pide documento y contrasena)' "/api/acceso/configuracion/ respondio $($configAcceso.Estado): $($configAcceso.Cuerpo)"
+        $instalacionVacia = Pedir "http://127.0.0.1:$puertoA/api/acceso/instalacion/" 'POST' '{}'
+        Comprobar ($instalacionVacia.Estado -eq 400) 'El primer arranque exige datos (organizacion, administrador y PIN maestro): una instalacion vacia se rechaza' "/api/acceso/instalacion/ con cuerpo vacio respondio $($instalacionVacia.Estado)"
         $bib = [regex]::Match($resumen, '(?m)^biblioteca=(.+)$').Groups[1].Value.Trim()
         Write-Host "  [info]   AVACOM Contenido visto desde el aula: $bib (informativo: la instalacion no depende de ella)" -ForegroundColor DarkGray
         Comprobar ($bib -in 'conectada', 'no_disponible', 'desconocida') 'El estado de la biblioteca se informa sin romper nada' "Estado de biblioteca inesperado: $bib"
 
         $fuente = Pedir "http://127.0.0.1:$puertoA/api/aula/fuente/" 'GET' '' 30
-        Comprobar ($fuente.Estado -eq 200) '/api/aula/fuente/ responde 200 (nunca 503) con o sin biblioteca' "/api/aula/fuente/ respondio $($fuente.Estado)"
+        # Desde que el instalador deja AVACOM_LMS_EXIGIR_SESION=1, las rutas del aula piden sesion: sin ella la respuesta
+        # correcta es 401 (nunca 503 ni 500). Con la sesion obligatoria apagada seria 200.
+        $exigeSesion = ((Leer-Valor $configA 'AVACOM_LMS_EXIGIR_SESION') -ne '0')
+        if ($exigeSesion) {
+            Comprobar ($fuente.Estado -eq 401) '/api/aula/fuente/ exige sesion (401): el nodo instalado no regala el aula sin identificarse' "/api/aula/fuente/ respondio $($fuente.Estado): $($fuente.Cuerpo)"
+        } else {
+            Comprobar ($fuente.Estado -eq 200) '/api/aula/fuente/ responde 200 (nunca 503) con o sin biblioteca' "/api/aula/fuente/ respondio $($fuente.Estado)"
+        }
         $auditoria = Pedir "http://127.0.0.1:$puertoA/api/auditoria/estado/"
         Comprobar ($auditoria.Estado -in 200, 401, 403) 'El modulo de auditoria esta en el paquete (/api/auditoria/ responde)' "/api/auditoria/estado/ respondio $($auditoria.Estado)"
         $evaluacion = Pedir "http://127.0.0.1:$puertoA/api/evaluacion/asignaciones/"
@@ -443,6 +457,8 @@ public static class Prueba {
             $codigo = Host-Ejecutar $instB @('validar', '60')
             Comprobar ($codigo -eq 0) 'validar correcto sobre el nodo actualizado' "validar devolvio $codigo"
             Comprobar ((Leer-Texto (Join-Path $datosB 'Logs\resumen-nodo.txt')) -match 'organizacion=si') 'El nodo sigue teniendo su organizacion' 'El nodo perdio su organizacion'
+            # Un nodo que ya tenia organizacion antes del PIN maestro no lo tiene tras actualizar: lo dice el resumen que lee la pantalla final.
+            Comprobar ((Leer-Texto (Join-Path $datosB 'Logs\resumen-nodo.txt')) -match '(?m)^pin_maestro=sin_configurar') 'El nodo actualizado avisa que le falta el PIN maestro (se configura en OPS, Seguridad del aula)' 'El resumen del nodo actualizado no dice pin_maestro=sin_configurar'
             $login = Pedir "http://127.0.0.1:$puertoB/api/acceso/sesiones/" 'POST' '{"identificador":"1000000001","secreto":"Ensayo.2026!"}' 30
             Comprobar ($login.Estado -eq 200) 'El administrador inicia sesion tras actualizar: sus datos siguen legibles con las mismas claves' "El inicio de sesion respondio $($login.Estado): $($login.Cuerpo)"
             $audito = Pedir "http://127.0.0.1:$puertoB/api/auditoria/estado/"

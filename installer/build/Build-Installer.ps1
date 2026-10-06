@@ -136,7 +136,12 @@ function Huella-Carpetas {
 }
 
 # Lo que el instalador de OPS empaqueta y de lo que depende su contenido. Student queda fuera: no viaja aqui.
-$ArchivosDeLog = @('*.log', '*.log.*', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.pyc', '.escritura')
+# '.env' y '.env.*' son la configuracion de DESARROLLO (backend\.env: sesion obligatoria y el PIN maestro de la primera
+# instalacion del desarrollador). No se versionan y NUNCA viajan: un PIN maestro conocido dentro de cada paquete
+# seria un agujero, y la configuracion del nodo instalado es solo Config\backend.env.
+# Tambien cualquier base SQLite suelta (el desarrollador prueba con otras, p. ej. primer-arranque.sqlite3, y puede tenerlas
+# abiertas): ni se empaquetan ni cuentan en la huella (leerlas, ademas, falla si otro proceso las tiene abiertas).
+$ArchivosDeLog = @('*.log', '*.log.*', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.pyc', '.escritura', '.env', '.env.*')
 function Huella-Backend([string] $carpeta) {
     Huella-Carpetas -Raices @($carpeta) -ExcluirArchivos $ArchivosDeLog -ExcluirRutas @((Join-Path $carpeta 'logs'))
 }
@@ -268,8 +273,17 @@ if ($OmitirPruebas) {
     Paso '2/8  Pruebas del backend'
     $venv = Join-Path $raiz 'backend\.venv\Scripts\python.exe'
     $pythonPruebas = if (Test-Path $venv) { $venv } else { (Get-Command python).Source }
-    $codigo = Nativo -Ejecutable $pythonPruebas -Argumentos @('manage.py', 'test') `
-                     -Directorio (Join-Path $raiz 'backend')
+    # Desde que settings.py lee backend\.env en desarrollo (que trae la sesion obligatoria), las pruebas heredarian ese
+    # modo. Se escribieron para el modo por defecto del backend (sin sesion obligatoria; las que necesitan sesion la
+    # activan ellas mismas): se les da ese entorno, y se restaura al terminar. Una variable del entorno manda sobre .env.
+    $exigirAntes = $env:AVACOM_LMS_EXIGIR_SESION
+    $env:AVACOM_LMS_EXIGIR_SESION = '0'
+    try {
+        $codigo = Nativo -Ejecutable $pythonPruebas -Argumentos @('manage.py', 'test') `
+                         -Directorio (Join-Path $raiz 'backend')
+    } finally {
+        if ($null -eq $exigirAntes) { Remove-Item Env:\AVACOM_LMS_EXIGIR_SESION -ErrorAction SilentlyContinue } else { $env:AVACOM_LMS_EXIGIR_SESION = $exigirAntes }
+    }
     if ($codigo -ne 0) { Fallar 'La suite del backend no paso: no se empaqueta.' }
 }
 
@@ -396,7 +410,7 @@ New-Item -ItemType Directory -Force $destinoBackend | Out-Null
 $codigo = Nativo -Ejecutable 'robocopy' -Argumentos @(
     (Join-Path $raiz 'backend'), $destinoBackend, '/E'
     '/XD', '.venv', '__pycache__', (Join-Path $raiz 'backend\logs')
-    '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.log', '*.log.*', '*.pyc', '.escritura'
+    '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.log', '*.log.*', '*.pyc', '.escritura', '.env', '.env.*'
     '/NFL', '/NDL', '/NJH', '/NJS', '/NP'
 ) -Silencioso
 if ($codigo -ge 8) { Fallar "robocopy fallo al copiar el backend (codigo $codigo)." }
@@ -406,7 +420,7 @@ foreach ($obligatorio in @('manage.py', 'avacom_lms\settings.py', 'avacom_lms\ws
         Fallar "El backend copiado esta incompleto: falta $obligatorio."
     }
 }
-if (Get-ChildItem $destinoBackend -Filter 'db.sqlite3*' -ErrorAction SilentlyContinue) {
+if (Get-ChildItem $destinoBackend -Recurse -Include '*.sqlite3*', '*.db' -ErrorAction SilentlyContinue) {
     Fallar 'La base de datos de desarrollo se colo en el paquete.'
 }
 foreach ($obligatorio in @('avacom_lms\asgi.py', 'classroom_engine\interfaces\websockets.py')) {
@@ -416,6 +430,9 @@ foreach ($obligatorio in @('avacom_lms\asgi.py', 'classroom_engine\interfaces\we
 }
 if (Get-ChildItem $destinoBackend -Recurse -Include '*.pyc' -ErrorAction SilentlyContinue) {
     Fallar 'Hay bytecode compilado (.pyc) dentro del backend a empaquetar.'
+}
+if (Get-ChildItem $destinoBackend -Recurse -Force -Filter '.env*' -File -ErrorAction SilentlyContinue) {
+    Fallar 'La configuracion de desarrollo (backend\.env) se colo en el paquete: llevaria un PIN maestro conocido a cada aula.'
 }
 if (Test-Path (Join-Path $destinoBackend 'logs')) {
     Fallar 'Los registros de desarrollo (backend\logs) se colaron en el paquete.'
@@ -511,6 +528,16 @@ Los cursos no viven aqui: son de AVACOM Contenido, que se instala aparte y
 tiene su propia carpeta. AVACOM OPS Master los consulta y guarda solo el
 expediente: inscripcion, progreso, intentos y notas. Si AVACOM Contenido no
 esta abierto, el aula arranca igual y los cursos aparecen cuando lo este.
+
+PRIMER ARRANQUE (instalacion nueva): el nodo queda sin organizacion. Al abrir AVACOM OPS
+Master por primera vez, la aplicacion lo detecta y abre el primer arranque: pais y nombre del
+aula, el administrador (documento, nombres, apellidos, contrasena) y el PIN maestro (seis
+digitos). La hoja de acceso se muestra UNA vez y el PIN maestro no se puede volver a ver.
+Despues, desde OPS (Grupos) se crean los grupos y los alumnos, o los alumnos se crean solos y
+los profesores se registran con el PIN maestro. Cada tableta se registra sola al conectar.
+ACTUALIZACION de un nodo que ya tenia organizacion: no tiene PIN maestro hasta que la
+administracion lo configure en OPS (Seguridad del aula); a los alumnos con PIN provisional
+conviene dejarlos en "PIN pendiente" (Nuevo PIN, en Grupos).
 
 Para quitar el producto, usa "Aplicaciones instaladas" de Windows. La
 desinstalacion pregunta si quieres conservar los datos y su configuracion (van
@@ -652,7 +679,14 @@ ejecuta las diez comprobaciones del asistente, revisa permisos, servicio, regist
 comunicacion con AVACOM Contenido, y recoge los errores de la aplicacion (registro de fallos y
 Visor de eventos de Windows). Deja un informe y un .zip con las evidencias en el escritorio.
 
-Esta version incluye: Modo Estudio, Evaluacion y entrega, y Auditoria y registros del nodo.
+Esta version incluye: Modo Estudio, Evaluacion y entrega, Auditoria y registros del nodo, y el
+acceso con PIN maestro (alta propia de profesores y alumnos, visitante, traspaso entre OPS y Student).
+
+PRIMER ARRANQUE: tras una instalacion nueva, abre AVACOM OPS Master. Pedira (con el teclado tactil
+de Windows) pais y nombre del aula, el administrador (documento, contrasena) y el PIN maestro de
+seis digitos. La hoja de acceso se muestra una sola vez. Luego crea los grupos y alumnos en Grupos
+(o deja que se registren solos). En cada tableta, AVACOM Student pide la direccion del aula que
+muestra la ultima pantalla del instalador.
 Politica de datos de esta version: $PoliticaDatos.
 "@ | Set-Content -Path (Join-Path $salida 'LEEME.txt') -Encoding utf8
 

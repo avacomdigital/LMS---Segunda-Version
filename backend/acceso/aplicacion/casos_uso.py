@@ -595,7 +595,7 @@ class ConsultarConfiguracion(Base):
             if org is None:
                 return {"instalado": False, "claves_derivadas": self.s.cifrador.claves_derivadas()}
             perfiles: dict[str, dict] = {}
-            duracion, inactividad = 240, 20
+            duracion, inactividad = 240, 240
             registro_propio: dict[str, bool] = {}
             for p in uow.politicas.por_organizacion(org.id):
                 resumen = {"tipo_identificador": p.tipo_identificador.value, "tipo_secreto": p.tipo_secreto.value,
@@ -1697,6 +1697,65 @@ class CanjearAccesoTemporal(Base):
             uow.autorizaciones.guardar(autorizacion)
             self.auditar(uow, autorizacion.usuario_id, "identidad.acceso_temporal.revocado", "m01_autorizacion_temporal",
                          autorizacion.id, {"motivo": "fallos"})
+
+
+TRASPASO_VIDA_SEG = 60
+
+
+class EmitirTraspaso(Base):
+    """Un código de un solo uso y de 60 s para abrir la MISMA sesión en la otra app (OPS ↔ Student) sin volver a escribir la clave.
+
+    Una persona entra por la app que tenga a mano; si su rol pertenece a la otra (el profesorado a OPS, el alumno a Student), la app le pide este
+    código y se lo pasa a la otra app. El código es un JWT firmado por el nodo con `tipo = traspaso`, atado a la sesión de origen (`sid`) y con un
+    `jti` que NO es una sesión: nadie puede usarlo como pase. Sólo vale para una sesión normal y sin contraseña provisional pendiente."""
+
+    def ejecutar(self, principal: Principal) -> dict:
+        if principal.clase_sesion is not ClaseSesion.NORMAL:
+            raise errores.Conflicto("Esta sesión no se puede pasar a otra app.")
+        if principal.debe_cambiar_credencial:
+            raise errores.Conflicto("Primero elige tu contraseña; después podrás pasar a la otra app.")
+        ahora = self.ahora()
+        codigo = self.s.tokens.emitir({
+            "sub": principal.usuario_id, "jti": _nuevo_id(), "sid": principal.sesion_id, "tipo": "traspaso",
+            "iat": ahora // 1000, "exp": ahora // 1000 + TRASPASO_VIDA_SEG,
+        })
+
+        def registrar(uow: UnidadDeTrabajo) -> dict:
+            self.auditar(uow, principal.usuario_id, "identidad.traspaso.emitido", "m01_sesion", principal.sesion_id, {"rol": principal.rol_codigo})
+            return {"codigo": codigo, "expira_en_seg": TRASPASO_VIDA_SEG, "menu": principal.menu.value}
+        return self.ejecutar_registrando(registrar)
+
+
+class CanjearTraspaso(Base):
+    """El código de `EmitirTraspaso` → una sesión nueva de la misma persona y el mismo rol, en el dispositivo de la otra app.
+    `abrir_sesion` cierra la sesión de origen (sesión única por persona): por eso el código sirve una sola vez, sin tabla de usados."""
+
+    def ejecutar(self, codigo: str, dispositivo: str | None = None) -> dict:
+        try:
+            claims = self.s.tokens.leer(str(codigo or ""))
+        except errores.ErrorAcceso:
+            raise errores.CredencialesInvalidas("El traspaso no es válido o ya caducó.")
+        if claims.get("tipo") != "traspaso" or not claims.get("sid"):
+            raise errores.CredencialesInvalidas("El traspaso no es válido o ya caducó.")
+        return self.ejecutar_registrando(lambda uow: self._canjear(uow, claims, dispositivo))
+
+    def _canjear(self, uow: UnidadDeTrabajo, claims: dict, dispositivo: str | None) -> dict:
+        org = uow.organizaciones.unica()
+        origen = uow.sesiones.por_id(str(claims["sid"]))
+        ahora = self.ahora()
+        if org is None or origen is None or origen.usuario_id != claims.get("sub") or not origen.vigente(ahora) or origen.clase is not ClaseSesion.NORMAL:
+            raise errores.CredencialesInvalidas("El traspaso no es válido o ya caducó.")
+        usuario = uow.usuarios.por_id(origen.usuario_id)
+        if usuario is None or not usuario.activo:
+            raise errores.CredencialesInvalidas()
+        rol = self.rol_de(uow, usuario, origen.rol_id)
+        politica = self.politica_de(uow, usuario, rol)
+        disp = self.dispositivo_por_identificador(uow, org.id, dispositivo)
+        salida = self.abrir_sesion(uow, usuario, rol, politica, disp, ClaseSesion.NORMAL, False)
+        self.auditar(uow, usuario.id, "identidad.traspaso.canjeado", "m01_sesion", salida["sesion_id"],
+                     {"sesion_origen": origen.id, "dispositivo": disp.nombre if disp else None})
+        self.evento(uow, "sesion", salida["sesion_id"], "traspaso_canjeado", {"usuario_id": usuario.id})
+        return salida
 
 
 class ListarAutorizaciones(Base):

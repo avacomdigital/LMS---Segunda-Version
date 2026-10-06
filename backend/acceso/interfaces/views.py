@@ -112,6 +112,21 @@ class SesionesView(VistaPublica):
             solo_activas=not _bandera(request.query_params.get("todas"))))
 
 
+class TraspasoView(VistaAcceso):
+    """POST = pedir el código de traspaso de la sesión propia (para abrirla en la otra app)."""
+
+    def post(self, request):
+        return Response(cu.EmitirTraspaso(self.s).ejecutar(_exigir_principal(request)))
+
+
+class TraspasoCanjeView(VistaPublica):
+    """POST = canjear un código de traspaso por una sesión nueva en este dispositivo."""
+
+    def post(self, request):
+        datos = _validar(s.TraspasoEntrada, request.data)
+        return Response(cu.CanjearTraspaso(self.s).ejecutar(datos["codigo"], datos["dispositivo"] or None))
+
+
 class CanjeView(VistaPublica):
     def post(self, request):
         datos = _validar(s.CanjeEntrada, request.data)

@@ -23,7 +23,7 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: «Clase de hoy» | Chip «Biblioteca conectada» y cursos por materia | | |
+| 1 | OPS: «Clase de hoy» | Chip «Biblioteca conectada» y cursos por materia | **Sesión denegada (2026-10-06, instalador 2.3.0).** La sesión del profesor caducaba demasiado pronto (duración corta del token) y OPS lo devolvía al acceso: no se podía dictar la clase. Causa hallada en el código, sin reproducir en el nodo del QA: el pase ya duraba 240 min, pero el reglamento de fábrica cerraba la sesión a los 20 min sin usar (30 el alumno), y una clase en pantalla pasa ese tiempo sin llamar a la API. **Corregido en 2.3.1** (inactividad de fábrica = 240 min; migración `acceso 0012` para nodos ya instalados). Repetir el paso con el 2.3.1 | FALLA (QA-26) |
 | 2 | OPS: «Ciencias naturales» → *Estados de la materia…* → «Ver lecciones ›» | Lección 1 con 4 objetos, lección 2 con 3. No hay lección de examen | | |
 | 3 | OPS: lección 1 → «Dar clase con esta lección» | Código de 6 dígitos («CÓDIGO DE UNIÓN · TOCA PARA AMPLIAR») | | |
 | 4 | Student A: «Clase en vivo» → escribir un código equivocado | «Ese código no es» | | |
@@ -479,7 +479,7 @@ Se llena al terminar cada escenario.
 
 | Escenario | Camino | Estado | Fecha | Quién | QA-nn / evidencia |
 |---|---|---|---|---|---|
-| ESC-01-01 · Abrir la clase y entrada de alumnos | HP-01 | | | | |
+| ESC-01-01 · Abrir la clase y entrada de alumnos | HP-01 | FALLA (paso 1) | 2026-10-06 | Gabriel Galindo | QA-26 · corregido en 2.3.1, por repetir |
 | ESC-01-02 · Presentación | HP-01 | | | | |
 | ESC-01-03 · Lectura con audio, video y PDF | HP-01 | | | | |
 | ESC-01-04 · Laboratorio | HP-01 | | | | |

@@ -58,6 +58,11 @@ class LoginEntrada(serializers.Serializer):
         return datos
 
 
+class TraspasoEntrada(serializers.Serializer):
+    codigo = serializers.CharField(max_length=2048, trim_whitespace=True)
+    dispositivo = serializers.CharField(max_length=128, required=False, allow_blank=True, default="")
+
+
 class CanjeEntrada(serializers.Serializer):
     codigo = serializers.CharField(max_length=16, required=False, allow_blank=True, default="")
     grant_id = serializers.CharField(max_length=36, required=False, allow_blank=True, default="")

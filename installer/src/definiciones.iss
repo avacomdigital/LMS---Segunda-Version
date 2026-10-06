@@ -7,7 +7,7 @@
 #define NombreCorto         "OPS Master"
 #define Fabricante          "AVACOM"
 #ifndef VersionProducto
-  #define VersionProducto   "2.2.0"
+  #define VersionProducto   "2.3.0"
 #endif
 #define UrlProducto         "https://github.com/avacomdigital/lms-prototype-v04"
 #define NombreServicio      "AVACOMOPSBackend"

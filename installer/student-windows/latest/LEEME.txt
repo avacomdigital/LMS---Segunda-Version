@@ -1,0 +1,19 @@
+﻿AVACOM Student 2.3.0 para Windows (revision 4d4df002)
+
+  AVACOM-Student-Setup-2.3.0.exe      el instalador (no se versiona: supera los 100 MB de GitHub)
+  SHA256.txt                           la huella del instalador y del codigo que lleva
+  AVACOM-Verificar-Student.bat         revisa el equipo, el instalador y lo ya instalado, y busca el
+                                       error exacto cuando algo falla. NO modifica nada.
+  LEEME.txt                            este archivo
+
+PARA INSTALAR: toca el instalador. Se maneja con toques: no hay que escribir nada. El runtime de .NET
+y todo lo que la aplicacion necesita van dentro; no hace falta internet. Pide permiso de administrador
+UNA vez, al principio.
+
+La primera vez que se abra AVACOM Student, escribe la direccion del aula que muestra AVACOM OPS Master
+(algo como http://192.168.0.55:8000).
+
+SI ALGO FALLA (por ejemplo, la aplicacion se cierra al abrir una leccion): toca
+AVACOM-Verificar-Student.bat. Deja un informe y un .zip con las evidencias en el escritorio.
+
+Student es independiente de AVACOM OPS Master: no exige que este en el mismo equipo y no lo modifica.

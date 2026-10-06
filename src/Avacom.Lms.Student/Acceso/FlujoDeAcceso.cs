@@ -331,6 +331,9 @@ public sealed class FlujoDeAcceso
         var sesion = await _api.IniciarSesionAsync(id, secreto, _dispositivo, ct: ct);
         if (sesion is not null) return Entro(sesion);
         var error = _api.UltimoError;
+        // La administración entra con el PIN maestro, y el nodo sólo lo acepta del equipo del profesor (RN-11): aquí no se puede completar.
+        if (error is { PinMaestroRequerido: true })
+            return new RespuestaDeAcceso(false, TraspasoEntreApps.MensajeSinTraspaso(AppDelAcceso.Ops, ResultadoTraspaso.SinApp));
         if (error is { Codigo: "credenciales_invalidas" })
             return new RespuestaDeAcceso(false, error.IntentosRestantes is { } quedan and > 0 ? $"{CodigoNoCoincide} {MensajesDeAcceso.Intentos(quedan)}" : CodigoNoCoincide);
         return Falla(error, c => EntrarConCodigoAsync(id, secreto, c));

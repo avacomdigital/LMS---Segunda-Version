@@ -74,7 +74,7 @@ Set-StrictMode -Version Latest
 # comprobación que falla no sirve para nada. Cada bloque maneja su error.
 $ErrorActionPreference = 'Continue'
 
-$VersionDiagnostico = '2.2.0'
+$VersionDiagnostico = '2.3.0'
 $RaizDatos = Join-Path $env:ProgramData 'AVACOM\OPS Master'
 $RutaEnlace = Join-Path $env:ProgramData 'AVACOM\content\link.json'
 $NombreServicio = 'AVACOMOPSBackend'

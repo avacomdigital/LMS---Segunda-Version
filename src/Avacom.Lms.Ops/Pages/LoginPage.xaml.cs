@@ -52,6 +52,9 @@ public partial class LoginPage : ContentPage
         }
         else DocumentoEntry.Text = string.Empty;
 
+        // Un traspaso desde Student (la persona entró allí con su documento y su clave y su cuenta es de OPS): se canjea sin pedir nada.
+        if (TraspasoEntreApps.TomarDeLaLinea() is { } entrante && await CanjearEntranteAsync(entrante)) return;
+
         if (await PrimerArranquePage.HayHojaPendienteAsync())
         {
             await Shell.Current.GoToAsync("primer-arranque");
@@ -236,29 +239,13 @@ public partial class LoginPage : ContentPage
 
             SalirDelPin();
             ClaveEntry.Text = string.Empty;
-            if (sesion.Usuario.Nivel < 2)
+            if (TraspasoEntreApps.AppDe(sesion.Usuario) == AppDelAcceso.Student)
             {
-                // Un alumno no entra al nodo del profesor: se suelta el pase que acaba de recibir.
-                await Sesion.CerrarSesionDeUsuarioAsync();
-                Estado("Esta pantalla es del profesorado. Usa la tableta del alumno.", Tono.Aviso);
+                // Un alumno ve SU menú: el de AVACOM Student. Se le abre esa app con su sesión; si no se puede, se le dice dónde entrar y se suelta el pase.
+                await PasarALaAppDelAlumnoAsync();
                 return;
             }
-            Sesion.Usuario = sesion.Usuario;
-            Sesion.SesionObligatoria = true;
-            // MSG-021: si esta entrada cerró la clase abierta en otro equipo, el tablero lo cuenta una vez, sin pedir confirmación.
-            Sesion.AvisoAlEntrar = sesion.SesionAnterior is { } anterior
-                ? $"Cerramos tu clase abierta en {NombreDeEquipo(anterior.Dispositivo)}. Continúa aquí sin perder nada."
-                : null;
-            if (sesion.Usuario.DebeCambiarCredencial)
-            {
-                // La contraseña de la hoja es provisional: antes del tablero, la persona elige la suya. La provisional pasa en memoria, una sola vez.
-                Sesion.RecordarClaveProvisional(clave);
-                Estado("Listo · ahora elige tu contraseña", Tono.Bien);
-                await Shell.Current.GoToAsync("elegir-contrasena");
-                return;
-            }
-            Estado("Listo · entrando", Tono.Bien);
-            await Shell.Current.GoToAsync("dashboard");
+            await AbrirTableroAsync(sesion, clave);
         }
         finally
         {
@@ -266,6 +253,64 @@ public partial class LoginPage : ContentPage
             PinTeclado.Habilitado = !(Sesion.Acceso.UltimoError is { PinMaestroBloqueado: true });
             _ocupado = false;
         }
+    }
+
+    /// <summary>Abre el tablero con la sesión ya identificada (por documento y clave, o por un traspaso desde Student). <paramref name="claveProvisional"/> sólo viaja en el primer caso.</summary>
+    private async Task AbrirTableroAsync(SesionAcceso sesion, string? claveProvisional)
+    {
+        Sesion.Usuario = sesion.Usuario;
+        Sesion.SesionObligatoria = true;
+        // MSG-021: si esta entrada cerró la clase abierta en otro equipo, el tablero lo cuenta una vez, sin pedir confirmación.
+        Sesion.AvisoAlEntrar = sesion.SesionAnterior is { } anterior
+            ? $"Cerramos tu clase abierta en {NombreDeEquipo(anterior.Dispositivo)}. Continúa aquí sin perder nada."
+            : null;
+        if (sesion.Usuario.DebeCambiarCredencial)
+        {
+            // La contraseña de la hoja es provisional: antes del tablero, la persona elige la suya. La provisional pasa en memoria, una sola vez.
+            Sesion.RecordarClaveProvisional(claveProvisional ?? string.Empty);
+            Estado("Listo · ahora elige tu contraseña", Tono.Bien);
+            await Shell.Current.GoToAsync("elegir-contrasena");
+            return;
+        }
+        Estado("Listo · entrando", Tono.Bien);
+        await Shell.Current.GoToAsync("dashboard");
+    }
+
+    /// <summary>La cuenta es de alumno: se abre AVACOM Student con la misma sesión (sin pedir la clave otra vez). Si no se puede, se dice dónde entrar.</summary>
+    private async Task PasarALaAppDelAlumnoAsync()
+    {
+        Estado("Abriendo AVACOM Student con tu sesión…", Tono.Neutro);
+        var resultado = await TraspasoEntreApps.PasarAsync(Sesion.Acceso, AppDelAcceso.Student, Sesion.BaseUri);
+        if (resultado == ResultadoTraspaso.Abierta)
+        {
+            ClienteJson.Token = null;   // el nodo cerró esta sesión al canjearse el traspaso: esta app no sigue presentándose con ella
+            Estado(TraspasoEntreApps.MensajeSinTraspaso(AppDelAcceso.Student, resultado), Tono.Bien);
+            return;
+        }
+        await Sesion.CerrarSesionDeUsuarioAsync();
+        Estado(TraspasoEntreApps.MensajeSinTraspaso(AppDelAcceso.Student, resultado), Tono.Aviso);
+    }
+
+    /// <summary>OPS se abrió desde Student con un código de traspaso: se canjea y se entra. Falso si no valió (la pantalla de acceso sigue normal).</summary>
+    private async Task<bool> CanjearEntranteAsync(TraspasoEntrante entrante)
+    {
+        if (entrante.Servidor is { } servidor && Ajustes.ServidorDePrueba is null) Sesion.GuardarServidor(servidor);
+        ServerEntry.Text = Sesion.BaseUri.ToString().TrimEnd('/');
+        Estado("Entrando con tu sesión…", Tono.Neutro);
+        var sesion = await Sesion.Acceso.CanjearTraspasoAsync(entrante.Codigo, Sesion.Dispositivo);
+        if (sesion is null)
+        {
+            Estado("El traspaso no valió o ya caducó. Escribe tu documento y tu contraseña para entrar.", Tono.Aviso);
+            return false;
+        }
+        if (TraspasoEntreApps.AppDe(sesion.Usuario) == AppDelAcceso.Student)
+        {
+            await Sesion.CerrarSesionDeUsuarioAsync();
+            Estado(TraspasoEntreApps.MensajeSinTraspaso(AppDelAcceso.Student, ResultadoTraspaso.SinApp), Tono.Aviso);
+            return false;
+        }
+        await AbrirTableroAsync(sesion, null);
+        return true;
     }
 
     private void OnPinVolver(object? sender, EventArgs e)

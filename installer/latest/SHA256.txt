@@ -1,9 +1,9 @@
-﻿AVACOM-OPS-Master-Setup-2.2.0.exe
-SHA256  6FD7F2CF24FA408CA1CAE5CDF5E8A71FE5C3C9AD89424F7A95CA512E98D2EF86
-Version 2.2.0
-Revision ae8eefd4
-Arbol-limpio no (39 archivos sin confirmar; ver manifiesto.json)
-Huella-backend c97b7cdcf62c2b7963520e611648b6a9a3b9c048be39ae4da1cd4020e3287b49
-Huella-app 7f97dbfcffffcb8ab8913e484d44504b9052edf3e9d366535f6c757eeaeaf597
-Huella-asistente 50a25ea6036267f2a833823730abb19fa8de4e126190ab413d6fb26316407f79
-Empaquetado 2026-10-01 17:49:37 -05:00
+﻿AVACOM-OPS-Master-Setup-2.3.1.exe
+SHA256  BF0C17303F29AC956F95B7EC40CABDE7BBBE542CD08759D8255C1400B5EF021B
+Version 2.3.1
+Revision 4d4df002
+Arbol-limpio no (37 archivos sin confirmar; ver manifiesto.json)
+Huella-backend e1c48338cc17a23c9964cac3ac8b45f94c06eb38db0145c1d2a3d7fc106446e2
+Huella-app 2bc31e1e9b4c83a3950e315711a00e56f7ff403c0760f0e2b3403c4e795dac74
+Huella-asistente 1941a729e8a4c1177ef5efed18f4568516a8209f683341d3e2a85d5fb1002849
+Empaquetado 2026-10-06 17:25:32 -05:00

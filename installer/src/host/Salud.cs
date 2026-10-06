@@ -28,7 +28,7 @@ internal static class Salud
     /// si el modulo de acceso no pudo leer su base de datos, el error (permisos de Data, base
     /// bloqueada o corrupta). <c>Error</c> es null cuando todo va bien.
     /// </summary>
-    public sealed record EstadoDelNodo(bool? Instalado, bool? ClavesDerivadas, string? Error = null);
+    public sealed record EstadoDelNodo(bool? Instalado, bool? ClavesDerivadas, string? Error = null, string? PinMaestro = null);
 
     /// <summary>
     /// Pregunta a /health/ por el estado del modulo de acceso. Sin organizacion
@@ -47,7 +47,11 @@ internal static class Salud
             var error = acceso.TryGetProperty("error", out var texto) && texto.ValueKind == JsonValueKind.String
                 ? texto.GetString()
                 : null;
-            return new EstadoDelNodo(Booleano(acceso, "instalado"), Booleano(acceso, "claves_derivadas"), error);
+            // RB-42: configurado | vencido | sin_configurar (sin fechas). Sin PIN maestro nadie puede crear su usuario de
+            // profesor ni restablecer su contrasena: el primer arranque de OPS lo crea; en un nodo ya instalado, lo
+            // configura la administracion en OPS (Seguridad del aula).
+            var pin = acceso.TryGetProperty("pin_maestro", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+            return new EstadoDelNodo(Booleano(acceso, "instalado"), Booleano(acceso, "claves_derivadas"), error, pin);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException)
         {
@@ -68,7 +72,13 @@ internal static class Salud
         try
         {
             using var cliente = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            var cuerpo = await cliente.GetStringAsync($"http://127.0.0.1:{puerto}/api/aula/fuente/").ConfigureAwait(false);
+            using var respuesta = await cliente.GetAsync($"http://127.0.0.1:{puerto}/api/aula/fuente/").ConfigureAwait(false);
+            // El nodo instalado exige sesion (AVACOM_LMS_EXIGIR_SESION=1): sin ella la ruta responde 401. No es un fallo ni se
+            // prueba a evadirlo: simplemente el instalador no puede ver la biblioteca desde aqui, y lo dice.
+            if (respuesta.StatusCode == HttpStatusCode.Unauthorized)
+                return new EstadoDeBiblioteca(null, "el aula exige sesion: se ve desde la aplicacion", null, null);
+            respuesta.EnsureSuccessStatusCode();
+            var cuerpo = await respuesta.Content.ReadAsStringAsync().ConfigureAwait(false);
             using var documento = JsonDocument.Parse(cuerpo);
             var raiz = documento.RootElement;
 

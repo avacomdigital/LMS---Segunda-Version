@@ -152,3 +152,21 @@ Actualizar sobre la versión 2.0.0 (la de Waitress) y sobre la misma versión no
 Desinstalar quita servicio, firewall, archivos y accesos, pregunta por los datos con la respuesta por defecto en conservar y no toca AVACOM Contenido. Reinstalar después, conservando los datos, deja el aula como estaba, con las personas todavía descifrables.
 
 Los dos instaladores se prueban por separado, y una instalación de Student (Windows o Android) nunca requiere ni modifica la de OPS. El instalador de OPS ya se verifica a sí mismo en cada compilación: sus comprobaciones se pueden ejecutar de verdad con el modo de volcado (/VOLCADO), el script Verificar-Asistente.ps1 y las pruebas del backend que Build-Installer.ps1 corre antes de empaquetar; el de Student debería tener un equivalente.
+
+## Arranque de la instalación
+
+Instalación nueva
+
+backend.env con AVACOM_LMS_EXIGIR_SESION=1. El instalador lo agrega solo si falta (commit dab03ad2). Si ya existe con 0, respeta ese valor. Con 0 el aula queda en modo prototipo y Student vuelve a "Tu nombre".
+Base sin organización. OPS lo detecta al comprobar la conexión (instalado: false) y abre el primer arranque: país, nombre del aula, administrador y PIN maestro.
+El primer arranque crea todo junto: organización, políticas por defecto, administrador y PIN maestro. Las políticas de fábrica traen registro propio de alumnos y de profesores encendidos, visitantes permitidos, PIN de 4 dígitos para alumnos y castigo a la tableta.
+La hoja de acceso se muestra una sola vez; el PIN maestro no se puede ver después.
+Para los alumnos faltan datos, que el instalador no crea: al menos un grupo y alumnos, o que los alumnos se creen solos. Lo hace el profesor o el administrador desde OPS (pantalla Grupos), o el profesor que se registra con el PIN. Sin grupos Student muestra la lista vacía; si el registro propio está encendido, igual deja crear un usuario nuevo.
+Cada tableta debe registrarse antes de ver la lista de nombres. Student lo hace solo al conectar. Si falla, las listas responden dispositivo_no_autorizado.
+Student debe apuntar a la IP del equipo maestro en el puerto 8000, en la misma red.
+
+Actualización de una instalación existente (como tu base de desarrollo)
+
+Hay que migrar, y la migración 0011 ajusta políticas y permisos.
+Si el nodo ya estaba instalado no tiene PIN maestro: no aparecen "Crear mi usuario" ni "Olvidé mi contraseña" hasta que la administración lo configure en OPS → Seguridad del aula, o el técnico con acceso_pin_maestro --cambiar.
+Los alumnos ya creados con PIN provisional conviene dejarlos en "PIN pendiente" (Nuevo PIN desde Grupos) para que elijan el suyo.

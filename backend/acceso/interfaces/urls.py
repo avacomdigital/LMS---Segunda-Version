@@ -9,6 +9,8 @@ urlpatterns = [
     # los dispositivos viven en MOD-009: /api/dispositivos/ (app device_manager)
     path("sesiones/", views.SesionesView.as_view(), name="acceso-sesiones"),
     path("sesiones/visitante/", views.SesionVisitanteView.as_view(), name="acceso-sesion-visitante"),
+    path("sesiones/traspaso/", views.TraspasoView.as_view(), name="acceso-traspaso"),
+    path("sesiones/traspaso/canjear/", views.TraspasoCanjeView.as_view(), name="acceso-traspaso-canjear"),
     path("autorizaciones-temporales/canjear/", views.CanjeView.as_view(), name="acceso-canjear"),
     # PIN maestro y profesores (requisitos de acceso 2026-10-05). Registro y restablecimiento van SIN sesión: los autoriza el PIN maestro.
     path("pin-maestro/", views.PinMaestroView.as_view(), name="acceso-pin-maestro"),

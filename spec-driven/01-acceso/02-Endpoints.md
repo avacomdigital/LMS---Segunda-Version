@@ -57,12 +57,12 @@ Lo que la tableta necesita para pintar PAN-101. **Sin PII.** Incluye las excepci
   "organizacion": { "codigo": "IE-SANJOSE", "nombre": "IE San José", "pais": "CO", "idioma": "es", "locale": "es-CO" },
   "perfiles": {
     "student": { "tipo_identificador": "CODIGO_ESTUDIANTIL", "tipo_secreto": "PIN", "longitud_minima": 4,
-                 "permite_acceso_temporal": true, "inactividad_min": 30, "autoregistro": true, "bloqueo_alcance": "DISPOSITIVO",
-                 "niveles": { "preescolar": { "tipo_identificador": "CODIGO_ESTUDIANTIL", "tipo_secreto": "AVATAR", "longitud_minima": 4, "permite_acceso_temporal": true, "inactividad_min": 30 } } },
-    "teacher": { "tipo_identificador": "DNI", "tipo_secreto": "PASSWORD", "longitud_minima": 8, "permite_acceso_temporal": false, "inactividad_min": 20, "niveles": {} },
+                 "permite_acceso_temporal": true, "inactividad_min": 240, "autoregistro": true, "bloqueo_alcance": "DISPOSITIVO",
+                 "niveles": { "preescolar": { "tipo_identificador": "CODIGO_ESTUDIANTIL", "tipo_secreto": "AVATAR", "longitud_minima": 4, "permite_acceso_temporal": true, "inactividad_min": 240 } } },
+    "teacher": { "tipo_identificador": "DNI", "tipo_secreto": "PASSWORD", "longitud_minima": 8, "permite_acceso_temporal": false, "inactividad_min": 240, "niveles": {} },
     "admin": { "...": "..." }, "reports": { "...": "..." }, "technician": { "...": "..." }
   },
-  "duracion_sesion_min": 240, "inactividad_min": 30,
+  "duracion_sesion_min": 240, "inactividad_min": 240,
   "niveles_educativos": ["preescolar", "primaria", "secundaria", "bachillerato", "preuniversitario"],
   "pin_maestro": { "configurado": true, "vencido": false, "por_vencer": false },
   "autoregistro_alumnos": true, "autoregistro_docentes": true, "visitante": true,
@@ -111,7 +111,7 @@ Desde el 2026-09-28 el registro idempotente de la tableta vive en **MOD-009 · D
 
 ```json
 {
-  "token": "eyJ…", "tipo": "Bearer", "expira_en": 1789014400000, "sesion_id": "…", "inactividad_min": 30,
+  "token": "eyJ…", "tipo": "Bearer", "expira_en": 1789014400000, "sesion_id": "…", "inactividad_min": 240,
   "sesion_anterior": { "sesion_id": "…", "dispositivo": "tableta-03", "emitida_en": 1789000000000, "cerrada_en": 1789000600000 },
   "roles_disponibles": ["STUDENT"],
   "usuario": { "id": "…", "alias": "Juan P.", "rol": "STUDENT", "menu": "student", "nivel": 1,

@@ -312,6 +312,7 @@ $asig.armado_previo     # estrategia random_balanced · 6 por alumno · banco 18
 | QA-18 | HP-03 | «Salir» borra la cola de **otro** alumno si no hay aula; los rechazos del nodo no se muestran; «Salir» deja paquetes huérfanos en el nodo (la tableta no se puede devolver al aula) | Ana completa sin red; «Cambiar» → Beto → «Salir»; reconectar | En el código |
 | QA-19 | HP-03 | Con práctica, sólo la práctica es obligatoria y el avance es 0 % hasta terminarla; los documentos dicen 75 % | Ver láminas y mirar OPS | Comprobado |
 | QA-20 | HP-03 | Dos alumnos con el mismo nombre se ven iguales; la huella de la tableta es `student-<nombre del equipo>` (dos con igual nombre son una) | Registrar dos «Ana» en «Grupos» | En el código |
+| QA-26 | HP-01 | La sesión del profesor se denegaba a los pocos minutos: el pase dura 240 min pero la inactividad de fábrica la cerraba a los 20 (30 el alumno) mientras la clase seguía en pantalla | «Clase de hoy» con el instalador 2.3.0, dejar la clase sin tocar y volver a usar OPS | Corregido en 2.3.1 (por repetir) |
 
 **De preparación**
 

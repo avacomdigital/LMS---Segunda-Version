@@ -1,5 +1,5 @@
 {
   "producto": "AVACOM LMS",
-  "version": "2.2.0",
-  "nota": "Fuente unica de la version del producto. Build-Installer.ps1 la lee para el instalador de OPS Master, y el instalador de Student debe leerla tambien: los dos se publican por separado pero salen de aqui, para que se pueda saber si un OPS y un Student son compatibles. Sube la version cuando cambie el contrato de red entre Student y el backend. 2.2.0: el backend suma Modo Estudio (/api/modo-estudio/), Evaluacion (/api/evaluacion/) y Auditoria y logs (/api/auditoria/, /api/logs/)."
+  "version": "2.3.1",
+  "nota": "Fuente unica de la version del producto. Build-Installer.ps1 la lee para el instalador de OPS Master, y el instalador de Student debe leerla tambien: los dos se publican por separado pero salen de aqui, para que se pueda saber si un OPS y un Student son compatibles. Sube la version cuando cambie el contrato de red entre Student y el backend. 2.2.0: el backend suma Modo Estudio (/api/modo-estudio/), Evaluacion (/api/evaluacion/) y Auditoria y logs (/api/auditoria/, /api/logs/). 2.3.0: el modulo de acceso suma el PIN maestro, el alta propia de profesores y alumnos y el visitante (/api/acceso/pin-maestro/, docentes/registro/, estudiantes/registro/, sesiones/visitante/; migraciones acceso 0010 y 0011), y OPS y Student traen sus pantallas de acceso. 2.3.1: el nodo ya no cierra la sesion por inactividad antes de las 4 horas (la inactividad de fabrica pasa de 20/30 a 240 minutos; migracion acceso 0012); sin cambio de contrato, Student 2.3.0 sigue siendo compatible."
 }

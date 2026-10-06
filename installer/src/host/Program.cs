@@ -124,13 +124,14 @@ internal static class Program
             "websocket=ok",
             $"organizacion={SiNo(estado.Instalado)}",
             $"claves_derivadas={SiNo(estado.ClavesDerivadas)}",
+            $"pin_maestro={estado.PinMaestro ?? "desconocido"}",
             $"registros={(registros ? "ok" : "sin_escritura")}",
             $"biblioteca={estadoBiblioteca}",
             $"biblioteca_cursos={(biblioteca.Cursos is { } c ? c.ToString() : "?")}",
         };
         lineas.AddRange(Direcciones.Listar(puerto).Select(d => $"direccion={d}"));
         File.WriteAllLines(resumen, lineas);
-        registro.Escribir($"Estado del nodo: organizacion={SiNo(estado.Instalado)}, claves derivadas={SiNo(estado.ClavesDerivadas)}, " +
+        registro.Escribir($"Estado del nodo: organizacion={SiNo(estado.Instalado)}, pin maestro={estado.PinMaestro ?? "desconocido"}, claves derivadas={SiNo(estado.ClavesDerivadas)}, " +
                           $"registros={(registros ? "ok" : "sin escritura")}.");
         return 0;
     }

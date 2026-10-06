@@ -41,6 +41,7 @@ public partial class ConnectionPage : ContentPage
         base.OnAppearing();
         if (!Preferences.Default.ContainsKey("student_name")) NameEntry.Text = ConnectionOptions.Default.StudentName;
         AlVolverAlAcceso();
+        if (TraspasoEntreApps.TomarDeLaLinea() is { } entrante) _ = CanjearEntranteAsync(entrante);
     }
 
     private async void OnCheck(object? sender, EventArgs e)
@@ -163,6 +164,12 @@ public partial class ConnectionPage : ContentPage
     /// </summary>
     private async Task AlEntrarAsync(SesionAcceso sesion)
     {
+        // Un solo acceso para las dos apps: si la cuenta es del profesorado, su menú es el de AVACOM OPS. Se abre esa app con la misma sesión.
+        if (TraspasoEntreApps.AppDe(sesion.Usuario) == AppDelAcceso.Ops)
+        {
+            await PasarAOpsAsync();
+            return;
+        }
         Sesion.Usuario = sesion.Usuario; Sesion.SesionObligatoria = true;
         // El nombre visible es el alias; el nombre escrito del modo prototipo no se usa con sesión.
         Preferences.Default.Remove("student_name");
@@ -170,6 +177,35 @@ public partial class ConnectionPage : ContentPage
         await Shell.Current.GoToAsync("menu");
         // MSG-020: sin pedir ninguna confirmación que retrase el ingreso; un aviso tranquilizador que se va solo.
         if (aviso is not null) Avisos.Mostrar(aviso);
+    }
+
+    /// <summary>La cuenta es del profesorado: se abre AVACOM OPS con la misma sesión (sin pedir la clave otra vez). Si no se puede, se dice dónde entrar y se suelta el pase.</summary>
+    private async Task PasarAOpsAsync()
+    {
+        Estado("●  Abriendo AVACOM OPS con tu sesión…", AzulSuave, Azul);
+        var resultado = await TraspasoEntreApps.PasarAsync(Sesion.Acceso, AppDelAcceso.Ops, Sesion.BaseUri);
+        if (resultado == ResultadoTraspaso.Abierta)
+        {
+            ClienteJson.Token = null; Sesion.Usuario = null;   // el nodo cerró esta sesión al canjearse el traspaso
+            Estado("●  " + TraspasoEntreApps.MensajeSinTraspaso(AppDelAcceso.Ops, resultado), VerdeSuave, Verde);
+            return;
+        }
+        await Sesion.CerrarSesionDeUsuarioAsync();
+        Estado("●  " + TraspasoEntreApps.MensajeSinTraspaso(AppDelAcceso.Ops, resultado), RojoSuave, Rojo);
+    }
+
+    /// <summary>Student se abrió desde OPS con un código de traspaso (la cuenta es de alumno): se canjea y se entra al menú sin pedir nada.</summary>
+    private async Task CanjearEntranteAsync(TraspasoEntrante entrante)
+    {
+        if (entrante.Servidor is { } servidor && TryNormalizar(servidor, out var uri))
+        {
+            Preferences.Default.Set("student_server", uri.ToString().TrimEnd('/'));
+            ServerEntry.Text = uri.ToString().TrimEnd('/');
+        }
+        Estado("●  Entrando con tu sesión…", AzulSuave, Azul);
+        var sesion = await Sesion.Acceso.CanjearTraspasoAsync(entrante.Codigo, Sesion.Dispositivo);
+        if (sesion is null) { Estado("●  El traspaso no valió o ya caducó · entra con tu código", RojoSuave, Rojo); return; }
+        await AlEntrarAsync(sesion);
     }
 
     /// <summary>MSG-020 · PAN-103: la sesión anterior de esta persona se cerró en otra tableta. Nada que hacer: todo su trabajo está a salvo.</summary>

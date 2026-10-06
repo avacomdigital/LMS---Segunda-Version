@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lanzador de AVACOM Student para Windows. No forma parte del producto: lo produce y
+    lo consume el instalador de Student.
+
+        Avacom.Student.Lanzador.exe iniciar     -> abre la aplicacion con un perfil de WebView2 escribible
+        Avacom.Student.Lanzador.exe verificar   -> comprueba que lo instalado puede abrirse (sin abrirlo)
+
+    Por que existe: las lecciones usan WebView2 (audio, video, PDF, laboratorios), que guarda su
+    perfil por defecto JUNTO AL EJECUTABLE. La aplicacion vive en Program Files, donde quien usa el
+    equipo no puede escribir, y al crear la primera WebView el proceso se cierra sin avisar.
+    El icono abre este lanzador, que le da a WebView2 una carpeta propia dentro del perfil de cada
+    persona (variable WEBVIEW2_USER_DATA_FOLDER, que WebView2 ya lee: el producto no cambia). Ademas
+    evita que cada alumno de un mismo equipo comparta cookies y cache con los demas.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- WinExe: ningun aviso del lanzador debe abrir una consola. -->
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>Avacom.Student.Lanzador</RootNamespace>
+    <AssemblyName>Avacom.Student.Lanzador</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>none</DebugType>
+    <AssemblyTitle>AVACOM Student - Lanzador</AssemblyTitle>
+    <Product>AVACOM Student</Product>
+    <Company>AVACOM</Company>
+    <Version>2.3.0</Version>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+</Project>

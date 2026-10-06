@@ -33,7 +33,7 @@ public partial class ConnectionPage
     // Lo único que se escribe con el teclado del sistema: el nombre de quien es nuevo (RF-21) y, en la salida de siempre, el código y la clave.
     private readonly Entry nombreNuevo = Campo("nuevo-nombre", "Tu nombre", Keyboard.Text);
     private readonly Entry apellidoNuevo = Campo("nuevo-apellido", "Tu apellido (si quieres)", Keyboard.Text);
-    private readonly Entry codigoEntry = Campo("codigo-codigo", "Tu código de estudiante", Keyboard.Plain);
+    private readonly Entry codigoEntry = Campo("codigo-codigo", "Tu código o documento", Keyboard.Plain);
     private readonly Entry claveEntry = Campo("codigo-clave", "Tu clave", Keyboard.Plain, clave: true);
 
     private static Entry Campo(string id, string ayuda, Keyboard teclado, bool clave = false) => new()
@@ -242,7 +242,7 @@ public partial class ConnectionPage
         if (avisoSinRed && flujo!.PuedeReintentar) PasoHost.Add(BotonReintentar());
         var botones = flujo!.Grupos.Select(g => (View)BotonOpcion(g.Nombre, AltoGrupo, async (_, _) => await AtenderAsync(c => flujo.ElegirGrupoAsync(g, c)), $"grupo-{g.Codigo}")).ToList();
         if (botones.Count > 0) PasoHost.Add(Rejilla(botones, ColumnasPara(anchoTarjeta, 170)));
-        PasoHost.Add(BotonQuieto("Entrar con mi código", (_, _) => { flujo.EmpezarConCodigo(); aviso = null; PintarPaso(); }, "acceso-codigo"));
+        PasoHost.Add(BotonQuieto("Entrar con mi código o documento", (_, _) => { flujo.EmpezarConCodigo(); aviso = null; PintarPaso(); }, "acceso-codigo"));
     }
 
     // ------------------------------------------------------------------------------------------------------------ (2) nombre
@@ -263,7 +263,7 @@ public partial class ConnectionPage
             PintarPaso();
         }, $"alumno-{a.Id}")).ToList();
         if (botones.Count > 0) PasoHost.Add(Rejilla(botones, ColumnasPara(anchoTarjeta, 150)));
-        PasoHost.Add(BotonQuieto("Entrar con mi código", (_, _) => { flujo.EmpezarConCodigo(); aviso = null; PintarPaso(); }, "acceso-codigo"));
+        PasoHost.Add(BotonQuieto("Entrar con mi código o documento", (_, _) => { flujo.EmpezarConCodigo(); aviso = null; PintarPaso(); }, "acceso-codigo"));
     }
 
     // ------------------------------------------------------------------------------------------------------------ (3) PIN
@@ -395,11 +395,11 @@ public partial class ConnectionPage
 
     private void PintarCodigo()
     {
-        Titulo.Text = "Entrar con mi código";
-        Descripcion.Text = "Escribe tu código y tu clave, como siempre.";
+        Titulo.Text = "Entrar con mi código o documento";
+        Descripcion.Text = "Escribe tu código y tu clave. Si eres del profesorado, tu documento y tu contraseña: te abrimos AVACOM OPS con tu sesión.";
         PonerAviso(aviso);
         if (avisoSinRed && flujo!.PuedeReintentar) PasoHost.Add(BotonReintentar());
-        PasoHost.Add(Etiqueta("Tu código"));
+        PasoHost.Add(Etiqueta("Tu código o documento"));
         PasoHost.Add(codigoEntry);
         PasoHost.Add(Etiqueta("Tu clave"));
         PasoHost.Add(claveEntry);

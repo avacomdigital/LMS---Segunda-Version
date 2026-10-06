@@ -182,7 +182,7 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
 }
 
 _BASE = dict(intentos_maximos=5, ventana_intentos_min=15, bloqueo_minutos=15, duracion_sesion_min=240,
-             vigencia_credencial_dias=None, inactividad_min=20)
+             vigencia_credencial_dias=None, inactividad_min=240)
 
 # perfil -> columnas de la política por defecto (BR-023: personal y alumnos por separado)
 POLITICAS_POR_DEFECTO: dict[Menu, dict] = {
@@ -190,7 +190,7 @@ POLITICAS_POR_DEFECTO: dict[Menu, dict] = {
     # RN-33: si se equivocan, espera la tableta, no la cuenta. RN-37: pueden crear su propio usuario.
     Menu.STUDENT: dict(_BASE, tipo_identificador=TipoIdentificador.CODIGO_ESTUDIANTIL, tipo_secreto=TipoSecreto.PIN,
                        longitud_minima=4, exige_mayuscula=False, exige_minuscula=False, exige_digito=True,
-                       exige_simbolo=False, permite_acceso_temporal=True, inactividad_min=30,
+                       exige_simbolo=False, permite_acceso_temporal=True,
                        autoregistro=True, bloqueo_alcance=BloqueoAlcance.DISPOSITIVO),
     # RN-20: el profesor crea su propio usuario con el PIN maestro; el interruptor lo apaga la administración (RN-37).
     Menu.TEACHER: dict(_BASE, tipo_identificador=TipoIdentificador.DNI, tipo_secreto=TipoSecreto.PASSWORD,
@@ -243,6 +243,7 @@ EVENTOS = {
     "acceso_temporal_otorgado": "identidad.acceso_temporal.otorgado.v1",
     "acceso_temporal_canjeado": "identidad.acceso_temporal.canjeado.v1",
     "acceso_temporal_revocado": "identidad.acceso_temporal.revocado.v1",
+    "traspaso_canjeado": "identidad.traspaso.canjeado.v1",
     "politica_configurada": "identidad.politica.configurada.v1",
     "grupo_creado": "identidad.grupo.creado.v1",
     "grupo_actualizado": "identidad.grupo.actualizado.v1",

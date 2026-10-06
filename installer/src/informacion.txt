@@ -40,6 +40,40 @@ aula. Para que puedan hacerlo, la instalación autoriza el puerto de la API
 local en Windows Defender Firewall, y solo en redes privadas.
 
 
+La primera vez que se abra AVACOM OPS Master (instalación nueva)
+
+    El instalador deja la API local lista, pero sin organización. Al abrir
+    AVACOM OPS Master por primera vez, la aplicación lo detecta y abre el
+    primer arranque, todo con toques y el teclado táctil de Windows:
+
+      1. País y nombre del aula (la organización).
+      2. El administrador: documento, nombres, apellidos y contraseña.
+      3. El PIN maestro (seis dígitos): con él los profesores crean su
+         usuario y restablecen su contraseña.
+
+    La hoja de acceso se muestra UNA sola vez, y el PIN maestro no se puede
+    volver a ver: anótalos antes de continuar.
+
+    Después, desde OPS (pantalla Grupos) el profesorado crea los grupos y los
+    alumnos; o los alumnos se crean solos desde su tableta, y los profesores
+    se registran con el PIN maestro. La política de fábrica permite el
+    registro propio y los visitantes, con PIN de 4 dígitos para el alumno.
+
+    Cada tableta se registra sola al conectarse. En AVACOM Student se escribe
+    la dirección del aula que muestra la última pantalla de este asistente
+    (algo como http://192.168.0.55:8000): la OPS y las tabletas deben estar en
+    la misma red.
+
+Si se actualiza una instalación que ya existía
+
+    Se conservan los datos y se aplican las migraciones. Si el aula ya tenía
+    organización pero no PIN maestro, hasta que se configure (AVACOM OPS
+    Master, Seguridad del aula) no aparecen «Crear mi usuario» ni «Olvidé mi
+    contraseña». A los alumnos que ya tenían un PIN provisional conviene
+    dejarlos en «PIN pendiente» (Nuevo PIN, en Grupos) para que cada uno
+    elija el suyo.
+
+
 Licencia y uso
 
 Software de AVACOM para uso educativo en las instituciones autorizadas.

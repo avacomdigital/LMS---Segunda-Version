@@ -755,11 +755,12 @@ end;
 
 procedure ComponerPantallaFinal;
 var
-  Resumen, Direcciones, Organizacion, Registros, Biblioteca, Cursos, Cabecera, Notas: String;
+  Resumen, Direcciones, Organizacion, PinMaestro, Registros, Biblioteca, Cursos, Cabecera, Notas: String;
 begin
   Resumen := LeerArchivo(CarpetaDeEstado + '\Logs\resumen-nodo.txt');
   Direcciones := ValoresDelResumen(Resumen, 'direccion');
   Organizacion := ValoresDelResumen(Resumen, 'organizacion');
+  PinMaestro := ValoresDelResumen(Resumen, 'pin_maestro');
   Registros := ValoresDelResumen(Resumen, 'registros');
   Biblioteca := ValoresDelResumen(Resumen, 'biblioteca');
   Cursos := ValoresDelResumen(Resumen, 'biblioteca_cursos');
@@ -785,8 +786,14 @@ begin
                 'No se encontró una dirección de red para las tabletas. Conecta este equipo a la red del aula.';
 
   Notas := '';
+  { Instalacion nueva: el nodo no tiene organizacion. El primer arranque lo hace OPS, con el teclado tactil de Windows
+    (pais, nombre del aula, administrador y PIN maestro; la hoja de acceso se muestra UNA vez). Los grupos y los alumnos
+    los crea despues el profesor o la administracion desde OPS (Grupos), o se registran ellos mismos. }
   if Organizacion = 'no' then
-    Notas := Notas + 'Falta crear la organización y el primer administrador. Ábrelos desde AVACOM OPS Master la primera vez.' + #13#10 + #13#10;
+    Notas := Notas + 'Falta el primer arranque: abre AVACOM OPS Master y crea la organización, el administrador y el PIN maestro (se muestra una sola vez). Luego crea los grupos y alumnos en Grupos.' + #13#10 + #13#10
+  else if (Organizacion = 'si') and ((PinMaestro = 'sin_configurar') or (PinMaestro = 'vencido')) then
+    { Actualizacion de un nodo ya instalado: no tiene PIN maestro (o vencio) y sin el nadie crea su usuario ni restablece su contrasena. }
+    Notas := Notas + 'Falta el PIN maestro: configúralo en OPS, Seguridad del aula. Hasta entonces nadie puede crear su usuario ni restablecer su contraseña.' + #13#10 + #13#10;
 
   { AVACOM Contenido es informativo: el aula funciona igual, solo que sin cursos
     hasta que la biblioteca este abierta. El instalador no la toca ni depende de ella. }

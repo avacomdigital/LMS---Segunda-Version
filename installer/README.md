@@ -85,7 +85,7 @@ El propio instalador sabe diagnosticar sin tocar el equipo. Con `/VOLCADO`
 ejecuta sus diez comprobaciones, las escribe en un archivo y aborta:
 
 ```powershell
-.\AVACOM-OPS-Master-Setup-2.2.0.exe /VERYSILENT /VOLCADO=C:\temp\diagnostico.txt
+.\AVACOM-OPS-Master-Setup-2.3.0.exe /VERYSILENT /VOLCADO=C:\temp\diagnostico.txt
 ```
 
 Eso es también lo que usa `Verificar-Asistente.ps1` en cada compilación: un
@@ -664,28 +664,65 @@ carpeta (`SHA256.txt`, `LEEME.txt` y `AVACOM-Verificar-Instalador.bat`) sí se
 versiona y se adjunta:
 
 ```bash
-gh release create v2.2.0 installer/latest/AVACOM-OPS-Master-Setup-2.2.0.exe installer/latest/SHA256.txt installer/latest/AVACOM-Verificar-Instalador.bat installer/latest/AVACOM-Probar-Comunicacion.bat --title "AVACOM OPS Master 2.2.0" --notes-file installer/latest/LEEME.txt
+gh release create v2.3.0 installer/latest/AVACOM-OPS-Master-Setup-2.3.0.exe installer/latest/SHA256.txt installer/latest/AVACOM-Verificar-Instalador.bat installer/latest/AVACOM-Probar-Comunicacion.bat --title "AVACOM OPS Master 2.3.0" --notes-file installer/latest/LEEME.txt
 ```
 
 Los dos `.bat` se adjuntan para poder revisar un nodo sin clonar el repositorio
 en él: se descargan y se tocan. Para verificar el `.exe` descargado:
 
 ```powershell
-Get-FileHash .\AVACOM-OPS-Master-Setup-2.2.0.exe -Algorithm SHA256
+Get-FileHash .\AVACOM-OPS-Master-Setup-2.3.0.exe -Algorithm SHA256
 ```
 
-**Versión 2.2.0.** La 2.1.0 se compiló el 2026-09-29, antes de Modo Estudio,
-Evaluación y Auditoría; el contrato de red entre Student y el backend cambió
-(`/api/modo-estudio/`, `/api/evaluacion/`, `/api/auditoria/`, `/api/logs/`), y
-`version.json` dice que la versión sube cuando eso ocurre. Una OPS con la 2.1.0 y
-una Student nueva (o al revés) no son compatibles.
+**Versión 2.3.0.** La 2.2.0 se compiló el 2026-10-01, antes del acceso con PIN
+maestro (`/api/acceso/pin-maestro/`, `docentes/registro/`, `estudiantes/registro/`,
+`sesiones/visitante/`, el traspaso entre apps y las migraciones `acceso` 0010 y
+0011); el contrato de red entre Student y el backend cambió, y `version.json` dice
+que la versión sube cuando eso ocurre. Una OPS con la 2.2.0 y una Student nueva (o
+al revés) no son compatibles. La misma versión sale en los tres entregables: este
+instalador, `student-windows/` y el APK de `student-android/`.
+
+## La primera instalación: qué pide el instalador y qué pide OPS
+
+El instalador **no pide ningún dato**: deja la API lista, con
+`AVACOM_LMS_EXIGIR_SESION=1`, claves propias y la base sin organización. Todo lo
+demás se pide en el **primer arranque de AVACOM OPS Master**, que se abre solo
+cuando el nodo contesta `instalado = false`:
+
+1. País e idioma. 2. Nombre del aula. 3. El administrador: documento, nombres y
+apellidos (**la contraseña no se escribe**: la genera el nodo y sale una sola vez
+en la hoja de acceso). 4. El **PIN maestro** (seis dígitos, dos veces, con teclado
+propio; se rechazan los fáciles como `123456`). 5. La hoja de acceso.
+
+Después el administrador entra con **documento, contraseña provisional y PIN
+maestro**, y elige su contraseña. Los grupos y los alumnos los crea el
+profesorado en OPS (Grupos), o los alumnos se crean solos (siempre dentro de un
+**grupo**: sin ninguno no pueden); los profesores se registran con el PIN maestro.
+Cada tableta se registra sola al conectarse. La pantalla final del instalador
+avisa si falta el primer arranque y, en una actualización de un nodo sin PIN
+maestro, que se configura en OPS → Seguridad del aula. El ensayo del paquete
+comprueba el nodo nuevo (sin organización, sesión obligatoria, sin PIN maestro) y
+el actualizado desde la 2.2.0.
+
+**Nunca viaja** configuración de desarrollo: `backend/.env` (con la sesión
+obligatoria y un PIN maestro de ejemplo) y las bases SQLite sueltas se excluyen del
+paquete y de la huella, y el build falla si se cuelan. Las pruebas del backend del
+build corren sin la sesión obligatoria (el modo para el que se escribieron).
+
+**Requisito del equipo:** el primer arranque pide texto (documento, nombres, nombre
+del aula) y la OPS no tiene teclado: el teclado táctil de Windows tiene que salir
+solo al tocar un campo («Mostrar el teclado táctil cuando no hay un teclado
+conectado», en Configuración → Dispositivos → Escritura). El instalador no cambia
+esa opción; queda como requisito del equipo hasta que se decida.
 
 ## Pendiente
 
-- **El instalador de AVACOM Student** (Windows y Android) no está construido:
-  tendrá su propio `AppId`, carpeta, versión y desinstalador, sin servicio ni
-  firewall, y leerá `version.json`. Student en Windows tiene **el mismo riesgo de
-  WebView2** que tenía OPS si se instala en Program Files.
+- **Student** tiene su propio instalador de Windows (`student-windows/`, ver su
+  README) y su APK (`student-android/`, `build/Build-StudentApk.ps1`). Pendiente en
+  los dos: el **icono** sigue siendo el de la plantilla de .NET MAUI (cambiarlo es
+  copiar los dos SVG de OPS a `src/Avacom.Lms.Student/Resources/AppIcon`, un cambio
+  de `src`), la **llave de firma** del APK es la de depuración y la **versión mínima
+  de Android** declarada es la 5.0 (API 21) aunque se prueba en Android 13 y 14.
 - El perfil de WebView2 dentro del propio producto (3 líneas en el arranque de OPS
   y de Student, junto a `WebViewAjustes`): hoy lo resuelve el instalador.
 - **WebView2 Runtime en un Windows 10 limpio**: el asistente solo lo avisa; no lo

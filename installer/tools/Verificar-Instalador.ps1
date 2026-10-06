@@ -62,7 +62,7 @@ Set-StrictMode -Version Latest
 # que falla no sirve para nada. Cada bloque maneja su error.
 $ErrorActionPreference = 'Continue'
 
-$VersionVerificador = '2.2.0'
+$VersionVerificador = '2.3.0'
 $NombreServicio = 'AVACOMOPSBackend'
 $IdInstalacion = '{B6D1F0A4-3C57-4E2B-9A18-7F5C2E8D4A31}_is1'
 
@@ -565,8 +565,26 @@ if (-not $InstalacionPresente) {
             Anotar 'OK' 'La API local responde (/health/)'
         }
         if ((Prop $acceso 'instalado' $true) -eq $false) {
-            Anotar 'INFO' 'El nodo todavía no tiene organización ni administrador' '' `
-                'Se crean desde AVACOM OPS Master la primera vez (hasta entonces el inicio de sesión responde 409).'
+            Anotar 'INFO' 'El nodo todavía no tiene organización ni administrador: falta el primer arranque' '' `
+                'Abre AVACOM OPS Master: el primer arranque pide país, nombre del aula, el administrador (documento y contraseña) y el PIN maestro de seis dígitos. La hoja de acceso se muestra UNA vez. Hasta entonces el inicio de sesión responde 409 y las tabletas no entran. Después se crean los grupos y alumnos en Grupos (o se registran solos).'
+        } else {
+            $estadoPin = [string](Prop $acceso 'pin_maestro' 'desconocido')
+            if ($estadoPin -eq 'configurado') {
+                Anotar 'OK' 'El PIN maestro está configurado (los profesores pueden crear su usuario y restablecer su contraseña)'
+            } elseif ($estadoPin -eq 'vencido') {
+                Anotar 'AVISO' 'El PIN maestro está vencido' '' 'Cámbialo en AVACOM OPS Master, Seguridad del aula, o con el técnico: manage.py acceso_pin_maestro --cambiar.'
+            } elseif ($estadoPin -eq 'sin_configurar') {
+                Anotar 'AVISO' 'El nodo tiene organización pero no PIN maestro' '' `
+                    'Hasta que la administración lo configure (AVACOM OPS Master, Seguridad del aula, o manage.py acceso_pin_maestro --cambiar) no aparecen «Crear mi usuario» ni «Olvidé mi contraseña». En una actualización, deja además a los alumnos con PIN provisional en «PIN pendiente» (Nuevo PIN, en Grupos).'
+            }
+        }
+        $configuracionAcceso = Invoke-Peticion "http://127.0.0.1:$Puerto/api/acceso/configuracion/"
+        if ($configuracionAcceso.Estado -eq 200) {
+            if ((Prop $configuracionAcceso.Json 'sesion_obligatoria' $true) -eq $true) {
+                Anotar 'OK' 'El nodo exige identificarse (AVACOM_LMS_EXIGIR_SESION=1): el personal con documento y contraseña, el alumno con su nombre y PIN, o como visitante'
+            } else {
+                Anotar 'AVISO' 'El nodo está en modo prototipo: NO exige sesión (AVACOM_LMS_EXIGIR_SESION=0)' '' 'Student pedirá solo «Tu nombre». Ponlo en 1 en backend.env y reinicia el servicio para que el aula exija el acceso.'
+            }
         }
         if ((Prop $acceso 'claves_derivadas' $false) -eq $true) {
             Anotar 'INFO' 'Este nodo usa las claves derivadas de la versión anterior' '' `
@@ -1148,6 +1166,10 @@ if (-not (Test-Path -LiteralPath $RutaEnlace)) {
                 Anotar 'AVISO' 'El aula no ve cursos: AVACOM Contenido no está disponible' (Recortar "$(Prop $fuente.Json 'motivo' '')" 220) `
                     (Recortar "$(Prop $fuente.Json 'sugerencia' '')" 200)
             }
+        } elseif ($fuente.Estado -eq 401) {
+            # Es lo normal desde que el nodo exige identificarse: el estado de la biblioteca solo se ve con sesión. Lo que
+            # importa (si Contenido contesta) ya se comprobó directamente arriba.
+            Anotar 'INFO' 'El aula exige sesión: lo que ve de AVACOM Contenido solo se consulta desde la aplicación (la comprobación directa de arriba es la que vale)'
         } else {
             Anotar 'AVISO' "No se pudo consultar al aula qué ve de AVACOM Contenido ($($fuente.Estado))" $fuente.Error
         }

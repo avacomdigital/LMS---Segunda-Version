@@ -92,6 +92,8 @@ dist/
 installer/latest/*.exe
 # Arnes de prueba del asistente: se compila y se borra en cada verificacion.
 installer/build/PruebaAsistente.exe
+installer/student-windows/latest/*.exe
+installer/student-windows/build/PruebaAsistenteStudent.exe
 
 # Presentaciones y discusiones privadas con el CTO
 /specs/presentaciones/

@@ -1,0 +1,55 @@
+﻿AVACOM Student
+
+Este asistente instalará AVACOM Student, la aplicación del estudiante,
+en este equipo.
+
+------------------------------------------------------------------------
+
+AVACOM LMS · AVACOM Student
+
+Qué queda instalado en este equipo
+
+    · AVACOM Student, la aplicación del estudiante.
+    · Un icono de AVACOM Student en el escritorio y en el menú Inicio.
+    · Nada más: no instala servicios, no abre puertos y no cambia la
+      configuración del firewall. Student solo se conecta, por la red del
+      aula, a AVACOM OPS Master.
+
+Todo lo que la aplicación necesita para funcionar viaja dentro de este
+instalador. No hace falta internet ni instalar nada más.
+
+
+Qué NO cambia
+
+    · AVACOM OPS Master y AVACOM Contenido son otros productos. Si están en
+      este equipo no se modifican: cada uno tiene su carpeta, sus datos y
+      su desinstalador.
+    · Al actualizar, se conservan la dirección del aula y el trabajo del
+      estudiante que todavía no llegó a AVACOM OPS Master (respuestas
+      pendientes, material de estudio descargado).
+    · Al desinstalar se pregunta si quieres borrar esos datos; por defecto
+      se conservan.
+
+
+La primera vez
+
+Cuando abras AVACOM Student por primera vez, escribe la dirección del aula
+que muestra la última pantalla del instalador de AVACOM OPS Master (algo
+como http://192.168.0.55:8000). El equipo y la OPS deben estar en la misma
+red, y la OPS ya debe haber hecho su primer arranque (organización,
+administrador y PIN maestro).
+
+Este equipo se registra solo en la OPS al conectarse. Después el estudiante
+toca su grupo y su nombre y marca su PIN, entra como visitante o, si el aula
+lo permite, crea su usuario nuevo. Si la lista de grupos sale vacía, el
+profesorado todavía no creó grupos ni alumnos: se crean en AVACOM OPS Master
+(pantalla Grupos), o cada alumno se crea solo desde aquí.
+
+
+Licencia y uso
+
+Software de AVACOM para uso educativo en las instituciones autorizadas.
+Al continuar, aceptas instalar y ejecutar estos componentes en este equipo.
+
+Este prototipo de aula funciona en una red cerrada: instálalo solo en
+equipos de la institución y en su red local.
