@@ -126,7 +126,11 @@ public sealed class TecladoPinView : ContentView
         for (var c = 0; c < 3; c++) _teclas.ColumnDefinitions.Add(new ColumnDefinition(_teclaAncho));
 
         // 1 2 3 / 4 5 6 / 7 8 9 / Borrar 0 Listo
-        for (var n = 1; n <= 9; n++) Poner(Tecla(n.ToString(), () => Marcar(n.ToString()), $"tecla-{n}", $"Número {n}"), (n - 1) / 3, (n - 1) % 3);
+        for (var n = 1; n <= 9; n++)
+        {
+            var digito = n.ToString();   // una copia por tecla: la variable del for es una sola y terminaba en 10 (cada tecla marcaba «10»)
+            Poner(Tecla(digito, () => Marcar(digito), $"tecla-{digito}", $"Número {digito}"), (n - 1) / 3, (n - 1) % 3);
+        }
         Poner(Tecla("Borrar", Borrar, "tecla-borrar", "Borrar el último número", secundaria: true), 3, 0);
         Poner(Tecla("0", () => Marcar("0"), "tecla-0", "Número 0"), 3, 1);
         if (ConBotonListo)
