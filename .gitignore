@@ -100,3 +100,4 @@ installer/build/PruebaAsistente.exe
 
 # Arnés de UI Automation de Student: capturas, textos y pid de cada corrida
 tests/Avacom.Lms.Student.Uia/salida/
+tests/Avacom.Lms.Ops.Uia/salida/
