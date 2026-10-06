@@ -8,8 +8,8 @@ namespace Avacom.Lms.Ui.Controls;
 /// del alumno. Nunca llama al teclado del sistema (el nodo del aula no tiene teclado y la tableta es compartida): el PIN se marca tocando, y los puntos
 /// sólo dicen cuántos dígitos van, no cuáles.
 ///
-/// <para><b>Medidas táctiles.</b> En Student las teclas miden 72 pt o más (<see cref="TeclaAncho"/> y <see cref="TeclaAlto"/> por defecto); en OPS, 150 × 46 px
-/// o más (la regla del nodo táctil). Cada pantalla fija las suyas.</para>
+/// <para><b>Medidas.</b> Por defecto 68 × 52: del mismo orden que los botones del acceso, para que el teclado no domine la tarjeta. Cada pantalla ajusta
+/// <see cref="TeclaAncho"/> y <see cref="TeclaAlto"/> a su composición (tableta o nodo táctil).</para>
 ///
 /// <para><b>Cuándo termina.</b> Con <see cref="LongitudMinima"/> igual a <see cref="Longitud"/> (el PIN maestro) el PIN se entrega solo al llegar al último
 /// dígito. Con una mínima menor (el PIN del alumno, de 4 a 6) aparece «Listo», que se enciende al alcanzar la mínima; si se llega a la máxima también se
@@ -32,7 +32,7 @@ public sealed class TecladoPinView : ContentView
     private bool _habilitado = true;
 
     private int _longitud = 6, _longitudMinima;
-    private double _teclaAncho = 76, _teclaAlto = 76, _separacion = 12;
+    private double _teclaAncho = 68, _teclaAlto = 52, _separacion = 10;
     private Color _acento = Ds.Rojo;
 
     /// <summary>Se entrega el PIN completo. El argumento es el PIN tal como se marcó (sólo dígitos).</summary>
