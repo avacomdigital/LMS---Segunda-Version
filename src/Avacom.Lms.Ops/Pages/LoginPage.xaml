@@ -57,20 +57,35 @@
                         </VerticalStackLayout>
                         <!-- Estado y mensajes del acceso (conexión, credenciales, sesión terminada): el texto dice lo que pasa; el color sólo acompaña. -->
                         <Border x:Name="StatusCard" BackgroundColor="{StaticResource ErrorSoft}" Padding="14" StrokeThickness="0"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="10"><Label x:Name="StatusDot" Text="●" TextColor="{StaticResource BrandRed}" VerticalOptions="Start"/><Label x:Name="StatusLabel" Grid.Column="1" Text="Sin comprobar · modo demo disponible" LineBreakMode="WordWrap"/></Grid></Border>
-                        <!-- Sólo cuando el nodo exige sesión (007-10): documento y clave. Es la única pantalla de OPS que pide escribir. -->
+                        <!-- Sólo cuando el nodo exige sesión (007-10, RF-05): documento y contraseña, el mismo acceso para profesorado, administración y técnico
+                             (el nodo sabe quién es por la cuenta). Debajo, siempre a la vista, «Crear mi usuario» y «Olvidé mi contraseña». -->
                         <VerticalStackLayout x:Name="CredencialesGrupo" IsVisible="False" Spacing="8">
-                            <Label Text="Documento" FontSize="13" Margin="0,4,0,0"/>
-                            <Entry x:Name="DocumentoEntry" Placeholder="Tu número de documento" ReturnType="Next" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" SemanticProperties.Description="Documento" Completed="OnDocumentoCompleted"/>
-                            <Label Text="Clave" FontSize="13" Margin="0,6,0,0"/>
-                            <Entry x:Name="ClaveEntry" Placeholder="Tu clave" IsPassword="True" ReturnType="Go" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" SemanticProperties.Description="Clave" Completed="OnEntrar"/>
-                            <Label Text="Usa el documento y la clave que te dio la escuela. Si no las recuerdas, pídelas a la administración." Style="{StaticResource Muted}" FontSize="12" LineBreakMode="WordWrap" Margin="0,2,0,0"/>
-                            <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,6,0,0">
-                                <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
-                                <Button x:Name="EntrarButton" Text="Entrar" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEntrar">
-                                    <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
-                                </Button>
-                            </Border>
-                            <Button x:Name="CambiarServidorButton" Text="Cambiar la dirección del servidor" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="13" HeightRequest="44" Clicked="OnCambiarServidor"/>
+                            <VerticalStackLayout x:Name="CamposGrupo" Spacing="8">
+                                <Label Text="Documento" FontSize="13" Margin="0,4,0,0"/>
+                                <Entry x:Name="DocumentoEntry" Placeholder="Tu número de documento" ReturnType="Next" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" SemanticProperties.Description="Documento" Completed="OnDocumentoCompleted"/>
+                                <Label Text="Contraseña" FontSize="13" Margin="0,6,0,0"/>
+                                <Entry x:Name="ClaveEntry" Placeholder="Tu contraseña" IsPassword="True" ReturnType="Go" IsSpellCheckEnabled="False" IsTextPredictionEnabled="False" SemanticProperties.Description="Contraseña" Completed="OnEntrar"/>
+                                <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,6,0,0">
+                                    <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
+                                    <Button x:Name="EntrarButton" Text="Entrar" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEntrar">
+                                        <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
+                                    </Button>
+                                </Border>
+                                <!-- RF-05 · RN-03: sin PIN maestro configurado no se ofrecen (y la nota dice qué sigue); con el PIN vencido siguen ahí y explican qué pasó. -->
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <Button x:Name="CrearUsuarioButton" Text="Crear mi usuario" BackgroundColor="#B3FFFFFF" TextColor="{StaticResource Ink}" BorderColor="#17000000" BorderWidth="1" CornerRadius="12" FontSize="14" HeightRequest="46" MinimumWidthRequest="150" Clicked="OnCrearMiUsuario"/>
+                                    <Button x:Name="OlvideButton" Grid.Column="1" Text="Olvidé mi contraseña" BackgroundColor="#B3FFFFFF" TextColor="{StaticResource Ink}" BorderColor="#17000000" BorderWidth="1" CornerRadius="12" FontSize="14" HeightRequest="46" MinimumWidthRequest="150" Clicked="OnOlvideMiContrasena"/>
+                                </Grid>
+                                <Label x:Name="CuentaNotaLabel" IsVisible="False" Style="{StaticResource Muted}" FontSize="12" LineBreakMode="WordWrap"/>
+                                <Button x:Name="CambiarServidorButton" Text="Cambiar la dirección del servidor" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="13" HeightRequest="46" Clicked="OnCambiarServidor"/>
+                            </VerticalStackLayout>
+                            <!-- La administración entra además con el PIN maestro: el nodo lo pide DESPUÉS de comprobar la contraseña. Teclado propio (RF-00a):
+                                 el equipo del aula no tiene teclado y el PIN nunca pasa por el del sistema. -->
+                            <VerticalStackLayout x:Name="PinGrupo" IsVisible="False" Spacing="10">
+                                <Label Text="PIN maestro de la escuela" FontSize="15" FontAttributes="Bold" HorizontalTextAlignment="Center"/>
+                                <controls:TecladoPinView x:Name="PinTeclado" Longitud="6" TeclaAncho="150" TeclaAlto="46" Separacion="10" HorizontalOptions="Center" PinCompleto="OnPinMaestroCompleto"/>
+                                <Button x:Name="PinVolverButton" Text="Volver" BackgroundColor="Transparent" TextColor="{StaticResource InkMuted}" FontSize="14" HeightRequest="46" MinimumWidthRequest="150" HorizontalOptions="Center" Clicked="OnPinVolver"/>
+                            </VerticalStackLayout>
                         </VerticalStackLayout>
                         <VerticalStackLayout x:Name="AccionesGrupo" Spacing="14">
                             <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource Ink}" Margin="0,4,0,0">
@@ -79,13 +94,14 @@
                                     <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#3A3A40" Offset="0"/><GradientStop Color="#232326" Offset="0.55"/><GradientStop Color="#0E0E10" Offset="1"/></LinearGradientBrush></Button.Background>
                                 </Button>
                             </Border>
-                            <Border Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,4,0,0">
+                            <!-- RF-05: «Iniciar como profesor» sin credenciales sólo existe con el nodo en modo prototipo (no exige sesión). Nunca se simula un acceso. -->
+                            <Border x:Name="IniciarCapsula" IsVisible="False" Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource BrandRed}" Margin="0,4,0,0">
                                 <Border.Shadow><Shadow Brush="#80C8222F" Offset="0,8" Radius="18"/></Border.Shadow>
                                 <Button x:Name="IniciarButton" Text="EC   Iniciar como profesor" Style="{StaticResource PrimaryButton}" CornerRadius="12" BorderWidth="0" Clicked="OnEnterDemo">
                                     <Button.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F25055" Offset="0"/><GradientStop Color="#E5262B" Offset="0.55"/><GradientStop Color="#B81C21" Offset="1"/></LinearGradientBrush></Button.Background>
                                 </Button>
                             </Border>
-                            <Label Text="El prototipo puede recorrerse sin backend. Al conectarse, usa /health/ y los contratos REST/WebSocket definidos." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="11" LineBreakMode="WordWrap"/>
+                            <Label x:Name="PrototipoNota" IsVisible="False" Text="Este nodo está en modo prototipo: se entra sin identificarse. Al conectarse, usa /health/ y los contratos REST/WebSocket definidos." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="11" LineBreakMode="WordWrap"/>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                     </ScrollView>
