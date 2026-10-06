@@ -154,5 +154,6 @@ internal sealed class FalsoAccesoApi : IAccesoApi
     public Task<IReadOnlyList<VisitanteEnClase>?> ListarVisitantesAsync(CancellationToken ct = default) => throw new NotSupportedException();
     public Task<bool> VincularVisitanteAsync(string visitaId, string alumnoId, CancellationToken ct = default) => throw new NotSupportedException();
     public Task<PoliticaDePerfil?> ConfigurarPoliticaAsync(string perfil, object cambios, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task<bool> CambiarMiContrasenaAsync(string secretoActual, string secretoNuevo, CancellationToken ct = default) => throw new NotSupportedException();
     public Task<JsonElement?> OtorgarEscaladaAsync(string usuarioId, string permiso, string alcance, string motivo, long vigenteHastaMs, CancellationToken ct = default) => throw new NotSupportedException();
 }
