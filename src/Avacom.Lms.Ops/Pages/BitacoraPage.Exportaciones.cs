@@ -56,24 +56,47 @@ public partial class BitacoraPage
         var estado = Ds.Secundario("La persona que autoriza no deja sesión abierta en este equipo: se identifica, concede y se despide en el mismo paso.", 13);
         var conceder = Ds.Boton("Conceder 30 minutos", Ds.Rango.Primary, null, 56, 240);
         conceder.FontSize = 15;
-        conceder.Clicked += async (_, _) =>
+        // Si quien autoriza es de administración, el nodo pide además el PIN maestro: teclado propio de seis puntos (el equipo no tiene teclado). Mientras
+        // se marca, el documento y la clave siguen en sus campos; al terminar, la clave se borra pase lo que pase.
+        var teclado = Avacom.Lms.Ops.Controls.MarcoDeAcceso.TecladoMaestro();
+        var cancelarPin = Ds.Boton("Cancelar", Ds.Rango.Quiet, null, 46);
+        cancelarPin.MinimumWidthRequest = 150;
+        cancelarPin.HorizontalOptions = LayoutOptions.Center;
+        var pinGrupo = new VerticalStackLayout
+        {
+            Spacing = 8, IsVisible = false, HorizontalOptions = LayoutOptions.Start,
+            Children = { new Label { Text = "PIN maestro de la escuela", FontSize = 15, FontAttributes = FontAttributes.Bold, HorizontalTextAlignment = TextAlignment.Center }, teclado, cancelarPin },
+        };
+        async Task AutorizarAsync(string? pin)
         {
             if (Sesion.Usuario is null) { estado.Text = "Hace falta una sesión de usuario en este equipo."; return; }
             if (motivo.Selected is null) { estado.Text = "Elige el motivo de la autorización."; return; }
             if (string.IsNullOrWhiteSpace(documento.Text) || string.IsNullOrWhiteSpace(clave.Text)) { estado.Text = "Escribe el documento y la clave de quien autoriza."; return; }
             Ds.Habilitar(conceder, false);
+            teclado.Habilitado = false;
             try
             {
-                var (ok, mensaje) = await Autorizaciones.AutorizarSalidaAsync(documento.Text.Trim(), clave.Text, motivo.Selected);
+                var (ok, mensaje, requierePin) = await Autorizaciones.AutorizarSalidaAsync(documento.Text.Trim(), clave.Text, motivo.Selected, pin);
                 estado.Text = mensaje;
+                if (requierePin && Sesion.Acceso.UltimoError is not { PinMaestroBloqueado: true })
+                {
+                    if (pin is not null) await teclado.SacudirAsync();
+                    pinGrupo.IsVisible = true;
+                    return;   // la clave se conserva hasta que se marque el PIN
+                }
+                pinGrupo.IsVisible = false;
+                teclado.Limpiar();
                 clave.Text = string.Empty;
                 if (ok) await MostrarAsync(Pestana.Exportaciones);
             }
-            finally { Ds.Habilitar(conceder, true); }
-        };
+            finally { Ds.Habilitar(conceder, true); teclado.Habilitado = true; }
+        }
+        teclado.PinCompleto += async (_, pin) => await AutorizarAsync(pin);
+        cancelarPin.Clicked += (_, _) => { pinGrupo.IsVisible = false; teclado.Limpiar(); clave.Text = string.Empty; estado.Text = "Autorización cancelada."; };
+        conceder.Clicked += async (_, _) => await AutorizarAsync(null);
         var fila = new HorizontalStackLayout { Spacing = 10, Children = { documento, clave, motivo, conceder } };
         documento.WidthRequest = 240; clave.WidthRequest = 200;
-        var pila = new VerticalStackLayout { Spacing = 10, Children = { Ds.Cuerpo("Quien autoriza", 16), fila, estado } };
+        var pila = new VerticalStackLayout { Spacing = 10, Children = { Ds.Cuerpo("Quien autoriza", 16), fila, estado, pinGrupo } };
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(20, 16), Colors.White);
     }
 
