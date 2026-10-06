@@ -94,7 +94,7 @@ public sealed class MensajeAulaTests
 
 // ================================================================================ acceso
 
-[Collection("estado global")]
+[Collection("registro-local")]   // toca el pase (ClienteJson.Token) que leen las pruebas del registro local: no pueden correr a la vez
 public sealed class AccesoApiTests : IDisposable
 {
     public AccesoApiTests() => ClienteJson.Token = null;

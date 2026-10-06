@@ -3,12 +3,18 @@ using Avacom.Lms.Core.Models;
 
 namespace Avacom.Lms.Core.Services;
 
-/// <summary>Un estudiante dentro de un grupo, como lo ve la pantalla «Grupos».</summary>
+/// <summary>
+/// Un estudiante dentro de un grupo, como lo ve la pantalla «Grupos». <c>Confirmado</c> falso = se registró solo y el profesor aún no lo respaldó (RB-20);
+/// <c>PinPendiente</c> = todavía no eligió su PIN (RN-35); <c>Origen</c> dice cómo nació la cuenta (padrón, profesor, alta propia).
+/// </summary>
 public sealed record EstudiantePadron(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("alias")] string Alias,
     [property: JsonPropertyName("estado")] string? Estado = null,
-    [property: JsonPropertyName("provisional")] bool Provisional = false);
+    [property: JsonPropertyName("provisional")] bool Provisional = false,
+    [property: JsonPropertyName("origen")] string? Origen = null,
+    [property: JsonPropertyName("confirmado")] bool Confirmado = true,
+    [property: JsonPropertyName("pin_pendiente")] bool PinPendiente = false);
 
 public sealed record GrupoPadron(
     [property: JsonPropertyName("id")] string Id,
@@ -35,13 +41,17 @@ public sealed record EstadoPadron(
     [property: JsonPropertyName("grupos")] IReadOnlyList<GrupoPadron> Grupos,
     [property: JsonPropertyName("sin_grupo")] IReadOnlyList<EstudianteSinGrupo> SinGrupo);
 
-/// <summary>El estudiante recién registrado. <c>SecretoInicial</c> (el PIN generado) se entrega UNA vez: si no se anota ahora, no vuelve a salir.</summary>
+/// <summary>
+/// El estudiante recién registrado. Ya no hay PIN generado que anotar (RB-26, RN-35): la cuenta queda en «PIN pendiente» y el alumno elige el suyo la
+/// primera vez que toca su nombre en la tableta. <c>SecretoInicial</c> sólo llega de un nodo anterior.
+/// </summary>
 public sealed record EstudianteRegistrado(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("alias")] string Alias,
     [property: JsonPropertyName("grupo_id")] string GrupoId,
     [property: JsonPropertyName("identificador")] string Identificador,
-    [property: JsonPropertyName("secreto_inicial")] string? SecretoInicial = null);
+    [property: JsonPropertyName("secreto_inicial")] string? SecretoInicial = null,
+    [property: JsonPropertyName("pin_pendiente")] bool PinPendiente = false);
 
 public sealed record GrupoCreado(
     [property: JsonPropertyName("id")] string Id,
@@ -69,6 +79,13 @@ public interface IPadronApi
     Task<bool> RetirarAsync(string grupoId, string usuarioId, CancellationToken ct = default);
     /// <summary>Sólo con el nodo vacío y sin sesión obligatoria: crea la organización de prueba para poder registrar. 409 si ya está instalado.</summary>
     Task<bool> PrepararAulaDePruebaAsync(CancellationToken ct = default);
+    /// <summary>
+    /// «Nuevo PIN» (RN-35): deja la cuenta en PIN pendiente y cierra sus sesiones. NO se genera ni se muestra ningún número: el alumno elige uno nuevo
+    /// la próxima vez que toque su nombre.
+    /// </summary>
+    Task<bool> ReiniciarPinAsync(string usuarioId, CancellationToken ct = default);
+    /// <summary>«Confirmar» (RB-20): el profesor respalda a un alumno que se registró solo.</summary>
+    Task<bool> ConfirmarAsync(string usuarioId, CancellationToken ct = default);
 }
 
 public sealed class PadronApi(HttpClient http, Uri baseUri) : ClienteJson(http, baseUri), IPadronApi
@@ -92,4 +109,10 @@ public sealed class PadronApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
 
     public async Task<bool> PrepararAulaDePruebaAsync(CancellationToken ct = default) =>
         await EnviarAsync<System.Text.Json.JsonElement?>("api/acceso/padron/preparar/", new Vacio(), ct) is not null;
+
+    public async Task<bool> ReiniciarPinAsync(string usuarioId, CancellationToken ct = default) =>
+        await EnviarAsync<System.Text.Json.JsonElement?>($"api/acceso/usuarios/{Uri.EscapeDataString(usuarioId)}/credencial/restablecer/", new Vacio(), ct) is not null;
+
+    public async Task<bool> ConfirmarAsync(string usuarioId, CancellationToken ct = default) =>
+        await EnviarAsync<System.Text.Json.JsonElement?>($"api/acceso/usuarios/{Uri.EscapeDataString(usuarioId)}/confirmar/", new Vacio(), ct) is not null;
 }

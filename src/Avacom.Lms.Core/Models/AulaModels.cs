@@ -863,6 +863,35 @@ public sealed record ErrorAula(int Estado, string? Codigo, string Detalle, strin
     public bool AulaLlena => Codigo == "aula_llena";
     /// <summary>INV-011: esta sesión habló por el participante de otra persona (tableta compartida); lo que esa persona dejó en la cola no se descarta.</summary>
     public bool PersonaAjena => Codigo == "persona_ajena";
+    // --- MOD-001 · PIN maestro, alumnos y visitantes (requisitos de acceso 2026-10-05): los códigos del §C.4.3 ---
+    /// <summary>RN-35: el alumno todavía no eligió su PIN; hay que mandarlo a elegirlo, no a corregir.</summary>
+    public bool PinPendiente => Codigo == "pin_pendiente";
+    /// <summary>La administración exige además el PIN maestro. Se dice DESPUÉS de comprobar la contraseña.</summary>
+    public bool PinMaestroRequerido => Codigo == "pin_maestro_requerido";
+    public bool PinMaestroInvalido => Codigo == "pin_maestro_invalido";
+    /// <summary>RN-10: demasiados intentos desde este equipo (<see cref="ReintentarEnSeg"/>).</summary>
+    public bool PinMaestroBloqueado => Codigo == "pin_maestro_bloqueado";
+    /// <summary>RN-09: venció; ya no acepta altas ni restablecimientos de profesores.</summary>
+    public bool PinMaestroVencido => Codigo == "pin_maestro_vencido";
+    public bool PinMaestroNoConfigurado => Codigo == "pin_maestro_no_configurado";
+    /// <summary>RN-33: la tableta espera tras varios PIN equivocados; entrar como visitante nunca se bloquea.</summary>
+    public bool DispositivoEnPausa => Codigo == "dispositivo_en_pausa";
+    /// <summary>RN-11 y BR-056: el PIN maestro no se acepta desde una tableta de alumno; la lista de nombres sólo sale a un equipo registrado.</summary>
+    public bool DispositivoNoAutorizado => Codigo == "dispositivo_no_autorizado";
+    /// <summary>RN-34: ya hay alguien con ese alias en el grupo; <see cref="Sugerencia"/> (o el extra <c>sugerencia</c>) trae una letra más.</summary>
+    public bool AliasDuplicado => Codigo == "alias_duplicado";
+    public bool RegistroCerrado => Codigo == "registro_cerrado";
+    public bool VisitanteNoPermitido => Codigo == "visitante_no_permitido";
+    /// <summary>RN-42 y RN-43: una visita sólo puede seguir la clase y practicar.</summary>
+    public bool SesionVisitanteLimitada => Codigo == "sesion_visitante_limitada";
+    public long? ReintentarEnSeg => Numero("reintentar_en_seg");
+    public long? IntentosRestantes => Numero("intentos_restantes");
+    /// <summary>Las reglas que una clave no cumplió (<c>secreto_debil</c>), en palabras del nodo.</summary>
+    public IReadOnlyList<string> Reglas =>
+        Extra is { ValueKind: JsonValueKind.Object } e && e.TryGetProperty("reglas", out var v) && v.ValueKind == JsonValueKind.Array
+            ? v.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToArray()
+            : [];
+
     public long? Numero(string clave) =>
         Extra is { ValueKind: JsonValueKind.Object } e && e.TryGetProperty(clave, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n : null;
     public string? Texto(string clave) =>

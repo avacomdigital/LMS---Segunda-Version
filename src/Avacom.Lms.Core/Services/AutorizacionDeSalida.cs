@@ -18,15 +18,16 @@ public static class AutorizacionDeSalida
         "Inspección interna", "Auditoría externa", "Requerimiento legal o de la autoridad educativa", "Respaldo externo de evidencia", "Soporte técnico de AVACOM",
     ];
 
-    public sealed record Resultado(bool Ok, string Mensaje, long? VigenteHastaMs = null);
+    /// <summary><c>RequierePinMaestro</c>: quien autoriza es de administración y el nodo exige además el PIN maestro; la pantalla lo pide con el teclado y repite.</summary>
+    public sealed record Resultado(bool Ok, string Mensaje, long? VigenteHastaMs = null, bool RequierePinMaestro = false);
 
     /// <summary>
     /// <paramref name="beneficiarioId"/> es quien usa el equipo (recibe la escalada); <paramref name="documento"/> y <paramref name="clave"/> son
-    /// de quien autoriza. <paramref name="dispositivo"/> es la huella del equipo para el login. Devuelve el resultado y deja
-    /// <see cref="ClienteJson.Token"/> exactamente como estaba.
+    /// de quien autoriza; <paramref name="pinMaestro"/> es el PIN maestro, que toda cuenta de administración presenta además de su clave mientras esté vigente.
+    /// <paramref name="dispositivo"/> es la huella del equipo para el login. Devuelve el resultado y deja <see cref="ClienteJson.Token"/> exactamente como estaba.
     /// </summary>
     public static async Task<Resultado> ConcederAsync(IAccesoApi acceso, string? beneficiarioId, string dispositivo, string documento, string clave, string motivo,
-                                                     CancellationToken ct = default)
+                                                     CancellationToken ct = default, string? pinMaestro = null)
     {
         if (string.IsNullOrEmpty(beneficiarioId)) return new(false, "Hace falta una sesión de usuario en este equipo.");
         if (string.IsNullOrWhiteSpace(documento) || string.IsNullOrWhiteSpace(clave)) return new(false, "Escribe el documento y la clave de quien autoriza.");
@@ -34,10 +35,12 @@ public static class AutorizacionDeSalida
         var miPase = ClienteJson.Token;
         try
         {
-            var otra = await acceso.IniciarSesionAsync(documento.Trim(), clave, dispositivo, ct: ct);
+            var otra = await acceso.IniciarSesionAsync(documento.Trim(), clave, dispositivo, pinMaestro: pinMaestro, ct: ct);
             if (otra is null)
             {
                 var error = acceso.UltimoError;
+                if (error is { PinMaestroRequerido: true }) return new(false, "Quien autoriza es de administración: escribe además el PIN maestro.", RequierePinMaestro: true);
+                if (error is { PinMaestroInvalido: true } or { PinMaestroBloqueado: true }) return new(false, MensajesDeAcceso.Texto(error), RequierePinMaestro: true);
                 return new(false, error?.Codigo == "credenciales_invalidas" ? "Documento o clave incorrectos." : error?.Detalle ?? "No se pudo identificar a quien autoriza.");
             }
             if (otra.Usuario.Id == beneficiarioId)

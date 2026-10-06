@@ -99,6 +99,29 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
     }
 
+    /// <summary>PUT con cuerpo JSON (cambiar el PIN maestro, configurar una política). Mismas reglas que <see cref="EnviarAsync{T}"/>.</summary>
+    protected async Task<T?> ReemplazarAsync<T>(string ruta, object cuerpo, CancellationToken ct)
+    {
+        try
+        {
+            var contenido = new StringContent(JsonSerializer.Serialize(cuerpo, Json), Encoding.UTF8, "application/json");
+            using var peticion = Peticion(HttpMethod.Put, ruta, contenido);
+            using var respuesta = await http.SendAsync(peticion, ct);
+            if (!respuesta.IsSuccessStatusCode)
+            {
+                await RegistrarErrorAsync(respuesta, ct);
+                return default;
+            }
+            Limpiar();
+            return await respuesta.Content.ReadFromJsonAsync<T>(Json, ct);
+        }
+        catch (Exception ex) when (EsDeRed(ex))
+        {
+            SinRed(ruta, ex);
+            return default;
+        }
+    }
+
     /// <summary>PATCH con cuerpo JSON (cambiar una asignación, registrar avance). Mismas reglas que <see cref="EnviarAsync{T}"/>.</summary>
     protected async Task<T?> ParchearAsync<T>(string ruta, object cuerpo, CancellationToken ct)
     {
