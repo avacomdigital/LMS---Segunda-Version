@@ -114,6 +114,13 @@ def main():
     t = esperar_texto("Hola, Juan P.")
     pantalla("03-pin")
     comprobar("1 · pide el PIN con el teclado propio", "Marca tu PIN" in t and "Número 1" in botones())
+    # Un toque, una marca: un solo invoke sobre «5» deja UN punto lleno (antes cada tecla marcaba «10», dos dígitos).
+    tocar("Número 5")
+    puntos = ui("buscar", nombre="números marcados")
+    comprobar("1 · un toque en «5» llena un solo punto", "1 de 6 números marcados" in puntos, puntos)
+    tocar("Borrar el último número")
+    puntos = ui("buscar", nombre="números marcados")
+    comprobar("1 · «Borrar» lo quita", "0 de 6 números marcados" in puntos, puntos)
     marcar("1234")
     t = esperar_texto("Bienvenido, Juan")
     pantalla("04-menu-juan")

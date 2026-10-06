@@ -50,6 +50,12 @@ switch ($Accion) {
             }
         }
     }
+    "buscar" {
+        # Cualquier elemento (no sólo textos y botones) cuyo nombre contenga -Nombre: p. ej. los puntos del teclado del PIN, «1 de 6 números marcados».
+        foreach ($e in Todos $win) {
+            if ($e.Current.Name -like ("*" + $Nombre + "*")) { Write-Output $e.Current.Name }
+        }
+    }
     "text" {
         foreach ($e in Todos $win) {
             if ($e.Current.ControlType.ProgrammaticName -eq "ControlType.Text" -and $e.Current.Name -ne "") { Write-Output $e.Current.Name }
