@@ -15,6 +15,13 @@ public static class Ajustes
     public static string? ServidorDePrueba { get; } =
         Perfil is not null && Environment.GetEnvironmentVariable("AVACOM_OPS_SERVIDOR") is { Length: > 0 } s ? s.Trim() : null;
 
+    /// <summary>
+    /// Sólo con el perfil de pruebas y <c>AVACOM_OPS_CLAVES_VISIBLES=1</c>: los campos de contraseña no se enmascaran. El campo enmascarado de MAUI en Windows
+    /// (MauiPasswordTextBox) no acepta el ValuePattern de UI Automation —el texto se ve pero la contraseña queda vacía—, así que sin esto el recorrido de
+    /// interfaz no podría escribir una contraseña sin tomar el teclado de quien trabaja en el equipo. Sin el perfil no hace nada.
+    /// </summary>
+    public static bool ClavesVisiblesDePrueba { get; } = Perfil is not null && Environment.GetEnvironmentVariable("AVACOM_OPS_CLAVES_VISIBLES") == "1";
+
     private static string? _rutaDePrueba = Perfil is not null && Environment.GetEnvironmentVariable("AVACOM_OPS_RUTA") is { Length: > 0 } r ? r.Trim() : null;
 
     /// <summary>

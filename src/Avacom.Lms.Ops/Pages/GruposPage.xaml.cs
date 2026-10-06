@@ -244,16 +244,18 @@ public partial class GruposPage : ContentPage
         var id = est.Id;
         if (!est.Confirmado)
         {
-            var confirmar = Ds.Boton("Confirmar", Ds.Rango.Secondary, async (_, _) => await ConfirmarAsync(id, est.Alias), 40, 110);
+            var confirmar = Ds.Boton("Confirmar", Ds.Rango.Secondary, async (_, _) => await ConfirmarAsync(id, est.Alias), 40);
             confirmar.FontSize = 14;
-            AutomationProperties.SetName(confirmar, $"Confirmar a {est.Alias}");
+            confirmar.MinimumWidthRequest = 110;
+            SemanticProperties.SetDescription(confirmar, $"Confirmar a {est.Alias}");
             acciones.Add(Ds.Capsula(confirmar));
         }
         if (!est.PinPendiente)
         {
-            var nuevoPin = Ds.Boton("Nuevo PIN", Ds.Rango.Secondary, async (_, _) => await NuevoPinAsync(id, est.Alias), 40, 110);
+            var nuevoPin = Ds.Boton("Nuevo PIN", Ds.Rango.Secondary, async (_, _) => await NuevoPinAsync(id, est.Alias), 40);
             nuevoPin.FontSize = 14;
-            AutomationProperties.SetName(nuevoPin, $"Nuevo PIN para {est.Alias}");
+            nuevoPin.MinimumWidthRequest = 110;
+            SemanticProperties.SetDescription(nuevoPin, $"Nuevo PIN para {est.Alias}");
             acciones.Add(Ds.Capsula(nuevoPin));
         }
         fila.Add(acciones, 1, 0);

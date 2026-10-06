@@ -294,7 +294,7 @@ public sealed class SeguridadAulaPage : ContentPage
             _docentes = await acceso.ListarDocentesPorPinMaestroAsync() ?? _docentes;
             Pintar();
         };
-        AutomationProperties.SetName(boton, $"{(d.Suspendido ? "Reactivar" : "Suspender")} a {d.Alias}");
+        SemanticProperties.SetDescription(boton, $"{(d.Suspendido ? "Reactivar" : "Suspender")} a {d.Alias}");
 
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14, Padding = new Thickness(0, 4) };
         fila.Add(texto, 0, 0);

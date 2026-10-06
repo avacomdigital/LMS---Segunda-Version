@@ -107,7 +107,7 @@ public sealed class MarcoDeAcceso : Grid
     {
         var e = new Entry
         {
-            Placeholder = marcador, IsPassword = secreto, IsSpellCheckEnabled = false, IsTextPredictionEnabled = false, ReturnType = ReturnType.Next,
+            Placeholder = marcador, IsPassword = secreto && !Ajustes.ClavesVisiblesDePrueba, IsSpellCheckEnabled = false, IsTextPredictionEnabled = false, ReturnType = ReturnType.Next,
             Keyboard = numerico ? Keyboard.Numeric : Keyboard.Default,
         };
         SemanticProperties.SetDescription(e, descripcion);

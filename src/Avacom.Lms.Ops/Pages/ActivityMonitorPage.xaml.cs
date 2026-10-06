@@ -86,7 +86,7 @@ public partial class ActivityMonitorPage : ContentPage
         }, 40);
         vincular.FontSize = 14;
         vincular.MinimumWidthRequest = 110;
-        AutomationProperties.SetName(vincular, abierto ? "Cancelar" : $"Vincular {v.Alias} a un alumno");
+        SemanticProperties.SetDescription(vincular, abierto ? "Cancelar" : $"Vincular {v.Alias} a un alumno");
         fila.Add(Ds.Capsula(vincular), 1, 0);
         pila.Add(fila);
         if (abierto) pila.Add(ListaDeAlumnos(v));

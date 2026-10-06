@@ -30,6 +30,7 @@ public partial class LoginPage : ContentPage
         InitializeComponent();
         ServerEntry.Text = Ajustes.ServidorDePrueba ?? Ajustes.Get("ops_server", Sesion.DireccionPorDefecto);
         ServerEntry.IsReadOnly = Ajustes.ServidorDePrueba is not null;
+        if (Ajustes.ClavesVisiblesDePrueba) ClaveEntry.IsPassword = false;   // sólo el recorrido de UI Automation (ver Ajustes)
     }
 
     protected override async void OnAppearing()
