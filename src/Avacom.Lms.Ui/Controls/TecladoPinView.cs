@@ -19,7 +19,7 @@ namespace Avacom.Lms.Ui.Controls;
 /// </summary>
 public sealed class TecladoPinView : ContentView
 {
-    private static readonly Color Fondo = Color.FromArgb("#FFFFFFFF"), FondoPulsado = Color.FromArgb("#FFE4E4E7");
+    private static readonly Color Fondo = Color.FromArgb("#FFFFFFFF");
     private static readonly Color PuntoVacio = Color.FromArgb("#FFD4D4D8");
 
     private readonly VerticalStackLayout _pila = new() { Spacing = 18, HorizontalOptions = LayoutOptions.Center };
@@ -170,9 +170,17 @@ public sealed class TecladoPinView : ContentView
             BackgroundColor = destacada ? _acento : secundaria ? Color.FromArgb("#FFF1F1F1") : Fondo, Padding = new Thickness(0),
         };
         SemanticProperties.SetDescription(boton, descripcion);
-        boton.Clicked += (_, _) => { if (_habilitado) alTocar(); };
-        boton.Pressed += (_, _) => { if (!destacada && !secundaria) boton.BackgroundColor = FondoPulsado; };
-        boton.Released += (_, _) => { if (!destacada && !secundaria) boton.BackgroundColor = Fondo; };
+        // Un toque, una marca. Sólo se escucha Clicked (no Pressed/Released: en WinUI cada toque llegaba dos veces) y, por si el sistema repite el
+        // evento, se descarta el segundo Clicked de la MISMA tecla dentro de 180 ms (ninguna mano marca dos veces el mismo número tan rápido).
+        long ultimo = 0;
+        boton.Clicked += (_, _) =>
+        {
+            if (!_habilitado) return;
+            var ahora = Environment.TickCount64;
+            if (ahora - ultimo < 180) return;
+            ultimo = ahora;
+            alTocar();
+        };
         return boton;
     }
 
