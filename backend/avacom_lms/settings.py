@@ -11,6 +11,23 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _cargar_env_de_desarrollo() -> None:
+    """Lee `backend/.env` (clave=valor por línea) para el desarrollo local. NUNCA pisa una variable que ya venga del entorno: en el equipo instalado la
+    configuración llega desde backend.env por el servicio, y este archivo (que no se versiona: está en .gitignore) no existe."""
+    ruta = BASE_DIR / ".env"
+    if not ruta.is_file():
+        return
+    for linea in ruta.read_text(encoding="utf-8-sig").splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+        clave, valor = linea.split("=", 1)
+        os.environ.setdefault(clave.strip(), valor.strip().strip('"').strip("'"))
+
+
+_cargar_env_de_desarrollo()
+
 SECRET_KEY = os.environ.get("AVACOM_LMS_SECRET", "prototipo-aula-sin-internet-no-es-secreto")
 DEBUG = os.environ.get("AVACOM_LMS_DEBUG", "1") == "1"
 
