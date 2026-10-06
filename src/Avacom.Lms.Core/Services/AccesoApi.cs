@@ -196,6 +196,11 @@ public interface IAccesoApi
     /// <summary>RB-19: dos toques, sin profesor, PIN ni código. Cuenta efímera con permisos mínimos.</summary>
     Task<SesionAcceso?> EntrarComoVisitanteAsync(string dispositivo, string? grupoId = null, CancellationToken ct = default);
     Task<bool> CerrarSesionAsync(CancellationToken ct = default);
+    /// <summary>
+    /// <c>PUT yo/credencial/</c>: la persona identificada cambia su propia contraseña (la provisional de la hoja de acceso, <c>DebeCambiarCredencial</c>, o
+    /// cuando quiera). El nodo cierra sus otras sesiones y conserva ésta. <c>secreto_debil</c> trae las reglas que no se cumplieron.
+    /// </summary>
+    Task<bool> CambiarMiContrasenaAsync(string secretoActual, string secretoNuevo, CancellationToken ct = default);
 
     /// <summary>JRN-001: el primer arranque. Sin PIN maestro el nodo no se instala (RN-03).</summary>
     Task<InstalacionHecha?> InstalarAsync(DatosDeInstalacion datos, CancellationToken ct = default);
@@ -267,6 +272,9 @@ public sealed class AccesoApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
         if (sesion is not null) Token = sesion.Token;
         return sesion;
     }
+
+    public async Task<bool> CambiarMiContrasenaAsync(string secretoActual, string secretoNuevo, CancellationToken ct = default) =>
+        await ReemplazarAsync<JsonElement?>("api/acceso/yo/credencial/", new { secreto_actual = secretoActual, secreto_nuevo = secretoNuevo }, ct) is not null;
 
     public Task<InstalacionHecha?> InstalarAsync(DatosDeInstalacion d, CancellationToken ct = default) =>
         EnviarAsync<InstalacionHecha>("api/acceso/instalacion/", new

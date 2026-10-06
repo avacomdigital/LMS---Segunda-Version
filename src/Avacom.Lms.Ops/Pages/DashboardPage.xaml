@@ -28,6 +28,9 @@
                 <Label FontAttributes="Bold" FontSize="16" Text="CLASSROOM" TextColor="#52525B" VerticalTextAlignment="Center" />
             </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
+                <!-- RF-08: «Seguridad del aula» (PIN maestro, profesores registrados con él y puertas de entrada), sólo para la administración. Es un botón
+                     y no una tesela para que se toque igual que el resto de la cabecera (y lo encuentre UI Automation). -->
+                <Button x:Name="SeguridadButton" IsVisible="False" Text="Seguridad del aula" HeightRequest="40" MinimumWidthRequest="120" Padding="16,0" Margin="0,0,10,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnSeguridadClicked" />
                 <Border BackgroundColor="#977528" HeightRequest="48" StrokeThickness="0" WidthRequest="48">
                     <Label x:Name="InicialesLabel" FontAttributes="Bold" HorizontalOptions="Center" Text="EC" TextColor="White" VerticalOptions="Center" />
                 </Border>
@@ -40,12 +43,22 @@
 
         <!-- MSG-021: aviso no bloqueante tras entrar (la entrada cerró la clase que esta persona tenía abierta en otro equipo). Se ve
              unos segundos sobre el tablero y se quita solo o con «Entendido»; nada espera una confirmación. -->
-        <Border x:Name="AvisoBanner" Grid.Row="1" IsVisible="False" ZIndex="7" HorizontalOptions="Center" VerticalOptions="Start" Margin="24,10,24,0" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                <Label x:Name="AvisoLabel" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />
-                <Button Grid.Column="1" Text="Entendido" HeightRequest="44" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#0B4F70" FontSize="14" Clicked="OnAvisoEntendido" />
-            </Grid>
-        </Border>
+        <VerticalStackLayout Grid.Row="1" ZIndex="7" Spacing="8" HorizontalOptions="Center" VerticalOptions="Start" Margin="24,10,24,0" MaximumWidthRequest="860">
+            <!-- RF-09 · RN-08: banda del PIN maestro para administración y técnico (a 30 días o menos, vencido o sin configurar). Se queda mientras dure: no
+                 se descarta, porque lo que avisa sigue pendiente. Al profesorado nunca se le muestra. -->
+            <Border x:Name="PinBanner" IsVisible="False" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Label x:Name="PinBannerLabel" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button x:Name="PinBannerButton" Grid.Column="1" Text="Cambiar ahora" HeightRequest="40" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnSeguridadClicked" />
+                </Grid>
+            </Border>
+            <Border x:Name="AvisoBanner" IsVisible="False" HorizontalOptions="Center" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Label x:Name="AvisoLabel" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button Grid.Column="1" Text="Entendido" HeightRequest="44" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#0B4F70" FontSize="14" Clicked="OnAvisoEntendido" />
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
 
         <AbsoluteLayout
             x:Name="MenuStage"

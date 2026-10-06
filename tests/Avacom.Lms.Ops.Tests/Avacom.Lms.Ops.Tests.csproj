@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas de lo que las pantallas de acceso de OPS deciden sin interfaz (requisitos de acceso 2026-10-05, RF-01…RF-09): la regla local del PIN maestro,
+    el código del aula, el borrador del primer arranque, la hoja de acceso, qué ofrece el acceso según el nodo y la banda del vencimiento. OPS es una app
+    MAUI y no se puede referenciar desde aquí: se COMPILA su archivo (vínculo, no copia), que no usa nada de MAUI. Lo que se prueba es el código que corre
+    en el equipo del aula.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Avacom.Lms.Ops.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Avacom.Lms.Core\Avacom.Lms.Core.csproj" />
+  </ItemGroup>
+
+  <!-- El código de OPS que se prueba, tal cual está en la app. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Acceso\ReglasDeAcceso.cs" Link="Ops\Acceso\ReglasDeAcceso.cs" />
+  </ItemGroup>
+
+</Project>

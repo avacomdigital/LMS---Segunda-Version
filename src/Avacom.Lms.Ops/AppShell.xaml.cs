@@ -5,6 +5,13 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
         Routing.RegisterRoute("dashboard", typeof(Pages.DashboardPage));
+        // MOD-001 · acceso (requisitos 2026-10-05): primer arranque y hoja de acceso, alta y recuperación del profesor con el PIN maestro, la contraseña
+        // propia tras la provisional y la seguridad del aula (sólo administración)
+        Routing.RegisterRoute("primer-arranque", typeof(Pages.PrimerArranquePage));
+        Routing.RegisterRoute("registro-docente", typeof(Pages.RegistroDocentePage));
+        Routing.RegisterRoute("restablecer-contrasena", typeof(Pages.RestablecerContrasenaPage));
+        Routing.RegisterRoute("elegir-contrasena", typeof(Pages.ElegirContrasenaPage));
+        Routing.RegisterRoute("seguridad-aula", typeof(Pages.SeguridadAulaPage));
         Routing.RegisterRoute("course-editor", typeof(Pages.CourseEditorPage));
         Routing.RegisterRoute("activity-monitor", typeof(Pages.ActivityMonitorPage));
         Routing.RegisterRoute("asignaturas", typeof(Pages.AsignaturasPage));

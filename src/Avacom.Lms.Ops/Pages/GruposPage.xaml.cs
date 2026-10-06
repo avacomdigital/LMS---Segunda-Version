@@ -215,25 +215,65 @@ public partial class GruposPage : ContentPage
         var pila = new VerticalStackLayout { Spacing = 8 };
         pila.Add(Ds.Titulo(g.Nombre, 24));
         pila.Add(Ds.Secundario(g.Estudiantes.Count == 0 ? "Este grupo todavía no tiene estudiantes. Registra el primero aquí abajo." : $"Estudiantes del grupo ({g.Estudiantes.Count})", 15));
-        foreach (var est in g.Estudiantes.OrderBy(x => x.Alias))
-        {
-            var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 10, Padding = new Thickness(0, 4) };
-            fila.Add(Ds.Cuerpo(est.Alias, 18), 0, 0);
-            var id = est.Id;
-            var quitar = Ds.Boton("Quitar del grupo", Ds.Rango.Quiet, async (_, _) => await RetirarAsync(g.Id, id, est.Alias), 46);
-            quitar.FontSize = 14;
-            fila.Add(quitar, 1, 0);
-            pila.Add(fila);
-            pila.Add(Ds.Separador());
-        }
+        if (g.Estudiantes.Any(x => !x.Confirmado || x.PinPendiente))
+            pila.Add(Ds.Secundario("«Sin confirmar»: se registró solo en la tableta; confírmalo si es de tu grupo. «PIN pendiente»: elegirá su PIN la próxima vez que toque su nombre.", 14));
+        foreach (var est in g.Estudiantes.OrderBy(x => x.Alias)) pila.Add(FilaEstudiante(g, est));
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(22, 18), Colors.White);
+    }
+
+    /// <summary>
+    /// RF-09b: el alumno con sus marcas («sin confirmar», «PIN pendiente») y sus acciones. «Nuevo PIN» deja la cuenta en PIN pendiente (RN-35): NO se genera
+    /// ni se muestra ningún número; el alumno elige uno nuevo al tocar su nombre. «Confirmar» respalda a quien se registró solo (RB-20).
+    /// </summary>
+    private View FilaEstudiante(GrupoPadron g, EstudiantePadron est)
+    {
+        var fila = new Grid
+        {
+            ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto)],
+            ColumnSpacing = 10, Padding = new Thickness(0, 4),
+        };
+        var nombre = new VerticalStackLayout { Spacing = 4, VerticalOptions = LayoutOptions.Center };
+        nombre.Add(Ds.Cuerpo(est.Alias, 18));
+        var marcas = new HorizontalStackLayout { Spacing = 6 };
+        if (!est.Confirmado) marcas.Add(Ds.Pildora("sin confirmar", Ds.AlertaSuave, Color.FromArgb("#3A2A00"), 12));
+        if (est.PinPendiente) marcas.Add(Ds.Pildora("PIN pendiente", Ds.InfoSuave, Ds.Tinta, 12));
+        if (marcas.Count > 0) nombre.Add(marcas);
+        fila.Add(nombre, 0, 0);
+
+        var acciones = new HorizontalStackLayout { Spacing = 8, VerticalOptions = LayoutOptions.Center };
+        var id = est.Id;
+        if (!est.Confirmado)
+        {
+            var confirmar = Ds.Boton("Confirmar", Ds.Rango.Secondary, async (_, _) => await ConfirmarAsync(id, est.Alias), 40);
+            confirmar.FontSize = 14;
+            confirmar.MinimumWidthRequest = 110;
+            SemanticProperties.SetDescription(confirmar, $"Confirmar a {est.Alias}");
+            acciones.Add(Ds.Capsula(confirmar));
+        }
+        if (!est.PinPendiente)
+        {
+            var nuevoPin = Ds.Boton("Nuevo PIN", Ds.Rango.Secondary, async (_, _) => await NuevoPinAsync(id, est.Alias), 40);
+            nuevoPin.FontSize = 14;
+            nuevoPin.MinimumWidthRequest = 110;
+            SemanticProperties.SetDescription(nuevoPin, $"Nuevo PIN para {est.Alias}");
+            acciones.Add(Ds.Capsula(nuevoPin));
+        }
+        fila.Add(acciones, 1, 0);
+        var quitar = Ds.Boton("Quitar del grupo", Ds.Rango.Quiet, async (_, _) => await RetirarAsync(g.Id, id, est.Alias), 46);
+        quitar.FontSize = 14;
+        quitar.MinimumWidthRequest = 110;
+        fila.Add(quitar, 2, 0);
+        var envoltura = new VerticalStackLayout { Spacing = 6 };
+        envoltura.Add(fila);
+        envoltura.Add(Ds.Separador());
+        return envoltura;
     }
 
     private Border ConstruirFormularioEstudiante()
     {
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(_tituloEstudiante);
-        pila.Add(Ds.Secundario("Sólo los nombres son obligatorios. Sin documento, el aula le emite una clave; el PIN lo genera el aula y se muestra una sola vez.", 14));
+        pila.Add(Ds.Secundario("Sólo los nombres son obligatorios. No hay PIN que anotar: el estudiante elige el suyo la primera vez que toca su nombre en la tableta.", 14));
         pila.Add(_nombresEntry);
         pila.Add(_apellidosEntry);
         pila.Add(_documentoEntry);
@@ -270,13 +310,10 @@ public partial class GruposPage : ContentPage
 
     private View TarjetaUltimo(EstudianteRegistrado e)
     {
+        // RB-26 · RN-35: ya no hay PIN generado que mostrar (y si un nodo anterior lo enviara, tampoco se muestra): la cuenta queda en «PIN pendiente».
         var pila = new VerticalStackLayout { Spacing = 4 };
         pila.Add(Ds.Titulo($"{e.Alias} quedó registrado", 19));
-        pila.Add(Ds.Cuerpo($"Clave de acceso: {e.Identificador}", 17));
-        pila.Add(string.IsNullOrWhiteSpace(e.SecretoInicial)
-            ? Ds.Secundario("PIN: el que elegiste.", 15)
-            : Ds.Cuerpo($"PIN inicial: {e.SecretoInicial}  ·  anótalo ahora, no vuelve a mostrarse.", 17));
-        pila.Add(Ds.Secundario("En el modo de estudio el estudiante sólo elige su nombre en la tableta: no necesita escribir la clave ni el PIN.", 14));
+        pila.Add(Ds.Cuerpo("La primera vez que toque su nombre en la tableta elegirá su PIN. No hay nada que anotar.", 17));
         return new Border
         {
             BackgroundColor = Ds.ExitoSuave, StrokeThickness = 0, Padding = new Thickness(20, 16),
@@ -320,6 +357,26 @@ public partial class GruposPage : ContentPage
         var api = Sesion.Padron;
         _ultimo = null;
         _aviso = await api.RetirarAsync(grupoId, usuarioId) ? ($"{alias} salió del grupo.", false) : (Motivo(api, "No se pudo quitar al estudiante."), true);
+        await CargarAsync();
+    }
+
+    /// <summary>RN-35: la cuenta queda en «PIN pendiente» y se cierran sus sesiones. El profesor nunca ve un número.</summary>
+    private async Task NuevoPinAsync(string usuarioId, string alias)
+    {
+        var api = Sesion.Padron;
+        _ultimo = null;
+        _aviso = await api.ReiniciarPinAsync(usuarioId)
+            ? ($"Listo. {alias} elegirá un PIN nuevo la próxima vez que toque su nombre en la tableta.", false)
+            : (Motivo(api, "No se pudo pedir un PIN nuevo."), true);
+        await CargarAsync();
+    }
+
+    /// <summary>RB-20: el profesor respalda a un alumno que se registró solo.</summary>
+    private async Task ConfirmarAsync(string usuarioId, string alias)
+    {
+        var api = Sesion.Padron;
+        _ultimo = null;
+        _aviso = await api.ConfirmarAsync(usuarioId) ? ($"Listo. {alias} quedó confirmado en el grupo.", false) : (Motivo(api, "No se pudo confirmar al estudiante."), true);
         await CargarAsync();
     }
 

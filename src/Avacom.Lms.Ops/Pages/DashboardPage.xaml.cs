@@ -1,3 +1,5 @@
+using Avacom.Lms.Core.Services;
+using Avacom.Lms.Ops.Acceso;
 using Avacom.Lms.Ui.Controls;
 
 namespace Avacom.Lms.Ops.Pages;
@@ -22,7 +24,34 @@ public partial class DashboardPage : ContentPage
             Sesion.AvisoAlEntrar = null;
             MostrarAviso(aviso);
         }
+        // RF-08: «Seguridad del aula» sólo para la administración.
+        SeguridadButton.IsVisible = Sesion.Usuario?.EsAdministracion == true;
+        _ = PintarAvisoDelPinAsync();
+        // Sólo con el perfil de pruebas de tests/Avacom.Lms.Ops.Uia (las teselas no se pueden tocar por UI Automation); sin él, nada.
+        if (Ajustes.TomarRutaDePrueba() is { } ruta) Dispatcher.Dispatch(async () => await Shell.Current.GoToAsync(ruta));
     }
+
+    /// <summary>
+    /// RF-09 · RN-08: la banda del PIN maestro. Administración y técnico la ven a 30 días o menos del vencimiento, con el PIN vencido o si el equipo aún no
+    /// tiene uno; la administración, además, con los días exactos (puede leer el estado fino). Al profesorado, nada.
+    /// </summary>
+    private async Task PintarAvisoDelPinAsync()
+    {
+        var usuario = Sesion.Usuario;
+        if (usuario is null || !(usuario.EsAdministracion || usuario.EsTecnico)) { PinBanner.IsVisible = false; return; }
+        var configuracion = await Sesion.ConsultarConfiguracionAsync() ?? Sesion.Configuracion;
+        var publico = configuracion?.PinMaestro;
+        EstadoPinMaestro? fino = null;
+        if (usuario.EsAdministracion && publico is { Configurado: true } && (publico.PorVencer || publico.Vencido))
+            fino = await Sesion.Acceso.EstadoPinMaestroAsync();
+        var texto = AvisoDelPinMaestro.Texto(usuario, publico, fino);
+        PinBannerLabel.Text = texto ?? string.Empty;
+        PinBanner.IsVisible = texto is not null;
+        PinBannerButton.IsVisible = usuario.EsAdministracion;
+        PinBannerButton.Text = publico is { Configurado: false } ? "Configurarlo ahora" : "Cambiar ahora";
+    }
+
+    private async void OnSeguridadClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("seguridad-aula");
 
     /// <summary>Con sesión de usuario (007-10) la cabecera muestra a quien entró; sin ella, la profesora de siempre del prototipo.</summary>
     private void PintarPersona()

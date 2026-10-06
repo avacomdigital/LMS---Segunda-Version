@@ -219,6 +219,29 @@ public sealed class AccesoClienteTests : IDisposable
     }
 
     [Fact]
+    public async Task Cambiar_mi_contrasena_es_un_PUT_con_la_actual_y_la_nueva()
+    {
+        ClienteJson.Token = "JWT-ADMIN";
+        var falso = new Falso((_, _) => Json(HttpStatusCode.OK, """{"cambiada":true,"sesiones_revocadas":0}"""));
+        Assert.True(await Api(falso).CambiarMiContrasenaAsync("Provisional.1", "Rectoria.2026!"));
+        var (metodo, ruta, cuerpo, autorizacion) = Assert.Single(falso.Peticiones);
+        Assert.Equal(HttpMethod.Put, metodo);
+        Assert.Equal("/api/acceso/yo/credencial/", ruta);
+        Assert.Equal("""{"secreto_actual":"Provisional.1","secreto_nuevo":"Rectoria.2026!"}""", cuerpo);
+        Assert.Equal("Bearer JWT-ADMIN", autorizacion);
+    }
+
+    [Fact]
+    public async Task Una_contrasena_nueva_debil_trae_las_reglas_en_palabras()
+    {
+        ClienteJson.Token = "JWT-ADMIN";
+        var api = Api(new Falso((_, _) => Json(HttpStatusCode.BadRequest,
+            """{"detail":"La clave no cumple la política.","codigo":"secreto_debil","reglas":["Debe tener al menos 12 caracteres."]}""")));
+        Assert.False(await api.CambiarMiContrasenaAsync("Provisional.1", "corta"));
+        Assert.Equal("Debe tener al menos 12 caracteres.", MensajesDeAcceso.Texto(api.UltimoError));
+    }
+
+    [Fact]
     public async Task Un_pin_nuevo_que_ya_se_uso_se_rechaza_como_debil()
     {
         var api = Api(new Falso((_, _) => Json(HttpStatusCode.BadRequest, """{"detail":"Ese PIN ya se usó hace poco.","codigo":"pin_debil"}""")));

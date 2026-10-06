@@ -46,7 +46,7 @@ public static class Sesion
     {
         get
         {
-            var texto = Preferences.Default.Get("ops_server", DireccionPorDefecto);
+            var texto = Ajustes.ServidorDePrueba ?? Ajustes.Get("ops_server", DireccionPorDefecto);
             try { return ConnectionOptions.Normalize(texto); }
             catch (ArgumentException) { return ConnectionOptions.Normalize(DireccionPorDefecto); }
         }
@@ -203,25 +203,97 @@ public static class Sesion
     /// </summary>
     public static void PrepararAparato()
     {
-        AparatoRegistrado.Cargar = () => Preferences.Default.Get<string?>("ops_dispositivo_id", null);
-        AparatoRegistrado.Guardar = id => { if (id is null) Preferences.Default.Remove("ops_dispositivo_id"); else Preferences.Default.Set("ops_dispositivo_id", id); };
+        AparatoRegistrado.Cargar = () => Ajustes.Get<string?>("ops_dispositivo_id", null);
+        AparatoRegistrado.Guardar = id => { if (id is null) Ajustes.Remove("ops_dispositivo_id"); else Ajustes.Set("ops_dispositivo_id", id); };
         RegistroLocal.Configurar("ops", AppInfo.Current.VersionString, () => AparatoRegistrado.Id);
     }
 
-    private static int _registrando;
+    private static readonly object CandadoRegistro = new();
+    private static Task? _registro;
+    private static Uri? _registradoEn;
 
-    /// <summary>Se presenta ante el nodo como equipo MASTER (idempotente, por su huella). Mejor esfuerzo: si el nodo no contesta, se reintenta en el siguiente tablero.</summary>
-    public static async Task RegistrarEquipoAsync()
+    /// <summary>Verdadero si el nodo de <see cref="BaseUri"/> ya conoce a este equipo como MASTER (el último latido contestó).</summary>
+    public static bool EquipoRegistrado => _registradoEn == BaseUri;
+
+    /// <summary>
+    /// Se presenta ante el nodo como equipo MASTER (idempotente, por su huella). Mejor esfuerzo: si el nodo no contesta, se reintenta en el siguiente tablero.
+    /// Si ya hay una presentación en curso, devuelve ESA (quien necesita esperarla, como el PIN maestro, la espera de verdad).
+    /// </summary>
+    public static Task RegistrarEquipoAsync()
     {
-        if (Interlocked.Exchange(ref _registrando, 1) == 1) return;
+        lock (CandadoRegistro)
+        {
+            if (_registro is { IsCompleted: false } enCurso) return enCurso;
+            return _registro = PresentarEquipoAsync();
+        }
+    }
+
+    private static async Task PresentarEquipoAsync()
+    {
+        var base_ = BaseUri;
         try
         {
             using var limite = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var equipo = await Dispositivos.LatidoAsync(Dispositivo, DeviceInfo.Current.Name, "windows", AppInfo.Current.VersionString, limite.Token, tipo: "MASTER");
-            if (equipo is not null) RegistroLocal.Info(Canal.Dispositivo, "equipo.registrado", "Este equipo se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado });
+            if (equipo is not null)
+            {
+                _registradoEn = base_;
+                RegistroLocal.Info(Canal.Dispositivo, "equipo.registrado", "Este equipo se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado });
+            }
         }
         catch (Exception ex) { RegistroLocal.Advertencia(Canal.Comunicacion, "equipo.registro_fallo", "No se pudo presentar el equipo ante el nodo", new { tipo = ex.GetType().Name }); }
-        finally { Volatile.Write(ref _registrando, 0); }
+    }
+
+    /// <summary>
+    /// RN-11: el nodo sólo acepta el PIN maestro (y sólo lista los grupos) si sabe que este equipo NO es una tableta de alumno. Antes de pedir el PIN se espera
+    /// a que la presentación termine, como mucho unos 5 s; si el nodo no contesta, se sigue igual y el nodo dirá lo que corresponda.
+    /// </summary>
+    public static async Task AsegurarEquipoAsync()
+    {
+        if (EquipoRegistrado) return;
+        try { await RegistrarEquipoAsync().WaitAsync(TimeSpan.FromSeconds(6)); }
+        catch (TimeoutException) { /* el nodo no contestó a tiempo: la operación lo dirá */ }
+    }
+
+    /// <summary>Lo último que el nodo dijo de sí mismo (<c>/api/acceso/configuracion/</c>): si está instalado, si exige sesión y el estado público del PIN maestro.</summary>
+    public static ConfiguracionAcceso? Configuracion { get; set; }
+
+    /// <summary>Pregunta al nodo por su configuración (máx. 4 s) y la recuerda. Nulo si no contesta.</summary>
+    public static async Task<ConfiguracionAcceso?> ConsultarConfiguracionAsync()
+    {
+        using var limite = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+        try
+        {
+            var c = await Acceso.ConfiguracionAsync(limite.Token);
+            if (c is not null)
+            {
+                Configuracion = c;
+                SesionObligatoria = c.SesionObligatoria;
+            }
+            return c;
+        }
+        catch (OperationCanceledException) { return null; }
+    }
+
+    /// <summary>Guarda la dirección del nodo que el acceso acaba de usar (en el perfil de pruebas manda la variable de entorno y no se escribe nada).</summary>
+    public static void GuardarServidor(string? direccion)
+    {
+        if (Ajustes.ServidorDePrueba is not null) return;
+        Ajustes.Set("ops_server", string.IsNullOrWhiteSpace(direccion) ? DireccionPorDefecto : direccion);
+    }
+
+    private static string? _claveProvisional;
+
+    /// <summary>
+    /// La contraseña provisional con la que alguien acaba de entrar (la de la hoja de acceso, <c>DebeCambiarCredencial</c>), sólo en memoria y sólo hasta
+    /// que «Elige tu contraseña» la tome: así no hay que volver a escribirla. Se borra al leerla.
+    /// </summary>
+    public static void RecordarClaveProvisional(string? clave) => _claveProvisional = clave;
+    public static string? TomarClaveProvisional()
+    {
+        var c = _claveProvisional;
+        _claveProvisional = null;
+        return c;
     }
 
     /// <summary>
@@ -239,6 +311,7 @@ public static class Sesion
         try { if (ClienteJson.Token is not null) await Acceso.CerrarSesionAsync(); } catch { /* aunque el nodo no conteste, esta app deja de presentarse */ }
         ClienteJson.Token = null;
         Usuario = null;
+        _claveProvisional = null;
     }
 
     /// <summary>MSG-021: aviso que el tablero muestra una sola vez tras entrar, cuando este acceso cerró la clase que la misma persona tenía abierta en otro equipo.</summary>
@@ -256,9 +329,9 @@ public static class Sesion
         : null;
 
     /// <summary>Con sesión (MOD-001) el profesor es quien se identificó; sin ella, la identidad estable del equipo (Q-04).</summary>
-    public static string ProfesorRotulo => Usuario?.Alias is { Length: > 0 } alias ? alias : Preferences.Default.Get("ops_profesor_nombre", "Ms. Carter");
+    public static string ProfesorRotulo => Usuario?.Alias is { Length: > 0 } alias ? alias : Ajustes.Get("ops_profesor_nombre", "Ms. Carter");
     public static string ProfesorId => Usuario?.Id is { Length: > 0 } uid ? uid
-        : Preferences.Default.Get("ops_profesor_id", string.Empty) is { Length: > 0 } id ? id : $"docente-{Identidad.SlugDe(ProfesorRotulo)}";
+        : Ajustes.Get("ops_profesor_id", string.Empty) is { Length: > 0 } id ? id : $"docente-{Identidad.SlugDe(ProfesorRotulo)}";
 
     /// <summary>
     /// Dónde se guarda la clase abierta: con sesión de usuario, una por persona (si otra profesora entra en este equipo no ve ni
@@ -269,8 +342,8 @@ public static class Sesion
     /// <summary>La clase que este equipo dejó abierta, para poder continuarla (BR-051) sin volver a elegir.</summary>
     public static string? ClaseAbiertaId
     {
-        get => Preferences.Default.Get<string?>(ClaveClaseAbierta, null);
-        set { if (value is null) Preferences.Default.Remove(ClaveClaseAbierta); else Preferences.Default.Set(ClaveClaseAbierta, value); }
+        get => Ajustes.Get<string?>(ClaveClaseAbierta, null);
+        set { if (value is null) Ajustes.Remove(ClaveClaseAbierta); else Ajustes.Set(ClaveClaseAbierta, value); }
     }
 
     public static readonly string[] Paleta = ["#E5262B", "#F3C701", "#01A4E1", "#019D60", "#A81D81", "#52525B"];
