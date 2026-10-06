@@ -57,19 +57,25 @@ switch ($Accion) {
     }
     "invoke" {
         # La tarjeta de pendientes se reconstruye en cada sondeo (2 s): el elemento puede quedar obsoleto entre
-        # buscarlo e invocarlo, así que se reintenta.
+        # buscarlo e invocarlo, así que se reintenta. Pero sólo si el toque NO llegó: WinUI a veces lanza una excepción DESPUÉS de pulsar
+        # (la pantalla se repinta en el mismo clic) y reintentar entonces pulsa dos veces (en el teclado del PIN, cada número salía doble).
+        # Obsoleto (ElementNotAvailable) → se busca otra vez; apagado (ElementNotEnabled) → no hay botón que tocar; cualquier otra → ya se tocó.
         $hecho = $false
-        for ($intento = 0; $intento -lt 6 -and -not $hecho; $intento++) {
+        $apagado = $false
+        for ($intento = 0; $intento -lt 6 -and -not $hecho -and -not $apagado; $intento++) {
             $hallado = $null
             foreach ($e in Todos $win) {
                 if ($e.Current.ControlType.ProgrammaticName -eq "ControlType.Button" -and $e.Current.Name.Trim() -like ("*" + $Nombre.Trim() + "*")) { $hallado = $e; break }
             }
             if ($null -ne $hallado) {
+                if (-not $hallado.Current.IsEnabled) { $apagado = $true; break }
                 try { $p = $hallado.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern); $p.Invoke(); $hecho = $true }
-                catch { Start-Sleep -Milliseconds 400 }
+                catch [System.Windows.Automation.ElementNotAvailableException] { Start-Sleep -Milliseconds 400 }
+                catch [System.Windows.Automation.ElementNotEnabledException] { $apagado = $true }
+                catch { $hecho = $true }
             } else { Start-Sleep -Milliseconds 700 }
         }
-        if (-not $hecho) { Write-Output "NO HAY BOTON '$Nombre'"; exit 2 }
+        if (-not $hecho) { Write-Output ($(if ($apagado) { "APAGADO '$Nombre'" } else { "NO HAY BOTON '$Nombre'" })); exit 2 }
         Write-Output "INVOCADO '$Nombre'"
     }
     "set" {
