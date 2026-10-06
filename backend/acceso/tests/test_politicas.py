@@ -160,11 +160,22 @@ class FortalezaTests(SimpleTestCase):
     def test_pin_de_seis_digitos_valido(self):
         self.assertEqual(PoliticaFortaleza.validar("691302", politica()), [])
 
-    def test_pin_trivial_o_corto_o_con_letras(self):
-        self.assertTrue(PoliticaFortaleza.validar("123456", politica()))
-        self.assertTrue(PoliticaFortaleza.validar("111111", politica()))
-        self.assertTrue(PoliticaFortaleza.validar("6913", politica()))
-        self.assertTrue(PoliticaFortaleza.validar("69a302", politica()))
+    def test_pin_del_alumno_sin_reglas_de_complejidad(self):
+        """RN-31: el PIN del alumno reconoce, no protege. `1234` y `111111` valen; sólo cuentan el largo (4 a 6) y que sean dígitos."""
+        corto = politica(TipoSecreto.PIN, 4)
+        for pin in ("1234", "1111", "123456", "4321"):
+            self.assertEqual(PoliticaFortaleza.validar(pin, corto), [], pin)
+        self.assertTrue(PoliticaFortaleza.validar("123", corto))
+        self.assertTrue(PoliticaFortaleza.validar("1234567", corto))   # más de seis
+        self.assertTrue(PoliticaFortaleza.validar("69a3", corto))
+
+    def test_pin_trivial_o_corto_o_con_letras_en_otros_perfiles(self):
+        """Un PIN de personal (si la institución lo elige) conserva las reglas: nada de secuencias ni repetidos."""
+        pin_personal = politica(TipoSecreto.PIN, 6, perfil=Menu.TEACHER)
+        self.assertTrue(PoliticaFortaleza.validar("123456", pin_personal))
+        self.assertTrue(PoliticaFortaleza.validar("111111", pin_personal))
+        self.assertTrue(PoliticaFortaleza.validar("6913", pin_personal))
+        self.assertTrue(PoliticaFortaleza.validar("69a302", pin_personal))
 
     def test_avatar_para_preescolar(self):
         avatar = politica(TipoSecreto.AVATAR, 4, nivel_clave="preescolar")

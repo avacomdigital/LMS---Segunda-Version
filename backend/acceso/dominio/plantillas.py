@@ -6,7 +6,7 @@ políticas de credencial por defecto. Un colegio que no configure nada funciona 
 """
 from __future__ import annotations
 
-from .valores import Alcance, Menu, TipoIdentificador, TipoSecreto
+from .valores import Alcance, BloqueoAlcance, Menu, TipoIdentificador, TipoSecreto
 
 S, G, L, O = Alcance.SELF, Alcance.ASSIGNED_GROUPS, Alcance.LEVEL, Alcance.ORGANIZATION
 
@@ -48,6 +48,7 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("identity.group.member.manage", "acceso", "Añadir y quitar miembros de grupos", O, False),
     ("identity.policy.manage", "acceso", "Configurar la política de credenciales (BR-023)", O, True),
     ("identity.device.manage", "acceso", "Registrar y dar de baja dispositivos", O, False),
+    ("identity.master_pin.manage", "acceso", "Ver el estado del PIN maestro y cambiarlo (RN-06, RB-08); el técnico lo fija en la instalación", O, True),
     # --- MOD-007 · Classroom Engine (sección J de su ficha). Los evalúa `classroom_engine.infraestructura.repositorios.AutorizacionAula`.
     ("classroom.start", "aula", "Abrir una sesión de aula sobre un grupo propio y generar su código de unión (FUN-064)", O, False),
     ("classroom.code.rotate", "aula", "Rotar el código de unión de una sesión activa (FUN-066)", O, False),
@@ -150,6 +151,8 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "identity.password.reset": G, "identity.password.change_own": S, "identity.exam_access.grant": G,
         "identity.session.read": G, "identity.session.revoke": G, "identity.session.revoke_own": S,
         "identity.group.read": G, "identity.group.member.manage": G, "identity.role.read": O,
+        # RB-28: crea grupos y los edita sólo si es su docente (el que crea un grupo queda como docente de él).
+        "identity.group.manage": G,
         # La clase la opera su profesor titular sobre sus grupos; la titularidad la comprueba el aula sesión por sesión.
         "classroom.start": G, "classroom.code.rotate": G, "classroom.device.admit": G, "classroom.device.remove": G,
         "classroom.device.lock": G, "classroom.present": G, "classroom.activity.launch": G, "classroom.activity.close": G,
@@ -183,12 +186,16 @@ _BASE = dict(intentos_maximos=5, ventana_intentos_min=15, bloqueo_minutos=15, du
 
 # perfil -> columnas de la política por defecto (BR-023: personal y alumnos por separado)
 POLITICAS_POR_DEFECTO: dict[Menu, dict] = {
+    # RN-31 y D-A3: el PIN es para todos los alumnos, de 4 dígitos por defecto y sin reglas de complejidad (reconoce, no protege).
+    # RN-33: si se equivocan, espera la tableta, no la cuenta. RN-37: pueden crear su propio usuario.
     Menu.STUDENT: dict(_BASE, tipo_identificador=TipoIdentificador.CODIGO_ESTUDIANTIL, tipo_secreto=TipoSecreto.PIN,
-                       longitud_minima=6, exige_mayuscula=False, exige_minuscula=False, exige_digito=True,
-                       exige_simbolo=False, permite_acceso_temporal=True, inactividad_min=30),
+                       longitud_minima=4, exige_mayuscula=False, exige_minuscula=False, exige_digito=True,
+                       exige_simbolo=False, permite_acceso_temporal=True, inactividad_min=30,
+                       autoregistro=True, bloqueo_alcance=BloqueoAlcance.DISPOSITIVO),
+    # RN-20: el profesor crea su propio usuario con el PIN maestro; el interruptor lo apaga la administración (RN-37).
     Menu.TEACHER: dict(_BASE, tipo_identificador=TipoIdentificador.DNI, tipo_secreto=TipoSecreto.PASSWORD,
                        longitud_minima=8, exige_mayuscula=True, exige_minuscula=False, exige_digito=False,
-                       exige_simbolo=True, permite_acceso_temporal=False),
+                       exige_simbolo=True, permite_acceso_temporal=False, autoregistro=True),
     Menu.ADMIN: dict(_BASE, tipo_identificador=TipoIdentificador.DNI, tipo_secreto=TipoSecreto.PASSWORD,
                      longitud_minima=12, exige_mayuscula=True, exige_minuscula=True, exige_digito=True,
                      exige_simbolo=True, permite_acceso_temporal=False, bloqueo_minutos=30),
@@ -206,6 +213,10 @@ PERMISOS_SESION_TEMPORAL = frozenset({
     "content.read", "results.read", "identity.session.revoke_own",
     *PERMISOS_DE_EVALUACION_DEL_ALUMNO,
 })
+
+# RB-07 · RN-42: lo único que puede hacer una sesión de visitante: leer lecciones y salir. Seguir la clase y responder sus actividades en vivo
+# no pasa por un permiso `identity.*`: se une por el código de la clase, que el aula valida con la sesión (clase VISITANTE) y su alias efímero.
+PERMISOS_SESION_VISITANTE = frozenset({"content.read", "identity.session.revoke_own"})
 
 # Lo único que puede hacer quien aún tiene una credencial provisional.
 PERMISOS_CON_CREDENCIAL_PROVISIONAL = frozenset({"identity.password.change_own", "identity.session.revoke_own"})
@@ -240,9 +251,27 @@ EVENTOS = {
     "dispositivo_registrado": "identidad.dispositivo.registrado.v1",
     "dispositivo_actualizado": "identidad.dispositivo.actualizado.v1",
     "organizacion_instalada": "identidad.organizacion.instalada.v1",
+    # PIN maestro, profesores y alumnos (requisitos de acceso 2026-10-05)
+    "pin_maestro_configurado": "identidad.pin_maestro.configurado.v1",
+    "pin_maestro_cambiado": "identidad.pin_maestro.cambiado.v1",
+    "pin_maestro_vencido": "identidad.pin_maestro.vencido.v1",
+    "pin_maestro_fallido": "identidad.pin_maestro.fallido.v1",
+    "pin_maestro_bloqueado": "identidad.pin_maestro.bloqueado.v1",
+    "docente_registrado": "identidad.docente.registrado.v1",
+    "docente_contrasena_restablecida": "identidad.docente.contrasena_restablecida.v1",
+    "estudiante_registrado": "identidad.estudiante.registrado.v1",
+    "estudiante_pin_establecido": "identidad.estudiante.pin_establecido.v1",
+    "sesion_visitante_abierta": "identidad.sesion.visitante_abierta.v1",
+    "usuario_confirmado": "identidad.usuario.confirmado.v1",
 }
 
 MINUTOS_ACCESO_TEMPORAL = 5
+# RN-33: tras equivocarse el máximo de veces en una tableta (política del perfil), la tableta espera estos minutos para probar un PIN.
+MINUTOS_PAUSA_DISPOSITIVO = 2
+# RN-45: una visita se retira sola a las 24 horas.
+HORAS_VIDA_VISITANTE = 24
+# RB-17: tope de altas propias por tableta y por hora (R-4: alguien creando cuentas falsas).
+ALTAS_MAXIMAS_POR_TABLETA_Y_HORA = 5
 FALLOS_MAXIMOS_ACCESO_TEMPORAL = 3
 CREDENCIALES_NO_REUTILIZABLES = 3
 # BR-101: toda escalada caduca. Tope de 24 horas (la más larga del Maestro, ESC-05).

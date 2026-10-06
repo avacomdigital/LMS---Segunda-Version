@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-VERSION_CATALOGO = "2026.09.30"
+VERSION_CATALOGO = "2026.10.06"
 
 M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION = "acceso", "aula", "dispositivos", "estudio", "evaluacion"
 M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS = "auditoria", "instalacion", "expediente", "pruebas"
@@ -67,6 +67,21 @@ _LISTA: tuple[Accion, ...] = (
     _a("identidad.grupo.miembro_agregado", M_ACCESO, "Miembro agregado al grupo", evento_origen="identidad.grupo.miembro_agregado.v1"),
     _a("identidad.grupo.miembro_retirado", M_ACCESO, "Miembro retirado del grupo", evento_origen="identidad.grupo.miembro_retirado.v1"),
     _a("identidad.instalacion", M_ACCESO, "Nodo instalado (organización y administrador)", evento_origen="identidad.organizacion.instalada.v1"),
+    # PIN maestro, profesores y alumnos (requisitos de acceso, 2026-10-05). Nunca llevan el PIN, ni el intentado ni el vigente.
+    _a("identidad.pin_maestro.configurado", M_ACCESO, "PIN maestro configurado (primer arranque)", evento_origen="identidad.pin_maestro.configurado.v1"),
+    _a("identidad.pin_maestro.cambiado", M_ACCESO, "PIN maestro cambiado", evento_origen="identidad.pin_maestro.cambiado.v1"),
+    _a("identidad.pin_maestro.fallido", M_ACCESO, "PIN maestro equivocado", evento_origen="identidad.pin_maestro.fallido.v1"),
+    _a("identidad.pin_maestro.bloqueado", M_ACCESO, "PIN maestro bloqueado en un equipo", evento_origen="identidad.pin_maestro.bloqueado.v1"),
+    _a("identidad.pin_maestro.rechazado_en_tableta", M_ACCESO, "PIN maestro presentado desde una tableta de alumno"),
+    _a("identidad.docente.registrado", M_ACCESO, "Profesor registrado con el PIN maestro", sensible=True, evento_origen="identidad.docente.registrado.v1"),
+    _a("identidad.docente.contrasena_restablecida", M_ACCESO, "Contraseña de profesor restablecida con el PIN maestro", sensible=True,
+       evento_origen="identidad.docente.contrasena_restablecida.v1"),
+    _a("identidad.estudiante.registrado", M_ACCESO, "Alumno registrado por sí mismo", sensible=True, evento_origen="identidad.estudiante.registrado.v1"),
+    _a("identidad.estudiante.pin_establecido", M_ACCESO, "Alumno eligió su PIN", evento_origen="identidad.estudiante.pin_establecido.v1"),
+    _a("identidad.sesion.visitante_abierta", M_ACCESO, "Sesión de visitante abierta", evento_origen="identidad.sesion.visitante_abierta.v1"),
+    _a("identidad.visita.retirada", M_ACCESO, "Cuenta de visita retirada"),
+    _a("identidad.usuario.confirmado", M_ACCESO, "Usuario confirmado por el profesor", evento_origen="identidad.usuario.confirmado.v1"),
+    _a("identidad.dispositivo.en_pausa", M_ACCESO, "Tableta en pausa tras varios PIN equivocados"),
     # nuevas (019-08, 019-10)
     _a("acceso.denegado", M_ACCESO, "Acceso denegado"),
     _a("acceso.dato_personal.consultado", M_ACCESO, "Dato personal de menor consultado", sensible=True),

@@ -27,6 +27,8 @@ class Organizacion(models.Model):
     locale = models.CharField(max_length=16)     # BCP 47
     zona_horaria = models.CharField(max_length=64, default="America/Bogota")
     creado_en = models.BigIntegerField(default=ahora_ms)
+    # RN-47: la institución puede apagar la entrada como visitante (encendida por defecto).
+    visitante = models.BooleanField(default=True)
 
     class Meta:
         db_table = "m01_organizacion"
@@ -53,6 +55,9 @@ class PoliticaCredencial(models.Model):
     nivel_clave = models.CharField(max_length=24, null=True, blank=True)
     # FUN-009: minutos sin actividad tras los que la sesión se cierra sola.
     inactividad_min = models.PositiveSmallIntegerField(default=20)
+    # RN-37: el propio usuario puede crear su cuenta (sólo `student` y `teacher`). RN-33: el castigo por fallar recae en la CUENTA o en la tableta (DISPOSITIVO).
+    autoregistro = models.BooleanField(default=False)
+    bloqueo_alcance = models.CharField(max_length=12, default="CUENTA")
     creado_en = models.BigIntegerField(default=ahora_ms)
     actualizado_en = models.BigIntegerField(default=ahora_ms)
 
@@ -68,6 +73,7 @@ class PoliticaCredencial(models.Model):
                 condition=~Q(tipo_secreto="PIN") | (Q(longitud_minima__gte=4) & Q(longitud_minima__lte=8)),
                 name="ck_m01_politica_pin_rango",
             ),
+            models.CheckConstraint(condition=Q(bloqueo_alcance__in=["CUENTA", "DISPOSITIVO"]), name="ck_m01_politica_bloqueo_alcance"),
         ]
 
 
@@ -127,11 +133,14 @@ class Usuario(models.Model):
     # Admisión nominal (JRN-007): cuenta creada por el profesor «por su nombre», pendiente de vincular.
     provisional = models.BooleanField(default=False)
     vinculado_a = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="provisionales")
+    # RB-03: cómo nació la cuenta y si el profesor ya confirmó que es quien dice ser (nulo = «sin confirmar»).
+    origen = models.CharField(max_length=16, default="INSTALACION")
+    confirmado_en = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = "m01_usuario"
         indexes = [models.Index(fields=["organizacion", "estado"]), models.Index(fields=["rol"]),
-                   models.Index(fields=["vinculado_a"])]
+                   models.Index(fields=["vinculado_a"]), models.Index(fields=["organizacion", "origen"])]
 
 
 class Persona(models.Model):
@@ -194,6 +203,31 @@ class Credencial(models.Model):
             models.UniqueConstraint(fields=["usuario"], condition=Q(activa=True), name="uq_m01_credencial_activa"),
             models.CheckConstraint(condition=Q(activa=True) | Q(sustituida_en__isnull=False), name="ck_m01_credencial_sustitucion"),
         ]
+
+
+class PinMaestro(models.Model):
+    """El PIN maestro de la institución (D-A5, RB-01): un secreto sin dueño, con versiones. Sólo se guarda su huella Argon2id.
+
+    Una sola versión `activa` por organización; las sustituidas se conservan con su fecha (CV-05), porque el dominio impide
+    reutilizar cualquiera de las tres últimas. `vence_en` = nacimiento + 365 días y nadie puede alargarlo."""
+
+    id = models.CharField(max_length=36, primary_key=True)
+    organizacion = models.ForeignKey(Organizacion, on_delete=models.CASCADE, related_name="pines_maestros")
+    hash = models.CharField(max_length=255)  # Argon2id codificado
+    activa = models.BooleanField(default=True)
+    creado_en = models.BigIntegerField(default=ahora_ms)
+    creado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")  # nulo en el primer arranque
+    vence_en = models.BigIntegerField()
+    sustituida_en = models.BigIntegerField(null=True, blank=True)
+
+    class Meta:
+        db_table = "m01_pin_maestro"
+        constraints = [
+            models.UniqueConstraint(fields=["organizacion"], condition=Q(activa=True), name="uq_m01_pin_maestro_activo"),
+            models.CheckConstraint(condition=Q(activa=True) | Q(sustituida_en__isnull=False), name="ck_m01_pin_maestro_sustitucion"),
+            models.CheckConstraint(condition=Q(vence_en__gt=F("creado_en")), name="ck_m01_pin_maestro_vigencia"),
+        ]
+        indexes = [models.Index(fields=["organizacion", "-creado_en"])]
 
 
 class UsuarioPermiso(models.Model):
@@ -342,7 +376,9 @@ class IntentoAcceso(models.Model):
 
     class Meta:
         db_table = "m01_intento_acceso"
-        indexes = [models.Index(fields=["usuario", "-momento"]), models.Index(fields=["autorizacion"])]
+        # `dispositivo, -momento` y `motivo, -momento` sirven al bloqueo por tableta (RN-33) y por PIN maestro (RN-10), que se calculan sobre este registro.
+        indexes = [models.Index(fields=["usuario", "-momento"]), models.Index(fields=["autorizacion"]),
+                   models.Index(fields=["dispositivo", "-momento"]), models.Index(fields=["motivo", "-momento"])]
 
 
 class EventoSalida(models.Model):

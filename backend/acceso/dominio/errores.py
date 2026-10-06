@@ -36,10 +36,30 @@ class PoliticaInvalida(ErrorAcceso):
     http = 400
 
 
+class PinInvalido(DatosInvalidos):
+    """El PIN maestro son seis dígitos."""
+    codigo = "pin_invalido"
+
+
+class PinDebil(DatosInvalidos):
+    """El PIN es demasiado fácil de adivinar."""
+    codigo = "pin_debil"
+
+
 class CredencialesInvalidas(ErrorAcceso):
     """Identificador o clave incorrectos."""
     codigo = "credenciales_invalidas"
     http = 401
+
+
+class PinMaestroInvalido(CredencialesInvalidas):
+    """El PIN maestro no es el vigente."""
+    codigo = "pin_maestro_invalido"
+
+
+class PinMaestroRequerido(CredencialesInvalidas):
+    """La cuenta de administración exige además el PIN maestro."""
+    codigo = "pin_maestro_requerido"
 
 
 class SesionRequerida(ErrorAcceso):
@@ -90,6 +110,36 @@ class SesionTemporalLimitada(SinPermiso):
     codigo = "sesion_temporal_limitada"
 
 
+class SesionVisitanteLimitada(SinPermiso):
+    """Quien entra como visitante sólo puede seguir la clase y practicar (RN-42, RN-43)."""
+    codigo = "sesion_visitante_limitada"
+
+
+class PinMaestroVencido(SinPermiso):
+    """El PIN maestro venció: ya no acepta altas ni restablecimientos de profesores (RN-09)."""
+    codigo = "pin_maestro_vencido"
+
+
+class DispositivoNoAutorizado(SinPermiso):
+    """El PIN maestro no se acepta desde una tableta de alumno (RN-11)."""
+    codigo = "dispositivo_no_autorizado"
+
+
+class RegistroCerrado(SinPermiso):
+    """El registro propio está apagado por la administración (RN-37)."""
+    codigo = "registro_cerrado"
+
+
+class VisitanteNoPermitido(SinPermiso):
+    """La institución apagó la entrada como visitante (RN-47)."""
+    codigo = "visitante_no_permitido"
+
+
+class PinPendiente(SinPermiso):
+    """El alumno todavía no eligió su PIN (RN-35)."""
+    codigo = "pin_pendiente"
+
+
 class DispositivoBloqueado(SinPermiso):
     """La tableta está bloqueada por el profesor o el administrador (MOD-009): no abre sesión."""
     codigo = "dispositivo_bloqueado"
@@ -107,6 +157,16 @@ class Conflicto(ErrorAcceso):
     http = 409
 
 
+class PinMaestroNoConfigurado(Conflicto):
+    """El nodo no tiene PIN maestro configurado."""
+    codigo = "pin_maestro_no_configurado"
+
+
+class AliasDuplicado(Conflicto):
+    """Ya hay alguien con ese alias en el grupo (RN-34)."""
+    codigo = "alias_duplicado"
+
+
 class YaInstalado(Conflicto):
     """El nodo ya tiene una organización instalada."""
     codigo = "ya_instalado"
@@ -115,4 +175,16 @@ class YaInstalado(Conflicto):
 class UsuarioBloqueado(ErrorAcceso):
     """El usuario está bloqueado."""
     codigo = "usuario_bloqueado"
+    http = 423
+
+
+class PinMaestroBloqueado(ErrorAcceso):
+    """Demasiados intentos con el PIN maestro desde este equipo (RN-10)."""
+    codigo = "pin_maestro_bloqueado"
+    http = 423
+
+
+class DispositivoEnPausa(ErrorAcceso):
+    """La tableta espera un momento tras varios PIN equivocados (RN-33)."""
+    codigo = "dispositivo_en_pausa"
     http = 423

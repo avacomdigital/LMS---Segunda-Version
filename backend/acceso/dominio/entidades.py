@@ -9,9 +9,11 @@ from typing import Any
 
 from .valores import (
     Alcance,
+    BloqueoAlcance,
     ClaseSesion,
     EstadoUsuario,
     Menu,
+    OrigenCuenta,
     PapelGrupo,
     ResultadoIntento,
     TipoAutorizacion,
@@ -31,6 +33,7 @@ class Organizacion:
     locale: str
     zona_horaria: str
     creado_en: int
+    visitante: bool = True   # RN-47: si la institución permite entrar como visitante
 
 
 @dataclass
@@ -76,6 +79,8 @@ class PoliticaCredencial:
     actualizado_en: int
     nivel_clave: str | None = None          # None = política del perfil; con valor = excepción para ese nivel educativo (BR-024)
     inactividad_min: int = 20               # FUN-009: minutos sin actividad tras los que la sesión se cierra sola
+    autoregistro: bool = False              # RN-37: el propio usuario puede crear su cuenta (sólo `student` y `teacher`)
+    bloqueo_alcance: BloqueoAlcance = BloqueoAlcance.CUENTA   # RN-33: el castigo por fallar recae en la cuenta o en la tableta
 
     def validar(self) -> None:
         """Impide que un colegio se configure a sí mismo un reglamento absurdo.
@@ -91,8 +96,11 @@ class PoliticaCredencial:
                 raise ValueError("El avatar sólo se admite para estudiantes (BR-024).")
         elif self.longitud_minima < 4:
             raise ValueError("La longitud mínima no puede ser menor que 4.")
-        if self.tipo_secreto is TipoSecreto.PIN and not 4 <= self.longitud_minima <= 8:
-            raise ValueError("Un PIN tiene entre 4 y 8 dígitos.")
+        if self.tipo_secreto is TipoSecreto.PIN:
+            # RN-31: el PIN del alumno es de 4 a 6 dígitos; el de otros perfiles, de 4 a 8.
+            tope = 6 if self.perfil is Menu.STUDENT else 8
+            if not 4 <= self.longitud_minima <= tope:
+                raise ValueError(f"Un PIN tiene entre 4 y {tope} dígitos.")
         if self.tipo_secreto is TipoSecreto.PASSWORD and self.longitud_minima < 8:
             raise ValueError("Una contraseña tiene al menos 8 caracteres.")
         if self.intentos_maximos < 3:
@@ -103,6 +111,12 @@ class PoliticaCredencial:
             raise ValueError("La inactividad se mide en minutos: al menos 5 y nunca más que la duración de la sesión.")
         if self.bloqueo_minutos < 1 or self.ventana_intentos_min < 1:
             raise ValueError("Ventana y bloqueo se expresan en minutos mayores que cero.")
+        # RN-33: sólo tiene sentido castigar a la tableta cuando quien se equivoca es un alumno compartiendo equipo;
+        # al personal se le bloquea la cuenta (sino cualquiera la bloquearía desde otro equipo sin consecuencias).
+        if self.bloqueo_alcance is BloqueoAlcance.DISPOSITIVO and self.perfil is not Menu.STUDENT:
+            raise ValueError("El bloqueo por tableta sólo se admite para estudiantes: el personal se bloquea por cuenta.")
+        if self.autoregistro and self.perfil not in (Menu.STUDENT, Menu.TEACHER):
+            raise ValueError("El registro propio sólo se admite para estudiantes y profesores.")
 
     def admite_identificador(self, tipo: TipoIdentificador) -> bool:
         """¿Sirve este tipo de identificador para entrar en este colegio?
@@ -158,6 +172,9 @@ class Usuario:
     # vincula después con la persona definitiva. Mientras tanto la cuenta es provisional.
     provisional: bool = False
     vinculado_a: str | None = None
+    # RB-03: cómo nació la cuenta y si alguien (el profesor) ya confirmó que es quien dice ser (nulo = «sin confirmar»).
+    origen: OrigenCuenta = OrigenCuenta.INSTALACION
+    confirmado_en: int | None = None
 
     @property
     def activo(self) -> bool:
@@ -210,6 +227,24 @@ class Credencial:
 
     def expirada(self, ahora: int) -> bool:
         return self.expira_en is not None and ahora >= self.expira_en
+
+
+@dataclass
+class PinMaestro:
+    """El PIN maestro de la institución (D-A5): un secreto sin dueño, con versiones. Sólo se guarda su huella Argon2id (RN-04).
+
+    Nace una versión nueva cada vez que se configura o se cambia; la anterior se conserva con su fecha de sustitución (CV-05)
+    porque el dominio impide reutilizar cualquiera de los tres últimos (RN-05). Dura 365 días y nadie puede alargarlo (RN-07).
+    """
+
+    id: str
+    organizacion_id: str
+    hash: str
+    activa: bool
+    creado_en: int
+    vence_en: int
+    creado_por: str | None = None   # nulo en el primer arranque: aún no existe ningún administrador
+    sustituida_en: int | None = None
 
 
 @dataclass

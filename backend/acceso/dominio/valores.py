@@ -7,6 +7,7 @@ de arquitectura lo garantiza (tests/test_arquitectura.py).
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from dataclasses import dataclass
 from enum import Enum
@@ -93,6 +94,8 @@ class MotivoCierre(str, Enum):
     ADMINISTRADOR = "administrador"
     CREDENCIAL_CAMBIADA = "credencial_cambiada"
     CREDENCIAL_RESTABLECIDA = "credencial_restablecida"
+    CREDENCIAL_RESTABLECIDA_PIN_MAESTRO = "credencial_restablecida_pin_maestro"  # RN-24: el profesor la restableció con el PIN maestro
+    VISITA_RETIRADA = "visita_retirada"        # RN-45: la cuenta efímera de una visita pasó las 24 h
     ROL_CAMBIADO = "rol_cambiado"
     ESTADO_CUENTA = "estado_cuenta"
     DISPOSITIVO_BAJA = "dispositivo_baja"
@@ -113,6 +116,25 @@ class PapelGrupo(str, Enum):
 class ClaseSesion(str, Enum):
     NORMAL = "NORMAL"
     TEMPORAL = "TEMPORAL"
+    VISITANTE = "VISITANTE"   # RN-40…47: entra sin identidad confirmada, con permisos mínimos (D-A4: clase de sesión, no un sexto rol)
+
+
+class OrigenCuenta(str, Enum):
+    """Cómo nació una cuenta (RB-03). Sirve para auditar y para que la administración sepa quién se registró con el PIN maestro."""
+
+    INSTALACION = "INSTALACION"          # el primer administrador, creado al instalar el nodo
+    IMPORTACION = "IMPORTACION"          # cargada por la administración (padrón o archivo)
+    PROFESOR = "PROFESOR"                # la creó un profesor para su grupo
+    AUTOALTA_ALUMNO = "AUTOALTA_ALUMNO"  # el propio alumno se registró en la tableta (RN-30)
+    PIN_MAESTRO = "PIN_MAESTRO"          # el propio profesor se registró con el PIN maestro (RN-20)
+    VISITANTE = "VISITANTE"              # cuenta efímera de una visita (RN-45)
+
+
+class BloqueoAlcance(str, Enum):
+    """Sobre qué recae el castigo por fallar la clave (RN-33): la cuenta o la tableta desde la que se prueba."""
+
+    CUENTA = "CUENTA"
+    DISPOSITIVO = "DISPOSITIVO"
 
 
 class TipoAutorizacion(str, Enum):
@@ -133,6 +155,7 @@ class ResultadoIntento(str, Enum):
     DESBLOQUEO = "DESBLOQUEO"
     TEMPORAL_EXITO = "TEMPORAL_EXITO"
     TEMPORAL_FALLO = "TEMPORAL_FALLO"
+    ALTA = "ALTA"   # RB-17: una cuenta propia nacida desde la tableta; no cuenta como fallo ni como acierto, sólo para el tope por hora
 
 
 def _enum(cls, texto, nombre):
@@ -340,3 +363,20 @@ class Password:
     @property
     def tiene_simbolo(self) -> bool:
         return any(not c.isalnum() for c in self.valor)
+
+
+def alias_clave(alias: str) -> str:
+    """La forma con que se compara un alias dentro del grupo (RN-34): sin mayúsculas, sin tildes y con los espacios colapsados."""
+    sin_tildes = "".join(c for c in unicodedata.normalize("NFD", str(alias or "")) if unicodedata.category(c) != "Mn")
+    return re.sub(r"\s+", " ", sin_tildes).strip().casefold()
+
+
+def sugerir_alias(primer_nombre: str, apellidos: str, ocupados: set[str]) -> str | None:
+    """RN-34: si «Juan P.» ya existe en el grupo, pide una letra más del apellido («Juan Pé.») en vez de rechazar sin salida.
+    Sin apellido no se puede inventar la letra: devuelve None y la pantalla pide que la escriba la persona."""
+    apellido = (apellidos or "").split()[0] if (apellidos or "").strip() else ""
+    for letras in range(2, len(apellido) + 1):
+        candidato = f"{primer_nombre} {apellido[:letras]}" + ("." if letras < len(apellido) else "")
+        if alias_clave(candidato) not in ocupados:
+            return candidato
+    return None

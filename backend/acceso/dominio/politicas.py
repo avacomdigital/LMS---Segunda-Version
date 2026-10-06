@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from . import errores, plantillas
 from .entidades import Concesion, IntentoAcceso, PoliticaCredencial, Principal, Rol, UsuarioPermiso
-from .valores import Alcance, Avatar, ClaseSesion, Password, Pin, ResultadoIntento, TipoSecreto
+from .valores import Alcance, Avatar, BloqueoAlcance, ClaseSesion, Menu, Password, Pin, ResultadoIntento, TipoSecreto
 
 # ------------------------------------------------------------------ objetivos
 
@@ -61,6 +61,8 @@ class Decision:
             raise errores.DebeCambiarCredencial(**extra)
         if self.codigo == "sesion_temporal_limitada":
             raise errores.SesionTemporalLimitada(**extra)
+        if self.codigo == "sesion_visitante_limitada":
+            raise errores.SesionVisitanteLimitada(**extra)
         # Regla de alcance del Documento Maestro: «cualquier objeto fuera de esa unión se evalúa como
         # acceso denegado, nunca como objeto inexistente, para no revelar por omisión». Por eso fuera de
         # alcance es siempre 403; el 404 queda reservado para lo que de verdad no existe.
@@ -134,6 +136,8 @@ class PoliticaAutorizacion:
             return Decision(False, permiso, "debe_cambiar_credencial")
         if actor.clase_sesion is ClaseSesion.TEMPORAL and permiso not in plantillas.PERMISOS_SESION_TEMPORAL:
             return Decision(False, permiso, "sesion_temporal_limitada")
+        if actor.clase_sesion is ClaseSesion.VISITANTE and permiso not in plantillas.PERMISOS_SESION_VISITANTE:
+            return Decision(False, permiso, "sesion_visitante_limitada")
         return None
 
     def alcance_concedido(self, ctx: ContextoActor, permiso: str) -> Alcance | None:
@@ -148,7 +152,7 @@ class PoliticaAutorizacion:
         concesion = ctx.concesiones.get(permiso)
         if concesion is None:
             return None
-        if ctx.principal.clase_sesion is ClaseSesion.TEMPORAL:
+        if ctx.principal.clase_sesion in (ClaseSesion.TEMPORAL, ClaseSesion.VISITANTE):
             return Alcance.SELF
         efectivo = Alcance.minimo(concesion.alcance, ctx.tope)
         if efectivo is Alcance.LEVEL and ctx.tope is not Alcance.LEVEL:
@@ -208,11 +212,14 @@ class PoliticaFortaleza:
                 pin = Pin(secreto)
             except ValueError as error:
                 return [str(error)]
+            # RN-31: el PIN del alumno es de 4 a 6 dígitos y SIN reglas de complejidad (`1234` vale): reconoce, no protege.
+            es_alumno = politica.perfil is Menu.STUDENT
+            maximo = 6 if es_alumno else 8
             if len(pin.valor) < politica.longitud_minima:
                 reglas.append(f"El PIN debe tener al menos {politica.longitud_minima} dígitos.")
-            if len(pin.valor) > 8:
-                reglas.append("El PIN no puede tener más de 8 dígitos.")
-            if pin.es_trivial():
+            if len(pin.valor) > maximo:
+                reglas.append(f"El PIN no puede tener más de {maximo} dígitos.")
+            if not es_alumno and pin.es_trivial():
                 reglas.append("El PIN es demasiado fácil de adivinar (repetido o en secuencia).")
             return reglas
         try:
@@ -275,6 +282,143 @@ class PoliticaBloqueo:
             if ahora < hasta:
                 return EstadoBloqueo(True, fallos, hasta)
         return EstadoBloqueo(False, fallos, None)
+
+
+    @staticmethod
+    def evaluar_dispositivo(intentos_desc: list[IntentoAcceso], politica: PoliticaCredencial, ahora: int) -> EstadoBloqueo:
+        """RN-33: el castigo por equivocarse recae en la TABLETA, no en la cuenta (así un compañero no puede bloquear a otro a propósito).
+
+        Cuenta los fallos de PIN hechos desde la tableta, de cualquier alumno, dentro de la ventana de la política; al llegar al máximo la
+        tableta espera `MINUTOS_PAUSA_DISPOSITIVO` minutos para probar un PIN. Un acierto desde la tableta borra la cuenta. Entrar como
+        visitante no pasa por aquí: nunca se bloquea."""
+        ventana_ms = politica.ventana_intentos_min * 60_000
+        pausa_ms = plantillas.MINUTOS_PAUSA_DISPOSITIVO * 60_000
+        fallos = 0
+        ultimo_fallo: int | None = None
+        for intento in intentos_desc:
+            if intento.resultado in (ResultadoIntento.EXITO, ResultadoIntento.DESBLOQUEO):
+                break
+            if intento.momento < ahora - max(ventana_ms, pausa_ms):
+                break
+            if intento.resultado is ResultadoIntento.FALLO and intento.momento >= ahora - ventana_ms:
+                fallos += 1
+                if ultimo_fallo is None:
+                    ultimo_fallo = intento.momento
+        if fallos >= politica.intentos_maximos and ultimo_fallo is not None:
+            hasta = ultimo_fallo + pausa_ms
+            if ahora < hasta:
+                return EstadoBloqueo(True, fallos, hasta)
+        return EstadoBloqueo(False, fallos, None)
+
+
+@dataclass(frozen=True)
+class EstadoBloqueoPinMaestro:
+    bloqueado: bool
+    fallos: int                    # fallos acumulados en la ventana actual (aún sin bloqueo)
+    hasta: int | None = None
+    episodios: int = 0             # bloqueos seguidos, sin ningún acierto entre medias
+    global_: bool = False          # el tope de todo el nodo, no el de este equipo
+
+    def segundos_restantes(self, ahora: int) -> int:
+        if not self.bloqueado or self.hasta is None:
+            return 0
+        return max(0, (self.hasta - ahora + 999) // 1000)
+
+
+class PoliticaPinMaestro:
+    """Las reglas del PIN maestro (D-A5), sin I/O: formato, trivialidad, vigencia anual y bloqueo contra la adivinación.
+
+    Un millón de combinaciones es poco: por eso el PIN no se puede probar sin límite (RN-10) y no existe un endpoint que sólo diga
+    «sí/no» (D-A6): se verifica DENTRO de la operación que autoriza.
+    """
+
+    LONGITUD = 6
+    VIGENCIA_DIAS = 365           # RN-07: no es configurable; nadie la alarga ni la apaga
+    AVISO_DIAS = 30               # RN-08
+    INTENTOS_POR_EQUIPO = 5       # RN-10
+    VENTANA_MIN = 15
+    BLOQUEO_MIN = 15
+    BLOQUEO_ESCALADO_MIN = 60     # tras tres bloqueos seguidos
+    BLOQUEOS_PARA_ESCALAR = 3
+    TOPE_GLOBAL_POR_HORA = 20
+    ULTIMOS_NO_REUTILIZABLES = 3  # RN-05
+    MINUTO = 60_000
+    DIA = 24 * 60 * MINUTO
+
+    @classmethod
+    def validar_formato(cls, valor) -> str:
+        """RN-02: exactamente seis dígitos. Devuelve el PIN normalizado."""
+        texto = str(valor or "").strip()
+        if len(texto) != cls.LONGITUD or not texto.isdigit() or not texto.isascii():
+            raise errores.PinInvalido("El PIN maestro son exactamente seis dígitos, sin letras ni espacios.")
+        return texto
+
+    @staticmethod
+    def es_trivial(valor: str) -> bool:
+        """RN-05: seis iguales (`111111`), secuencias (`123456`, `654321`), parejas repetidas (`121212`) y tríos repetidos (`123123`)."""
+        if len(set(valor)) == 1:
+            return True
+        pasos = [int(valor[i + 1]) - int(valor[i]) for i in range(len(valor) - 1)]
+        if all(p == 1 for p in pasos) or all(p == -1 for p in pasos):
+            return True
+        return valor == valor[:2] * 3 or valor == valor[:3] * 2
+
+    @classmethod
+    def exigir_fuerte(cls, valor) -> str:
+        pin = cls.validar_formato(valor)
+        if cls.es_trivial(pin):
+            raise errores.PinDebil("Ese PIN es demasiado fácil de adivinar: evita números repetidos, secuencias como 123456 y parejas repetidas.")
+        return pin
+
+    @classmethod
+    def vence_en(cls, creado_en: int) -> int:
+        return creado_en + cls.VIGENCIA_DIAS * cls.DIA
+
+    @staticmethod
+    def esta_vencido(vence_en: int, ahora: int) -> bool:
+        return ahora >= vence_en
+
+    @classmethod
+    def dias_restantes(cls, vence_en: int, ahora: int) -> int:
+        """Días que faltan, redondeando hacia arriba (con 30 días y una hora quedan 31) y sin bajar de cero."""
+        return max(0, -((ahora - vence_en) // cls.DIA))
+
+    @classmethod
+    def en_aviso(cls, vence_en: int, ahora: int) -> bool:
+        """RN-08: a 30 días o menos del vencimiento el administrador y el técnico ven el aviso; el profesorado, nada."""
+        return cls.dias_restantes(vence_en, ahora) <= cls.AVISO_DIAS
+
+    @classmethod
+    def evaluar_bloqueo_equipo(cls, intentos_desc: list[IntentoAcceso], ahora: int) -> EstadoBloqueoPinMaestro:
+        """RN-10: 5 fallos en 15 min desde un mismo equipo lo bloquean 15 min; tras tres bloqueos seguidos (sin aciertos entre ellos) el bloqueo
+        sube a 60 min. Se calcula repasando el registro de intentos del equipo, del más antiguo al más nuevo: sin contadores que se desincronicen."""
+        ventana = cls.VENTANA_MIN * cls.MINUTO
+        fallos: list[int] = []
+        bloqueado_hasta = 0
+        episodios = 0
+        for intento in reversed(intentos_desc):
+            if intento.resultado in (ResultadoIntento.EXITO, ResultadoIntento.DESBLOQUEO):
+                fallos, bloqueado_hasta, episodios = [], 0, 0
+            elif intento.resultado is ResultadoIntento.FALLO and intento.momento >= bloqueado_hasta:
+                fallos = [t for t in fallos if t > intento.momento - ventana] + [intento.momento]
+                if len(fallos) >= cls.INTENTOS_POR_EQUIPO:
+                    episodios += 1
+                    minutos = cls.BLOQUEO_ESCALADO_MIN if episodios >= cls.BLOQUEOS_PARA_ESCALAR else cls.BLOQUEO_MIN
+                    bloqueado_hasta = intento.momento + minutos * cls.MINUTO
+                    fallos = []
+        if ahora < bloqueado_hasta:
+            return EstadoBloqueoPinMaestro(True, 0, bloqueado_hasta, episodios)
+        fallos = [t for t in fallos if t > ahora - ventana]
+        return EstadoBloqueoPinMaestro(False, len(fallos), None, episodios)
+
+    @classmethod
+    def evaluar_bloqueo_global(cls, fallos_de_la_hora_desc: list[int], ahora: int) -> EstadoBloqueoPinMaestro:
+        """RN-10: tope de 20 fallos por hora en todo el nodo, sea cual sea el equipo. `fallos_de_la_hora_desc` = momentos, del más nuevo al más antiguo."""
+        recientes = [t for t in fallos_de_la_hora_desc if t > ahora - 60 * cls.MINUTO]
+        if len(recientes) >= cls.TOPE_GLOBAL_POR_HORA:
+            hasta = recientes[cls.TOPE_GLOBAL_POR_HORA - 1] + 60 * cls.MINUTO
+            return EstadoBloqueoPinMaestro(True, len(recientes), hasta, global_=True)
+        return EstadoBloqueoPinMaestro(False, len(recientes))
 
 
 def politica_aplicable(del_perfil: PoliticaCredencial, del_grupo: PoliticaCredencial | None,
