@@ -22,4 +22,11 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("examen", typeof(Examen.ExamenPage));
         Routing.RegisterRoute("examen-entrega", typeof(Examen.ExamenEntregaPage));
     }
+
+    /// <summary>RF-23: con sesión de visitante, cada pantalla que se ve lleva la banda amarilla; al cerrar la visita se quita.</summary>
+    protected override void OnNavigated(ShellNavigatedEventArgs args)
+    {
+        base.OnNavigated(args);
+        BandaDeVisitante.Aplicar(CurrentPage);
+    }
 }

@@ -44,12 +44,20 @@ public partial class App : Application
 		{
 			try
 			{
+				// RF-27: una visita que termina (inactividad, 24 h, otra persona en la tableta) no se readmite: el nodo ya retiró su cuenta efímera y su
+				// participación en la clase no es de nadie. Se vuelve al acceso limpio, con un aviso propio.
+				var eraVisita = Sesion.EsVisitante;
 				ClienteJson.Token = null; Sesion.Usuario = null;   // el pase ya no vale; no hace falta avisarle nada al nodo
+				if (eraVisita) Sesion.OlvidarClase();
 				if (Shell.Current is null || Shell.Current.CurrentPage is Pages.ConnectionPage) return;
-				Sesion.RecordarCodigo = true;   // es la misma persona: que no tenga que volver a escribir su código
+				Sesion.RecordarCodigo = !eraVisita;   // es la misma persona: que no tenga que volver a escribir su código
 				await Shell.Current.GoToAsync("//connection");
-				Avisos.Mostrar(error.CerradaEnOtroDispositivo
+				Avisos.Mostrar(eraVisita
+					? "Tu visita terminó. Como visitante no se guarda nada; si quieres seguir, entra de nuevo."
+					: error.CerradaEnOtroDispositivo
 					? "Abriste tu sesión en otra tableta. Tu trabajo está a salvo; entra aquí de nuevo si quieres seguir aquí."
+					: error.Codigo == "sesion_inactiva"
+					? "Cerramos tu sesión porque la tableta pasó un rato sin usarse. Lo que hiciste está guardado; entra de nuevo para continuar."
 					: "Tu sesión terminó. Lo que hiciste está guardado; entra de nuevo para continuar.");
 			}
 			catch (Exception ex) { RegistroDeFallos.Escribir("student", "App.SesionRechazada", ex); }
