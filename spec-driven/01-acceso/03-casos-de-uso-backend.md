@@ -590,6 +590,46 @@ Los grupos son el contexto que da sentido a «mis estudiantes» y ahora también
 
 ---
 
+### Familia G · PIN maestro y profesores (revisión 2026-10-06 · `aplicacion/pin_maestro.py`)
+
+El PIN maestro es de la **institución**, no de una persona: seis dígitos con versiones, vigencia anual y bloqueo contra la adivinación. Quien lo conoce hace dos cosas y sólo dos: crear su propia cuenta de profesor y restablecer su propia contraseña de profesor. No abre cuentas de administración, de reportes ni de técnico.
+
+| Caso de uso | Qué hace | Permiso / quién autoriza |
+|---|---|---|
+| `VerificadorPinMaestro` (en `casos_uso.py`) | Verifica el PIN **dentro** de la operación que autoriza: rechaza tabletas de alumno (RN-11), bloquea por equipo y global (RN-10), rechaza el vencido (RN-09) y paga el mismo coste con o sin versión activa (RB-34). Los fallos y bloqueos se confirman aunque la respuesta sea un error (`ejecutar_registrando`) | — |
+| `crear_version_pin_maestro` (RB-10) | Nace una versión: sustituye la anterior, reinicia el reloj, evento y asiento. La llama `InstalarNodo` (primer arranque, sin creador) y `CambiarPinMaestro` | — |
+| `ConsultarEstadoPinMaestro` (RB-12) | `{configurado, creado_en, vence_en, dias_restantes, vencido, aviso, bloqueado_hasta}`, nunca el PIN | `identity.master_pin.manage` |
+| `CambiarPinMaestro` (RB-11) | Reemplaza el PIN sin saber el actual: seis dígitos, no trivial, distinto de los tres últimos | `identity.master_pin.manage` |
+| `RegistrarDocente` (RB-13) | Dos transacciones: verifica el PIN (se confirma aunque falle) y luego crea la cuenta `TEACHER` activa, con origen `PIN_MAESTRO`, contraseña definitiva y docente de los grupos elegidos | **PIN maestro** |
+| `RestablecerContrasenaDocente` (RB-14) | Verifica el PIN **antes** de mirar el documento (RN-25), sólo restablece profesores (RN-12), cierra sus sesiones y levanta su bloqueo | **PIN maestro** |
+| `ListarDocentesPorPinMaestro` (RB-15) | Las cuentas con origen `PIN_MAESTRO`, con el equipo desde el que se registraron | `identity.user.read` (organización) |
+
+`AutenticarUsuario` cambia (RB-22): acepta `usuario_id` (alumno que toca su nombre) y `pin_maestro` (administración). `InstalarNodo` exige `pin_maestro`. `ConsultarConfiguracion` añade el estado público del PIN y las puertas de entrada (RB-24). `RestablecerCredencial` deja a los alumnos en PIN pendiente (RB-23). `CrearGrupo` admite al profesor sobre sus propios grupos (RB-28). `ConfigurarPolitica` admite `autoregistro`, `bloqueo_alcance` y `visitante` (RB-27). `ImportarUsuarios` y el padrón dejan al alumno sin PIN en PIN pendiente (RB-26).
+
+### Familia H · El alumno y el visitante en la tableta (`aplicacion/estudiantes.py`)
+
+| Caso de uso | Qué hace | Quién autoriza |
+|---|---|---|
+| `ListarGruposDelAula` (RB-16) | Grupos que la tableta ofrece, con el tipo de clave de cada uno | Tableta registrada (BR-056) |
+| `ListarEstudiantesDelGrupo` (RB-16) | `[{id, alias, pin_pendiente}]`, nada más (D-A8) | Tableta registrada |
+| `RegistrarEstudiante` (RB-17) | Alta propia: alias único por grupo (RN-34) con sugerencia, PIN validado por el reglamento del grupo, tope de 5 por tableta y hora, apagable con `autoregistro` | Tableta registrada |
+| `EstablecerPinAlumno` (RB-18) | Elegir el PIN de una cuenta **sin credencial** | Tableta registrada |
+| `AbrirSesionVisitante` (RB-19) | Cuenta efímera + sesión `VISITANTE`; barre las visitas de más de 24 h; respeta INV-011 | Tableta registrada · política `visitante` |
+| `ConfirmarEstudiante` (RB-20) | Marca `confirmado_en`; idempotente | `identity.user.update` |
+| `ListarVisitantes` (RN-46) | Visitas abiertas y su tableta | `identity.session.read` (profesor o administración) |
+
+Dominio nuevo (sin Django): `PoliticaPinMaestro` (formato, trivialidad, vigencia, aviso, bloqueo por equipo y global), `PoliticaBloqueo.evaluar_dispositivo` (RN-33), `ClaseSesion.VISITANTE` con `PERMISOS_SESION_VISITANTE`, y `alias_clave` / `sugerir_alias`. `PoliticaAutorizacion.transversal` devuelve `sesion_visitante_limitada` y limita el alcance a `SELF`; los adaptadores de autorización de modo estudio y evaluación lo dicen con su causa exacta.
+
+### Familia I · La consola del técnico (`aplicacion/consola.py`)
+
+| Caso de uso | Comando | Qué hace |
+|---|---|---|
+| `EstadoPinMaestroDeConsola` | `acceso_pin_maestro` | Estado sin mostrar el PIN |
+| `CambiarPinMaestroDeConsola` | `acceso_pin_maestro --cambiar` | Reemplaza el PIN (entrada estándar o `AVACOM_LMS_PIN_MAESTRO_NUEVO`); asiento con `actor = sistema`, `motivo = consola` |
+| `RestablecerAdministradorDeConsola` | `acceso_restablecer_admin --dni …` | Único camino para recuperar al administrador (RN-12, PA-07): contraseña provisional, sesiones cerradas, asiento con `actor = sistema` |
+
+**Los 16 casos de uso y piezas de esta revisión se suman a los 39 de las familias A–F.**
+
 ## 5 · Las piezas que no son casos de uso
 
 ### 5.1 · Migraciones

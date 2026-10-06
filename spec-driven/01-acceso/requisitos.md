@@ -6,7 +6,7 @@
 | Fuente normativa | `AVACOM_LMS_Documento_Maestro_Consolidado_v1.0` · MOD-001 *Identity & Access* (capacidades, funciones, reglas, escenarios), JRN-001, JRN-007, PAN-002, PAN-204, NFR-031 |
 | Punto de partida | Lo que ya existe en [01 · Modelado](01-modelado-datos.md), [02 · Endpoints](02-Endpoints.md), [03 · Casos de uso](03-casos-de-uso-backend.md) y [04 · Lineamientos](04-Lineamientos-Al-Documento-Maestro.md), más lo que hay hoy en OPS y Student (ver §2) |
 | Para qué sirve | Lista cerrada de lo que hay que construir esta semana para dar por completo el módulo de acceso, partida en **dominio del problema**, **backend** y **frontend MAUI** |
-| Estado | Propuesta para revisión. Las decisiones que tomé por mi cuenta están en §6 y las que necesito que confirmes en §7 |
+| Estado | **Implementado el 2026-10-06** (backend, Core, OPS y Student; ver «Estado de la implementación» al final). Las decisiones que se tomaron por cuenta propia están en §6 y las que se asumieron en §7 y en el cierre |
 
 > **Condición que lo gobierna todo: el LMS funciona sin internet.** Sin internet no hay correo, ni SMS, ni «recuperar por enlace», ni servicio central que diga quién es quién. Lo que sí existe es el nodo del aula (el equipo con OPS Master) en la red local. Toda identificación y toda recuperación de acceso se resuelven entre las personas y ese nodo.
 
@@ -484,3 +484,38 @@ OPS es el equipo del aula y **no tiene teclado**: todo lo que se pueda resolver 
 | Alumnos crean su usuario y PIN | RN-30…37 | RB-16…18, 22, 26 | RF-20…22, 28 | AC-A11…A13, A17, A18, A20 |
 | Visitante contra el sabotaje | RN-40…47 | RB-07, 19, 25 | RF-23…27 | AC-A14…A16, A19 |
 | Todo funciona sin internet | Condición inicial | RB-40, 41 | RF-00e | AC-A21 |
+
+
+---
+
+# PARTE F · Estado de la implementación (2026-10-06)
+
+Cómo quedó cada decisión abierta de §7 y qué se decidió al construir. Los documentos hermanos ya reflejan el resultado: [01 · Modelado §3.29](01-modelado-datos.md), [02 · Endpoints §6 ter](02-Endpoints.md), [03 · Casos de uso (familias G, H, I)](03-casos-de-uso-backend.md) y [04 · Lineamientos §9](04-Lineamientos-Al-Documento-Maestro.md).
+
+## F.1 · Preguntas abiertas (§7)
+
+| # | Pregunta | Resultado |
+|---|---|---|
+| PA-01 | «PIN fácilmente reconocible» | **Fácil de recordar**, 4 dígitos por defecto (4 a 6) y sin reglas de complejidad. Preescolar conserva el avatar (cuadrícula de dibujos) |
+| PA-02 | ¿El profesor registrado con PIN queda activo al instante? | Sí, con lista y suspensión en la pantalla «Seguridad del aula» |
+| PA-03 | ¿Puede un profesor crear grupos? | Sí, acotado a los que crea (RB-28); queda como su docente |
+| PA-04 | ¿El profesor admite a los visitantes? | No: los ve (con su tableta) y puede vincularlos a un alumno; no los admite uno a uno |
+| PA-05 | Examen y PIN olvidado | El visitante no rinde evaluaciones; el pase de examen del profesor se conserva y no se ofrece desde la tableta |
+| PA-06 | PIN vencido y no cambiado | Nada más que RN-09: se sigue enseñando |
+| PA-07 | Recuperar al administrador | Comando de consola para el técnico (`acceso_restablecer_admin`, RB-44) |
+| PA-08 | Teclado de OPS | Texto con el del sistema; el PIN y la hoja de acceso siempre con el teclado propio (`TecladoPinView`) |
+| PA-09 | Visitantes que se acumulan | Se retiran, no se borran; el archivado queda para la política de retención |
+
+## F.2 · Decisiones tomadas al construir
+
+| # | Decisión | Por qué |
+|---|---|---|
+| D-A9 | **La administración entra con su contraseña y además con el PIN maestro** mientras esté vigente. El nodo dice `pin_maestro_requerido` después de comprobar la contraseña; un PIN vencido no se exige | Pedido del responsable del proyecto («el admin se identifica y aparte exige la clave maestra»). El vencido no se exige porque sólo la sesión del administrador puede reemplazarlo; el perdido lo reemplaza el técnico por consola |
+| D-A10 | `autoregistro` viene encendido también para el perfil `teacher` | El PIN maestro ya es el control; el interruptor lo apaga la administración (RN-37) |
+| D-A11 | «PIN pendiente» = la cuenta **no tiene credencial activa** (RB-05) | Es el único estado sin ambigüedad: ni hash utilizable ni bandera que se desincronice |
+| D-A12 | Las listas de la tableta y el alta propia exigen un **equipo registrado** (BR-056); el PIN maestro, además, rechaza el tipo `TABLETA` y, sin equipo identificado, cuenta en un cubo «anónimo» bajo el tope global de 20 fallos por hora | Un equipo no registrado no tiene a quién castigar: la protección fuerte es el tope global |
+| D-A13 | Un profesor con un rol vigente que no sea de profesor (p. ej. coordinador) no se restablece con el PIN maestro | RN-12: el PIN no toca cuentas con poder de administración |
+
+## F.3 · Criterios de aceptación (§8) y dónde se prueban
+
+Backend (`backend/acceso/tests/`): `test_pin_maestro` (AC-A01…A03, A05, A06, A22), `test_api_docentes` (AC-A04, A07…A10), `test_api_estudiantes` (AC-A11…A13, A17, A18, A20), `test_api_visitante` (AC-A14…A16, A19, A21), `test_comandos`, `test_migraciones_acceso` y las suites existentes adaptadas (AC-A23). Cliente: `tests/Avacom.Lms.Core.Tests` (`AccesoClienteTests`, `MensajesDeAccesoTests`). La verificación de las pantallas de OPS y Student está en los informes de cada app.

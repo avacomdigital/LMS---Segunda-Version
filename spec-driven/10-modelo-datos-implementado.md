@@ -1,16 +1,16 @@
 # 10 · Modelo de datos implementado
 
-> Estado a 2026-10-01. Se **genera**, no se redacta a mano: se migra una base SQLite temporal con las migraciones del backend, se leen los modelos de Django (`models.py` de las siete apps) y lo que el motor guardó de verdad (restricciones `CHECK`, índices únicos parciales, triggers). Los comentarios de cada campo en `models.py` pasan a ser su descripción. Nunca se toca `backend/db.sqlite3`.
+> Estado a 2026-10-06. Se **genera**, no se redacta a mano: se migra una base SQLite temporal con las migraciones del backend, se leen los modelos de Django (`models.py` de las siete apps) y lo que el motor guardó de verdad (restricciones `CHECK`, índices únicos parciales, triggers). Los comentarios de cada campo en `models.py` pasan a ser su descripción. Nunca se toca `backend/db.sqlite3`.
 
 Este documento reúne en un solo lugar lo que cada módulo describe por separado ([01-acceso](01-acceso/01-modelado-datos.md), [02-classroom-engine](02-classroom-engine/01-modelo-de-datos.md), [03-device-manager](03-device-manager/00-modelo-y-api.md), [04-modo-estudio](04-modo-estudio/02-modelo-y-api.md), [05-audit-logs](05-audit-logs/modelado_datos.md), [06-evaluation-delivery](06-evaluation-delivery/modelado-datos.md)): qué tablas hay, qué atributos tienen, cómo se relacionan (1:N, 0..1:N, 1:1, N:M) y qué cambió frente al diseño v2 acordado con el CTO. El visor interactivo (`specs/analisis/index.html`, privado) dibuja exactamente estos datos con la PK y la FK escritas en cada fila.
 
 ## 1. Resumen
 
-**52 tablas** en 7 módulos, **677 columnas**, **56 FK físicas** (las impone el motor) y **36 FK lógicas** entre módulos (se guarda la llave, la valida el puerto del módulo dueño), más **9 referencias `curso_ref`** a AVACOM Biblioteca (no son tablas del LMS) y **9 tablas puente** que resuelven relaciones N:M.
+**53 tablas** en 7 módulos, **690 columnas**, **58 FK físicas** (las impone el motor) y **36 FK lógicas** entre módulos (se guarda la llave, la valida el puerto del módulo dueño), más **9 referencias `curso_ref`** a AVACOM Biblioteca (no son tablas del LMS) y **9 tablas puente** que resuelven relaciones N:M.
 
 | Módulo | App | Tablas | Columnas | FK físicas | FK lógicas | Qué posee |
 |---|---|---:|---:|---:|---:|---|
-| MOD-001 · Acceso e identidad | `acceso` | 17 | 158 | 32 | 0 | Quién entra: organización, políticas de credencial, roles y permisos con alcance, cuentas, identificadores y credenciales cifrados, sesiones, autorizaciones temporales para examen, intentos de acceso, grupos y su padrón. |
+| MOD-001 · Acceso e identidad | `acceso` | 18 | 171 | 34 | 0 | Quién entra: organización, políticas de credencial, roles y permisos con alcance, cuentas, identificadores y credenciales cifrados, sesiones, autorizaciones temporales para examen, intentos de acceso, grupos y su padrón. |
 | MOD-009 · Gestión de dispositivos | `device_manager` | 3 | 33 | 2 | 2 | Inventario de equipos del aula (bloqueo, latido, perfil compartida/asignada, capacidad de control declarada) y la sesión de alumno en cada equipo. |
 | MOD-007 · Aula (Classroom Engine) | `classroom_engine` | 11 | 149 | 12 | 10 | La clase en vivo: sesión, participantes y su presencia, selector, controles, lanzamientos («distribuciones») con su avance de entrega, intentos en clase, avisos y resumen de cierre. |
 | MOD-008 · Modo de estudio | `modo_estudio` | 6 | 103 | 3 | 10 | Lecciones asignadas para estudiar fuera de clase: asignación, tarea por alumno, paquete descargable, práctica autocalificable y libro de sincronización de la cola de la tableta. |
@@ -84,11 +84,11 @@ Las parejas de `m07_participante`, `m09_dim_sesion_alumno`, `m08_tarea` y `m05_i
 | `calificacion` | Sin tabla todavía. |
 | `evaluacion` | Sin tabla con ese nombre: la asignación y el intento formal viven en `m10_asignacion` y `m10_intento_formal`. |
 
-**33 tablas implementadas no existen en el diseño v2** (módulos y tablas agregados): `m01_autorizacion_temporal`, `m01_credencial`, `m01_evento_salida`, `m01_identificador_usuario`, `m01_intento_acceso`, `m01_organizacion`, `m01_politica_credencial`, `m01_sesion`, `m01_usuario_permiso`, `m01_usuario_rol`, `m09_evento_salida`, `m07_aviso`, `m07_control`, `m07_distribucion_entrega`, `m07_evento_salida`, `m07_presencia`, `m07_resumen`, `m08_asignacion`, `m08_evento_salida`, `m08_paquete`, `m08_practica`, `m08_sincronizacion`, `m08_tarea`, `m10_admision`, `m10_evento_salida`, `m10_incidente`, `m05_apertura_material`, `m05_disponibilidad_observada`, `m10_intento`, `m10_intento_pregunta`, `m10_intento_respuesta`, `m19_bitacora_tramo`, `m19_evento_salida`.
+**34 tablas implementadas no existen en el diseño v2** (módulos y tablas agregados): `m01_autorizacion_temporal`, `m01_credencial`, `m01_evento_salida`, `m01_identificador_usuario`, `m01_intento_acceso`, `m01_organizacion`, `m01_pin_maestro`, `m01_politica_credencial`, `m01_sesion`, `m01_usuario_permiso`, `m01_usuario_rol`, `m09_evento_salida`, `m07_aviso`, `m07_control`, `m07_distribucion_entrega`, `m07_evento_salida`, `m07_presencia`, `m07_resumen`, `m08_asignacion`, `m08_evento_salida`, `m08_paquete`, `m08_practica`, `m08_sincronizacion`, `m08_tarea`, `m10_admision`, `m10_evento_salida`, `m10_incidente`, `m05_apertura_material`, `m05_disponibilidad_observada`, `m10_intento`, `m10_intento_pregunta`, `m10_intento_respuesta`, `m19_bitacora_tramo`, `m19_evento_salida`.
 
 ## 4. Todas las relaciones
 
-101 relaciones, agrupadas por el módulo de la tabla hija. «Obligatoria» = la FK no admite `NULL`/vacío.
+103 relaciones, agrupadas por el módulo de la tabla hija. «Obligatoria» = la FK no admite `NULL`/vacío.
 
 ### 4.1 MOD-001 · Acceso e identidad
 
@@ -109,6 +109,8 @@ Las parejas de `m07_participante`, `m09_dim_sesion_alumno`, `m08_tarea` y `m05_i
 | `m01_miembro_grupo.grupo_id` | `m01_grupo.id` | `1 : N` | sí | FK física | CASCADE | cada fila de `m01_miembro_grupo` apunta a una fila de `m01_grupo`, y una fila de `m01_grupo` puede tener muchas de `m01_miembro_grupo`. |
 | `m01_miembro_grupo.usuario_id` | `m01_usuario.id` | `1 : N` | sí | FK física | CASCADE | cada fila de `m01_miembro_grupo` apunta a una fila de `m01_usuario`, y una fila de `m01_usuario` puede tener muchas de `m01_miembro_grupo`. |
 | `m01_persona.usuario_id` | `m01_usuario.id` | `1 : 1` | sí | PK = FK | CASCADE | cada fila de `m01_persona` apunta a una fila de `m01_usuario`, y cada fila de `m01_usuario` tiene como máximo una de `m01_persona`. |
+| `m01_pin_maestro.organizacion_id` | `m01_organizacion.id` | `1 : N` | sí | FK física | CASCADE | cada fila de `m01_pin_maestro` apunta a una fila de `m01_organizacion`, y una fila de `m01_organizacion` puede tener muchas de `m01_pin_maestro`. |
+| `m01_pin_maestro.creado_por_id` | `m01_usuario.id` | `0..1 : N` | no | FK física | SET NULL | cada fila de `m01_pin_maestro` apunta a una fila de `m01_usuario` o a ninguna, y una fila de `m01_usuario` puede tener muchas de `m01_pin_maestro`. |
 | `m01_politica_credencial.organizacion_id` | `m01_organizacion.id` | `1 : N` | sí | FK física | CASCADE | cada fila de `m01_politica_credencial` apunta a una fila de `m01_organizacion`, y una fila de `m01_organizacion` puede tener muchas de `m01_politica_credencial`. |
 | `m01_rol.organizacion_id` | `m01_organizacion.id` | `0..1 : N` | no | FK física | CASCADE | cada fila de `m01_rol` apunta a una fila de `m01_organizacion` o a ninguna, y una fila de `m01_organizacion` puede tener muchas de `m01_rol`. |
 | `m01_rol_permiso.rol_id` | `m01_rol.id` | `1 : N` | sí | FK física | CASCADE | cada fila de `m01_rol_permiso` apunta a una fila de `m01_rol`, y una fila de `m01_rol` puede tener muchas de `m01_rol_permiso`. |
@@ -375,7 +377,7 @@ Clase `IntentoAcceso` · app `acceso` · **PK** `id` · en el diseño v2: _sin e
 | `autorizacion_id` | **FK** → `m01_autorizacion_temporal.id` | VARCHAR(36) | sí |  | Llave foránea física → m01_autorizacion_temporal. |
 | `momento` |  | BIGINT | no | ahora_ms() | Instante en milisegundos del reloj del nodo (CV-03). |
 
-- Índices: (autorizacion_id)  [m01_intento_acceso_autorizacion_id_697c3ba4] · (dispositivo_id)  [m01_intento_acceso_dispositivo_id_b4daccca] · (usuario_id)  [m01_intento_acceso_usuario_id_ec22ed07] · (usuario_id, momento DESC)  [m01_intento_usuario_79fa2b_idx] · (autorizacion_id)  [m01_intento_autoriz_d56615_idx]
+- Índices: (autorizacion_id)  [m01_intento_acceso_autorizacion_id_697c3ba4] · (dispositivo_id)  [m01_intento_acceso_dispositivo_id_b4daccca] · (usuario_id)  [m01_intento_acceso_usuario_id_ec22ed07] · (usuario_id, momento DESC)  [m01_intento_usuario_79fa2b_idx] · (autorizacion_id)  [m01_intento_autoriz_d56615_idx] · (dispositivo_id, momento DESC)  [m01_intento_disposi_9a8167_idx] · (motivo, momento DESC)  [m01_intento_motivo_29a92d_idx]
 
 #### `m01_miembro_grupo`  ·  REL · asociativa
 
@@ -401,7 +403,7 @@ Restricciones del motor:
 
 #### `m01_organizacion`  ·  ENTIDAD
 
-Organizacion(id, codigo, nombre, pais, idioma, locale, zona_horaria, creado_en)
+Organizacion(id, codigo, nombre, pais, idioma, locale, zona_horaria, creado_en, visitante)
 
 Clase `Organizacion` · app `acceso` · **PK** `id` · en el diseño v2: _sin equivalente (tabla agregada)_
 
@@ -415,6 +417,7 @@ Clase `Organizacion` · app `acceso` · **PK** `id` · en el diseño v2: _sin eq
 | `locale` |  | VARCHAR(16) | no |  | BCP 47 |
 | `zona_horaria` |  | VARCHAR(64) | no | 'America/Bogota' |  |
 | `creado_en` |  | BIGINT | no | ahora_ms() | Instante en milisegundos del reloj del nodo (CV-03). |
+| `visitante` |  | BOOLEAN | no | true | RN-47: la institución puede apagar la entrada como visitante (encendida por defecto). |
 
 #### `m01_permiso`  ·  ENTIDAD
 
@@ -448,9 +451,34 @@ Clase `Persona` · app `acceso` · **PK** `usuario_id` · en el diseño v2: usua
 
 - Índices: (telefono_hmac)  [m01_persona_telefono_hmac_a3f0e758]
 
+#### `m01_pin_maestro`  ·  ENTIDAD
+
+El PIN maestro de la institución (D-A5, RB-01): un secreto sin dueño, con versiones. Sólo se guarda su huella Argon2id. Una sola versión `activa` por organización; las sustituidas se conservan con su fecha (CV-05), porque el dominio impide reutilizar cualquiera de las tres últimas. `vence_en` = nacimiento + 365 días y nadie puede alargarlo.
+
+Clase `PinMaestro` · app `acceso` · **PK** `id` · en el diseño v2: _sin equivalente (tabla agregada)_
+
+| Campo | Llave | Tipo | Null | Default | Descripción · restricción |
+|---|---|---|:---:|---|---|
+| `id` | **PK** | VARCHAR(36) | no |  | Identificador de texto de la fila (CV-02). |
+| `organizacion_id` | **FK** → `m01_organizacion.id` | VARCHAR(36) | no |  | Llave foránea física → m01_organizacion. |
+| `hash` |  | VARCHAR(255) | no |  | Argon2id codificado |
+| `activa` |  | BOOLEAN | no | true |  |
+| `creado_en` |  | BIGINT | no | ahora_ms() | Instante en milisegundos del reloj del nodo (CV-03). |
+| `creado_por_id` | **FK** → `m01_usuario.id` | VARCHAR(36) | sí |  | nulo en el primer arranque |
+| `vence_en` |  | BIGINT | no |  | Instante en milisegundos del reloj del nodo (CV-03). |
+| `sustituida_en` |  | BIGINT | sí |  | Instante en milisegundos del reloj del nodo (CV-03). |
+
+Restricciones del motor:
+
+- `ck_m01_pin_maestro_sustitucion: (activa OR sustituida_en IS NOT NULL)`
+- `ck_m01_pin_maestro_vigencia: vence_en > (creado_en)`
+- `UNIQUE (organizacion_id) WHERE activa  [uq_m01_pin_maestro_activo]`
+
+- Índices: (creado_por_id)  [m01_pin_maestro_creado_por_id_f0f23598] · (organizacion_id)  [m01_pin_maestro_organizacion_id_99bd8478] · (organizacion_id, creado_en DESC)  [m01_pin_mae_organiz_e3a266_idx]
+
 #### `m01_politica_credencial`  ·  ENTIDAD
 
-PoliticaCredencial(id, organizacion, perfil, tipo_identificador, tipo_secreto, longitud_minima, exige_mayuscula, exige_minuscula, exige_digito, exige_simbolo, intentos_maximos, ventana_intentos_min, bloqueo_minutos, duracion_sesion_min, vigencia_credencial_dias, permite_acceso_temporal, nivel_clave, inactividad_min, creado_en, actualizado_en)
+PoliticaCredencial(id, organizacion, perfil, tipo_identificador, tipo_secreto, longitud_minima, exige_mayuscula, exige_minuscula, exige_digito, exige_simbolo, intentos_maximos, ventana_intentos_min, bloqueo_minutos, duracion_sesion_min, vigencia_credencial_dias, permite_acceso_temporal, nivel_clave, inactividad_min, autoregistro, bloqueo_alcance, creado_en, actualizado_en)
 
 Clase `PoliticaCredencial` · app `acceso` · **PK** `id` · en el diseño v2: _sin equivalente (tabla agregada)_
 
@@ -474,6 +502,8 @@ Clase `PoliticaCredencial` · app `acceso` · **PK** `id` · en el diseño v2: _
 | `permite_acceso_temporal` |  | BOOLEAN | no | false |  |
 | `nivel_clave` |  | VARCHAR(24) | sí |  | BR-024: excepción del perfil para un nivel educativo (preescolar con avatar). Nulo = política general. |
 | `inactividad_min` |  | SMALLINT | no | 20 | FUN-009: minutos sin actividad tras los que la sesión se cierra sola. |
+| `autoregistro` |  | BOOLEAN | no | false | RN-37: el propio usuario puede crear su cuenta (sólo `student` y `teacher`). RN-33: el castigo por fallar recae en la CUENTA o en la tableta (DISPOSITIVO). |
+| `bloqueo_alcance` |  | VARCHAR(12) | no | 'CUENTA' |  |
 | `creado_en` |  | BIGINT | no | ahora_ms() | Instante en milisegundos del reloj del nodo (CV-03). |
 | `actualizado_en` |  | BIGINT | no | ahora_ms() | Instante en milisegundos del reloj del nodo (CV-03). |
 
@@ -481,6 +511,7 @@ Restricciones del motor:
 
 - `ck_m01_politica_pin_rango: (NOT (tipo_secreto = 'PIN') OR (longitud_minima >= 4 AND longitud_minima <= 8))`
 - `ck_m01_politica_longitud: (longitud_minima >= 4 OR tipo_secreto = 'AVATAR')`
+- `ck_m01_politica_bloqueo_alcance: bloqueo_alcance IN ('CUENTA', 'DISPOSITIVO')`
 - `UNIQUE (organizacion_id, perfil) WHERE nivel_clave IS NULL  [uq_m01_politica_perfil]`
 - `UNIQUE (organizacion_id, perfil, nivel_clave) WHERE nivel_clave IS NOT NULL  [uq_m01_politica_perfil_nivel]`
 
@@ -578,8 +609,10 @@ Clase `Usuario` · app `acceso` · **PK** `id` · en el diseño v2: usuario
 | `ultimo_acceso_en` |  | BIGINT | sí |  | Instante en milisegundos del reloj del nodo (CV-03). |
 | `provisional` |  | BOOLEAN | no | false | Admisión nominal (JRN-007): cuenta creada por el profesor «por su nombre», pendiente de vincular. |
 | `vinculado_a_id` | **FK** → `m01_usuario.id` | VARCHAR(36) | sí |  | Llave foránea física → m01_usuario. |
+| `origen` |  | VARCHAR(16) | no | 'INSTALACION' | RB-03: cómo nació la cuenta y si el profesor ya confirmó que es quien dice ser (nulo = «sin confirmar»). |
+| `confirmado_en` |  | BIGINT | sí |  | Instante en milisegundos del reloj del nodo (CV-03). |
 
-- Índices: (organizacion_id)  [m01_usuario_organizacion_id_2f1bd94b] · (rol_id)  [m01_usuario_rol_id_1a5cb13c] · (creado_por_id)  [m01_usuario_creado_por_id_56acb03a] · (organizacion_id, estado)  [m01_usuario_organiz_c8194f_idx] · (rol_id)  [m01_usuario_rol_id_5690f4_idx] · (vinculado_a_id)  [m01_usuario_vincula_153213_idx] · (vinculado_a_id)  [m01_usuario_vinculado_a_id_8487a4f8]
+- Índices: (organizacion_id)  [m01_usuario_organizacion_id_2f1bd94b] · (rol_id)  [m01_usuario_rol_id_1a5cb13c] · (creado_por_id)  [m01_usuario_creado_por_id_56acb03a] · (vinculado_a_id)  [m01_usuario_vinculado_a_id_8487a4f8] · (organizacion_id, estado)  [m01_usuario_organiz_c8194f_idx] · (rol_id)  [m01_usuario_rol_id_5690f4_idx] · (vinculado_a_id)  [m01_usuario_vincula_153213_idx] · (organizacion_id, origen)  [m01_usuario_organiz_9fcd6f_idx]
 
 #### `m01_usuario_permiso`  ·  REL · asociativa
 

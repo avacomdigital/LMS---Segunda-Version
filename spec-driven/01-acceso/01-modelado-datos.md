@@ -3,8 +3,8 @@
 | Campo | Valor |
 |---|---|
 | Módulo | `acceso` · **MOD-001 · Identity & Access** del Documento Maestro (DOM-001 · Identidad y Organización) |
-| Estado | Especificado e implementado en `backend/acceso/`; alineado con el Maestro según [04 · Lineamientos](04-Lineamientos-Al-Documento-Maestro.md). Revisión 2026-10-01: registro de estudiantes y grupos desde OPS ([§3.28](#328--registro-de-estudiantes-y-grupos-desde-ops-pantalla-grupos)); sin tablas nuevas |
-| Prefijo de tablas | `m01_` (CV-01) · 18 tablas |
+| Estado | Especificado e implementado en `backend/acceso/`; alineado con el Maestro según [04 · Lineamientos](04-Lineamientos-Al-Documento-Maestro.md). Revisión 2026-10-01: registro de estudiantes y grupos desde OPS ([§3.28](#328--registro-de-estudiantes-y-grupos-desde-ops-pantalla-grupos)). Revisión 2026-10-06: PIN maestro, alta propia de profesores y alumnos, visitante y castigo por tableta ([§3.29](#329--pin-maestro-alta-propia-y-visitante-requisitos-del-2026-10-05)); **una tabla y cinco columnas nuevas**, migraciones `0010` y `0011` |
+| Prefijo de tablas | `m01_` (CV-01) · 19 tablas |
 | Plataforma | Python 3.12 · Django 5.2.3 · DRF 3.16.1 · SQLite · `argon2-cffi` · `cryptography` · `PyJWT` |
 | Cliente | .NET MAUI (AVACOM OPS Master en Windows, AVACOM Student en Windows/Android), sin internet, sin teclado en el nodo principal |
 | Decisiones que cierra | Q-04 (autenticación mínima) y Q-24 (tabla preparatoria de identidad) |
@@ -26,6 +26,8 @@ El aula AVACOM funciona sin internet. Todo lo que hace falta para **decidir qui�
 8. **Escaladas temporales (BR-101)** con motivo, caducidad obligatoria y concedente distinto del receptor. **Carga masiva** desde archivo (FUN-003).
 9. **Nada se borra (CV-05)**: identificadores se retiran, asignaciones se revocan, cuentas pasan a `RETIRADO` y no vuelven (BR-025). Todo cambio publica un evento `identidad.*.v1` en la cola de salida dentro de la misma transacción.
 10. **Arquitectura hexagonal dentro del monolito modular.** Dominio y casos de uso no importan Django; ORM, DRF, Argon2, AES y JWT son adaptadores sustituibles.
+11. **PIN maestro de la institución (2026-10-06).** Seis dígitos que pertenecen al aula, no a una persona: con él el profesor crea su propio usuario y restablece su contraseña sin internet. Se guarda sólo su huella, vence a los 365 días y se protege contra la adivinación con bloqueo por equipo y tope global ([§3.29](#329--pin-maestro-alta-propia-y-visitante-requisitos-del-2026-10-05)).
+12. **El alumno se identifica tocando su nombre y marcando su PIN**; si olvidó el PIN entra como **visitante** (cuenta efímera de permisos mínimos). El castigo por equivocarse recae en la **tableta**, no en la cuenta.
 
 ---
 
@@ -129,6 +131,7 @@ Convenciones que se conservan: fechas en **bigint milisegundos** (CV-03), claves
 | `locale` | char(16) | BCP 47 |
 | `zona_horaria` | char(64) | IANA |
 | `creado_en` | bigint | |
+| `visitante` | bool | **Nuevo (0010).** La institución permite entrar como visitante (RN-47). Por defecto `true` |
 
 ### 3.2 · `m01_politica_credencial` · PoliticaCredencial
 
@@ -142,7 +145,7 @@ El reglamento de acceso (BR-023, BR-024). Una fila **general por perfil** y, opc
 | `nivel_clave` | char(24) null | `preescolar` · `primaria` · `secundaria` · `bachillerato` · `preuniversitario`. Null = política general |
 | `tipo_identificador` | char(24) | `DNI` / `CODIGO_ESTUDIANTIL` / `CLAVE_INSTALACION` / `EMAIL` / `CUALQUIERA` |
 | `tipo_secreto` | char(16) | `PIN` / `PASSWORD` / `AVATAR` |
-| `longitud_minima` | smallint | 6 para PIN, 8 para contraseña docente, 12 para administración |
+| `longitud_minima` | smallint | **4** para el PIN del alumno (antes 6), 8 para contraseña docente, 12 para administración |
 | `exige_mayuscula`, `exige_minuscula`, `exige_digito`, `exige_simbolo` | bool | Sólo aplican a `PASSWORD` |
 | `intentos_maximos` | smallint | 5 |
 | `ventana_intentos_min` | smallint | 15 |
@@ -151,9 +154,11 @@ El reglamento de acceso (BR-023, BR-024). Una fila **general por perfil** y, opc
 | `inactividad_min` | smallint | **20** (30 para estudiantes). FUN-009 |
 | `vigencia_credencial_dias` | int null | Null = no caduca |
 | `permite_acceso_temporal` | bool | Sólo `student` por defecto |
+| `autoregistro` | bool | **Nuevo (0010).** El propio usuario puede crear su cuenta (RN-37); sólo `student` y `teacher`. Encendido por defecto en ambos |
+| `bloqueo_alcance` | char(12) | **Nuevo (0010).** `CUENTA` o `DISPOSITIVO` (RN-33). `DISPOSITIVO` por defecto para `student`; el personal sólo admite `CUENTA` |
 | `creado_en`, `actualizado_en` | bigint | |
 
-Invariantes: única por `(organizacion, perfil)` sin nivel; única por `(organizacion, perfil, nivel_clave)` con nivel; `PIN` ⇒ 4..8; `AVATAR` sólo para `student`; `5 ≤ inactividad_min ≤ duracion_sesion_min`.
+Invariantes: única por `(organizacion, perfil)` sin nivel; única por `(organizacion, perfil, nivel_clave)` con nivel; `PIN` ⇒ 4..8 (4..6 para `student`, sin reglas de complejidad: `1234` vale, RN-31); `AVATAR` sólo para `student`; `5 ≤ inactividad_min ≤ duracion_sesion_min`; `bloqueo_alcance = DISPOSITIVO` sólo para `student`; `autoregistro` sólo para `student` y `teacher`.
 
 Resolución para una persona: **política de su grupo** → **política de su nivel educativo** → **política de su perfil**.
 
@@ -207,6 +212,8 @@ La **cuenta**. Sin datos personales.
 | `idioma` | char(8) | ISO 639-1 |
 | `provisional` | bool | Admisión nominal: la creó el profesor «por su nombre» y aún no se vinculó |
 | `vinculado_a` | FK null (usuario) | Al vincular, apunta a la persona definitiva y la provisional pasa a `RETIRADO` |
+| `origen` | char(16) | **Nuevo (0010).** Cómo nació la cuenta: `INSTALACION` · `IMPORTACION` · `PROFESOR` · `AUTOALTA_ALUMNO` · `PIN_MAESTRO` · `VISITANTE` (RB-03) |
+| `confirmado_en` | bigint null | **Nuevo (0010).** Nulo = «sin confirmar»: se registró solo y nadie de la institución lo ha respaldado. Las cuentas anteriores se dan por confirmadas |
 | `creado_en`, `actualizado_en`, `creado_por`, `ultimo_acceso_en` | | |
 
 ### 3.7 · `m01_persona` · Persona (1:1)
@@ -320,7 +327,7 @@ Reglas: **una sola vigente por persona** y **cero o una por dispositivo** (INV-0
 
 ### 3.16 · `m01_intento_acceso` · IntentoAcceso
 
-`usuario_id?`, `identificador_hmac`, `dispositivo_id?`, `resultado` (`EXITO` · `FALLO` · `BLOQUEADO` · `DESBLOQUEO` · `TEMPORAL_EXITO` · `TEMPORAL_FALLO`), `motivo`, `autorizacion_id?`, `momento`. De aquí se **calcula** el bloqueo (FUN-007).
+`usuario_id?`, `identificador_hmac`, `dispositivo_id?`, `resultado` (`EXITO` · `FALLO` · `BLOQUEADO` · `DESBLOQUEO` · `TEMPORAL_EXITO` · `TEMPORAL_FALLO` · `ALTA`), `motivo`, `autorizacion_id?`, `momento`. De aquí se **calcula** el bloqueo de la cuenta (FUN-007), el de la **tableta** (RN-33: los intentos con `dispositivo_id`) y el del **PIN maestro** (RN-10: `motivo = pin_maestro`, sin usuario; `FALLO`, `BLOQUEADO` y `EXITO`). `ALTA` no cuenta como fallo ni como acierto: sólo deja constancia de la cuenta propia que nació desde esa tableta (tope de 5 por hora) y desde qué equipo se registró un profesor. Índices nuevos: `(dispositivo_id, -momento)` y `(motivo, -momento)`.
 
 ### 3.17 · `m01_autorizacion_temporal` · AutorizacionTemporal
 
@@ -507,6 +514,43 @@ El módulo tiene que contestar, sin red y en milisegundos, tres preguntas que se
 
 ---
 
+### 3.29 · PIN maestro, alta propia y visitante (requisitos del 2026-10-05)
+
+Los requisitos de [requisitos.md](requisitos.md) se resolvieron con **una tabla nueva y cinco columnas**, sin tocar el resto del modelo. Cada decisión de modelado, y por qué no hizo falta más:
+
+**`m01_pin_maestro` · PinMaestro (tabla nueva, RB-01).** Una fila por **versión** del PIN de la institución.
+
+| Columna | Tipo | Nota |
+|---|---|---|
+| `id` | char(36) PK | |
+| `organizacion_id` | FK | |
+| `hash` | char(255) | Argon2id. **El PIN no se guarda ni se puede leer** (RN-04): si se olvida se reemplaza |
+| `activa` | bool | Una sola `activa` por organización (índice único parcial `uq_m01_pin_maestro_activo`) |
+| `creado_en` | bigint | Nacimiento de la versión: arranca el reloj de 365 días |
+| `creado_por_id` | FK null (usuario) | Nulo en el primer arranque (aún no hay administrador) y en el reemplazo por consola |
+| `vence_en` | bigint | `creado_en` + 365 días. No es configurable (RN-07). Check `vence_en > creado_en` |
+| `sustituida_en` | bigint null | Las versiones sustituidas se conservan (CV-05): el dominio impide reutilizar cualquiera de las tres últimas (RN-05). Check `activa OR sustituida_en NOT NULL` |
+
+No es una `m01_credencial` (no tiene dueño: D-A5) ni una escalada (no caduca por BR-101 sino por vigencia anual). **Vencido** (día 366) deja de aceptar altas y restablecimientos de profesores; no detiene clases ni sesiones (D-A1, DEC-018) y la administración entra sin PIN para poder reemplazarlo.
+
+**Lo que NO necesitó tabla nueva**
+
+| Necesidad | Cómo se resuelve |
+|---|---|
+| Registro de intentos y bloqueo del PIN maestro (RB-02) | `m01_intento_acceso` con `motivo = pin_maestro` y `usuario_id` nulo; el bloqueo se **calcula** (5 fallos en 15 min por equipo → 15 min, tres bloqueos seguidos → 60 min; tope global de 20 fallos por hora) |
+| PIN pendiente del alumno (RB-05) | **Ausencia de credencial activa.** Es el único estado sin ambigüedad: ni hash utilizable ni bandera aparte que se desincronice |
+| Visitante (RB-07) | `m01_sesion.clase = VISITANTE` y una cuenta `STUDENT` con `origen = VISITANTE`, `provisional = true`, sin credencial ni grupo; se **retira** (`RETIRADO`) al cerrar la sesión o a las 24 h. No hay sexto rol (D-A4) |
+| Castigo a la tableta (RN-33) | Se calcula sobre `m01_intento_acceso.dispositivo_id`; `bloqueo_alcance` en la política decide si recae en la cuenta o en la tableta |
+| Tope de altas propias por tableta (RB-17) | Una fila `ALTA` por cuenta nacida desde la tableta |
+| Equipo desde el que se registró un profesor (RB-15) | La fila `ALTA` de esa cuenta |
+| Permiso del PIN maestro y profesor que crea grupos (RB-08, RB-28) | Filas de `m01_permiso` / `m01_rol_permiso` sembradas por la migración `0011` |
+
+**Migraciones.** `0010_pin_maestro_origen_autoalta` (esquema) y `0011_datos_pin_maestro_y_alumnos` (datos, idempotente): siembra `identity.master_pin.manage` (sólo `ADMIN`; el técnico no), concede al profesor `identity.group.manage` acotado a sus grupos, completa `origen` (`INSTALACION` si nadie la creó, `PROFESOR` si la creó un profesor, `IMPORTACION` si la creó la administración) y `confirmado_en`, y lleva la política del alumno a PIN de 4 dígitos, registro propio y castigo a la tableta (sin pisar lo que la institución ya ajustó).
+
+Cardinalidad: `m01_organizacion 1 ─ N m01_pin_maestro` (una activa); `m01_usuario 1 ─ N m01_pin_maestro` por `creado_por`. La tabla no es asociativa y su atributo propio es el tiempo (vigencia).
+
+---
+
 ## 4 · Protección de la información
 
 | Dato | Protección | Motivo |
@@ -589,7 +633,7 @@ Regla verificable: una prueba recorre `dominio/` y `aplicacion/` y falla si alg�
 - `m01_usuario.id` **es** el `persona_id` del expediente. `vinculado_a` permite reasignar lo que hizo una cuenta provisional.
 - Grupos (MOD-002) viven hoy dentro de `acceso` y se administran desde la pantalla **Grupos** de OPS (§3.28); cuando exista ese módulo, se replicarán desde su dueño. Los dispositivos ya tienen dueño desde el 2026-09-28 (MOD-009, `device_manager`): este módulo los lee por su puerto `RepositorioDispositivos`, que llama a `device_manager/servicios.py` dentro de la transacción del login.
 - La orden de limpiar el contenedor de la tableta (MOD-009) se deriva de `identidad.sesion.cerrada.v1` con motivo `otro_dispositivo` o `dispositivo_compartido`.
-- La exigencia de sesión en el expediente sigue preparada y no activada (`AVACOM_LMS_EXIGIR_SESION=0`, Q-34).
+- La exigencia de sesión (`AVACOM_LMS_EXIGIR_SESION`) queda en `1` en el instalador desde el 2026-10-06 (Q-34 cerrada, RB-40); el valor `0` sólo sirve para el modo prototipo del repositorio. El visitante pasa con sus permisos limitados.
 
 ---
 

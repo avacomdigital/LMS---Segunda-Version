@@ -56,21 +56,34 @@ Lo que la tableta necesita para pintar PAN-101. **Sin PII.** Incluye las excepci
   "instalado": true,
   "organizacion": { "codigo": "IE-SANJOSE", "nombre": "IE San José", "pais": "CO", "idioma": "es", "locale": "es-CO" },
   "perfiles": {
-    "student": { "tipo_identificador": "CODIGO_ESTUDIANTIL", "tipo_secreto": "PIN", "longitud_minima": 6,
-                 "permite_acceso_temporal": true, "inactividad_min": 30,
+    "student": { "tipo_identificador": "CODIGO_ESTUDIANTIL", "tipo_secreto": "PIN", "longitud_minima": 4,
+                 "permite_acceso_temporal": true, "inactividad_min": 30, "autoregistro": true, "bloqueo_alcance": "DISPOSITIVO",
                  "niveles": { "preescolar": { "tipo_identificador": "CODIGO_ESTUDIANTIL", "tipo_secreto": "AVATAR", "longitud_minima": 4, "permite_acceso_temporal": true, "inactividad_min": 30 } } },
     "teacher": { "tipo_identificador": "DNI", "tipo_secreto": "PASSWORD", "longitud_minima": 8, "permite_acceso_temporal": false, "inactividad_min": 20, "niveles": {} },
     "admin": { "...": "..." }, "reports": { "...": "..." }, "technician": { "...": "..." }
   },
   "duracion_sesion_min": 240, "inactividad_min": 30,
   "niveles_educativos": ["preescolar", "primaria", "secundaria", "bachillerato", "preuniversitario"],
+  "pin_maestro": { "configurado": true, "vencido": false, "por_vencer": false },
+  "autoregistro_alumnos": true, "autoregistro_docentes": true, "visitante": true,
+  "sesion_obligatoria": true,
   "claves_derivadas": false
 }
 ```
 
+`pin_maestro` (RB-24) dice **sólo** si hay PIN, si venció y si está a 30 días o menos de vencer (`por_vencer`, que enciende la banda del tablero de administración y técnico, RN-08): sin fechas ni días, que son de quien tiene `identity.master_pin.manage`. `autoregistro_*` y `visitante` dicen qué puertas de entrada están abiertas: la pantalla no ofrece las que están cerradas.
+
 ### 1.2 · `POST /api/acceso/instalacion/`
 
-Primer arranque (JRN-001). Sólo mientras no exista organización (409 `ya_instalado` después). Crea organización, las cinco políticas por perfil y el primer administrador. Devuelve `password_inicial` **una sola vez** si no se envió contraseña (PAN-204).
+Primer arranque (JRN-001). Sólo mientras no exista organización (409 `ya_instalado` después). Crea organización, las cinco políticas por perfil, el primer administrador y **la primera versión del PIN maestro** (RB-10, RB-21). Devuelve `password_inicial` **una sola vez** si no se envió contraseña (PAN-204).
+
+```json
+{ "organizacion": { "codigo": "IE-SANJOSE", "nombre": "IE San José" },
+  "administrador": { "nombres": "Ana", "dni": "1042888795", "password": "" },
+  "pin_maestro": "482915" }
+```
+
+`pin_maestro` es **obligatorio** (RN-03): seis dígitos y nada trivial (RN-05). Sin él, `400`; trivial, `400 pin_debil`; mal formado, `400 pin_invalido`; en cualquiera de los tres la instalación no deja nada a medias. **La respuesta no lo devuelve** (RN-04): la hoja de acceso del primer arranque (PAN-204) lo muestra desde lo que el cliente acaba de marcar.
 
 ### 1.3 · Dispositivos → MOD-009
 
@@ -83,6 +96,16 @@ Desde el 2026-09-28 el registro idempotente de la tableta vive en **MOD-009 · D
 ```
 
 `rol` es opcional: si la persona tiene varios roles vigentes elige con cuál trabaja (BR-021); si se omite, entra con su rol principal.
+
+**Tres formas de identificarse, un solo caso de uso** (el sistema decide quién es por la cuenta, no por la pantalla):
+
+| Quién | Cuerpo |
+|---|---|
+| Personal (profesor, técnico) y alumno «de siempre» | `{ identificador, secreto, dispositivo }` |
+| **Alumno que toca su nombre** (RB-22, PAN-002) | `{ "usuario_id", "secreto", "dispositivo" }`: sólo desde una **tableta registrada** (BR-056; si no, `403 dispositivo_no_autorizado`) y sólo para alumnos con PIN o avatar: el `usuario_id` de un profesor o de la administración se trata como si no existiera (`401 credenciales_invalidas`). Si todavía no eligió su PIN, `403 pin_pendiente` (no cuenta como intento fallido) |
+| **Administración** | `{ identificador, secreto, dispositivo, "pin_maestro" }`: toda cuenta cuyo rol efectivo sea de administración presenta **además** el PIN maestro mientras esté vigente. Sin él, el nodo contesta `401 pin_maestro_requerido` **después** de comprobar la contraseña (para no revelar a quien no la conoce qué cuentas son de administración). Un PIN vencido **no se exige**: sólo la sesión del administrador puede reemplazarlo (RN-09). Aplican RN-10 y RN-11 |
+
+**El castigo por equivocarse recae en la tableta, no en la cuenta (RN-33).** Con `bloqueo_alcance = DISPOSITIVO` (alumnos por defecto), 5 PIN equivocados en una tableta —de cualquier alumno— la ponen en pausa 2 minutos: `423 dispositivo_en_pausa` con `reintentar_en_seg`. La cuenta no se bloquea nunca por intentos y desde otra tableta entra normal. Entrar como visitante (§6 ter) nunca se bloquea. Para el personal el bloqueo sigue siendo por cuenta.
 
 → `200`
 
@@ -98,7 +121,11 @@ Desde el 2026-09-28 el registro idempotente de la tableta vive en **MOD-009 · D
 
 **Sesión única.** Si la persona tenía otra sesión abierta, se cierra con motivo `otro_dispositivo` y `sesion_anterior` trae de dónde se cerró, para mostrar PAN-103 / MSG-020. Si otra persona tenía sesión en esta misma tableta, se cierra con `dispositivo_compartido` (INV-011). Si no había nada que cerrar, `sesion_anterior` es `null`.
 
-Errores: `401 credenciales_invalidas` (mismo mensaje y coste para inexistente, tipo no permitido, rol no asignado y secreto incorrecto; trae `intentos_restantes`), `423 usuario_bloqueado` con `reintentar_en_seg` (FUN-007).
+Errores: `401 credenciales_invalidas` (mismo mensaje y coste para inexistente, tipo no permitido, rol no asignado y secreto incorrecto; trae `intentos_restantes`), `423 usuario_bloqueado` con `reintentar_en_seg` (FUN-007), `423 dispositivo_en_pausa`, `403 pin_pendiente`, `403 dispositivo_no_autorizado`, `401 pin_maestro_requerido`, `401 pin_maestro_invalido` (con `intentos_restantes`), `423 pin_maestro_bloqueado`.
+
+### 1.4 bis · `POST /api/acceso/sesiones/visitante/` · Entrar como visitante (RB-19)
+
+`{ "dispositivo": "a8f3…", "grupo_id"?: "…" }` → `200` con la forma de §1.4 y `usuario.clase_sesion: "VISITANTE"`. Sin profesor, PIN ni código; ver §6 ter.
 
 ### 1.5 · `POST /api/acceso/autorizaciones-temporales/canjear/`
 
@@ -217,7 +244,10 @@ CAP-006 (suplente): `POST …/roles/` con `rol: "TEACHER"`, `alcance_tipo: "ASSI
 
 ### 4.8 · `POST /api/acceso/usuarios/{id}/credencial/restablecer/` (FUN-006, CAP-004)
 
-Permiso `identity.password.reset`. `{ "secreto": "204915" }` opcional. → `200 { "secreto_provisional", "tipo_secreto", "debe_cambiar": true, "sesiones_revocadas" }`. Se devuelve **una sola vez**.
+Permiso `identity.password.reset`. `{ "secreto": "204915" }` opcional. → `200 { "secreto_provisional", "tipo_secreto", "pin_pendiente", "debe_cambiar", "sesiones_revocadas" }`.
+
+- **Personal:** como siempre; el secreto provisional se devuelve **una sola vez**.
+- **Alumno sin `secreto` (RB-23, RN-35):** la cuenta queda en **PIN pendiente**; no se genera, no se devuelve ni se imprime ningún número (`secreto_provisional: null`, `pin_pendiente: true`). El alumno elige el suyo la próxima vez que toque su nombre (`POST /estudiantes/{id}/pin/`, §6 ter). Con `secreto` explícito el contrato anterior se conserva.
 
 ### 4.9 · `POST /api/acceso/usuarios/{id}/desbloquear/` (FUN-008)
 
@@ -258,12 +288,58 @@ Estudiantes y grupos en pocas llamadas, pensadas para una pantalla táctil. No h
 
 | Ruta | Verbo | Cuerpo / respuesta |
 |---|---|---|
-| `/api/acceso/padron/` | GET | `{ instalado, organizacion{codigo,nombre}, grupos[{id,codigo,nombre,periodo,nivel_clave,activo,estudiantes[{id,alias,estado,provisional}],docentes}], sin_grupo[{id,alias}] }`. Nodo vacío: `{ instalado:false, … }` con **200** (no es un error). Con sesión, sólo los grupos que el alcance permite |
+| `/api/acceso/padron/` | GET | `{ instalado, organizacion{codigo,nombre}, grupos[{id,codigo,nombre,periodo,nivel_clave,activo,estudiantes[{id,alias,estado,provisional,origen,confirmado,pin_pendiente}],docentes}], sin_grupo[{id,alias}] }`. Nodo vacío: `{ instalado:false, … }` con **200** (no es un error). Con sesión, sólo los grupos que el alcance permite |
 | `/api/acceso/padron/preparar/` | POST | Sin cuerpo. Crea la organización `AULA-PRUEBA` (día cero de prueba). `201 { organizacion }`; `409` si el nodo ya está instalado |
 | `/api/acceso/padron/grupos/` | POST | `{ "nombre", "codigo"?, "periodo"?, "nivel_clave"? }`. El código sale del nombre («Sexto A» → `SEXTO-A`) y el periodo es el año si no se dan. `201`; `409` si ya existe ese código en ese periodo; `403` si el rol no tiene `identity.group.manage` |
-| `/api/acceso/padron/estudiantes/` | POST | `{ "nombres", "apellidos"?, "documento"?, "pin"?, "grupo_id" }` → `201 { id, alias, grupo_id, identificador, secreto_inicial? }`. `secreto_inicial` (PIN generado) sale **una sola vez**. `400 identificador_duplicado`; `404` grupo inexistente; `403` grupo ajeno |
+| `/api/acceso/padron/estudiantes/` | POST | `{ "nombres", "apellidos"?, "documento"?, "pin"?, "grupo_id" }` → `201 { id, alias, grupo_id, identificador, pin_pendiente }`. **Sin `pin` la cuenta queda en PIN pendiente** (RB-26): ya no se genera ni se entrega `secreto_inicial`. `400 identificador_duplicado`; `404` grupo inexistente; `403` grupo ajeno |
 | `/api/acceso/padron/grupos/{id}/estudiantes/` | POST | `{ "usuario_id" }`: agrega a un estudiante existente (o lo reincorpora, reabriendo su pertenencia). `201`, o `200` con `ya_estaba: true` |
 | `/api/acceso/padron/grupos/{id}/estudiantes/{usuario_id}/` | DELETE | Lo saca del grupo (`hasta = ahora`); la persona no se borra. `204` |
+
+---
+
+## 6 ter · PIN maestro, profesores, alumnos y visitante (requisitos del 2026-10-05)
+
+Rutas nuevas. Las marcadas **sin sesión** no declaran un permiso `identity.*`: su autorización es el PIN maestro (profesores) o la tableta registrada (alumnos). Es una **excepción deliberada** a «toda ruta declara permiso».
+
+**No existe `POST /pin-maestro/verificar/`** (D-A6): un endpoint que sólo dijera «sí/no» sería el oráculo perfecto para quien prueba combinaciones. El PIN se verifica **dentro** de la operación que autoriza; a cambio, la app conserva lo escrito si el PIN falla.
+
+| Ruta | Verbo | Sesión · permiso | Cuerpo → respuesta |
+|---|---|---|---|
+| `/api/acceso/pin-maestro/` | GET | `identity.master_pin.manage` | `{ configurado, creado_en, vence_en, dias_restantes, vencido, aviso, bloqueado_hasta }`. **Nunca** el PIN ni su huella |
+| `/api/acceso/pin-maestro/` | PUT | `identity.master_pin.manage` | `{ pin_nuevo }` → `200 { creado_en, vence_en, dias_restantes }`. Seis dígitos, no trivial, distinto de los tres últimos; reinicia el reloj de 365 días. Sirve también para configurar el primero en un nodo que se actualizó sin PIN |
+| `/api/acceso/docentes/registro/` | POST | **sin sesión · PIN** | `{ pin_maestro, documento, nombres, apellidos, secreto, grupos[ids], dispositivo }` → `201 { id, alias }`. Cuenta `TEACHER` activa con origen `PIN_MAESTRO`, contraseña definitiva, docente de los grupos elegidos (RN-20…RN-23) |
+| `/api/acceso/docentes/restablecer/` | POST | **sin sesión · PIN** | `{ pin_maestro, documento, secreto_nuevo, dispositivo }` → `200 { sesiones_revocadas }`. Sólo profesores: un documento de administración, reportes, técnico o alumno se contesta **igual** que uno inexistente (`404`, RN-12, RN-25). Cierra todas sus sesiones y levanta su bloqueo |
+| `/api/acceso/docentes/?origen=PIN_MAESTRO` | GET | `identity.user.read` con alcance de organización | `[{ id, alias, estado, origen, registrado_en, confirmado, equipo, grupos[] }]` para que la administración revise y suspenda (`PATCH /usuarios/{id}/` con `estado`) |
+| `/api/acceso/aula/grupos/` | GET | **sin sesión · tableta registrada** | `?dispositivo=<huella>` (o la cabecera `X-Avacom-Dispositivo`) → `[{ id, codigo, nombre, nivel_clave, tipo_secreto, longitud_pin, alumnos, registro_abierto }]`: sólo los grupos con alumnos o con registro abierto; `?para=docente` trae todos los activos |
+| `/api/acceso/aula/grupos/{id}/estudiantes/` | GET | **sin sesión · tableta registrada** | `[{ id, alias, pin_pendiente }]`. **Nada más**: ni documento ni apellidos (D-A8) |
+| `/api/acceso/estudiantes/registro/` | POST | **sin sesión · tableta registrada** | `{ grupo_id, nombres, apellidos?, alias?, pin, dispositivo }` → `201 { id, alias }`. Origen `AUTOALTA_ALUMNO`, sin confirmar; el alias (nombre + inicial) es único en el grupo sin distinguir mayúsculas ni tildes: si existe, `409 alias_duplicado` con `sugerencia` («Juan Pé.»). Tope de 5 por tableta y hora; se apaga con la política `autoregistro` |
+| `/api/acceso/estudiantes/{id}/pin/` | POST | **sin sesión · tableta registrada** | `{ pin, dispositivo }` → `200`. Sólo si la cuenta está en PIN pendiente; si ya tiene PIN, `409 pin_ya_establecido` |
+| `/api/acceso/sesiones/visitante/` | POST | **sin sesión · tableta registrada** | `{ dispositivo, grupo_id? }` → `200` con la forma del login y `clase_sesion: "VISITANTE"` |
+| `/api/acceso/visitantes/` | GET | `identity.session.read` (profesor o administración) | `[{ usuario_id, alias, sesion_id, dispositivo_id, dispositivo, emitida_en }]`: quiénes están dentro como visitante y desde qué tableta (RN-46) |
+| `/api/acceso/usuarios/{id}/confirmar/` | POST | `identity.user.update` | `200 { id, confirmado_en }`. Idempotente (RB-20) |
+| `/api/acceso/politicas/{perfil}/` | PUT | `identity.policy.manage` | Admite además `autoregistro`, `bloqueo_alcance` y, sólo en `student` general, `visitante` (el interruptor institucional de RN-47) |
+
+**Visitante (RN-40…RN-47).** Cada visita crea una cuenta efímera «Visitante · <tableta>» con rol `STUDENT`, `provisional`, origen `VISITANTE`, sin clave ni grupo, y una sesión de clase `VISITANTE` de 24 h como máximo. Sólo puede leer lecciones (`content.read`), cerrar su sesión y seguir la clase por el código; todo lo demás responde `403 sesion_visitante_limitada` (RB-25). Se **retira** (no se borra) al cerrar la sesión, cuando otra persona entra en la tableta (INV-011) o pasadas 24 h. El profesor puede vincular la visita a un alumno con `POST /usuarios/{id}/vincular/` (el mismo mecanismo de JRN-007, RN-44).
+
+**Grupos del profesor (RB-28).** `POST /api/acceso/grupos/` y `/padron/grupos/` admiten ahora al profesor (`identity.group.manage` acotado a sus grupos): crea el suyo y queda como `DOCENTE`; editar uno ajeno sigue en `403`.
+
+### Códigos de error nuevos
+
+| HTTP | `codigo` | Cuándo |
+|---|---|---|
+| 400 | `pin_invalido` · `pin_debil` | No son 6 dígitos · trivial o repetido (RN-05) |
+| 401 | `pin_maestro_requerido` | La administración entra además con el PIN (después de comprobar su contraseña) |
+| 401 | `pin_maestro_invalido` | PIN equivocado (trae `intentos_restantes`) |
+| 403 | `pin_maestro_vencido` | RN-09 |
+| 403 | `dispositivo_no_autorizado` | PIN maestro desde una tableta de alumno (RN-11) · lista o alta desde un equipo no registrado (BR-056) |
+| 403 | `registro_cerrado` · `visitante_no_permitido` | Políticas apagadas · tope de altas por tableta (`motivo: tope_por_tableta`) |
+| 403 | `pin_pendiente` | El alumno aún no eligió su PIN |
+| 403 | `sesion_visitante_limitada` | El visitante intentó algo que no puede |
+| 409 | `pin_maestro_no_configurado` | No hay versión activa |
+| 409 | `alias_duplicado` | RN-34 (trae `alias` y `sugerencia`) |
+| 409 | `pin_ya_establecido` | La cuenta ya tiene PIN |
+| 423 | `pin_maestro_bloqueado` | RN-10 (trae `reintentar_en_seg`) |
+| 423 | `dispositivo_en_pausa` | RN-33 (trae `reintentar_en_seg`) |
 
 ---
 
@@ -272,10 +348,10 @@ Estudiantes y grupos en pocas llamadas, pensadas para una pantalla táctil. No h
 | Elemento | Cambio |
 |---|---|
 | `REST_FRAMEWORK.DEFAULT_AUTHENTICATION_CLASSES` | `acceso.interfaces.autenticacion.AutenticacionJwt`. Sin cabecera → anónimo; las rutas del expediente no cambian |
-| `AVACOM_LMS_EXIGIR_SESION` | `0` por defecto (Q-34) |
-| `/health/` | `"acceso": { "instalado", "claves_derivadas" }` |
+| `AVACOM_LMS_EXIGIR_SESION` | `0` en el repositorio (modo prototipo) y **`1` en el instalador** (Q-34 cerrada, RB-40) |
+| `/health/` | `"acceso": { "instalado", "claves_derivadas", "pin_maestro": "configurado" \| "vencido" \| "sin_configurar" }` (RB-42, sin fechas) |
 | `m19_auditoria` | Acciones `identidad.*` (sesión abierta/cerrada, cuenta bloqueada/desbloqueada, credencial, rol, escalada, importación, vinculación…) |
-| Comandos | `acceso_instalar` (§1.2) y `acceso_importar` (§4.3) |
+| Comandos | `acceso_instalar` (§1.2; el PIN maestro por `AVACOM_LMS_PIN_MAESTRO` o `--pin-maestro-stdin`, nunca como argumento), `acceso_importar` (§4.3), `acceso_pin_maestro` (estado y `--cambiar`, RB-43) y `acceso_restablecer_admin` (RB-44) |
 
 ---
 

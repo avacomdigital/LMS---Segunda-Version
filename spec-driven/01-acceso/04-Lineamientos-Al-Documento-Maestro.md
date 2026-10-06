@@ -209,6 +209,12 @@ Todos los eventos del módulo siguen la nomenclatura `identidad.<agregado>.<hech
 | D-5 | Inactividad | Temporizador del sistema | Se decide al primer contacto tras el plazo | Sin proceso en segundo plano; mismo efecto para quien usa la sesión |
 | D-6 | Cierre por otro dispositivo | Índice único parcial | Cierre explícito en `abrir_sesion()` | La fila cerrada conserva su motivo e historial |
 | D-7 | Identificador de cinco segmentos y `secuencia` | Obligatorios en toda tabla | UUID y sin `secuencia` | El generador pertenece a MOD-015; se añadirá con él |
+| D-8 | Alumno de primaria con clave corta; secundaria en adelante con usuario y contraseña | PIN hasta primaria; contraseña después | **PIN para todos los alumnos** (4 a 6 dígitos, sin reglas de complejidad); secundaria vuelve a contraseña con `ConfigurarPolitica`, sin tocar código | Es lo pedido (D-A3 de los requisitos 2026-10-05): el PIN reconoce, no protege; lo que protege es que nada se puede dañar con una cuenta de alumno |
+| D-9 | Bloqueo de la cuenta tras intentos fallidos (FUN-007) | La cuenta se bloquea | Para alumnos el castigo recae en la **tableta** (2 minutos tras 5 PIN equivocados); al personal se le sigue bloqueando la cuenta | Que un compañero no pueda bloquear a otro a propósito (D-A2) |
+| D-10 | Un alumno entra si está inscrito o si el profesor lo admite como invitado (BR-047) | El profesor admite uno a uno | El **visitante** entra por su cuenta con una cuenta efímera de permisos mínimos; el profesor los ve y puede expulsarlos | Que «olvidé mi clave» no sirva para frenar la clase ni dependa del profesor (D-A4, D-A7) |
+| D-11 | Credencial de persona / escalada (BR-101) | Toda credencial tiene dueño; toda escalada caduca por BR-101 | El **PIN maestro** es un secreto de la institución con versiones y vigencia anual de 365 días, ni credencial ni escalada | No tiene dueño y no encaja en `m01_credencial` (D-A5) |
+| D-12 | Restablecer la contraseña (FUN-006) | Lo hace quien tiene `identity.password.reset` | Además, **el profesor restablece la suya con el PIN maestro**; la del administrador y la del técnico no se restablecen con él: sólo por consola del equipo (`acceso_restablecer_admin`) | Operar sin internet ni soporte externo (RN-12, PA-07) |
+| D-13 | Autenticar a la administración (FUN-004) | Contraseña | Contraseña **y PIN maestro** mientras esté vigente; un PIN vencido no se exige para que el administrador pueda reemplazarlo | Decisión del responsable del proyecto al implementar los requisitos: el administrador «se identifica y aparte exige la clave maestra». No contradice RN-12: el PIN no reemplaza la contraseña ni abre la cuenta por sí solo |
 
 ---
 
@@ -222,4 +228,8 @@ Todos los eventos del módulo siguen la nomenclatura `identidad.<agregado>.<hech
 | Q-41 | CAP-006 suplente | Registrar en MOD-002 la asignación docente con papel `suplente`; MOD-001 ya acota el rol por grupo y vigencia |
 | Q-42 | Publicar `identidad.sesion.restaurada.v1` | Al aviso de arranque de MOD-015, marcar las sesiones vigentes como restauradas |
 | Q-43 | Orden de cierre de MOD-009 | Consumir `identidad.sesion.cerrada.v1` con motivo `otro_dispositivo` o `dispositivo_compartido` para destruir la clave del contenedor |
-| Q-34 | Exigir sesión en expediente y biblioteca | Sigue abierta: `AVACOM_LMS_EXIGIR_SESION=1` cuando las apps MAUI tengan las pantallas de acceso |
+| Q-34 | Exigir sesión en expediente y biblioteca | **Cerrada el 2026-10-06 (RB-40):** el instalador deja `AVACOM_LMS_EXIGIR_SESION=1`; las pantallas de acceso de OPS y Student existen y el visitante pasa con permisos limitados. El valor `0` queda sólo para el modo prototipo |
+| Q-74 | La pantalla «¿Quién eres?» de Modo Estudio sin verificación (D-15) | **Respondida:** se reemplaza por el acceso con PIN (RF-24); el modo estudio usa la sesión |
+| Q-80 | Vencido el PIN maestro, ¿qué pasa si la administración no lo cambia? (PA-06) | Nada más que RN-09: no hay altas ni restablecimientos de profesores; se sigue enseñando |
+| Q-81 | Archivado de visitantes efímeros (PA-09) | Se **retiran** al cerrar o a las 24 h y nunca se borran; el archivado de las de más de un año entra en la política de retención de MOD-019 |
+| Q-82 | ¿El administrador que olvidó el PIN maestro puede entrar? | Sólo con el PIN vigente; si se perdió, el técnico lo **reemplaza** por consola (`acceso_pin_maestro --cambiar`, RN-04). Si venció, entra sin él |
