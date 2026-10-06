@@ -90,6 +90,18 @@ switch ($Accion) {
         }
     }
     "text" { Textos | ForEach-Object { Write-Output $_ } }
+    "buscar" {
+        # Cualquier elemento (no sólo textos) cuyo nombre contenga -Valor: p. ej. los puntos del PIN, «1 de 6 números marcados».
+        foreach ($e in Todos $win) { if ($e.Current.Name -like ("*" + $Valor + "*")) { Write-Output ("VISTO '" + $e.Current.Name + "'"); exit 0 } }
+        Write-Output "NO HAY '$Valor'"; exit 3
+    }
+    "tecla" {
+        # Un solo toque sobre una tecla del teclado del PIN por su AutomationId (tecla-5, tecla-borrar…).
+        $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $Nombre)
+        $t = $win.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
+        if ($null -eq $t) { Write-Output "NO HAY TECLA '$Nombre'"; exit 2 }
+        Invocar $t; Write-Output "TOCADA '$Nombre'"
+    }
     "esperar" {
         $limite = if ($Espera -gt 0) { $Espera } else { 15000 }
         $reloj = [Diagnostics.Stopwatch]::StartNew()
@@ -136,7 +148,8 @@ switch ($Accion) {
                 else { Start-Sleep -Milliseconds 400 }
             }
             if (-not $hecho) { Write-Output "NO HAY TECLA"; exit 2 }
-            Start-Sleep -Milliseconds 120
+            # El teclado descarta un segundo toque de la MISMA tecla dentro de 180 ms (rebote): entre dígitos se espera más que eso.
+            Start-Sleep -Milliseconds 260
         }
         Write-Output ("PIN MARCADO (" + $Valor.Length + " digitos)")
     }
