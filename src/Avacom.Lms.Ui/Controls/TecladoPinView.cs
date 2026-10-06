@@ -78,7 +78,7 @@ public sealed class TecladoPinView : ContentView
     public bool Habilitado
     {
         get => _habilitado;
-        set { _habilitado = value; foreach (var b in _botones) b.IsEnabled = value && (b != _listo || EsEntregable); Opacity = value ? 1 : 0.55; }
+        set { _habilitado = value; foreach (var b in _botones) b.IsEnabled = value && (b != _listo || EsEntregable); Opacity = value ? 1 : 0.55; Pintar(); }
     }
 
     // ------------------------------------------------------------------------------------------------------------------------ estado
@@ -217,7 +217,12 @@ public sealed class TecladoPinView : ContentView
     private void Pintar()
     {
         for (var i = 0; i < _marcas.Count; i++) _marcas[i].BackgroundColor = i < _pin.Length ? _acento : PuntoVacio;
-        if (_listo is not null) _listo.IsEnabled = _habilitado && EsEntregable;
+        if (_listo is not null)
+        {
+            _listo.IsEnabled = _habilitado && EsEntregable;
+            // «Listo» es rojo: apagado tiene que verse apagado (en Windows el botón deshabilitado conserva su fondo).
+            _listo.Opacity = _listo.IsEnabled || !_habilitado ? 1 : 0.4;
+        }
         SemanticProperties.SetDescription(_puntos, $"{_pin.Length} de {_longitud} números marcados");
     }
 }
