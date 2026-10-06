@@ -87,6 +87,11 @@ internal static class Configuracion
             "Los cursos salen SIEMPRE de AVACOM Contenido (la biblioteca). El curso de ejemplo\n" +
             "del repositorio es solo para pruebas: aqui esta apagado y no viaja en el instalador."),
         new("AVACOM_AULA_PERMITIR_EJEMPLO", "0", true, ""),
+
+        new("AVACOM_LMS_EXIGIR_SESION", "1", false,
+            "1: el nodo exige identificarse (Q-34 cerrada). El personal entra con su documento y su contrasena (la administracion,\n" +
+            "ademas, con el PIN maestro); el alumno toca su nombre y marca su PIN, o entra como visitante.\n" +
+            "Ponlo en 0 solo para una demostracion sin credenciales, y reinicia el servicio AVACOMOPSBackend."),
     ];
 
     /// <summary>

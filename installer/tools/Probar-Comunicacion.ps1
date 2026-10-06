@@ -729,9 +729,17 @@ if (-not $BackendVivo) {
     } else {
         if ([bool](Prop $acceso 'instalado' $false)) {
             Anotar 'OK' 'El nodo tiene organización y administrador'
+            # El PIN maestro (seis dígitos de la institución) se configura en el primer arranque; sin él no hay alta ni restablecimiento de profesores.
+            switch ([string](Prop $acceso 'pin_maestro' '')) {
+                'configurado'    { Anotar 'OK' 'El PIN maestro está configurado y vigente' }
+                'vencido'        { Anotar 'AVISO' 'El PIN maestro venció: ya no acepta altas ni restablecimientos de profesores' '' `
+                                       'La administración lo cambia en OPS (Seguridad del aula) o el técnico con manage.py acceso_pin_maestro --cambiar.' }
+                'sin_configurar' { Anotar 'AVISO' 'El nodo no tiene PIN maestro: los profesores no pueden crear su usuario ni restablecer su contraseña' '' `
+                                       'La administración lo configura en OPS (Seguridad del aula).' }
+            }
         } else {
-            Anotar 'AVISO' 'El nodo aún no tiene organización ni administrador (el login responde 409 no_instalado)' '' `
-                'Créalos una sola vez desde AVACOM OPS Master la primera vez que se abra, o con manage.py acceso_instalar.'
+            Anotar 'AVISO' 'El nodo aún no tiene organización, administrador ni PIN maestro (el login responde 409 no_instalado)' '' `
+                'Créalos una sola vez desde AVACOM OPS Master la primera vez que se abra (pantalla de primer arranque), o con manage.py acceso_instalar (el PIN maestro va en la variable AVACOM_LMS_PIN_MAESTRO).'
         }
         $derivadas = Prop $acceso 'claves_derivadas' $null
         if ($derivadas -eq $true) {

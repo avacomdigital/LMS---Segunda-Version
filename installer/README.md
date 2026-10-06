@@ -439,10 +439,24 @@ dejaría a esas personas sin poder descifrarse.
 
 ### Organización y primer administrador
 
-Tras migrar, el nodo no tiene organización ni administrador y el login responde
-`409 no_instalado`. Son datos de texto libre y el nodo no tiene teclado, así que
-no se piden en el asistente: la pantalla final **avisa** si faltan, y crearlos
-es una pantalla de primer arranque de OPS (tarea de la aplicación).
+Tras migrar, el nodo no tiene organización, administrador ni PIN maestro y el
+login responde `409 no_instalado`. Son datos de texto libre y el nodo no tiene
+teclado, así que no se piden en el asistente: la pantalla final **avisa** si
+faltan (y, ya instalado, muestra el estado del PIN maestro: `configurado`,
+`vencido` o `sin_configurar`, sin fechas), y crearlos es la pantalla de primer
+arranque de OPS (aula, administrador y PIN maestro de seis dígitos; sin PIN no se
+instala). Por consola: `manage.py acceso_instalar ...` con el PIN en la variable
+`AVACOM_LMS_PIN_MAESTRO` o por la entrada estándar (`--pin-maestro-stdin`), nunca
+como argumento. El técnico puede reemplazar el PIN maestro con
+`manage.py acceso_pin_maestro --cambiar` y recuperar al administrador con
+`manage.py acceso_restablecer_admin --dni <documento>`.
+
+**Sesión obligatoria.** El instalador deja `AVACOM_LMS_EXIGIR_SESION=1` en
+`backend.env` (cierra Q-34): expediente, biblioteca, aula, estudio y evaluación
+exigen pase. El personal entra con documento y contraseña (la administración,
+además, con el PIN maestro), el alumno toca su nombre y marca su PIN, y el
+visitante entra con permisos mínimos. Una instalación que ya traía el valor lo
+conserva; si falta, se agrega en 1.
 
 ## La marca
 
@@ -672,8 +686,6 @@ una Student nueva (o al revés) no son compatibles.
   tendrá su propio `AppId`, carpeta, versión y desinstalador, sin servicio ni
   firewall, y leerá `version.json`. Student en Windows tiene **el mismo riesgo de
   WebView2** que tenía OPS si se instala en Program Files.
-- La pantalla de primer arranque de OPS que cree la organización y el primer
-  administrador es una tarea de la aplicación.
 - El perfil de WebView2 dentro del propio producto (3 líneas en el arranque de OPS
   y de Student, junto a `WebViewAjustes`): hoy lo resuelve el instalador.
 - **WebView2 Runtime en un Windows 10 limpio**: el asistente solo lo avisa; no lo
