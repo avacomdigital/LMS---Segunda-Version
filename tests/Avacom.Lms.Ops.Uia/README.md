@@ -39,6 +39,8 @@ Tarda unos 6 minutos. Sale con 0 si todo se cumplió y lista lo que falló si no
 - **OPS corre con un perfil de pruebas** (`AVACOM_OPS_PERFIL=uia-<hora>`, `AVACOM_OPS_SERVIDOR`): sus preferencias y su almacén cifrado van en un
   contenedor aparte y la dirección del servidor sale de la variable, así que la OPS de quien trabaja en el equipo no cambia. `AVACOM_OPS_RUTA` (sólo con
   el perfil) lleva una vez el tablero a otra pantalla, porque las teselas hexagonales no se pueden tocar por UI Automation.
+- **Contraseñas**: el campo enmascarado de MAUI en Windows no acepta el `ValuePattern` de UI Automation (el texto se ve, pero la contraseña queda
+  vacía). Con el perfil, `AVACOM_OPS_CLAVES_VISIBLES=1` deja esos campos sin máscara; el enmascarado en sí no lo prueba este recorrido.
 - **Candado de pantalla**: antes de abrir ventanas toma `%LOCALAPPDATA%\Temp\avacom-gui.lock` (lo usan también las pruebas de Student) y lo suelta al
   terminar. La ventana de prueba toma el foco mientras dura.
 - Si una OPS del usuario está abierta, compila con `-p:OutDir=` a otra carpeta (la suya bloquea `bin\`); el guion sólo cierra las instancias que abre.

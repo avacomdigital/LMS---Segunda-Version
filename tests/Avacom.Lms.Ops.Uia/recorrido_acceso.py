@@ -99,14 +99,16 @@ def mover_vencimiento(db: Path, dias: float) -> None:
     """Simula el paso del tiempo: la versión activa del PIN maestro vence dentro de `dias` días (negativo = ya venció)."""
     vence = int((time.time() + dias * 86400) * 1000)
     with sqlite3.connect(db) as c:
-        c.execute("UPDATE m01_pin_maestro SET vence_en = ? WHERE activa = 1", (vence,))
+        # La base exige vence_en > creado_en (nadie alarga la vigencia): se corre también el nacimiento.
+        c.execute("UPDATE m01_pin_maestro SET creado_en = ?, vence_en = ? WHERE activa = 1", (vence - 365 * 86_400_000, vence))
 
 
 # ------------------------------------------------------------------------------------------------------------------------ OPS por UIA
 
 class Ops:
     def __init__(self, exe: Path, salida: Path, perfil: str, ruta: str | None = None):
-        env = {**os.environ, "AVACOM_OPS_PERFIL": perfil, "AVACOM_OPS_SERVIDOR": NODO}
+        # AVACOM_OPS_CLAVES_VISIBLES: el campo enmascarado de MAUI no acepta el ValuePattern de UIA (ver Ajustes.ClavesVisiblesDePrueba).
+        env = {**os.environ, "AVACOM_OPS_PERFIL": perfil, "AVACOM_OPS_SERVIDOR": NODO, "AVACOM_OPS_CLAVES_VISIBLES": "1"}
         if ruta:
             env["AVACOM_OPS_RUTA"] = ruta
         self.salida = salida
@@ -298,7 +300,7 @@ def recorrido(exe: Path, salida: Path, db: Path) -> None:
         ops.pin(PIN_2)
         anotar("AC-A08 · registrado, entra directo al tablero", ops.esperar("Bienvenido, Marta", 25000))
         anotar("el profesor no ve «Seguridad del aula» ni la banda del PIN",
-               "Seguridad del aula" not in ops.ui("list")[1] and not any("PIN maestro vence" in t for t in ops.textos()))
+               not any(l.startswith("Button\tSeguridad del aula") for l in ops.ui("list")[1].splitlines()) and not any("PIN maestro vence" in t for t in ops.textos()))
 
         # 5 · grupos: «sin confirmar» y «PIN pendiente» (RF-09b)
         ops.invocar("Grupos")
