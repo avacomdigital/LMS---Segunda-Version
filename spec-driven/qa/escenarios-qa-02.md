@@ -23,12 +23,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: «Clase de hoy» | Chip «Biblioteca conectada» y cursos por materia | **Sesión denegada (2026-10-06, instalador 2.3.0).** La sesión del profesor caducaba demasiado pronto (duración corta del token) y OPS lo devolvía al acceso: no se podía dictar la clase. Causa hallada en el código, sin reproducir en el nodo del QA: el pase ya duraba 240 min, pero el reglamento de fábrica cerraba la sesión a los 20 min sin usar (30 el alumno), y una clase en pantalla pasa ese tiempo sin llamar a la API. **Corregido en 2.3.1** (inactividad de fábrica = 240 min; migración `acceso 0012` para nodos ya instalados). Repetir el paso con el 2.3.1 | FALLA (QA-26) |
-| 2 | OPS: «Ciencias naturales» → *Estados de la materia…* → «Ver lecciones ›» | Lección 1 con 4 objetos, lección 2 con 3. No hay lección de examen | | |
-| 3 | OPS: lección 1 → «Dar clase con esta lección» | Código de 6 dígitos («CÓDIGO DE UNIÓN · TOCA PARA AMPLIAR») | | |
-| 4 | Student A: «Clase en vivo» → escribir un código equivocado | «Ese código no es» | | |
-| 5 | Student A: escribir el código correcto → «Entrar a la clase» | Entra; OPS muestra «1 conectados» en ≤ 3 s | | |
-| 6 | OPS: iniciar otra clase con el mismo profesor | Aviso «Ya tienes una clase abierta» con opción de continuar o cerrarla | | |
+| 1 | OPS: «Clase de hoy» | Chip «Biblioteca conectada» y cursos por materia | **Resuelto y probado (2026-10-06).** Primera corrida con el instalador 2.3.0: sesión denegada (QA-26). La sesión del profesor caducaba demasiado pronto y OPS lo devolvía al acceso. Causa: el pase ya duraba 240 min, pero el reglamento de fábrica cerraba la sesión a los 20 min sin usar (30 el alumno), y una clase en pantalla pasa ese tiempo sin llamar a la API. Corregido en 2.3.1 (inactividad de fábrica = 240 min; migración `acceso 0012` para nodos ya instalados). Repetido con la corrección: OPS muestra el chip «Biblioteca conectada» y los cursos por materia, sin devolver al acceso | OK |
+| 2 | OPS: «Ciencias naturales» → *Estados de la materia…* → «Ver lecciones ›» | Lección 1 con 4 objetos, lección 2 con 3. No hay lección de examen | Funciona: la lección 1 sale con 4 objetos, la lección 2 con 3 y no hay lección de examen | OK |
+| 3 | OPS: lección 1 → «Dar clase con esta lección» | Código de 6 dígitos («CÓDIGO DE UNIÓN · TOCA PARA AMPLIAR») | Funciona: aparece el código de 6 dígitos con el rótulo «CÓDIGO DE UNIÓN · TOCA PARA AMPLIAR» | OK |
+| 4 | Student A: «Clase en vivo» → escribir un código equivocado | «Ese código no es» | Funciona: con un código equivocado Student muestra «Ese código no es» | OK |
+| 5 | Student A: escribir el código correcto → «Entrar a la clase» | Entra; OPS muestra «1 conectados» en ≤ 3 s | Funciona: Student A entra a la clase y OPS muestra «1 conectados» en 3 s o menos | OK |
+| 6 | OPS: iniciar otra clase con el mismo profesor | Aviso «Ya tienes una clase abierta» con opción de continuar o cerrarla | Funciona: OPS avisa «Ya tienes una clase abierta» con la opción de continuarla o cerrarla | OK |
 
 ### ESC-01-02 · Presentación (láminas)
 
@@ -38,10 +38,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: abrir la presentación | «Lámina 1 de 7» en OPS y en Student | | |
-| 2 | OPS: avanzar con ▶ por las 7 láminas | Cada lámina se ve completa; imágenes cargan | | |
-| 3 | OPS: llegar a la lámina con video y reproducirlo | El video se ve entero y se puede saltar a otro punto | | |
-| 4 | Student A: comprobar cada cambio | Replica la lámina de OPS en ≤ 3 s | | |
+| 1 | OPS: abrir la presentación | «Lámina 1 de 7» en OPS y en Student | Se abre la presentación, pero algunas láminas se ven en gris | FALLA (QA-27) |
+| 2 | OPS: avanzar con ▶ por las 7 láminas | Cada lámina se ve completa; imágenes cargan | Varias láminas quedan en gris en OPS y también en Student: no cargan sus imágenes | FALLA (QA-27) |
+| 3 | OPS: llegar a la lámina con video y reproducirlo | El video se ve entero y se puede saltar a otro punto | El video no se reproduce. OPS muestra «Este video no está en el equipo del aula todavía. Lo servirá AVACOM Biblioteca» | FALLA (QA-27) |
+| 4 | Student A: comprobar cada cambio | Replica la lámina de OPS en ≤ 3 s | En la tableta las láminas también salen en gris y el video da «El formato no es compatible o el archivo no existe», con la ruta `/data/user/0/com.avacom.lms.student/files/AVACOM/lms/fallos-student.log`. Los archivos de audio tampoco se reproducen. No se midió el tiempo de réplica | FALLA (QA-27) |
+
+**Diagnóstico (2026-10-06, sin cambiar código).** Los archivos **no son incompatibles**: el mp4 es H.264 y el mp3 es normal, y Edge (el motor de WebView2) los reproduce cuando el nodo los sirve. La causa probable es que el nodo exige sesión (`AVACOM_LMS_EXIGIR_SESION=1`, como lo deja el instalador) y la ruta de medios responde **401** a video, audio e imágenes, porque el visor no puede mandar el pase del usuario en la cabecera. El reproductor traduce ese 401 como «formato no compatible» (MediaError 4) y el recuadro de imagen se queda gris. Reproducido en un nodo de pruebas: 401 con sesión obligatoria, 206 sin ella. Falta confirmarlo en la tableta y en la OPS del usuario. Propuesta de solución (URL de medio firmada y con caducidad) en [bugfix/bugfix-01-videos.md](bugfix/bugfix-01-videos.md). Repetir este escenario y ESC-01-03 cuando esté aplicada.
 
 ### ESC-01-03 · Lectura con audio, video y PDF
 
@@ -52,7 +54,7 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
 | 1 | OPS: abrir la lectura | «Página 1 de 4» | | |
-| 2 | OPS: reproducir el audio | Se oye; si falla, mensaje claro | | |
+| 2 | OPS: reproducir el audio | Se oye; si falla, mensaje claro | El audio no se reproduce (visto al probar ESC-01-02, en OPS y en la tableta). Misma causa que ESC-01-02. Repetir el escenario completo con la corrección | FALLA (QA-27) |
 | 3 | OPS: reproducir el video | Se ve y avanza | | |
 | 4 | OPS: abrir el PDF | Se muestra el documento | | |
 | 5 | Student A: repetir los tres | Mismo resultado que en OPS | | |
@@ -479,9 +481,9 @@ Se llena al terminar cada escenario.
 
 | Escenario | Camino | Estado | Fecha | Quién | QA-nn / evidencia |
 |---|---|---|---|---|---|
-| ESC-01-01 · Abrir la clase y entrada de alumnos | HP-01 | FALLA (paso 1) | 2026-10-06 | Gabriel Galindo | QA-26 · corregido en 2.3.1, por repetir |
-| ESC-01-02 · Presentación | HP-01 | | | | |
-| ESC-01-03 · Lectura con audio, video y PDF | HP-01 | | | | |
+| ESC-01-01 · Abrir la clase y entrada de alumnos | HP-01 | OK (6 de 6 pasos) | 2026-10-06 | Gabriel Galindo | QA-26 · resuelto en 2.3.1 y repetido con éxito |
+| ESC-01-02 · Presentación | HP-01 | FALLA (pasos 1 a 4) | 2026-10-06 | Gabriel Galindo | QA-27 · láminas en gris, video y audio no se reproducen · propuesta en `bugfix/bugfix-01-videos.md` |
+| ESC-01-03 · Lectura con audio, video y PDF | HP-01 | FALLA (paso 2, audio); pasos 3 a 5 por repetir | 2026-10-06 | Gabriel Galindo | QA-27 · visto al probar ESC-01-02 |
 | ESC-01-04 · Laboratorio | HP-01 | | | | |
 | ESC-01-05 · Controles de la clase | HP-01 | | | | |
 | ESC-01-06 · Actividad lanzada y respondida | HP-01 | | | | |

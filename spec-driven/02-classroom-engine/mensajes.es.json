@@ -1,0 +1,352 @@
+{
+  "E-BLANK-NUMERIC": {
+    "titulo": "Hueco numérico con algo que no es número",
+    "que_paso": "El modo es `numeric` y la respuesta aceptada o la errada no es un número.",
+    "como_se_arregla": "Escribe un número, o cambia el modo a `text`."
+  },
+  "E-BLANK-SELECT": {
+    "titulo": "Las opciones del hueco no sirven",
+    "que_paso": "`choices` no trae la respuesta aceptada, o no trae ninguna incorrecta.",
+    "como_se_arregla": "Incluye la aceptada y al menos una errada: sin error que elegir, elegir no mide nada."
+  },
+  "E-BLANK-TEMPLATE": {
+    "titulo": "Los huecos no cuadran con la plantilla",
+    "que_paso": "Un hueco declarado no aparece en la plantilla, aparece uno que no se declaró, o el mismo sale dos veces.",
+    "como_se_arregla": "Revisa que cada `{{id}}` de la plantilla tenga su hueco, exactamente una vez."
+  },
+  "E-CURRIC-ID": {
+    "titulo": "El código curricular no tiene forma de id",
+    "que_paso": "En `avacom-node` y `avacom-objective` el código es la clave de un catálogo, no texto libre.",
+    "como_se_arregla": "Escríbelo en minúsculas, sin tildes ni espacios, con `.`, `_` o `-` de separador."
+  },
+  "E-CURRIC-PARENT": {
+    "titulo": "Padre que no existe, o cadena que da la vuelta",
+    "que_paso": "El `parent` de una destreza no está declarado, o la cadena de padres vuelve sobre sí misma.",
+    "como_se_arregla": "Declara el padre, o quítalo si esa destreza no cuelga de ninguna."
+  },
+  "E-CURRIC-RELATION": {
+    "titulo": "Eso no puede medir",
+    "que_paso": "Se declaró `assesses` en una cátedra, una explicación o un simulador. Ninguno captura una respuesta, así que no produce evidencia de nada.",
+    "como_se_arregla": "Cámbialo a `teaches`, o mueve el anclaje a la actividad o al examen que sí mide."
+  },
+  "E-CURRIC-REPLACED": {
+    "titulo": "Anclaje a un nodo ya sustituido",
+    "que_paso": "Un `curriculumRefs` apunta a un id que este mismo curso declara como sustituido por otro.",
+    "como_se_arregla": "Ancla al nodo que está vivo. El id viejo sigue sirviendo para la evidencia ya reunida, no para contenido nuevo."
+  },
+  "E-CURRIC-REPLACES": {
+    "titulo": "Linaje mal declarado",
+    "que_paso": "Un nodo dice reemplazar a otro que sigue declarado en `curriculumNodes`, o se reemplaza a sí mismo. Un nodo no puede estar vivo y sustituido a la vez.",
+    "como_se_arregla": "Si el nodo viejo sigue en uso, quítalo de `replaces`. Si de verdad lo sustituye, borra su declaración: el linaje es lo que mantiene la evidencia del id viejo."
+  },
+  "E-CURRIC-UNDECLARED": {
+    "titulo": "Destreza sin declarar",
+    "que_paso": "Se ancla a una destreza que el curso no declara en `curriculumNodes`. Un id sin nombre no le sirve a nadie río abajo.",
+    "como_se_arregla": "Decláralo arriba con su nombre, o corrige el id si querías una de las que ya están."
+  },
+  "E-DRAG-EMPTY-TARGET": {
+    "titulo": "Zona a la que no va nada",
+    "que_paso": "Un objetivo no recibe ninguna pieza. Ocupa sitio en la pantalla, no se puede acertar ni fallar, y el alumno pierde tiempo buscando qué poner ahí.",
+    "como_se_arregla": "Dale al menos una pieza, o quítalo. Para que sobren opciones están las piezas que no van a ninguna zona: esas son los distractores."
+  },
+  "E-DRAG-ITEM-TWICE": {
+    "titulo": "Una pieza con dos destinos correctos",
+    "que_paso": "La misma pieza aparece en dos colocaciones correctas. La pregunta queda ambigua: el alumno no puede acertar las dos.",
+    "como_se_arregla": "Deja una sola colocación por pieza. Si de verdad vale en dos sitios, son dos piezas distintas."
+  },
+  "E-DRAG-REF": {
+    "titulo": "Arrastre que apunta a algo que no existe",
+    "que_paso": "Una colocación, correcta o anticipada, nombra una pieza o un objetivo que la pregunta no declara.",
+    "como_se_arregla": "Revisa los ids: las piezas van en `items` y las zonas en `targets`, y los dos se nombran por id, nunca por posición."
+  },
+  "E-EXAM-COUNT": {
+    "titulo": "El examen pide más de lo que hay",
+    "que_paso": "`questionCount` supera el banco, o la estrategia `fixed` no cuadra con él.",
+    "como_se_arregla": "Baja el número, o añade preguntas al banco."
+  },
+  "E-EXAM-TOPIC": {
+    "titulo": "Pregunta de examen sin tema",
+    "que_paso": "Dentro de un examen, cada pregunta tiene que decir qué mide: es contra eso que se equilibra la selección.",
+    "como_se_arregla": "Añade `topicRef` apuntando a un tema o subtema de la lección."
+  },
+  "E-EXAM-TOPICS": {
+    "titulo": "No alcanza para cubrir los temas",
+    "que_paso": "`coverAllTopics` pide al menos una pregunta por tema, y se piden menos preguntas que temas hay.",
+    "como_se_arregla": "Sube `questionCount`, o quita `coverAllTopics`."
+  },
+  "E-ID-DUP": {
+    "titulo": "Id repetido en el curso",
+    "que_paso": "Ese id ya se usaba en otro sitio. Lecciones, objetos, láminas, páginas, temas, subtemas, preguntas y medios comparten un mismo espacio de nombres.",
+    "como_se_arregla": "Cámbialo por uno libre. El mensaje dice dónde estaba el otro."
+  },
+  "E-ID-DUP-LOCAL": {
+    "titulo": "Id repetido dentro de una lista",
+    "que_paso": "Dos opciones, huecos, ítems o columnas de una misma pregunta llevan el mismo id. En relacionar, además, un id no puede estar a la vez a la izquierda y a la derecha.",
+    "como_se_arregla": "Renombra uno de los dos. Basta con que sean distintos dentro de su pregunta."
+  },
+  "E-KEY-CONFLICT": {
+    "titulo": "Una respuesta está en los dos lados",
+    "que_paso": "Algo declarado como error coincide con una respuesta aceptada.",
+    "como_se_arregla": "Quítalo de uno de los dos sitios."
+  },
+  "E-KEY-NO-CORRECT": {
+    "titulo": "Ninguna opción es correcta",
+    "que_paso": "La pregunta no tiene respuesta buena.",
+    "como_se_arregla": "Marca `isCorrect: true` en la que lo sea."
+  },
+  "E-KEY-NO-INCORRECT": {
+    "titulo": "Ninguna opción es incorrecta",
+    "que_paso": "El contrato exige declarar en qué se va a equivocar el alumno: sin error anticipado, la actividad califica pero no enseña.",
+    "como_se_arregla": "Añade al menos una opción incorrecta, con su `feedback`."
+  },
+  "E-KEY-SINGLE": {
+    "titulo": "Varias correctas sin permitirlo",
+    "que_paso": "Hay más de una opción correcta y `allowMultiple` está en false.",
+    "como_se_arregla": "Pon `allowMultiple: true`, o deja una sola correcta."
+  },
+  "E-LIC-ATTRIBUTION": {
+    "titulo": "Licencia Creative Commons sin atribución",
+    "que_paso": "Una licencia CC obliga a decir de quién es la obra, y no hay texto de atribución.",
+    "como_se_arregla": "Escribe la atribución tal como la pide la fuente."
+  },
+  "E-LIC-NONCOMMERCIAL": {
+    "titulo": "Licencia no comercial en un producto comercial",
+    "que_paso": "Una licencia NC no se puede usar aquí sin un acuerdo firmado que lo permita.",
+    "como_se_arregla": "Consigue el acuerdo y ponlo en `agreementRef`, o cambia el recurso por uno con otra licencia."
+  },
+  "E-LIC-PHET-DATE": {
+    "titulo": "Simulador PhET sin fecha de publicación",
+    "que_paso": "La fecha es lo que prueba qué licencia le aplica a esa versión.",
+    "como_se_arregla": "Añade `publishedDate` con la fecha de la versión que descargaste."
+  },
+  "E-LIC-PHET-NC": {
+    "titulo": "Versión de PhET posterior al corte",
+    "que_paso": "A partir de esa fecha PhET pasó a CC BY-NC, que exige acuerdo firmado.",
+    "como_se_arregla": "Usa una versión anterior, o consigue el acuerdo y ponlo en `agreementRef`."
+  },
+  "E-MATCH-INCOMPLETE": {
+    "titulo": "Un ítem sin pareja",
+    "que_paso": "Hay un ítem a la izquierda que ninguna pareja correcta usa.",
+    "como_se_arregla": "Dale su pareja, o quítalo de la lista."
+  },
+  "E-MATCH-LEFT-TWICE": {
+    "titulo": "Un ítem emparejado dos veces",
+    "que_paso": "El mismo ítem de la izquierda aparece en dos parejas correctas.",
+    "como_se_arregla": "Cada uno de la izquierda va exactamente una vez. Uno de la derecha sí puede servir a varios."
+  },
+  "E-MATCH-REF": {
+    "titulo": "Una pareja apunta a un id que no existe",
+    "que_paso": "`pairs` o `wrongPairs` nombran un ítem que no está en `left` ni en `right`.",
+    "como_se_arregla": "Corrige el id, o añade el ítem que falta."
+  },
+  "E-MEDIA-EXTENSION": {
+    "titulo": "Extensión que el servidor no entrega",
+    "que_paso": "El archivo tiene una extensión que la app no sirve para esa clase de medio.",
+    "como_se_arregla": "Convierte el archivo. Imagen: png, jpg, webp, gif, svg. Vídeo: mp4, webm. Audio: mp3, m4a, wav, ogg."
+  },
+  "E-MEDIA-MIMETYPE": {
+    "titulo": "El mimeType no corresponde",
+    "que_paso": "El `mimeType` declarado no pega con el `kind`: un vídeo con `image/png`.",
+    "como_se_arregla": "Corrígelo: `image/…`, `video/…`, `audio/…`, `application/pdf` o `text/html` para un simulador."
+  },
+  "E-MEDIA-PATH-DUP": {
+    "titulo": "Dos medios, el mismo archivo",
+    "que_paso": "Dos entradas de `media` apuntan al mismo `path`. Viajaría dos veces y pesaría el doble.",
+    "como_se_arregla": "Deja una sola entrada y apunta las dos referencias a ella."
+  },
+  "E-MODE-EXAM-ONLY": {
+    "titulo": "Examen y modo examen no coinciden",
+    "que_paso": "Un examen fuera del modo `exam`, o algo que no es un examen dentro de él.",
+    "como_se_arregla": "Un examen lleva exactamente `[\"exam\"]`. Lo demás no puede llevar `exam`."
+  },
+  "E-MODE-SIMPLE-OPEN": {
+    "titulo": "Pregunta abierta en modo simple",
+    "que_paso": "En modo simple no hay quién califique prosa.",
+    "como_se_arregla": "Quita el modo `simple` de ese objeto, o cambia la pregunta por una que se califique sola."
+  },
+  "E-MODE-SUBSET": {
+    "titulo": "Un modo que el padre no permite",
+    "que_paso": "Los modos de una lección salen de los del curso, y los de un objeto de los de su lección.",
+    "como_se_arregla": "Quita el modo de más, o añádelo también arriba."
+  },
+  "E-NET-EXTERNAL": {
+    "titulo": "Una dirección de internet",
+    "que_paso": "El aula no tiene internet: esa dirección deja la pantalla en blanco delante de treinta alumnos.",
+    "como_se_arregla": "Descarga el recurso y decláralo como medio del curso."
+  },
+  "E-OPEN-RUBRIC-LEVEL": {
+    "titulo": "Un nivel da más puntos que su criterio",
+    "que_paso": "Un nivel de logro no puede valer más que el criterio del que cuelga.",
+    "como_se_arregla": "Baja los puntos del nivel, o sube los del criterio."
+  },
+  "E-OPEN-RUBRIC-POINTS": {
+    "titulo": "La rúbrica no suma",
+    "que_paso": "Los puntos de los criterios no dan los puntos de la pregunta. Solo pasa en una actividad: una pregunta de examen no declara points y ahi la rubrica es su propia escala.",
+    "como_se_arregla": "Ajusta los criterios, o los puntos de la pregunta."
+  },
+  "E-ORDER-PERMUTATION": {
+    "titulo": "El orden correcto no es un orden",
+    "que_paso": "`correctOrder` no contiene cada ítem exactamente una vez: falta alguno, sobra alguno, o alguno se repite.",
+    "como_se_arregla": "Escribe los mismos ids de `items`, cada uno una vez."
+  },
+  "E-PKG-COURSE": {
+    "titulo": "El curso de dentro no se puede abrir",
+    "que_paso": "`course.json` no está en el inventario, no se pudo descifrar, no es válido, o su id o su versión no coinciden con `package.json`.",
+    "como_se_arregla": "Casi siempre es una licencia de otra construcción: copia el paquete y su licencia juntos. Si el curso no valida, corrígelo y vuelve a empaquetar."
+  },
+  "E-PKG-COURSE-MEDIA": {
+    "titulo": "Medio que el paquete no trae",
+    "que_paso": "`course.json` nombra un archivo de medio que no está dentro del paquete.",
+    "como_se_arregla": "Vuelve a empaquetar el curso: el empaquetador mete cada medio que el curso declara."
+  },
+  "E-PKG-FORMAT": {
+    "titulo": "Eso no es un paquete",
+    "que_paso": "La carpeta no trae `package.json`, no se puede leer, o no es un paquete AVACOMPKG2 de esta versión del formato.",
+    "como_se_arregla": "Apunta a la carpeta del paquete que dejó el empaquetador, entera. Si es de un formato viejo, vuelve a empaquetar el curso."
+  },
+  "E-PKG-HASH": {
+    "titulo": "Un archivo llegó corrupto",
+    "que_paso": "Un archivo del paquete no tiene el tamaño o la huella que dice el inventario firmado.",
+    "como_se_arregla": "Repite la copia. Si vuelve a pasar con el mismo archivo, el origen está dañado: vuelve a empaquetar."
+  },
+  "E-PKG-INVALID": {
+    "titulo": "Paquete roto sin causa concreta",
+    "que_paso": "La comprobación de integridad falló sin señalar ninguna comprobación. Solo aparece en el registro del equipo.",
+    "como_se_arregla": "Pide la comprobación profunda (`GET /v2/packages/{courseId}?deep=true`) para ver qué falla, y reinstala el paquete."
+  },
+  "E-PKG-INVENTORY": {
+    "titulo": "Sobra o falta un archivo",
+    "que_paso": "Falta un archivo que el inventario firmado lista, o hay uno que no lista: una copia incompleta, o alguien tocó la carpeta.",
+    "como_se_arregla": "Copia la carpeta del paquete completa, sin añadirle nada. El mensaje dice qué archivo es."
+  },
+  "E-PKG-IO": {
+    "titulo": "No se pudo leer o escribir el disco",
+    "que_paso": "La instalación falló al copiar: el USB se retiró, el disco está lleno o un archivo estaba bloqueado.",
+    "como_se_arregla": "Vuelve a lanzar la instalación del mismo paquete: reanuda desde donde se quedó. Si se repite, revisa el espacio libre y el USB."
+  },
+  "E-PKG-LICENSE": {
+    "titulo": "No hay licencia para este equipo",
+    "que_paso": "El paquete no trae `.lic` para este OPS, o la que trae es de otra construcción del mismo `curso@version`. El mensaje dice cuál de las dos.",
+    "como_se_arregla": "Pide la licencia para la llave de este equipo, y cópiala junto al paquete con el que se generó: licencia y paquete van siempre juntos."
+  },
+  "E-PKG-MISSING": {
+    "titulo": "El curso está en el índice pero no en el disco",
+    "que_paso": "La carpeta del paquete instalado ya no existe: alguien la borró o la movió a mano.",
+    "como_se_arregla": "Vuelve a instalar el paquete desde el USB. No muevas ni borres carpetas dentro de `%ProgramData%\\AVACOM\\content`."
+  },
+  "E-PKG-PUBLISHER-UNTRUSTED": {
+    "titulo": "Editor que este equipo no conoce",
+    "que_paso": "El paquete está firmado con una llave que no figura entre los editores de confianza del OPS.",
+    "como_se_arregla": "Añade la llave pública del editor en `appsettings.json` del equipo, o pide el paquete firmado con la llave de AVACOM."
+  },
+  "E-PKG-SIGNATURE": {
+    "titulo": "La firma no cuadra",
+    "que_paso": "Falta `inventory.json` o `inventory.sig`, o el inventario se modificó después de firmarse.",
+    "como_se_arregla": "No toques la carpeta del paquete. Vuelve a copiarla desde el original, o vuelve a empaquetar el curso."
+  },
+  "E-PKG-VERSION": {
+    "titulo": "Ya está instalada esa versión o una más nueva",
+    "que_paso": "En el equipo hay una versión del curso igual o posterior a la del paquete. Se omite: no es un error.",
+    "como_se_arregla": "Nada. Si de verdad hace falta la versión vieja, desinstala primero la que hay."
+  },
+  "E-PLACEHOLDER": {
+    "titulo": "Texto de relleno",
+    "que_paso": "Quedó un TODO, un TBD, un FIXME o un lorem ipsum.",
+    "como_se_arregla": "Escribe el texto de verdad. Un curso con relleno no se publica."
+  },
+  "E-RANGE": {
+    "titulo": "Un rango que no tiene sentido",
+    "que_paso": "`endSec` no supera a `startSec`, `toPage` es menor que `fromPage`, o la página se sale del PDF.",
+    "como_se_arregla": "Revisa los dos números. El final va después del principio."
+  },
+  "E-REF-MEDIA": {
+    "titulo": "Se usa un medio que no existe",
+    "que_paso": "Un bloque o una pregunta apunta a un `mediaId` que no está declarado en `media`.",
+    "como_se_arregla": "Decláralo en `media`, o corrige el id si es un error de tecleo."
+  },
+  "E-REF-MEDIA-KIND": {
+    "titulo": "El medio es de otra clase",
+    "que_paso": "El medio existe, pero ese sitio no admite esa clase: una opción de respuesta con imagen no acepta un audio.",
+    "como_se_arregla": "Usa un medio de la clase que ese sitio espera."
+  },
+  "E-REF-TOPIC": {
+    "titulo": "El tema no existe",
+    "que_paso": "`topicRef` apunta a un tema o subtema que la lección no declara.",
+    "como_se_arregla": "Decláralo en `topics` de la lección, o apunta a uno que ya exista."
+  },
+  "E-SCHEMA": {
+    "titulo": "No cumple el esquema",
+    "que_paso": "Falta un campo obligatorio, sobra uno que no existe, o un valor no es del tipo declarado.",
+    "como_se_arregla": "La ruta del error dice dónde. Si la propiedad sobra, quítala: el esquema no admite campos inventados."
+  },
+  "E-SIM-DESIGN-SIZE": {
+    "titulo": "Falta el tamaño de diseño",
+    "que_paso": "El simulador pide `scale_to_fit` pero no dice a qué tamaño fue diseñado, así que no hay nada que escalar.",
+    "como_se_arregla": "Añade `designWidth` y `designHeight` con el tamaño para el que se hizo."
+  },
+  "E-VIDEO-PAUSE": {
+    "titulo": "Una pausa del video no sirve",
+    "que_paso": "Una pausa para pensar (`interactions`) está en un medio que no es video, cae fuera de la duración, no va en orden, o no tiene exactamente una opción correcta.",
+    "como_se_arregla": "Pon las pausas solo en videos, en segundos dentro de `durationSec`, de menor a mayor y con una sola opción `isCorrect: true`."
+  },
+  "W-BRAND-TERM": {
+    "titulo": "Término que la marca desaconseja",
+    "que_paso": "Hay una palabra que AVACOM no usa.",
+    "como_se_arregla": "El aviso trae la alternativa."
+  },
+  "W-COURSE-WEIGHT": {
+    "titulo": "Curso fuera de presupuesto",
+    "que_paso": "Se pasa de lo que le toca de disco. No es una cifra suelta: son los 250 GB que cabe instalar, repartidos entre el catálogo previsto.",
+    "como_se_arregla": "Comprime los medios. Un vídeo suele ser el culpable."
+  },
+  "W-CURRIC-NODE-ORPHAN": {
+    "titulo": "Destreza que nadie trabaja",
+    "que_paso": "Se declara en `curriculumNodes` pero ningún contenido del curso la enseña ni la mide.",
+    "como_se_arregla": "Ancla algo a ella, o quítala de la lista. Si solo sirve de padre, no hace falta nada."
+  },
+  "W-CURRIC-NODE-TYPE": {
+    "titulo": "Nivel colgado de uno más estrecho",
+    "que_paso": "Un nivel del árbol cuelga de otro más estrecho o de una hoja: una unidad dentro de una destreza, una materia dentro de un tema.",
+    "como_se_arregla": "Revisa el `parent` o el `type`. El orden es campo formativo, ámbito, materia, unidad, tema y subtema; proyecto, reto y destreza cuelgan al final de una rama."
+  },
+  "W-EXAM-POOL-SMALL": {
+    "titulo": "Banco corto",
+    "que_paso": "El banco no llega al triple de lo que se pregunta, así que dos alumnos van a ver casi el mismo examen.",
+    "como_se_arregla": "Añade preguntas al banco."
+  },
+  "W-ID-CONVENTION": {
+    "titulo": "El courseId no se deduce del árbol",
+    "que_paso": "El id no termina donde está el curso, así que nadie puede escribirlo sin consultarlo.",
+    "como_se_arregla": "Déjalo como `<origen>.<país>.<nivel>.<grado>.<materia>.<tema>`, con los códigos exactos de `classification`."
+  },
+  "W-IMAGE-TEXT-SMALL": {
+    "titulo": "Texto ilegible dentro de una imagen",
+    "que_paso": "Un diagrama SVG trae texto por debajo de 32 px sobre un lienzo de 1280. Se proyecta en una pantalla de 86 pulgadas y se lee a seis metros: a ese tamaño no se lee.",
+    "como_se_arregla": "Sube el tamaño y quita palabras. Un diagrama proyectado dice menos y lo dice más grande; lo que no cabe grande, va en la lámina como texto o en otra imagen."
+  },
+  "W-LESSON-WEIGHT": {
+    "titulo": "Lección muy pesada",
+    "que_paso": "Pasa de 40 MB de medios, y eso lo paga el aula cuando el profesor le da a empezar. Lo avisa el empaquetador, que es el único que ve los archivos.",
+    "como_se_arregla": "Comprime los medios, o reparte el contenido en dos lecciones."
+  },
+  "W-MEDIA-ORPHAN": {
+    "titulo": "Un medio que nadie usa",
+    "que_paso": "Está declarado y pesa en el paquete, pero ningún bloque ni pregunta lo nombra.",
+    "como_se_arregla": "Úsalo, o quítalo de `media`."
+  },
+  "W-MEDIA-OVERSIZE": {
+    "titulo": "Imagen más grande de lo que se puede ver",
+    "que_paso": "Tiene más píxeles de los que caben en el lienzo del aula: ocupa disco y tiempo de descarga sin verse mejor.",
+    "como_se_arregla": "Redúcela. El lienzo es de 1920 por 1080."
+  },
+  "W-MEDIA-SPEECH-UNDECLARED": {
+    "titulo": "No se dijo si hay voz",
+    "que_paso": "En un audio o un vídeo, sin `hasSpeech` no se puede exigir transcripción ni subtítulos.",
+    "como_se_arregla": "Declara `hasSpeech`. Si hay voz, hacen falta `transcriptPath` y, en vídeo, `captionsPath`."
+  },
+  "W-SLIDE-OVERFLOW": {
+    "titulo": "Se sale de la lámina",
+    "que_paso": "Hay más texto del que cabe, y el visor recorta lo que sobra en silencio: sin barra, sin aviso y sin error.",
+    "como_se_arregla": "Parte la lámina en dos, o acorta el texto."
+  }
+}

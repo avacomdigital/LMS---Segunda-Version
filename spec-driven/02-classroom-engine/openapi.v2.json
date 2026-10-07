@@ -27,7 +27,7 @@
         "summary": "Service status",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -54,7 +54,7 @@
         "summary": "This document",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -145,7 +145,7 @@
             "name": "questionType",
             "in": "query",
             "required": false,
-            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering",
+            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering, drag_drop",
             "schema": {
               "type": "array",
               "items": {
@@ -241,13 +241,85 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/curriculum": {
+      "get": {
+        "summary": "Curriculum catalog (read only): every node the installed courses declare, as one tree.",
+        "description": "The catalog is the sum of what is installed, so it grows and shrinks with the packages. A node whose parent is not installed comes out at the root. Courses hidden by school policy do not contribute.",
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CurriculumCatalogNode"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISO 3166-1 alpha-2. Keeps only the nodes declared by courses of that country. An OPS can hold courses of more than one, and a school's LMS wants its own tree, not the sum. Without it, every installed course contributes."
+          }
+        ]
+      }
+    },
+    "/v2/curriculum/{nodeId}/content": {
+      "get": {
+        "summary": "Content anchored to a curriculum node: what teaches it and what assesses it.",
+        "description": "Turns a node into the list of pieces a teacher can put in a plan. The node brings its lineage always, and its branch when descendants=true.",
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "description": "Node id, as GET /v2/curriculum serves it.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "descendants",
+            "in": "query",
+            "required": false,
+            "description": "true also returns what is anchored to the nodes below this one.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CurriculumAnchor"
                   }
                 }
               }
@@ -335,7 +407,7 @@
             "name": "questionType",
             "in": "query",
             "required": false,
-            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering",
+            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering, drag_drop",
             "schema": {
               "type": "array",
               "items": {
@@ -475,7 +547,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -611,7 +683,7 @@
             "name": "questionType",
             "in": "query",
             "required": false,
-            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering",
+            "description": "open, multiple_choice, fill_blanks, matching, true_false, ordering, drag_drop",
             "schema": {
               "type": "array",
               "items": {
@@ -707,7 +779,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -770,11 +842,20 @@
                 "free_learning"
               ]
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -874,11 +955,20 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Lesson as defined in course.schema.json#/$defs/Lesson plus courseId and version",
+            "description": "Lesson as defined in course.schema.json#/$defs/Lesson plus courseId and version. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -962,11 +1052,20 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Object as defined in course.schema.json#/$defs/LessonObject plus courseId, version, lessonId",
+            "description": "Object as defined in course.schema.json#/$defs/LessonObject plus courseId, version, lessonId. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1019,11 +1118,20 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1098,11 +1206,20 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": false,
+            "description": "Course version to read. Omitted means the installed one; an archived version is served while its retention lasts, which is what keeps a class that started before an update reading what it started with.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1158,7 +1275,7 @@
         ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1205,7 +1322,7 @@
         },
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1264,7 +1381,7 @@
         },
         "responses": {
           "200": {
-            "description": "Results in request order",
+            "description": "Results in request order. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1299,7 +1416,7 @@
         },
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1362,19 +1479,79 @@
         }
       }
     },
-    "/v2/policies": {
+    "/v2/packages": {
       "get": {
-        "summary": "School policy (read only). Only disabled entries are listed.",
+        "summary": "Integrity of every installed package.",
+        "description": "Answers whether what is installed is still the content that was signed, without opening a lesson. School policy is not applied: this is a technical question about the machine, not about what may be served to a class today.",
+        "parameters": [
+          {
+            "name": "deep",
+            "in": "query",
+            "required": false,
+            "description": "true reads and hashes every file of the package. It is the only way to see a file altered in place, and on a course with video it means reading hundreds of megabytes: for a screen that refreshes often, leave it out.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "OK. Full real payloads, captured against a running node, are in docs/EJEMPLOS-API-LMS.md.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Policy"
+                    "$ref": "#/components/schemas/PackageIntegrity"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/packages/{courseId}": {
+      "get": {
+        "summary": "Integrity of one installed package.",
+        "description": "The same check for a single course, which is what a plan of class needs before projecting it.",
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "path",
+            "required": true,
+            "description": "Course to check.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deep",
+            "in": "query",
+            "required": false,
+            "description": "true reads and hashes every file of the package. It is the only way to see a file altered in place, and on a course with video it means reading hundreds of megabytes: for a screen that refreshes often, leave it out.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageIntegrity"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The course is not installed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -1406,14 +1583,27 @@
             ],
             "properties": {
               "code": {
-                "type": "string"
+                "type": "string",
+                "description": "Stable machine-readable code. Switch on this, never on the message."
               },
               "message": {
-                "type": "string"
+                "type": "string",
+                "description": "Sentence for a log or a developer. Wording may change between versions."
               },
               "details": {
-                "type": "object"
+                "type": "object",
+                "description": "Extra context when there is any, such as which parameter was rejected."
               }
+            },
+            "description": "Every failure answers with this shape and nothing else."
+          }
+        },
+        "example": {
+          "error": {
+            "code": "course_not_found",
+            "message": "Course not found",
+            "details": {
+              "courseId": "avacom.co.primary.4.math.nope"
             }
           }
         }
@@ -1423,37 +1613,55 @@
         "properties": {
           "contract": {
             "type": "integer",
-            "const": 2
+            "const": 2,
+            "description": "Major version of this API. A change here is a breaking change."
           },
           "schema": {
-            "type": "string"
+            "type": "string",
+            "description": "Version of course.schema.json the installed courses were validated against."
           },
           "index": {
             "type": "string",
             "enum": [
               "ready",
               "rebuilding"
-            ]
+            ],
+            "description": "State of the local index. While it rebuilds, catalog calls answer 503."
           },
           "installedCourses": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Courses installed and readable on this node right now."
+          },
+          "appVersion": {
+            "type": "string",
+            "description": "Build of the content app running on this OPS, as major.minor.patch. Ask for it before blaming the content: two classrooms can be on different builds."
           }
+        },
+        "example": {
+          "contract": 2,
+          "schema": "1.0",
+          "index": "ready",
+          "installedCourses": 4,
+          "appVersion": "2.0.0"
         }
       },
       "NamedCode": {
         "type": "object",
         "properties": {
           "code": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable key inside its country tree. Never translated."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Local name to show, in the language of the country."
           },
           "order": {
             "type": [
               "integer",
               "null"
-            ]
+            ],
+            "description": "Sort position among its siblings. Absent means sort by name."
           }
         }
       },
@@ -1461,22 +1669,40 @@
         "type": "object",
         "properties": {
           "country": {
-            "type": "string"
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 of the country whose tree this course hangs from."
           },
           "countryName": {
-            "type": "string"
+            "type": "string",
+            "description": "Name of that country, ready to show."
           },
           "level": {
-            "$ref": "#/components/schemas/NamedCode"
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Level of the country's tree the course hangs from. In the complementary track this field holds the proficiency level instead, such as A1: the two share only their depth, so read track first."
           },
           "grade": {
-            "$ref": "#/components/schemas/NamedCode"
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Grade inside that level, such as Cuarto. Only in the school track."
+          },
+          "area": {
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Area of complementary education, such as Idiomas. Only in the complementary track, where it is the widest step and takes the place the educational level has in the school tree."
           },
           "subject": {
-            "$ref": "#/components/schemas/NamedCode"
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Subject of the course: Matematicas in the school tree, Ingles in the complementary one."
           },
           "topic": {
-            "$ref": "#/components/schemas/NamedCode"
+            "$ref": "#/components/schemas/NamedCode",
+            "description": "Topic of the subject, and the place a course hangs from: a course IS a topic and fills one of them per language. Fracciones in the school tree, Verb to be in the complementary one."
+          },
+          "track": {
+            "type": "string",
+            "enum": [
+              "school",
+              "complementary"
+            ],
+            "description": "Which tree of the country this course hangs from, and therefore which four fields describe where it sits. school: level, grade, subject and topic. complementary: area, subject, level and topic. Absent means school. Each tree uses its own four and never the other's, so a school course has no area and a complementary one has no grade."
           }
         }
       },
@@ -1484,34 +1710,43 @@
         "type": "object",
         "properties": {
           "courseId": {
-            "type": "string"
+            "type": "string",
+            "description": "Permanent id of the course. It never changes across versions: store it."
           },
           "version": {
-            "type": "string"
+            "type": "string",
+            "description": "Semantic version of this release. Store it beside the courseId, because an attempt belongs to the version it was made with."
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "description": "Title to show. It changes between versions, so never use it as a key."
           },
           "subtitle": {
-            "type": "string"
+            "type": "string",
+            "description": "Second line of the title, when there is one."
           },
           "language": {
-            "type": "string"
+            "type": "string",
+            "description": "BCP 47 tag of this course. One course file per language."
           },
           "translationGroupId": {
-            "type": "string"
+            "type": "string",
+            "description": "Courses that are translations of each other share this id."
           },
           "classification": {
-            "$ref": "#/components/schemas/Classification"
+            "$ref": "#/components/schemas/Classification",
+            "description": "Where the course hangs in the country's tree. The keys of /v2/tree are built out of these codes, and so is the courseId."
           },
           "estimatedDurationMin": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Minutes the whole course is expected to take."
           },
           "modes": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Modes this course can be delivered in: simple, class, exam, review, free_learning."
           },
           "curriculumRefs": {
             "type": "array",
@@ -1519,22 +1754,28 @@
               "type": "object",
               "properties": {
                 "framework": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Official framework such as DBA or CCSS, or a reserved AVACOM catalog."
                 },
                 "code": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Entry inside that framework."
                 }
               }
-            }
+            },
+            "description": "Curriculum anchors of the course. This listing carries only framework and code; the course detail also carries relation."
           },
           "lessonCount": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Lessons the course has."
           },
           "coverMediaId": {
-            "type": "string"
+            "type": "string",
+            "description": "Media id of the cover image, to resolve through a media session."
           },
           "updatedAt": {
-            "type": "string"
+            "type": "string",
+            "description": "When this version was packaged, ISO 8601 UTC."
           }
         }
       },
@@ -1545,16 +1786,20 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CourseSummary"
-            }
+            },
+            "description": "Courses of this page."
           },
           "page": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Page returned, counting from 1."
           },
           "pageSize": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Courses per page, at most 100."
           },
           "total": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Courses matching the filter, across every page."
           }
         }
       },
@@ -1569,27 +1814,40 @@
               "grade",
               "subject",
               "topic"
-            ]
+            ],
+            "description": "Level of the tree this node sits at: country, level, grade, subject or topic."
           },
           "code": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable key of the node inside its parent."
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Local name to show."
           },
           "key": {
             "type": "string",
             "description": "Policy reference, e.g. CO/primary/4/math"
           },
           "count": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Courses hanging from this node, including its children."
           },
           "children": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TreeNode"
-            }
+            },
+            "description": "Nodes one level down. A topic has none."
           }
+        },
+        "example": {
+          "kind": "grade",
+          "code": "4",
+          "name": "Cuarto",
+          "key": "CO/primary/4",
+          "count": 1,
+          "children": []
         }
       },
       "SearchResult": {
@@ -1601,59 +1859,72 @@
               "type": "object",
               "properties": {
                 "scope": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "What was hit: a course, a lesson, an object or a question."
                 },
                 "courseId": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Course the hit belongs to."
                 },
                 "lessonId": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Lesson of the hit, when the scope reaches that deep."
                 },
                 "objectId": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Object of the hit, when the scope reaches that deep."
                 },
                 "questionId": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Question of the hit, when the scope is a question."
                 },
                 "title": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Title of what was hit, ready to show."
                 },
                 "snippet": {
                   "type": "string",
-                  "description": "Matches wrapped in ** markers"
+                  "description": "The hit in context, with the matched terms wrapped in ** markers. Inline Markdown, not HTML: escape it before inserting."
                 },
                 "treePath": {
                   "type": "array",
                   "items": {
                     "type": "string"
-                  }
+                  },
+                  "description": "Names from the country down to the course that holds the hit, to show where it lives without asking for the tree."
                 }
               }
-            }
+            },
+            "description": "Hits, most relevant first."
           },
           "total": {
-            "type": "integer"
+            "type": "integer",
+            "description": "Hits found, which may exceed the ones returned."
           }
         }
       },
       "CourseOutline": {
         "type": "object",
-        "description": "Course metadata (see course.schema.json), lessons with object summaries {id, type, title, modes, topicRef, estimatedDurationSec, questionCount, pageCount, mediaId} and media {id, kind, title, mimeType, durationSec, pageCount, width, height, altText, hasCaptions, hasTranscript, entry, simulation, license}."
+        "description": "Course metadata (see course.schema.json), lessons with object summaries {id, type, title, modes, topicRef, estimatedDurationSec, questionCount, pageCount, mediaId} curriculumNodes (the skills this course works, see CurriculumNode: the only place the catalog travels, so keep them) and previousTopics [string] (topics worth covering before this course, plain text for a teacher: a suggestion, not a reference and not a gate), media {id, kind, title, mimeType, bytes, durationSec, pageCount, width, height, altText, hasCaptions, hasTranscript, entry, simulation, license}. bytes is what the medium occupies ENCRYPTED, which is what actually travels to a device: use it to budget a preload or to report storage. It is projected from the package's signed inventory and never declared in course.json. A simulation reports the whole folder."
       },
       "ExamPool": {
         "type": "object",
         "properties": {
           "courseId": {
-            "type": "string"
+            "type": "string",
+            "description": "Course the exam belongs to."
           },
           "version": {
-            "type": "string"
+            "type": "string",
+            "description": "Version of the course this pool came from. Store it with the attempt."
           },
           "objectId": {
-            "type": "string"
+            "type": "string",
+            "description": "Id of the exam object."
           },
           "settings": {
-            "type": "object"
+            "type": "object",
+            "description": "Selection and delivery settings, so the LMS can assemble a balanced exam."
           },
           "questions": {
             "type": "array",
@@ -1661,25 +1932,32 @@
               "type": "object",
               "properties": {
                 "questionId": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Id of the question inside the course."
                 },
                 "type": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "One of the six question kinds."
                 },
                 "topicRef": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Topic the question measures. Required inside an exam, and what coverAllTopics balances against."
                 },
                 "difficulty": {
-                  "type": "integer"
+                  "type": "integer",
+                  "description": "From 1, very easy, to 5, very hard. Used to balance one exam against another."
                 },
                 "estimatedSec": {
-                  "type": "integer"
+                  "type": "integer",
+                  "description": "Seconds the question is expected to take. The exam time limit adds these up when the exam declares extraPercent."
                 },
                 "points": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "Points the question is worth."
                 }
               }
-            }
+            },
+            "description": "Every question available, with the metadata needed to pick, and no answer keys."
           }
         }
       },
@@ -1687,26 +1965,32 @@
         "type": "object",
         "properties": {
           "courseId": {
-            "type": "string"
+            "type": "string",
+            "description": "Course the questions belong to."
           },
           "version": {
-            "type": "string"
+            "type": "string",
+            "description": "Version they came from."
           },
           "objectId": {
-            "type": "string"
+            "type": "string",
+            "description": "Id of the exam object."
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "description": "Title of the exam, ready to show."
           },
           "instructions": {
-            "type": "string"
+            "type": "string",
+            "description": "What the student reads before starting."
           },
           "questions": {
             "type": "array",
             "items": {
               "type": "object",
               "description": "Question without answer keys, feedback or teacher notes"
-            }
+            },
+            "description": "Questions in the order requested, redacted: no key ever comes out of here."
           }
         }
       },
@@ -1714,37 +1998,46 @@
         "type": "object",
         "properties": {
           "courseId": {
-            "type": "string"
+            "type": "string",
+            "description": "Course the question belongs to."
           },
           "version": {
-            "type": "string"
+            "type": "string",
+            "description": "Version the guide came from."
           },
           "questionId": {
-            "type": "string"
+            "type": "string",
+            "description": "Question being graded."
           },
           "prompt": {
-            "type": "string"
+            "type": "string",
+            "description": "The prompt, repeated so the teacher does not have to look it up."
           },
           "points": {
-            "type": "number"
+            "type": "number",
+            "description": "Points the question is worth."
           },
           "responseFormat": {
-            "type": "string"
+            "type": "string",
+            "description": "How the student answered: text, drawing or audio."
           },
           "modelAnswer": {
-            "type": "string"
+            "type": "string",
+            "description": "An answer that would earn full marks. For the teacher only."
           },
           "rubric": {
             "type": "array",
             "items": {
               "type": "object"
-            }
+            },
+            "description": "Criteria with their points and bands."
           },
           "incorrectExamples": {
             "type": "array",
             "items": {
               "type": "object"
-            }
+            },
+            "description": "Answers anticipated as wrong, with the reason each one fails."
           }
         }
       },
@@ -1758,21 +2051,24 @@
         ],
         "properties": {
           "courseId": {
-            "type": "string"
+            "type": "string",
+            "description": "Course of the question being evaluated."
           },
           "version": {
             "type": "string",
             "description": "Optional. Defaults to the installed version; archived versions allowed."
           },
           "objectId": {
-            "type": "string"
+            "type": "string",
+            "description": "Object the question belongs to. It decides whether keys may be shown."
           },
           "questionId": {
-            "type": "string"
+            "type": "string",
+            "description": "Question being evaluated."
           },
           "response": {
             "type": "object",
-            "description": "multiple_choice {selectedOptionIds[]}, true_false {value}, fill_blanks {blanks:{id:value}}, matching {pairs:[{leftId,rightId}]}, ordering {order[]}, open {text|drawingRef|audioRef}"
+            "description": "multiple_choice {selectedOptionIds[]}, true_false {value}, fill_blanks {blanks:{id:value}}, matching {pairs:[{leftId,rightId}]}, ordering {order[]}, drag_drop {placements:[{itemId,targetId}]}, open {text|drawingRef|audioRef}"
           }
         }
       },
@@ -1780,32 +2076,46 @@
         "type": "object",
         "properties": {
           "questionId": {
-            "type": "string"
+            "type": "string",
+            "description": "Question this result belongs to."
           },
           "score": {
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "description": "Points earned, rounded to four decimals with banker's rounding."
           },
           "maxScore": {
-            "type": "number"
+            "type": "number",
+            "description": "Points the question was worth."
           },
           "correct": {
             "type": [
               "boolean",
               "null"
-            ]
+            ],
+            "description": "Whether the answer counts as right. With partial credit it can be false and still score."
           },
           "requiresManualGrading": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "True for an open question: the app never grades prose."
           },
           "feedback": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "What to show the student, chosen from what the content declared for this mistake."
           }
+        },
+        "example": {
+          "questionId": "l3-q6",
+          "score": 2.0,
+          "maxScore": 2.0,
+          "correct": true,
+          "requiresManualGrading": false,
+          "feedback": "Bien: el vapor se enfria y vuelve a liquido."
         }
       },
       "MediaSessionRequest": {
@@ -1815,22 +2125,26 @@
         ],
         "properties": {
           "courseId": {
-            "type": "string"
+            "type": "string",
+            "description": "Course whose media will be served."
           },
           "lessonId": {
-            "type": "string"
+            "type": "string",
+            "description": "Open a session for every medium of this lesson. Use it instead of listing ids one by one."
           },
           "mediaIds": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Specific media to open, when a whole lesson is more than needed."
           },
           "ttlSec": {
             "type": "integer",
             "minimum": 1,
             "maximum": 28800,
-            "default": 14400
+            "default": 14400,
+            "description": "Seconds the session stays valid. It expires on its own; a class never needs hours."
           }
         }
       },
@@ -1838,14 +2152,17 @@
         "type": "object",
         "properties": {
           "sessionId": {
-            "type": "string"
+            "type": "string",
+            "description": "Id of the session, to revoke it when the class ends."
           },
           "baseUrl": {
-            "type": "string"
+            "type": "string",
+            "description": "Loopback base the media server answers on. The port changes between runs."
           },
           "expiresAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "When the session stops answering. ISO 8601 UTC with second precision, always ending in Z, like every other timestamp of this API."
           },
           "urls": {
             "type": "object",
@@ -1877,42 +2194,221 @@
                     "null"
                   ],
                   "description": "Simulations only. GET returns {mediaId, entry, files[]} with every relative path of the simulation folder; each file is served at <baseUrl><mediaId>/<path>."
+                },
+                "poster": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Videos with a posterPath only: <baseUrl><mediaId>/@poster, the still image shown before playback, served with its own image type. Optional and additive: absent or null when the medium declares no poster."
                 }
               }
             },
-            "description": "Per mediaId: captions (VTT) and transcript for audio and video, files list URL for simulations."
+            "description": "Per mediaId: captions (VTT) and transcript for audio and video, poster image for videos that declare one, files list URL for simulations."
           }
+        },
+        "example": {
+          "sessionId": "c1f0e4a27b9d4e51",
+          "baseUrl": "http://127.0.0.1:5181",
+          "expiresAt": "2026-09-22T18:40:00Z"
         }
       },
-      "Policy": {
+      "CurriculumNode": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable id of the node. It is what curriculumRefs points at, it never changes, and it is shared between courses: store it as the aggregation key."
+          },
+          "name": {
+            "type": "string",
+            "description": "The node in the words a teacher would use, in the language of the curriculum. Show this, never the id."
+          },
+          "parent": {
+            "type": "string",
+            "description": "The broader node this one belongs to. Absent means it is the top of its branch. Mastery rolls up along this chain."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "formative_field",
+              "strand",
+              "subject",
+              "unit",
+              "topic",
+              "subtopic",
+              "project",
+              "challenge",
+              "skill",
+              "objective",
+              "competency"
+            ],
+            "description": "What the node is in the tree of its education level. The first six are levels and go from broad to narrow in that order; the last three hang at the end of a branch. Absent means skill."
+          },
+          "replaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Node ids this one superseded when the curriculum redrew them. Evidence gathered under those ids keeps counting for this node; nothing new should be anchored to them."
+          },
+          "order": {
+            "type": "integer",
+            "description": "Where the node goes among its siblings, from 0. Absent means sort by name."
+          }
+        },
+        "description": "A node of the AVACOM curriculum catalog. The catalog is the sum of what the installed courses declare: there is no central list to ask for, and GET /v2/curriculum serves what this machine has."
+      },
+      "CurriculumCatalogNode": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CurriculumNode"
+          }
+        ],
+        "type": "object",
+        "properties": {
+          "courses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Installed courses that declare this node."
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurriculumCatalogNode"
+            },
+            "description": "Nodes that hang from this one."
+          }
+        },
+        "description": "A node of the catalog as this machine knows it, with the courses that declare it and the nodes below."
+      },
+      "CurriculumAnchor": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Node this anchor points at. It can be an id the asked-for node superseded, which is how old content keeps answering."
+          },
+          "courseId": {
+            "type": "string",
+            "description": "Course that declares the anchor."
+          },
+          "version": {
+            "type": "string",
+            "description": "Installed version of that course."
+          },
           "scope": {
             "type": "string",
             "enum": [
-              "country",
-              "level",
-              "grade",
-              "subject",
-              "topic",
               "course",
               "lesson",
-              "object"
-            ]
+              "object",
+              "question"
+            ],
+            "description": "What is anchored: the course, a lesson, an object or a question."
           },
-          "ref": {
-            "type": "string"
+          "refId": {
+            "type": "string",
+            "description": "Id of the anchored piece inside the course."
           },
-          "enabled": {
-            "type": "boolean"
+          "relation": {
+            "type": "string",
+            "enum": [
+              "teaches",
+              "assesses"
+            ],
+            "description": "teaches, assesses, or absent when the content did not declare it. Absent must not be read as either."
           },
-          "changedBy": {
-            "type": "string"
+          "lessonId": {
+            "type": "string",
+            "description": "Lesson the piece belongs to, when it is a lesson, an object or a question."
           },
-          "changedAt": {
-            "type": "string"
+          "objectId": {
+            "type": "string",
+            "description": "Object the piece belongs to, when it is an object or a question."
+          },
+          "objectType": {
+            "type": "string",
+            "description": "Type of that object: lecture, explanation, simulation_lab, activity or exam."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title to show: the object's, the lesson's or the course's, whichever the anchor is on."
           }
-        }
+        },
+        "description": "One anchor of installed content to a node of the curriculum catalog."
+      },
+      "IntegrityProblem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Code of the check that failed: E-PKG-FORMAT (no package.json, or not an AVACOMPKG2 package), E-PKG-PUBLISHER-UNTRUSTED (the publisher key is not trusted by this device), E-PKG-SIGNATURE (the signed inventory was altered), E-PKG-HASH (a file differs in size or hash), E-PKG-INVENTORY (a file of the signed inventory is missing, or a file not in it is present), E-PKG-LICENSE (no licence for this device or this build), E-PKG-COURSE (course.json cannot be decrypted, is invalid or does not match package.json), E-PKG-COURSE-MEDIA (course.json names a media file the package does not carry) or E-PKG-MISSING (indexed, but its folder is gone). E-PKG-VERSION and E-PKG-IO are install outcomes and never appear here."
+          },
+          "message": {
+            "type": "string",
+            "description": "What failed, in English and naming the file when there is one."
+          }
+        },
+        "description": "One thing wrong with an installed package."
+      },
+      "PackageIntegrity": {
+        "type": "object",
+        "properties": {
+          "packageKey": {
+            "type": "string",
+            "description": "Key of the installed package: courseId@version."
+          },
+          "courseId": {
+            "type": "string",
+            "description": "Course the package carries."
+          },
+          "version": {
+            "type": "string",
+            "description": "Installed version."
+          },
+          "title": {
+            "type": "string",
+            "description": "Course title, to show without a second call."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "broken",
+              "missing"
+            ],
+            "description": "ok when every check passed, broken when one failed, missing when the folder is in the index but not on disk."
+          },
+          "deep": {
+            "type": "boolean",
+            "description": "Whether every file was read and hashed. False means only sizes, signature, licence and course.json were checked."
+          },
+          "files": {
+            "type": "integer",
+            "description": "Files on disk inside the package."
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "What the package occupies on disk, in bytes."
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this answer was produced, ISO 8601 UTC. Nothing is cached: it is the moment of the call."
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntegrityProblem"
+            },
+            "description": "Empty when the status is ok."
+          }
+        },
+        "description": "The integrity of one installed package, checked at the moment of the call."
       }
     }
   }

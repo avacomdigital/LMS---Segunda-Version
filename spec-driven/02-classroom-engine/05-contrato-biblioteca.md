@@ -48,6 +48,15 @@ Tableta / OPS ──HTTP LAN :8000──► backend del LMS ──127.0.0.1:{api
 
 Las URL del servidor de medios no llevan token: la capacidad está en la propia URL (`/s/{capacidad}/{mediaId}`) y caduca con la sesión (`ttlSec`, hasta ocho horas; el aula pide un minuto).
 
+**La dirección de un medio hacia el cliente (bugfix 01, 2026-10-07).** El mismo modelo se repite del lado del LMS: quien abre un medio es el visor (`<video>`/`<audio>` de la WebView, `Image` de MAUI) y no sabe mandar `Authorization`. Con la sesión obligatoria (`AVACOM_LMS_EXIGIR_SESION=1`), cada `url` de medio que el backend entrega a una petición CON sesión lleva el permiso en el camino:
+
+```
+/api/aula/cursos/{curso}/medios/{medio}/…?fuente=biblioteca            ← lo que el contrato 2 describe (sigue valiendo con Bearer)
+/api/m/{pase}/aula/cursos/{curso}/medios/{medio}/…?fuente=biblioteca   ← lo que recibe el cliente con sesión
+```
+
+`{pase}` es un JWT `tipo=medio` firmado por el nodo, atado a la sesión de quien pidió la lección (vida máxima 24 h, pero muere con su sesión), y sólo abre GET/HEAD de rutas de medios del aula, del modo de estudio y de evaluación; cada ruta conserva sus reglas (la asignación que le alcanza al alumno, el medio de ESE examen). Un `url` relativo de simulación (`js/app.js`) hereda el prefijo. Errores: `401 pase_de_medios_invalido` / `pase_de_medios_vencido` / `sesion_*`, `403 pase_de_medios_fuera_de_alcance`, `405 pase_de_medios_metodo`. Sin sesión (modo prototipo) las direcciones no cambian. No cambia nada del contrato con AVACOM Contenido. Detalle en `spec-driven/qa/bugfix/bugfix-01-videos.md`.
+
 ---
 
 ## 2 · Rutas que consume el aula
