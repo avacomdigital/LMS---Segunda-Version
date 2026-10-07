@@ -151,14 +151,29 @@ La WebView de Android se «alejaba» (zoom-out) para encajar el contenido y `inn
 2. **El ajuste de escala de Android sólo se aplica al html del curso.** Los laboratorios (simulaciones HTML5), los reproductores propios (video/audio/pdf) y los demás visores **no** se tocaron ni se miraron en Android en esta sesión; si alguno mostrara el mismo alejamiento, el arreglo es llamar a `FijarEscala` sobre su WebView.
 3. **Excepciones no atrapadas siguen cerrando la aplicación.** Se atraparon los dos caminos que causaron este fallo (visor y toques) y toda caída ahora queda registrada y entregada, pero no se marca `Handled` en general: queda como decisión del CTO si, ante cualquier excepción de la interfaz, OPS debe seguir abierta con un aviso (riesgo: una pantalla a medias que nadie ve).
 4. **Un renglón puede entregarse dos veces** (si el proceso cae entre la respuesta del nodo y la confirmación). Es preferible a perderlo; el nodo no deduplica.
-5. **La pantalla de la Bitácora no se vio con una sesión de administrador.** Se comprobó lo que la alimenta (los renglones ERROR llegan al nodo, legibles, y la API de logs los lista) y el cambio de la pestaña es de filtro por defecto y de detalle; falta mirarla en vivo con una persona administradora (en el nodo de pruebas sin sesión obligatoria la Bitácora responde 401, D-8).
+5. **La pestaña «Errores» se vio en vivo con una persona administradora** (OPS real, nodo con sesión obligatoria, PIN maestro por el teclado propio): abre en «WARNING o peor» y el resumen dice «happy 0 · sad 10 · bad 7». **No se abrió el detalle de una fila** (el mensaje completo que añade D-11), y el filtro de nivel no se manejó por UI Automation (es un selector propio): los ERROR del fallo se comprobaron en el archivo `backend-clientes.log` del nodo.
 6. **El código del visor html del contrato 2 aún no estaba confirmado en git** cuando se hizo este arreglo (era trabajo de la sesión «Bugfix 01 · contrato 2»): el commit de este bugfix lleva con él `AulaContenidoView`, `AulaModels` y `DiagnosticoDeMedio`, que el arreglo necesita para compilar. El resto de lo pendiente (backend del contrato 2, pase de medios, instaladores) sigue sin confirmar.
 7. **Student Android olvida la dirección del aula al reabrirse** (muestra siempre `http://192.168.1.10:8000`, `ConnectionPage` no recarga `student_server`): ya conocido, visto de nuevo en el emulador. No se tocó.
 8. **Pregunta para el CTO:** el pase del aula, el recorte y este cierre salieron todos de la misma fuente, el visor html del contrato 2, que se puso en marcha sin probarlo contra un curso real de varios objetos html. Conviene que cada nueva capacidad del visor se pruebe con el recorrido completo de una lección (cátedra → teoría → guía → actividad) en OPS, Student Windows y Android antes de entregarla.
 
-## 10. Instaladores
+## 10. Instaladores 2.4.1
 
-Reconstruidos como **2.4.1** (`installer/version.json`) con el arreglo y el ajuste de Android: OPS en `installer/latest`, Student Windows en `installer/student-windows/latest` y el APK arm64 en `installer/student-android` (ver `LEEME.txt` de cada carpeta para el SHA-256).
+Reconstruidos el 2026-10-07 desde el árbol que contiene este arreglo (`installer/version.json` = 2.4.1, sin cambio de contrato con el backend). Cada compilación terminó con «el código no cambió durante la compilación: el instalador es lo que había al empezar».
+
+| Entrega | Archivo | Tamaño | SHA-256 |
+|---|---|---|---|
+| OPS (Windows) | `installer/latest/AVACOM-OPS-Master-Setup-2.4.1.exe` | 104,1 MB | `3A96F6E9C22D0EA235282347C479211AD87481910FE6E7B8FBA5341E8F8A0279` |
+| Student (Windows) | `installer/student-windows/latest/AVACOM-Student-Setup-2.4.1.exe` | 64,7 MB | `6EF3C9F9C645A3FA798679BB335816E017197A2650A76073E201C053CDD7AA16` |
+| Student (Android, arm64) | `installer/student-android/Student LMS 2.4.1.apk` (código de versión 20401, misma llave de depuración) | 20,9 MB | `6BF61F8ED36984A211C3768657DF0864245429E759E592ABC5194D7E4AEC8A89` |
+| Servidor LAN del APK | `installer/student-android/Servir-APK.bat` + `Servir-APK.py` + `GUIA-55-TABLETAS.txt` (elige solo el APK más nuevo de la carpeta) | — | — |
+
+**Que llevan las correcciones se comprobó** buscando las cadenas del arreglo dentro de lo que se empaqueta: en `dist/staging/App` (OPS) y en `dist/student-windows/staging/App` (Student) están `FijarEscala`, «No se pudo mostrar este contenido», `ui.toque.fallo`, `-pendientes.log` y «Falló la interfaz de Windows». El APK es sólo arm64 (sin x86_64) y se compiló desde el mismo árbol; su contenido no se puede buscar por cadenas (el almacén de ensambladuras va comprimido), y la prueba en Android se hizo con la compilación x86_64 del mismo código.
+
+**Lo que el instalador de OPS ya garantiza y esta compilación volvió a comprobar** (1145 pruebas del backend en verde, y «el paquete se ensayó de punta a punta: todo correcto»):
+
+* **Permisos** de las carpetas de estado (`%ProgramData%\AVACOM\OPS Master`): control total explícito para el sistema y los administradores en `Config`, `Data`, `Respaldos` y `Logs\auditoria`; `Logs` y el perfil de WebView2 junto a la aplicación quedan además en «modificar» para los usuarios (lectura, escritura y borrado), porque los escribe quien da la clase. Esas carpetas no se borran al desinstalar. El `AVACOM-Verificar-Instalador.bat` hace una prueba real de crear y borrar archivos con la cuenta de quien lo ejecuta.
+* **Primer arranque**: el nodo nuevo nace sin organización y con la sesión obligatoria; OPS abre su primer arranque (aula, administrador, PIN maestro de seis dígitos por el teclado propio) y el ensayo comprueba que un PIN fácil o corto se rechaza, que se crean la organización, el administrador y el PIN, que la contraseña inicial la genera el nodo, que un segundo primer arranque se rechaza (409) y que OPS se presenta como equipo MASTER. Además, el nodo escribe sus registros y su auditoría en la carpeta de estado y nunca dentro del programa.
+* **El ensayo de actualización con datos** (`-VersionAnterior`) **no se corrió** esta vez; sí se corrió en la entrega 2.4.0.
 
 ## 11. Capturas
 
@@ -169,5 +184,6 @@ Reconstruidos como **2.4.1** (`installer/version.json`) con el arreglo y el ajus
 | ![OPS · tarjeta de fallo](capturas/bugfix-02-ops-tarjeta-de-fallo.png) | Fallo provocado en el visor: la clase sigue con «No se pudo mostrar este contenido» y «Reintentar»; el ERROR quedó anotado |
 | ![OPS · respaldo de bloques](capturas/bugfix-02-ops-respaldo-de-bloques.png) | Fallo provocado sólo en la página HTML: la clase sigue con el texto nativo del curso |
 | ![Student Windows · teoría](capturas/bugfix-02-student-windows-teoria.png) | Student Windows siguiendo la clase: teoría, página 6 de 12 |
+| ![Bitácora · Errores](capturas/bugfix-02-bitacora-errores.png) | La **Bitácora de auditoría**, pestaña «Errores», en OPS con sesión de administrador: abre en «WARNING o peor» (fila con nivel, canal, app, mensaje, evento y ruta happy/sad/bad) |
 | ![Android · antes](capturas/bugfix-02-android-antes-recortada.png) | Android **antes** del ajuste de escala: la lámina se ve ampliada y recortada |
 | ![Android · después](capturas/bugfix-02-android-despues-video.png) | Android **después**: la lámina del video de la cátedra entra completa, con póster, controles y pausas |
