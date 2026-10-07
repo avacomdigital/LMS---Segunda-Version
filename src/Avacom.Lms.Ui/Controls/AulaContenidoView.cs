@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
@@ -31,6 +32,18 @@ public sealed class AulaContenidoView : ContentView
     private readonly Grid _mandos = new() { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12, Padding = new Thickness(0, 12, 0, 0) };
     private readonly List<WebView> _webs = [];
     private string? _hostPermitido;
+
+    // Lo que la unidad en pantalla tiene en vuelo (descarga de imágenes, sondeo de un medio que falló): se cancela al cambiar de unidad.
+    private CancellationTokenSource _cancelarMedios = new();
+
+    // Contrato 2: la cátedra o explicación maquetada por el curso vive en UNA WebView por objeto; cambiar de lámina es cambiar el `#s{n}`
+    // de la misma página, no recargarla (recargar parpadea y pierde lo que el html del curso tuviera en marcha, como un video).
+    private WebView? _webHtml;
+    private string? _webHtmlPagina;
+    private View? _htmlContenedor;
+    // Un View sólo puede colgar de un padre. El encabezado nace con SU contenedor y muere con él: reutilizarlo en el contenedor de otra página
+    // (cátedra → teoría) lo dejaba colgando del anterior y WinUI lanzaba COMException 0x800F1000 al montar el nuevo (Bugfix 02).
+    private ContentView? _htmlCabecera;
 
     // Espacio útil para un medio (video o imagen de un bloque) según lo que mide el visor AHORA. Se mide en `_cuerpo`
     // y no en el contenedor del medio: el medio vive dentro de un ScrollView y su alto cambia el alto de la página, pero
@@ -128,11 +141,31 @@ public sealed class AulaContenidoView : ContentView
         _mandos.IsVisible = false;
     }
 
+    /// <summary>
+    /// Pinta el objeto en foco. Nunca lanza: un fallo al montar la pantalla se anota como ERROR con todo lo que hace falta para entenderlo
+    /// (qué objeto, qué unidad, qué página del curso, qué excepción y dónde) y la clase sigue con una tarjeta que lo dice y deja reintentar.
+    /// Lo llaman el sondeo, el canal en tiempo real y los toques del profesor: una excepción aquí cerraba la aplicación entera en medio de la clase.
+    /// </summary>
     public void Mostrar(ObjetoAula objeto, string? unidadRef)
     {
+        try { MostrarObjeto(objeto, unidadRef); }
+        catch (Exception ex)
+        {
+            AnotarFalloDelVisor(objeto, unidadRef, ex, conRespaldo: false);
+            try { LimpiarWeb(); } catch { /* ya está anotado: lo que importa es no tumbar la aplicación */ }
+            _unidadesEnPantalla = null;
+            _mandos.IsVisible = false;
+            _cuerpo.Content = TarjetaDeFalloDelVisor(objeto, unidadRef);
+        }
+    }
+
+    private void MostrarObjeto(ObjetoAula objeto, string? unidadRef)
+    {
+        // La misma cátedra maquetada, otra lámina: la WebView del html se queda y sólo cambia de sección.
+        var conservarHtml = _webHtml is not null && Objeto?.ObjetoRef == objeto.ObjetoRef && objeto.TieneHtml;
         Objeto = objeto;
         _unidadesEnPantalla = null;
-        LimpiarWeb();
+        LimpiarWeb(conservarHtml);
         switch (objeto.Componente)
         {
             case "presentacion":
@@ -183,10 +216,30 @@ public sealed class AulaContenidoView : ContentView
         _unidadesEnPantalla = unidades;
         _indiceEnPantalla = indice;
 
-        var pila = new VerticalStackLayout { Spacing = 18 * Escala, Padding = new Thickness(28 * Escala, 24 * Escala) };
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
         cabecera.Add(Ds.Secundario($"{objeto.ComponenteLegible} · {objeto.Titulo}", 15 * Escala), 0, 0);
         cabecera.Add(Ds.Pildora(objeto.Componente == "presentacion" ? $"Lámina {indice + 1} de {unidades.Count}" : $"Página {indice + 1} de {unidades.Count}", Ds.Categoria(objeto.Componente)), 1, 0);
+
+        // Contrato 2: el curso trae la cátedra o explicación maquetada (html con sus estilos). Se muestra ESA página, en la sección de la
+        // lámina en foco; los bloques quedan de respaldo si el html falta en la biblioteca.
+        if (objeto.TieneHtml && Absoluta is not null && !string.IsNullOrWhiteSpace(unidad.UrlHtml))
+        {
+            try
+            {
+                MostrarHtml(objeto, unidad, cabecera);
+                PintarMandos(unidades, indice);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // La página maquetada no se pudo montar: se anota (ERROR, con la causa) y la clase sigue con los bloques del curso, que son la
+                // verdad del contenido. Con las WebView a medio montar, se vacía todo antes de pintar el respaldo.
+                AnotarFalloDelVisor(objeto, unidad.UnidadRef, ex, conRespaldo: true, unidad);
+                LimpiarWeb();
+            }
+        }
+
+        var pila = new VerticalStackLayout { Spacing = 18 * Escala, Padding = new Thickness(28 * Escala, 24 * Escala) };
         pila.Add(cabecera);
         if (!string.IsNullOrWhiteSpace(unidad.Titulo)) pila.Add(Ds.Titulo(unidad.Titulo!, 30 * Escala));
         foreach (var bloque in unidad.Bloques) pila.Add(Bloque(bloque));
@@ -194,6 +247,51 @@ public sealed class AulaContenidoView : ContentView
 
         _cuerpo.Content = new ScrollView { Content = Ds.Tarjeta(pila, Ds.RadioGrande, new Thickness(0)) };
         PintarMandos(unidades, indice);
+    }
+
+    /// <summary>
+    /// La página html del curso (`entry`) en una WebView acotada al host del aula, en la sección `#s{n}` de la unidad en foco. La misma
+    /// página con otra sección sólo cambia el <c>location.hash</c>: el html del curso decide qué sección se ve (<c>:target</c> o su propio
+    /// guion). Una presentación no se desplaza (cada lámina cabe en pantalla); una lectura sí.
+    /// </summary>
+    private void MostrarHtml(ObjetoAula objeto, UnidadAula unidad, View cabecera)
+    {
+        var destino = Absoluta!(unidad.UrlHtml!);
+        var pagina = destino.GetLeftPart(UriPartial.Query);                 // sin el `#s{n}`
+        var seccion = destino.Fragment;                                      // `#s{n}`
+        if (_webHtml is not null && _htmlContenedor is not null && _htmlCabecera is not null && string.Equals(_webHtmlPagina, pagina, StringComparison.Ordinal))
+        {
+            // Misma página, otra sección: sin recargar. Sólo cambia el texto del encabezado («Lámina 7 de 19»).
+            _htmlCabecera.Content = cabecera;
+            var hash = seccion.Replace("'", string.Empty).Replace("\\", string.Empty);
+            _ = _webHtml.EvaluateJavaScriptAsync($"(function(){{try{{location.hash='{hash}';}}catch(e){{}}}})();");
+            if (!ReferenceEquals(_cuerpo.Content, _htmlContenedor)) _cuerpo.Content = _htmlContenedor;
+            return;
+        }
+
+        // Otra página (de la cátedra a la teoría, o de vuelta): contenedor, encabezado y WebView NUEVOS, y la anterior se apaga. Nada del contenedor
+        // viejo se reutiliza: un View sólo puede colgar de un padre y WinUI lanza COMException al montarlo en dos a la vez.
+        if (_webHtml is not null)
+        {
+            try { _webHtml.Source = new HtmlWebViewSource { Html = "<html><body></body></html>" }; } catch { }
+            _webs.Remove(_webHtml);
+        }
+        _webHtml = NuevaWeb(null, null, desplazable: objeto.Componente != "presentacion");
+        WebViewAjustes.FijarEscala(_webHtml);   // Android: sin zoom-out, para que la página vea el tamaño real de su recuadro (Bugfix 02)
+        _hostPermitido = destino.GetLeftPart(UriPartial.Authority);
+        _webHtmlPagina = pagina;
+        _webHtml.Source = new UrlWebViewSource { Url = destino.AbsoluteUri };
+        var marco = new Border
+        {
+            StrokeThickness = 0, BackgroundColor = Colors.White, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioGrande },
+            Content = _webHtml,
+        };
+        _htmlCabecera = new ContentView { Content = cabecera, Padding = new Thickness(28 * Escala, 12 * Escala, 28 * Escala, 0) };
+        var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)], RowSpacing = 10 * Escala };
+        raiz.Add(_htmlCabecera, 0, 0);
+        raiz.Add(marco, 0, 1);
+        _htmlContenedor = raiz;
+        _cuerpo.Content = raiz;
     }
 
     private void PintarMandos(IReadOnlyList<UnidadAula> unidades, int indice)
@@ -287,13 +385,8 @@ public sealed class AulaContenidoView : ContentView
         var pila = new VerticalStackLayout { Spacing = 8 };
         if (Absoluta is not null && !string.IsNullOrWhiteSpace(b.Url))
         {
-            var imagen = new Image { Aspect = Aspect.AspectFit, Source = new UriImageSource { Uri = Absoluta(b.Url!), CachingEnabled = false } };
-            if (!string.IsNullOrWhiteSpace(b.TextoAlternativo)) SemanticProperties.SetDescription(imagen, b.TextoAlternativo);
-            var marco = new Border
-            {
-                StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioTarjeta },
-                Content = imagen,
-            };
+            var marco = new Border { StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioTarjeta } };
+            CargarImagen(marco, Absoluta(b.Url!), b.TextoAlternativo, b.MediaRef);
             pila.Add(CajaAjustada(marco, b.Ancho, b.Alto));
         }
         else
@@ -313,6 +406,14 @@ public sealed class AulaContenidoView : ContentView
         var inv = System.Globalization.CultureInfo.InvariantCulture;
         var fragmento = b.DesdeSeg is not null || b.HastaSeg is not null ? $"#t={b.DesdeSeg ?? 0},{(b.HastaSeg is null ? string.Empty : b.HastaSeg.Value.ToString(inv))}" : string.Empty;
         var pista = !string.IsNullOrWhiteSpace(b.SubtitulosUrl) ? $"<track kind=\"subtitles\" srclang=\"es\" label=\"Español\" src=\"{Absoluta(b.SubtitulosUrl!).AbsoluteUri}\" default>" : string.Empty;
+        // Contrato 2: la imagen fija antes de reproducir y las pausas para pensar (`interactions`), serializadas para el guion del reproductor.
+        // El serializador escapa `<`, `>` y `&`, así que el JSON puede ir dentro de <script> sin cerrar la etiqueta por accidente.
+        var poster = !string.IsNullOrWhiteSpace(b.PosterUrl) ? $" poster=\"{Absoluta(b.PosterUrl!).AbsoluteUri}\"" : string.Empty;
+        var pausas = JsonSerializer.Serialize((b.Pausas ?? []).Select(p => new
+        {
+            pausa_ref = p.PausaRef, en_seg = p.EnSeg, enunciado = p.Enunciado ?? string.Empty,
+            opciones = (p.Opciones ?? []).Select(o => new { texto = o.Texto ?? string.Empty, es_respuesta = o.EsRespuesta, explicacion = o.Explicacion ?? string.Empty }),
+        }));
         // Recuadro de tamaño fijo, calculado en C# (AjusteDeMedio): el documento llena exactamente la WebView y el video se
         // escala «contain» dentro (cualquier proporción, sin recortar). Nada de flex ni de desplazamiento propio.
         // Además WebView2 debe arrancar sin las superposiciones de video de DirectComposition (WebViewAjustes): con ellas el
@@ -321,13 +422,33 @@ public sealed class AulaContenidoView : ContentView
             <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
             <style>html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Segoe UI,Arial,sans-serif}
             video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;outline:none}
-            .aviso{display:none;position:absolute;inset:0;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:20px;background:#111}</style></head>
-            <body><video id="v" controls {{{(b.Autoplay == true ? "autoplay" : "")}}} playsinline preload="metadata" src="{{{url}}}{{{fragmento}}}">{{{pista}}}</video>
-            <div class="aviso" id="a">Este video no está en el equipo del aula todavía.<br>Lo servirá AVACOM Biblioteca.</div>
+            .aviso{display:none;position:absolute;inset:0;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:20px;background:#111}
+            .p{display:none;position:absolute;inset:0;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+            .q{max-width:720px;width:100%;max-height:100%;overflow:auto;background:#fff;color:#18181B;border-radius:16px;padding:20px 24px;box-sizing:border-box;font-size:20px}
+            .q p{margin:0 0 14px;font-weight:600}
+            .q button{display:block;width:100%;text-align:left;margin:8px 0;padding:12px 16px;border-radius:12px;border:2px solid #C7C4BE;background:#fff;color:#18181B;font-size:19px;font-family:inherit}
+            .q button.ok{border-color:#1B8A4C;background:#E7F6EC}.q button.no{border-color:#E5262B;background:#FDECEC}
+            .q .r{min-height:24px;margin:10px 0;font-size:17px;color:#52525B}
+            .q .c{background:#E5262B;color:#fff;border:0;text-align:center;font-weight:600}.q .c:disabled{opacity:.4}</style></head>
+            <body><video id="v" controls {{{(b.Autoplay == true ? "autoplay" : "")}}} playsinline preload="metadata"{{{poster}}} src="{{{url}}}{{{fragmento}}}">{{{pista}}}</video>
+            <div class="aviso" id="a">No se pudo reproducir este video.</div>
+            <div class="p" id="p"></div>
             <script>var v=document.getElementById('v');var fin={{{(b.HastaSeg is null ? "null" : b.HastaSeg.Value.ToString(inv))}}};
             v.addEventListener('error',function(){v.style.display='none';document.getElementById('a').style.display='flex';
               try{location.href='{{{EsquemaAviso}}}://fallo?tipo=video&codigo='+(v.error?v.error.code:0)+'&estado='+v.networkState;}catch(x){}});
-            v.addEventListener('timeupdate',function(){if(fin!==null&&v.currentTime>=fin){v.pause();}});</script></body></html>
+            // Pausas para pensar (contrato 2): en `en_seg` el video se detiene y pregunta; sigue cuando se eligió y se leyó la razón.
+            var P={{{pausas}}},hecha={},ov=document.getElementById('p');
+            function esc(s){return String(s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+            function pausa(q){v.pause();hecha[q.pausa_ref]=1;var h='<div class="q"><p>'+esc(q.enunciado)+'</p>';
+              for(var i=0;i<q.opciones.length;i++){h+='<button type="button" data-i="'+i+'">'+esc(q.opciones[i].texto)+'</button>';}
+              h+='<div class="r" id="r"></div><button type="button" class="c" id="c" disabled>Continuar</button></div>';ov.innerHTML=h;ov.style.display='flex';
+              var bs=ov.querySelectorAll('button[data-i]');for(var j=0;j<bs.length;j++){bs[j].onclick=function(){var o=q.opciones[+this.getAttribute('data-i')];
+                for(var k=0;k<bs.length;k++){bs[k].className='';}this.className=o.es_respuesta?'ok':'no';
+                document.getElementById('r').textContent=(o.es_respuesta?'Correcto. ':'No es esa. ')+(o.explicacion||'');document.getElementById('c').disabled=false;};}
+              document.getElementById('c').onclick=function(){ov.style.display='none';v.play();};}
+            v.addEventListener('timeupdate',function(){if(fin!==null&&v.currentTime>=fin){v.pause();}
+              for(var i=0;i<P.length;i++){var q=P[i];if(!hecha[q.pausa_ref]&&v.currentTime>=q.en_seg&&v.currentTime<q.en_seg+1.5){pausa(q);break;} }});
+            v.addEventListener('seeking',function(){for(var i=0;i<P.length;i++){if(v.currentTime<P[i].en_seg){delete hecha[P[i].pausa_ref];} }});</script></body></html>
             """;
         var avisos = new VerticalStackLayout { Spacing = 6 };
         var web = Web(html, null, uri => AvisarFallo("video", b, uri, avisos));
@@ -425,14 +546,65 @@ public sealed class AulaContenidoView : ContentView
             _ => "No se pudo reproducir",
         };
         var detalle = parametros.TryGetValue("detalle", out var d) && !string.IsNullOrWhiteSpace(d) ? $" ({d})" : string.Empty;
-        var url = Absoluta is not null && !string.IsNullOrWhiteSpace(b.Url) ? Absoluta(b.Url!).AbsoluteUri : b.Url ?? string.Empty;
-        var fallo = new FalloDeMedio(tipo, b.MediaRef ?? string.Empty, url, codigo, mensaje + detalle);
-        RegistroDeFallos.Escribir(NombreApp, $"{tipo} {fallo.MediaRef} · {fallo.Url}",
+        var destinoUri = Absoluta is not null && !string.IsNullOrWhiteSpace(b.Url) ? Absoluta(b.Url!) : null;
+        // El registro no lleva el pase de la dirección (es un permiso de lectura de la sesión), sólo el camino del medio.
+        var url = destinoUri is not null ? DiagnosticoDeMedio.SinPase(destinoUri) : b.Url ?? string.Empty;
+        var medio = b.MediaRef ?? string.Empty;
+        RegistroDeFallos.Escribir(NombreApp, $"{tipo} {medio} · {url}",
             new InvalidDataException($"{mensaje}{detalle}. MediaError {codigo}. El medio no pasó la comprobación de reproducción en el visor del aula."));
         if (destino.Children.Count == 0)
-            destino.Children.Add(Ds.Alerta_($"El {tipo} no se pudo reproducir", $"{mensaje}{detalle}. Quedó anotado en {RegistroDeFallos.Ruta(NombreApp)}.",
+            destino.Children.Add(Ds.Alerta_($"El {tipo} no se pudo reproducir", "Comprobando la causa…", Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
+        _ = DiagnosticarAsync(tipo, medio, destinoUri, url, codigo, mensaje + detalle, destino, _cancelarMedios.Token);
+    }
+
+    /// <summary>
+    /// «MediaError 4» (formato no compatible) es también lo que ve el reproductor cuando el equipo del aula contestó 401, 404 o 503: el archivo puede estar
+    /// perfecto. Se le pregunta al aula qué contestó de verdad y se dice esa causa en pantalla, en el archivo de fallos y por <see cref="MedioFallido"/>.
+    /// </summary>
+    private async Task DiagnosticarAsync(string tipo, string medio, Uri? uri, string urlSinPase, int codigo, string mensajeDelReproductor, Layout destino, CancellationToken ct)
+    {
+        var sondeo = uri is null ? new SondeoDeMedio(null, null, null, null, null, "sin dirección") : await DiagnosticoDeMedio.SondearAsync(uri, ct: ct);
+        if (ct.IsCancellationRequested) return;
+        // Si el aula sí entrega el archivo, el reproductor tiene razón y es un asunto de formato de ESTE dispositivo.
+        var causa = sondeo.Entrega ? $"{mensajeDelReproductor}. {sondeo.Causa}" : sondeo.Causa;
+        RegistroLocal.Advertencia(Canal.Comunicacion, "medio.diagnostico", $"{tipo} {medio} · {urlSinPase}",
+            new { tipo, medio, media_error = codigo, respuesta = sondeo.Resumen, entrega = sondeo.Entrega });
+        Dispatcher.Dispatch(() =>
+        {
+            destino.Children.Clear();
+            destino.Children.Add(Ds.Alerta_($"El {tipo} no se pudo reproducir", $"{causa} Quedó anotado en {RegistroDeFallos.Ruta(NombreApp)} ({sondeo.Resumen}).",
                 Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
-        MedioFallido?.Invoke(this, fallo);
+        });
+        MedioFallido?.Invoke(this, new FalloDeMedio(tipo, medio, urlSinPase, codigo, causa));
+    }
+
+    /// <summary>
+    /// Una imagen del curso, bajada por la app y no por el visor: así un fallo (sesión terminada, medio que falta, aula apagada) se dice en el recuadro con su
+    /// causa, en vez de dejar un rectángulo gris sin explicación. La dirección ya lleva el pase; la descarga manda además el Bearer si la ruta no lo trae.
+    /// </summary>
+    private void CargarImagen(Border marco, Uri uri, string? alternativo, string? mediaRef)
+    {
+        var imagen = new Image { Aspect = Aspect.AspectFit };
+        if (!string.IsNullOrWhiteSpace(alternativo)) SemanticProperties.SetDescription(imagen, alternativo);
+        marco.Content = imagen;
+        var ct = _cancelarMedios.Token;
+        _ = Task.Run(async () =>
+        {
+            var (bytes, sondeo) = await DiagnosticoDeMedio.DescargarImagenAsync(uri, ct: ct);
+            if (ct.IsCancellationRequested) return;
+            if (bytes is not null)
+            {
+                Dispatcher.Dispatch(() => imagen.Source = ImageSource.FromStream(() => new MemoryStream(bytes)));
+                return;
+            }
+            RegistroLocal.Advertencia(Canal.Comunicacion, "medio.imagen_no_entregada", $"imagen {mediaRef} · {DiagnosticoDeMedio.SinPase(uri)}",
+                new { medio = mediaRef, respuesta = sondeo.Resumen });
+            Dispatcher.Dispatch(() => marco.Content = new VerticalStackLayout
+            {
+                Spacing = 4, Padding = new Thickness(16), VerticalOptions = LayoutOptions.Center, HorizontalOptions = LayoutOptions.Center,
+                Children = { Ds.Cuerpo("Imagen no disponible", 17 * Escala), Ds.Secundario(sondeo.Causa, 14 * Escala) },
+            });
+        }, ct);
     }
 
     private View Pdf(BloqueAula b)
@@ -534,7 +706,10 @@ public sealed class AulaContenidoView : ContentView
             contenido.Add(Pregunta(p));
             pila.Add(Ds.Tarjeta(contenido, Ds.RadioTarjeta, new Thickness(18, 16)));
         }
-        pila.Add(Ds.Secundario("Vista previa: las respuestas se envían desde la tableta del alumno y las corrige la biblioteca. Aquí no hay claves.", 13));
+        // Lo que esta pantalla puede y no puede hacer con la actividad, dicho según quién la mira (QA 2026-10-07: «no se podían seleccionar»).
+        pila.Add(Ds.Secundario(NombreApp == "student"
+            ? "Puedes marcar opciones para pensarlas. Para responder de verdad, espera a que tu profesor lance la actividad: te aparecerá abajo con el botón «Responder»."
+            : "Marca opciones en pantalla para comentarlas con la clase; nada se envía. Para que los alumnos respondan en sus tabletas, pulsa «Lanzar actividad».", 13 * Escala));
         return pila;
     }
 
@@ -564,9 +739,8 @@ public sealed class AulaContenidoView : ContentView
     {
         if (Absoluta is null)
             return new Border { StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, HeightRequest = 160 * Escala };
-        var imagen = new Image { Aspect = Aspect.AspectFit, Source = new UriImageSource { Uri = Absoluta(url), CachingEnabled = false } };
-        if (!string.IsNullOrWhiteSpace(alternativo)) SemanticProperties.SetDescription(imagen, alternativo);
-        var marco = new Border { StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = imagen };
+        var marco = new Border { StrokeThickness = 0, BackgroundColor = Ds.Lienzo, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno } };
+        CargarImagen(marco, Absoluta(url), alternativo, null);
         if (altoMaximo > 0) { marco.HeightRequest = altoMaximo; marco.HorizontalOptions = LayoutOptions.Start; return marco; }
         return ConProporcion(marco, ancho, alto);
     }
@@ -589,15 +763,48 @@ public sealed class AulaContenidoView : ContentView
             case "opcion_multiple":
             case "verdadero_falso":
             {
+                // Las opciones se pueden MARCAR en pantalla (una, o varias si la pregunta lo permite): en la pantalla del aula sirve para
+                // comentar con la clase; en la tableta, para pensar la respuesta mientras el profesor la lanza. No se envía ni se corrige nada
+                // desde aquí: la respuesta de verdad va por la actividad lanzada (ActividadResponderView).
+                var varias = p.PermiteVarias == true;
                 var pila = new VerticalStackLayout { Spacing = 8 };
+                var filas = new List<(Border Caja, BoxView Marca, string Ref, string Rotulo)>();
+                var marcadas = new HashSet<string>();
+                void Pintar()
+                {
+                    foreach (var (caja, marca, referencia, rotulo) in filas)
+                    {
+                        var elegida = marcadas.Contains(referencia);
+                        marca.Color = elegida ? Ds.Tinta : Ds.Lienzo;
+                        caja.BackgroundColor = elegida ? Ds.InfoSuave : Colors.Transparent;
+                        caja.StrokeThickness = elegida ? 2 : 0;
+                        SemanticProperties.SetDescription(caja, $"{rotulo}. {(elegida ? "Marcada" : "Sin marcar")}");
+                    }
+                }
                 foreach (var op in p.Opciones ?? [])
                 {
-                    var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(28), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 10, Padding = new Thickness(6, 4) };
-                    fila.Add(new BoxView { WidthRequest = 22, HeightRequest = 22, CornerRadius = p.PermiteVarias == true ? 6 : 11, Color = Colors.Transparent, }, 0, 0);
-                    ((BoxView)fila.Children[0]).Color = Ds.Lienzo;
+                    var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(28), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 10 };
+                    var marca = new BoxView { WidthRequest = 22, HeightRequest = 22, CornerRadius = varias ? 6 : 11, Color = Ds.Lienzo, VerticalOptions = LayoutOptions.Center };
+                    fila.Add(marca, 0, 0);
                     fila.Add(TextoOImagen(op.Tramos, op.Texto, op.Url, op.TextoAlternativo, op.OpcionRef, 17 * Escala), 1, 0);
-                    pila.Add(fila);
+                    var caja = new Border
+                    {
+                        StrokeThickness = 0, Stroke = new SolidColorBrush(Ds.Tinta), BackgroundColor = Colors.Transparent, Padding = new Thickness(10, 8),
+                        StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, MinimumHeightRequest = 48, Content = fila,
+                        AutomationId = $"vista-opcion-{op.OpcionRef}",
+                    };
+                    var referencia = op.OpcionRef;
+                    Ds.Tocable(caja, () =>
+                    {
+                        if (varias) { if (!marcadas.Remove(referencia)) marcadas.Add(referencia); }
+                        else if (!marcadas.Remove(referencia)) { marcadas.Clear(); marcadas.Add(referencia); }
+                        Pintar();
+                        return Task.CompletedTask;
+                    });
+                    filas.Add((caja, marca, referencia, op.Texto ?? op.TextoAlternativo ?? referencia));
+                    pila.Add(caja);
                 }
+                Pintar();
                 return pila;
             }
             case "completar":
@@ -620,6 +827,25 @@ public sealed class AulaContenidoView : ContentView
             {
                 var pila = new VerticalStackLayout { Spacing = 6 };
                 foreach (var e in p.Elementos ?? []) pila.Add(Item(e, Ds.Lienzo, "↕  "));
+                return pila;
+            }
+            case "arrastrar":
+            {
+                // Contrato 2: las piezas en una bandeja y las zonas donde van. En la vista previa no se mueven; en la tableta las coloca EditorArrastrar.
+                var pila = new VerticalStackLayout { Spacing = 10 };
+                var bandeja = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, JustifyContent = Microsoft.Maui.Layouts.FlexJustify.Start, AlignItems = Microsoft.Maui.Layouts.FlexAlignItems.Start };
+                foreach (var e in p.Elementos ?? [])
+                {
+                    var pieza = Item(e, Colors.White);
+                    pieza.Margin = new Thickness(0, 0, 8, 8);
+                    bandeja.Add(pieza);
+                }
+                pila.Add(new Border { StrokeThickness = 1.5, Stroke = new SolidColorBrush(Color.FromArgb("#C7C4BE")), BackgroundColor = Colors.White, Padding = new Thickness(10, 10, 2, 2), StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = bandeja });
+                foreach (var z in p.Zonas ?? [])
+                {
+                    var cabecera = TextoOImagen(null, z.Rotulo, z.Url, z.TextoAlternativo, z.ZonaRef, 17 * Escala);
+                    pila.Add(new Border { StrokeThickness = 0, BackgroundColor = Ds.Lienzo, Padding = new Thickness(14, 12), StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, MinimumHeightRequest = 56, Content = cabecera });
+                }
                 return pila;
             }
             case "abierta":
@@ -768,14 +994,70 @@ public sealed class AulaContenidoView : ContentView
         "-webkit-overflow-scrolling:touch!important}';" +
         "document.head?document.head.appendChild(s):document.documentElement.appendChild(s);}catch(e){}})();";
 
-    private void LimpiarWeb()
+    private void LimpiarWeb(bool conservarHtml = false)
     {
+        _cancelarMedios.Cancel();
+        _cancelarMedios.Dispose();
+        _cancelarMedios = new CancellationTokenSource();
         foreach (var web in _webs)
         {
+            if (conservarHtml && ReferenceEquals(web, _webHtml)) continue;
             try { web.Source = new HtmlWebViewSource { Html = "<html><body></body></html>" }; } catch { }
         }
         _webs.Clear();
+        if (conservarHtml && _webHtml is not null) _webs.Add(_webHtml);
+        else { _webHtml = null; _webHtmlPagina = null; _htmlContenedor = null; _htmlCabecera = null; }
         _ajustes.Clear();
+    }
+
+    /// <summary>
+    /// Deja el fallo del visor donde un técnico lo va a buscar: un renglón ERROR del canal «aplicacion» (archivo local y, de inmediato, la bitácora del nodo)
+    /// que dice QUÉ se iba a mostrar (objeto, lámina o página), QUÉ salió mal (tipo, código y mensaje de la excepción) y DÓNDE (clase, método y línea), y cómo
+    /// siguió la clase. Nunca lleva el pase de medios de la dirección ni datos de personas.
+    /// </summary>
+    private void AnotarFalloDelVisor(ObjetoAula objeto, string? unidadRef, Exception ex, bool conRespaldo, UnidadAula? unidad = null)
+    {
+        try
+        {
+            var unidades = objeto.Unidades;
+            var enFoco = unidad ?? unidades.FirstOrDefault(u => u.UnidadRef == unidadRef) ?? (unidades.Count > 0 ? unidades[0] : null);
+            var lugar = enFoco is null ? string.Empty : $" · {(objeto.Componente == "presentacion" ? "lámina" : "página")} {enFoco.Indice} de {unidades.Count}";
+            var pagina = enFoco?.UrlHtml is { Length: > 0 } relativa && Absoluta is not null ? DiagnosticoDeMedio.SinPase(Absoluta(relativa)) : null;
+            var que = pagina is not null ? "la página maquetada del curso" : "el contenido";
+            var desenlace = conRespaldo
+                ? "La clase sigue con el texto del curso, sin la maqueta."
+                : "La pantalla quedó con un aviso y el botón «Reintentar»; la clase sigue.";
+            var donde = RegistroDeFallos.DondeFallo(ex);
+            var mensaje = $"No se pudo mostrar {que} «{objeto.Titulo}» ({objeto.ComponenteLegible.ToLowerInvariant()}{lugar}) en el visor del aula. {desenlace} " +
+                          $"{RegistroDeFallos.Resumen(ex)}{(donde is null ? string.Empty : $" · en {donde}")}";
+            RegistroDeFallos.Anotar(NombreApp, $"AulaContenidoView.Mostrar {objeto.ObjetoRef}", ex, "aula.visor.fallo", mensaje,
+                new
+                {
+                    objeto_ref = objeto.ObjetoRef, tipo = objeto.Tipo, componente = objeto.Componente,
+                    unidad_ref = enFoco?.UnidadRef ?? unidadRef, indice = enFoco?.Indice, total = unidades.Count,
+                    pagina_html = pagina, tipo_excepcion = ex.GetType().Name, codigo = RegistroDeFallos.CodigoDe(ex), donde, con_respaldo = conRespaldo,
+                });
+        }
+        catch { /* anotar el fallo nunca puede ser otro fallo */ }
+    }
+
+    /// <summary>La tarjeta que sustituye a lo que no se pudo pintar: dice qué pasó en palabras, que quedó anotado y deja reintentar.</summary>
+    private View TarjetaDeFalloDelVisor(ObjetoAula objeto, string? unidadRef)
+    {
+        var reintentar = Ds.Boton("Reintentar", Ds.Rango.Primary, (_, _) => Mostrar(objeto, unidadRef), 56, 200);
+        var capsula = Ds.Capsula(reintentar);
+        capsula.HorizontalOptions = LayoutOptions.Center;
+        var titulo = Ds.Titulo("No se pudo mostrar este contenido", 24 * Escala);
+        titulo.HorizontalTextAlignment = TextAlignment.Center;
+        var detalle = Ds.Secundario($"«{objeto.Titulo}» no se pudo pintar en esta pantalla. El fallo quedó anotado como ERROR en la bitácora del aula, con lo que hace falta para corregirlo. " +
+                                    "Puedes reintentar o seguir con otro objeto de la secuencia.", 16 * Escala);
+        detalle.HorizontalTextAlignment = TextAlignment.Center;
+        var pila = new VerticalStackLayout
+        {
+            Spacing = 14, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, Padding = 32, MaximumWidthRequest = 760,
+            Children = { titulo, detalle, capsula },
+        };
+        return Ds.Tarjeta(pila, Ds.RadioGrande, new Thickness(0));
     }
 
     private static string Mmss(double seg) => $"{(int)seg / 60}:{(int)seg % 60:00}";

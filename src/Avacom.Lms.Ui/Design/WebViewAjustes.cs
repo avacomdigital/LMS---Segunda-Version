@@ -19,6 +19,9 @@ public static class WebViewAjustes
 
     public static void Aplicar()
     {
+#if ANDROID
+        AjustarAndroid();
+#endif
         if (!OperatingSystem.IsWindows()) return;
         try
         {
@@ -29,4 +32,50 @@ public static class WebViewAjustes
         }
         catch { /* sin variable de entorno: el video se ve como antes, el resto del aula no depende de esto */ }
     }
+
+    /// <summary>
+    /// <b>Android.</b> Fija la escala de una WebView que muestra una página del curso hecha para un escenario fijo (la cátedra y la teoría en html).
+    /// Medido en un emulador de tableta (Bugfix 02): la página veía <c>window.innerWidth × innerHeight</c> = 1669 × 674 cuando el recuadro real era de
+    /// 1248 × 503 (<c>clientWidth</c>, <c>visualViewport</c>), porque la WebView se alejaba (zoom-out) para encajar el contenido; el guion del curso calcula
+    /// su escala con <c>innerWidth/innerHeight</c> y la lámina quedaba recortada por abajo y por la derecha. Sin zoom, sin «ventana ancha» y con escala
+    /// inicial 100, la ventana de la página y el recuadro coinciden (medido: 2496 × 1007 las dos) y la lámina entra completa y centrada, como en Windows.
+    /// En el resto de plataformas no hace nada. Sólo se aplica a la WebView del html del curso: los reproductores propios y los laboratorios no cambian.
+    /// </summary>
+    public static void FijarEscala(Microsoft.Maui.Controls.WebView web)
+    {
+#if ANDROID
+        web.HandlerChanged += (_, _) =>
+        {
+            try
+            {
+                if (web.Handler?.PlatformView is not global::Android.Webkit.WebView nativa) return;
+                var ajustes = nativa.Settings;
+                ajustes.UseWideViewPort = false;
+                ajustes.LoadWithOverviewMode = false;
+                ajustes.SetSupportZoom(false);
+                ajustes.BuiltInZoomControls = false;
+                ajustes.DisplayZoomControls = false;
+                nativa.SetInitialScale(100);
+            }
+            catch { /* una WebView que no acepta el ajuste conserva el comportamiento de siempre */ }
+        };
+#endif
+    }
+
+#if ANDROID
+    /// <summary>
+    /// <b>Android.</b> La WebView exige un toque del usuario para arrancar cualquier video o audio (<c>MediaPlaybackRequiresUserGesture</c>, verdadero por defecto),
+    /// y entonces el <c>autoplay</c> que el curso declara para la cátedra (el profesor lleva el ritmo) se ignora en silencio: la tableta mostraba el video
+    /// parado. Se desactiva esa exigencia sólo en las WebView del aula; el audio y el video sin <c>autoplay</c> siguen esperando el toque como siempre.
+    /// (El tráfico HTTP sin cifrar hacia el nodo del aula se permite en el manifiesto de cada app: <c>usesCleartextTraffic</c>.)
+    /// </summary>
+    private static void AjustarAndroid()
+    {
+        Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping("AvacomMediosDelAula", static (handler, _) =>
+        {
+            try { handler.PlatformView.Settings.MediaPlaybackRequiresUserGesture = false; }
+            catch { /* una WebView que no acepta el ajuste conserva el comportamiento de siempre */ }
+        });
+    }
+#endif
 }

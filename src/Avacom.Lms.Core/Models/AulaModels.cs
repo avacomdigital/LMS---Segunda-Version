@@ -119,7 +119,36 @@ public sealed record MedioAula(
     [property: JsonPropertyName("transcripcion_url")] string? TranscripcionUrl,
     [property: JsonPropertyName("simulacion")] SimulacionAula? Simulacion,
     [property: JsonPropertyName("licencia")] LicenciaAula? Licencia,
+    [property: JsonPropertyName("ausente")] bool Ausente,
+    // Contrato 2 (2026-10-07): página de entrada de una simulación o de una lección `html`; póster y pausas para pensar de un video.
+    [property: JsonPropertyName("entrada")] string? Entrada = null,
+    [property: JsonPropertyName("poster_url")] string? PosterUrl = null,
+    [property: JsonPropertyName("pausas")] IReadOnlyList<PausaAula>? Pausas = null);
+
+/// <summary>Contrato 2: la cátedra o explicación maquetada por el curso (`html {mediaId, entry}`): su página de entrada y su carpeta.</summary>
+public sealed record HtmlAula(
+    [property: JsonPropertyName("media_ref")] string MediaRef,
+    [property: JsonPropertyName("entrada")] string? Entrada,
+    [property: JsonPropertyName("url")] string? Url,
+    [property: JsonPropertyName("base_url")] string? BaseUrl,
     [property: JsonPropertyName("ausente")] bool Ausente);
+
+/// <summary>Una opción de una pausa para pensar de un video. Es formativa: la respuesta y su razón SÍ llegan, para mostrarlas al elegir.</summary>
+public sealed record OpcionPausaAula(
+    [property: JsonPropertyName("opcion_ref")] string OpcionRef,
+    [property: JsonPropertyName("texto")] string? Texto,
+    [property: JsonPropertyName("tramos")] IReadOnlyList<Tramo>? Tramos,
+    [property: JsonPropertyName("es_respuesta")] bool EsRespuesta,
+    [property: JsonPropertyName("explicacion")] string? Explicacion);
+
+/// <summary>Contrato 2: una pausa para pensar (`interactions`) de un video: en `EnSeg` el reproductor se detiene y pregunta.</summary>
+public sealed record PausaAula(
+    [property: JsonPropertyName("pausa_ref")] string PausaRef,
+    [property: JsonPropertyName("en_seg")] double EnSeg,
+    [property: JsonPropertyName("enunciado")] string? Enunciado,
+    [property: JsonPropertyName("enunciado_tramos")] IReadOnlyList<Tramo>? EnunciadoTramos,
+    [property: JsonPropertyName("opciones")] IReadOnlyList<OpcionPausaAula>? Opciones,
+    [property: JsonPropertyName("consejo_docente")] string? ConsejoDocente = null);
 
 public sealed record BloqueAula(
     [property: JsonPropertyName("tipo")] string Tipo,
@@ -148,7 +177,9 @@ public sealed record BloqueAula(
     [property: JsonPropertyName("desde_pagina")] int? DesdePagina,
     [property: JsonPropertyName("hasta_pagina")] int? HastaPagina,
     [property: JsonPropertyName("paginas")] int? Paginas,
-    [property: JsonPropertyName("url_pagina_inicial")] string? UrlPaginaInicial);
+    [property: JsonPropertyName("url_pagina_inicial")] string? UrlPaginaInicial,
+    [property: JsonPropertyName("poster_url")] string? PosterUrl = null,
+    [property: JsonPropertyName("pausas")] IReadOnlyList<PausaAula>? Pausas = null);
 
 public sealed record NotasDocente(
     [property: JsonPropertyName("summary")] string? Summary,
@@ -175,7 +206,9 @@ public sealed record UnidadAula(
     [property: JsonPropertyName("titulo")] string? Titulo,
     [property: JsonPropertyName("duracion_seg")] int? DuracionSeg,
     [property: JsonPropertyName("bloques")] IReadOnlyList<BloqueAula> Bloques,
-    [property: JsonPropertyName("notas_docente")] NotasDocente? NotasDocente);
+    [property: JsonPropertyName("notas_docente")] NotasDocente? NotasDocente,
+    /// <summary>Contrato 2: la misma lámina o página en el html del curso (`entry#s{n}`), cuando el objeto está maquetado.</summary>
+    [property: JsonPropertyName("url_html")] string? UrlHtml = null);
 
 /// <summary>Una opción de selección múltiple: texto (RichText) o imagen (<c>mediaId</c> del esquema 1.0), o ambos.</summary>
 public sealed record OpcionAula(
@@ -191,6 +224,14 @@ public sealed record ElementoAula(
     [property: JsonPropertyName("ref")] string Ref,
     [property: JsonPropertyName("texto")] string? Texto,
     [property: JsonPropertyName("tramos")] IReadOnlyList<Tramo>? Tramos = null,
+    [property: JsonPropertyName("media_ref")] string? MediaRef = null,
+    [property: JsonPropertyName("url")] string? Url = null,
+    [property: JsonPropertyName("texto_alternativo")] string? TextoAlternativo = null);
+
+/// <summary>Contrato 2: una zona de «arrastrar y soltar» (<c>DragTarget</c>): un rótulo o una imagen donde caen las piezas.</summary>
+public sealed record ZonaAula(
+    [property: JsonPropertyName("zona_ref")] string ZonaRef,
+    [property: JsonPropertyName("rotulo")] string? Rotulo,
     [property: JsonPropertyName("media_ref")] string? MediaRef = null,
     [property: JsonPropertyName("url")] string? Url = null,
     [property: JsonPropertyName("texto_alternativo")] string? TextoAlternativo = null);
@@ -219,7 +260,9 @@ public sealed record PreguntaAula(
     [property: JsonPropertyName("derecha")] IReadOnlyList<ElementoAula>? Derecha,
     [property: JsonPropertyName("elementos")] IReadOnlyList<ElementoAula>? Elementos,
     [property: JsonPropertyName("formato_respuesta")] string? FormatoRespuesta,
-    [property: JsonPropertyName("longitud_maxima")] int? LongitudMaxima)
+    [property: JsonPropertyName("longitud_maxima")] int? LongitudMaxima,
+    /// <summary>Contrato 2: las zonas de «arrastrar» (las piezas van en <see cref="Elementos"/>).</summary>
+    [property: JsonPropertyName("zonas")] IReadOnlyList<ZonaAula>? Zonas = null)
 {
     public string TipoLegible => Componente switch
     {
@@ -229,6 +272,7 @@ public sealed record PreguntaAula(
         "relacionar" => "Relacionar",
         "ordenar" => "Ordenar",
         "abierta" => "Respuesta abierta",
+        "arrastrar" => "Arrastrar y soltar",
         _ => Tipo,
     };
 }
@@ -265,9 +309,12 @@ public sealed record ObjetoAula(
     [property: JsonPropertyName("ajustes")] AjustesActividad? Ajustes,
     [property: JsonPropertyName("preguntas")] IReadOnlyList<PreguntaAula>? Preguntas,
     [property: JsonPropertyName("puntos_totales")] double? PuntosTotales,
-    [property: JsonPropertyName("total_preguntas_banco")] int? TotalPreguntasBanco)
+    [property: JsonPropertyName("total_preguntas_banco")] int? TotalPreguntasBanco,
+    [property: JsonPropertyName("html")] HtmlAula? Html = null)
 {
     public IReadOnlyList<UnidadAula> Unidades => Laminas ?? Paginas ?? [];
+    /// <summary>La cátedra o explicación viene maquetada por el curso y su html está en la biblioteca: el visor la carga en un marco.</summary>
+    public bool TieneHtml => Html is { Ausente: false, Url.Length: > 0 };
     public bool EsActividad => Componente == "actividad";
     public string ComponenteLegible => Componente switch
     {
