@@ -12,7 +12,9 @@ namespace Avacom.Lms.Ops.Pages;
 /// </summary>
 public partial class BitacoraPage
 {
-    private string? _lApp, _lCanal, _lNivel;
+    // La pestaña se llama «Errores»: por defecto muestra WARNING o peor. Con todos los niveles, las últimas 80 líneas eran peticiones normales (INFO, «happy»)
+    // y un ERROR quedaba enterrado a los pocos segundos de ocurrir. El nivel es un MÍNIMO: DEBUG muestra todo.
+    private string? _lApp, _lCanal, _lNivel = "WARNING";
 
     private async Task<View> ErroresAsync()
     {
@@ -43,6 +45,7 @@ public partial class BitacoraPage
         nivel.SelectionChanged += async (_, _) => { _lNivel = nivel.Selected; await MostrarAsync(Pestana.Errores); };
         var fila = new HorizontalStackLayout { Spacing = 10, Children = { app, canal, nivel } };
         var resumen = logs.Resumen is { } r ? $"happy {r.Happy} · sad {r.Sad} · bad {r.Bad} · {logs.Total} líneas, se muestran las últimas {logs.Lineas.Count}" : $"{logs.Total} líneas";
+        resumen += _lNivel is null or "DEBUG" or "INFO" ? string.Empty : $" · nivel {_lNivel} o peor (elige INFO o DEBUG para ver también lo normal)";
         var pila = new VerticalStackLayout { Spacing = 8, Children = { fila, Ds.Secundario(resumen, 14) } };
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(18, 14), Colors.White);
     }
@@ -81,6 +84,8 @@ public partial class BitacoraPage
             if (detalle is not null) { contenedor.Remove(detalle); detalle = null; return Task.CompletedTask; }
             var pila = new VerticalStackLayout { Spacing = 6 };
             pila.Add(Ds.Separador());
+            // La fila recorta el mensaje a una línea; aquí va completo (con salto por carácter: sin ciclos de layout).
+            if (!string.IsNullOrWhiteSpace(l.Mensaje)) pila.Add(Mono(l.Mensaje!, 14));
             if (l.Detalle is not null) pila.Add(Mono(Bonito(l.Detalle)));
             if (!string.IsNullOrWhiteSpace(l.Traza)) pila.Add(Mono(string.Join("\n", l.Traza.Split('\n').TakeLast(8)), 12));
             pila.Add(Ds.Secundario($"{l.Archivo ?? "—"} · módulo {l.Modulo ?? "—"} · corr {l.Corr ?? "—"} · caso {l.Caso ?? "—"}", 12));

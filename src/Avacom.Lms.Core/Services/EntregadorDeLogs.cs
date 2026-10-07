@@ -32,16 +32,55 @@ public sealed class EntregadorDeLogs : IDisposable
     public DateTimeOffset? UltimaEntregaEn { get; private set; }
     public int Entregados { get; private set; }
 
-    /// <summary>Arranca el temporizador (idempotente).</summary>
+    /// <summary>Cuánto se espera, tras un ERROR, para juntar los que lleguen pegados antes de entregarlos (un fallo suele traer varios).</summary>
+    public static readonly TimeSpan EsperaTrasError = TimeSpan.FromMilliseconds(1500);
+
+    private int entregaProgramada;
+    private bool enganchado;
+
+    /// <summary>Arranca el temporizador (idempotente) y se engancha a los ERROR: un error no espera al siguiente minuto para llegar a la bitácora del nodo.</summary>
     public void Iniciar()
     {
         temporizador ??= new Timer(_ => _ = EntregarAhoraAsync(), null, PrimeraEspera, cada);
+        if (enganchado) return;
+        enganchado = true;
+        RegistroLocal.Escrito += AlEscribir;
+        // Si la app va a morir (excepción no controlada), RegistroDeFallos pide una entrega inmediata y la espera unos segundos antes de que el proceso caiga.
+        RegistroDeFallos.EntregaUrgente = () => EntregarAhoraAsync();
     }
 
     public void Detener()
     {
         temporizador?.Dispose();
         temporizador = null;
+        if (!enganchado) return;
+        enganchado = false;
+        RegistroLocal.Escrito -= AlEscribir;
+        RegistroDeFallos.EntregaUrgente = null;
+    }
+
+    /// <summary>Un ERROR o CRITICAL entrega ya (tras <see cref="EsperaTrasError"/>); un WARNING espera al ciclo normal.</summary>
+    private void AlEscribir(RenglonLog renglon)
+    {
+        if (renglon.Nivel is not ("ERROR" or "CRITICAL")) return;
+        if (Interlocked.Exchange(ref entregaProgramada, 1) == 1) return;   // ya hay una entrega a punto de salir: se llevará este también
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(EsperaTrasError);
+                Interlocked.Exchange(ref entregaProgramada, 0);
+                // Si justo hay una entrega en curso (ya se llevó lo que había antes de este error), se vuelve a mirar en un momento.
+                // Un entregador detenido (la app cierra, o cambió de instancia) ya no entrega lo que programó.
+                for (var intento = 0; intento < 3 && enganchado && RegistroLocal.CuentaPendientes > 0; intento++)
+                {
+                    if (turno.CurrentCount == 0) { await Task.Delay(TimeSpan.FromSeconds(2)); continue; }
+                    await EntregarAhoraAsync();
+                    break;
+                }
+            }
+            catch { Interlocked.Exchange(ref entregaProgramada, 0); }
+        });
     }
 
     /// <summary>Intenta entregar lo pendiente ahora. Devuelve lo que el nodo contestó, o null si no había nada, no había con qué o falló.</summary>
@@ -69,6 +108,7 @@ public sealed class EntregadorDeLogs : IDisposable
             UltimaEntrega = respuesta;
             UltimaEntregaEn = DateTimeOffset.Now;
             Entregados += respuesta.Escritos;
+            RegistroLocal.Confirmar();   // ahora sí: lo entregado sale del archivo de pendientes
             return respuesta;
         }
         finally { turno.Release(); }

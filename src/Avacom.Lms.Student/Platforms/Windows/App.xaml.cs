@@ -17,8 +17,9 @@ public partial class App : MauiWinUIApplication
 	public App()
 	{
 		this.InitializeComponent();
-		// Un fallo no controlado en el aula queda en %LOCALAPPDATA%\AVACOM\lms para poder diagnosticarlo.
-		this.UnhandledException += (_, e) => Avacom.Lms.Core.Services.RegistroDeFallos.Escribir("student", "WinUI.UnhandledException", e.Exception);
+		// Un fallo no controlado en el aula queda en %LOCALAPPDATA%\AVACOM\lms para poder diagnosticarlo y, si la app va a caer, se intenta llevar
+		// a la bitácora del nodo antes de que el proceso muera (sin esto, el error que cerraba la app era justo el que nunca llegaba).
+		this.UnhandledException += (_, e) => Avacom.Lms.Core.Services.RegistroDeFallos.Escribir("student", "WinUI.UnhandledException", e.Exception, fatal: !e.Handled);
 	}
 
 	protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

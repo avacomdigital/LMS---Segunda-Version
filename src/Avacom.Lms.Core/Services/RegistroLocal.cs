@@ -86,11 +86,14 @@ public static class RegistroLocal
     /// <summary>Se dispara tras escribir cada renglón (desde el hilo que escribe). Lo usan las pruebas y la pestaña de diagnóstico.</summary>
     public static event Action<RenglonLog>? Escrito;
 
+    private static string? _colaRecuperadaDe;
+
     public static void Configurar(string app, string? version = null, Func<string?>? dispositivoId = null)
     {
         App = string.IsNullOrWhiteSpace(app) ? "cliente" : app.Trim().ToLowerInvariant();
         if (version is not null) VersionApp = version;
         if (dispositivoId is not null) DispositivoId = dispositivoId;
+        RecuperarPendientes();
     }
 
     /// <summary>La carpeta de los logs. <c>AVACOM_LMS_DIR_LOGS</c> la sustituye (pruebas, técnico).</summary>
@@ -101,6 +104,8 @@ public static class RegistroLocal
 
     public static string RutaApp => Path.Combine(Carpeta, $"{App}-app.log");
     public static string RutaErrores => Path.Combine(Carpeta, $"{App}-errores.log");
+    /// <summary>Lo que falta entregar al nodo, en disco: si la app muere (o no hay red) antes de entregarlo, el siguiente arranque lo recupera.</summary>
+    public static string RutaPendientes => Path.Combine(Carpeta, $"{App}-pendientes.log");
 
     // ------------------------------------------------------------------ escribir
 
@@ -132,7 +137,11 @@ public static class RegistroLocal
                 {
                     Anexar(RutaErrores, linea);
                     Pendientes.Enqueue(renglon);
-                    while (Pendientes.Count > PendientesMaximos) Pendientes.Dequeue();
+                    var recortada = false;
+                    while (Pendientes.Count > PendientesMaximos) { Pendientes.Dequeue(); recortada = true; }
+                    // La cola en disco: un renglón WARNING+ no puede depender de que la app siga viva un minuto más (era la ventana en la que se
+                    // perdía todo lo que una caída se llevaba por delante). Si se recortó la cola, el archivo se reescribe con lo que queda.
+                    if (recortada) ReescribirPendientes(); else AnexarSinRotar(RutaPendientes, linea);
                 }
             }
             try { Escrito?.Invoke(renglon); } catch { }
@@ -282,10 +291,70 @@ public static class RegistroLocal
         }
     }
 
+    /// <summary>
+    /// El nodo aceptó lo que se tomó con <see cref="TomarPendientes"/>: el archivo de pendientes se reescribe con lo que sigue sin entregar. Hasta este
+    /// momento los renglones tomados siguen en disco, así que una caída a mitad de la entrega no los pierde (a lo sumo se entregan dos veces).
+    /// </summary>
+    public static void Confirmar()
+    {
+        lock (Cerrojo) ReescribirPendientes();
+    }
+
+    /// <summary>
+    /// Al arrancar (una vez por app): lo que la sesión anterior dejó sin entregar al nodo —una caída, o una clase sin red— vuelve a la cola y se
+    /// entrega con la primera entrega de esta sesión. Sin esto, el error que mató la app era justo el que no llegaba nunca a la bitácora del nodo.
+    /// </summary>
+    public static void RecuperarPendientes()
+    {
+        try
+        {
+            lock (Cerrojo)
+            {
+                var ruta = RutaPendientes;
+                if (string.Equals(_colaRecuperadaDe, ruta, StringComparison.Ordinal)) return;
+                _colaRecuperadaDe = ruta;
+                if (!File.Exists(ruta)) return;
+                var recuperados = new List<RenglonLog>();
+                foreach (var linea in File.ReadLines(ruta, Encoding.UTF8))
+                {
+                    if (string.IsNullOrWhiteSpace(linea)) continue;
+                    try { if (JsonSerializer.Deserialize<RenglonLog>(linea, Json) is { } r) recuperados.Add(r); } catch (JsonException) { }
+                }
+                if (recuperados.Count == 0) return;
+                var actuales = Pendientes.ToArray();
+                Pendientes.Clear();
+                foreach (var r in recuperados) Pendientes.Enqueue(r);
+                foreach (var r in actuales) Pendientes.Enqueue(r);
+                while (Pendientes.Count > PendientesMaximos) Pendientes.Dequeue();
+            }
+        }
+        catch { /* un archivo de pendientes ilegible no puede impedir arrancar */ }
+    }
+
+    /// <summary>Reescribe el archivo de pendientes con exactamente lo que hay en cola. Con el cerrojo tomado.</summary>
+    private static void ReescribirPendientes()
+    {
+        try
+        {
+            var ruta = RutaPendientes;
+            if (Pendientes.Count == 0) { if (File.Exists(ruta)) File.Delete(ruta); return; }
+            Directory.CreateDirectory(Path.GetDirectoryName(ruta)!);
+            var texto = string.Concat(Pendientes.Select(r => JsonSerializer.Serialize(r, Json) + "\n"));
+            File.WriteAllText(ruta, texto, new UTF8Encoding(false));
+        }
+        catch { /* si no se puede, la cola en memoria sigue siendo la fuente */ }
+    }
+
+    private static void AnexarSinRotar(string ruta, string linea)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(ruta)!);
+        File.AppendAllText(ruta, linea + "\n", new UTF8Encoding(false));
+    }
+
     /// <summary>Vacía la cola y la ventana de repetición (pruebas).</summary>
     public static void Reiniciar()
     {
-        lock (Cerrojo) Pendientes.Clear();
+        lock (Cerrojo) { Pendientes.Clear(); _colaRecuperadaDe = null; }
         UltimaVez.Clear();
     }
 

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Avacom.Lms.Core.Models;
+using Avacom.Lms.Core.Services;
 using Microsoft.Maui.Controls.Shapes;
 
 namespace Avacom.Lms.Ui.Design;
@@ -431,9 +432,22 @@ public static class Ds
         var tap = new TapGestureRecognizer();
         tap.Tapped += async (_, _) =>
         {
-            await vista.ScaleToAsync(0.97, 70, Easing.CubicOut);
-            await vista.ScaleToAsync(1, 110, Easing.CubicOut);
-            await accion();
+            // Un toque corre en un `async void`: una excepción que se escapara de la acción cerraba la aplicación entera (en plena clase). Se anota
+            // como ERROR —con la pantalla, el control y el lugar del código— y la app sigue.
+            try
+            {
+                await vista.ScaleToAsync(0.97, 70, Easing.CubicOut);
+                await vista.ScaleToAsync(1, 110, Easing.CubicOut);
+                await accion();
+            }
+            catch (Exception ex)
+            {
+                var donde = RegistroDeFallos.DondeFallo(ex);
+                var control = string.IsNullOrWhiteSpace(vista.AutomationId) ? vista.GetType().Name : vista.AutomationId;
+                RegistroDeFallos.Anotar(RegistroLocal.App, $"Toque en {control}", ex, "ui.toque.fallo",
+                    $"Falló la acción de un toque en la pantalla (control «{control}»); la aplicación sigue abierta. {RegistroDeFallos.Resumen(ex)}{(donde is null ? string.Empty : $" · en {donde}")}",
+                    new { control, tipo_excepcion = ex.GetType().Name, codigo = RegistroDeFallos.CodigoDe(ex), donde });
+            }
         };
         vista.GestureRecognizers.Add(tap);
     }

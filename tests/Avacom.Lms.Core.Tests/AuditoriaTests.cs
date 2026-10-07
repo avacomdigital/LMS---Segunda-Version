@@ -159,11 +159,155 @@ public sealed class RegistroLocalTests : IDisposable
             RegistroDeFallos.Escribir("student", "Prueba.Origen", new InvalidOperationException("estado imposible"));
             Assert.Contains("Prueba.Origen", File.ReadAllText(RegistroDeFallos.Ruta("student")));
             var linea = Lineas(RegistroLocal.RutaErrores).Single();
-            Assert.Equal(("aplicacion", "excepcion.no_controlada", "Prueba.Origen"),
-                         (linea.GetProperty("canal").GetString(), linea.GetProperty("evento").GetString(), linea.GetProperty("mensaje").GetString()));
+            Assert.Equal(("aplicacion", "excepcion.no_controlada"), (linea.GetProperty("canal").GetString(), linea.GetProperty("evento").GetString()));
+            // Desde el bugfix 02 el título no es sólo el origen: dice qué pasó, de qué tipo y con qué texto.
+            var mensaje = linea.GetProperty("mensaje").GetString()!;
+            Assert.Contains("Prueba.Origen", mensaje);
+            Assert.Contains("InvalidOperationException: estado imposible", mensaje);
             Assert.Contains("estado imposible", linea.GetProperty("traza").GetString());
         }
         finally { Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", null); }
+    }
+
+    /// <summary>Lo que fabrica la pantalla del aula cuando WinUI se queja de un elemento que ya cuelga de otro (el fallo real del bugfix 02).</summary>
+    private static void MontarUnaPantallaQueFalla() =>
+        throw new System.Runtime.InteropServices.COMException("No se han detectado componentes instalados.", unchecked((int)0x800F1000));
+
+    private static Exception LaExcepcionDeLaPantalla()
+    {
+        try { MontarUnaPantallaQueFalla(); }
+        catch (Exception ex) { return ex; }
+        throw new InvalidOperationException("no llegó a fallar");
+    }
+
+    [Fact]
+    public void UnaCaida_SeEscribeConUnaFraseQueUnTecnicoEntiende_ConTipoCodigoYLugar()
+    {
+        Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", carpeta);
+        try
+        {
+            RegistroDeFallos.Escribir("ops", "WinUI.UnhandledException", LaExcepcionDeLaPantalla(), fatal: true);
+            var linea = Lineas(RegistroLocal.RutaErrores).Single();
+            var mensaje = linea.GetProperty("mensaje").GetString()!;
+            Assert.Equal("ERROR", linea.GetProperty("nivel").GetString());
+            Assert.Equal("bad", linea.GetProperty("ruta").GetString());
+            Assert.Equal("excepcion.no_controlada", linea.GetProperty("evento").GetString());
+            Assert.Contains("Falló la interfaz de Windows y la aplicación se cerró", mensaje);          // qué pasó, en palabras
+            Assert.Contains("COMException (0x800F1000): No se han detectado componentes instalados", mensaje);   // tipo, código y texto del sistema
+            Assert.Contains("MontarUnaPantallaQueFalla", mensaje);                                       // dónde, en código de AVACOM
+            var detalle = linea.GetProperty("detalle");
+            Assert.Equal("0x800F1000", detalle.GetProperty("codigo").GetString());
+            Assert.Equal("COMException", detalle.GetProperty("tipo").GetString());
+            Assert.True(detalle.GetProperty("fatal").GetBoolean());
+        }
+        finally { Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", null); }
+    }
+
+    [Fact]
+    public void SoloUnaCaidaIntentaEntregarElErrorAntesDeMorir()
+    {
+        Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", carpeta);
+        var llamadas = 0;
+        RegistroDeFallos.EntregaUrgente = () => { Interlocked.Increment(ref llamadas); return Task.CompletedTask; };
+        try
+        {
+            RegistroDeFallos.Escribir("ops", "TaskScheduler.UnobservedTaskException", new InvalidOperationException("en segundo plano"));
+            Assert.Equal(0, llamadas);
+            RegistroDeFallos.Escribir("ops", "AppDomain.UnhandledException", new InvalidOperationException("mata la app"), fatal: true);
+            Assert.Equal(1, llamadas);
+        }
+        finally { RegistroDeFallos.EntregaUrgente = null; Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", null); }
+    }
+
+    [Fact]
+    public void LaEntregaUrgenteNuncaRetrasaUnaCaidaMasDeLoQueSeLeConcede()
+    {
+        Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", carpeta);
+        var antes = RegistroDeFallos.EsperaUrgente;
+        RegistroDeFallos.EsperaUrgente = TimeSpan.FromMilliseconds(300);
+        RegistroDeFallos.EntregaUrgente = () => Task.Delay(TimeSpan.FromSeconds(30));   // un nodo que no contesta
+        try
+        {
+            var reloj = System.Diagnostics.Stopwatch.StartNew();
+            RegistroDeFallos.Escribir("ops", "AppDomain.UnhandledException", new InvalidOperationException("x"), fatal: true);
+            Assert.True(reloj.Elapsed < TimeSpan.FromSeconds(5), $"tardó {reloj.Elapsed}");
+        }
+        finally { RegistroDeFallos.EntregaUrgente = null; RegistroDeFallos.EsperaUrgente = antes; Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", null); }
+    }
+
+    [Fact]
+    public void UnFalloAtrapadoQueEsUnDefecto_QuedaComoErrorConSuEventoYSuMensaje()
+    {
+        Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", carpeta);
+        try
+        {
+            RegistroDeFallos.Anotar("student", "AulaContenidoView.Mostrar l1-explicacion", LaExcepcionDeLaPantalla(), "aula.visor.fallo",
+                "No se pudo mostrar la página maquetada del curso «Teoría» (lectura · página 1 de 12) en el visor del aula.", new { objeto_ref = "l1-explicacion", indice = 1 });
+            var linea = Lineas(RegistroLocal.RutaErrores).Single();
+            Assert.Equal(("ERROR", "aula.visor.fallo", "bad"), (linea.GetProperty("nivel").GetString(), linea.GetProperty("evento").GetString(), linea.GetProperty("ruta").GetString()));
+            Assert.Contains("«Teoría»", linea.GetProperty("mensaje").GetString());
+            Assert.Equal("l1-explicacion", linea.GetProperty("detalle").GetProperty("objeto_ref").GetString());
+            Assert.Contains("AulaContenidoView.Mostrar l1-explicacion", File.ReadAllText(RegistroDeFallos.Ruta("student")));
+        }
+        finally { Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", null); }
+    }
+
+    [Fact]
+    public void DondeFallo_DiceLaClaseYElMetodoDeAvacomQueEstabanHaciendoAlgo()
+    {
+        var donde = RegistroDeFallos.DondeFallo(LaExcepcionDeLaPantalla());
+        Assert.NotNull(donde);
+        Assert.StartsWith($"{nameof(RegistroLocalTests)}.MontarUnaPantallaQueFalla", donde);
+        Assert.Null(RegistroDeFallos.DondeFallo(new InvalidOperationException("nunca lanzada: sin pila")));
+    }
+
+    [Fact]
+    public void LosPendientes_SobrevivenAUnCierre_YSeRecuperanAlArrancar()
+    {
+        RegistroLocal.Advertencia(Canal.Comunicacion, "socket.caida", "Se cayó el canal");
+        RegistroLocal.Error(Canal.Aplicacion, "aula.visor.fallo", "No se pudo mostrar la Teoría");
+        RegistroLocal.Info(Canal.Dispositivo, "arranque", "esto no se entrega");
+        Assert.Equal(2, Lineas(RegistroLocal.RutaPendientes).Count);
+
+        // La app muere: la memoria se pierde; el archivo no.
+        RegistroLocal.Reiniciar();
+        Assert.Equal(0, RegistroLocal.CuentaPendientes);
+        RegistroLocal.Configurar("student");
+        Assert.Equal(2, RegistroLocal.CuentaPendientes);
+        var recuperados = RegistroLocal.TomarPendientes();
+        Assert.Equal(["socket.caida", "aula.visor.fallo"], recuperados.Select(r => r.Evento!).ToArray());
+        Assert.Equal("ERROR", recuperados[1].Nivel);
+    }
+
+    [Fact]
+    public void LoTomadoSigueEnDiscoHastaQueElNodoLoConfirma()
+    {
+        RegistroLocal.Advertencia(Canal.Comunicacion, "a", "uno");
+        RegistroLocal.Advertencia(Canal.Comunicacion, "b", "dos");
+        RegistroLocal.Advertencia(Canal.Comunicacion, "c", "tres");
+        var tomados = RegistroLocal.TomarPendientes(2);
+        Assert.Equal(2, tomados.Count);
+        Assert.Equal(3, Lineas(RegistroLocal.RutaPendientes).Count);     // una caída ahora no pierde los dos que iban en vuelo
+        RegistroLocal.Confirmar();
+        Assert.Equal(["c"], Lineas(RegistroLocal.RutaPendientes).Select(l => l.GetProperty("evento").GetString()!).ToArray());
+        RegistroLocal.TomarPendientes();
+        RegistroLocal.Confirmar();
+        Assert.False(File.Exists(RegistroLocal.RutaPendientes));          // nada pendiente: sin archivo
+    }
+
+    [Fact]
+    public void LaColaEnDisco_NoCreceSinLimite()
+    {
+        var antes = RegistroLocal.PendientesMaximos;
+        RegistroLocal.PendientesMaximos = 5;
+        try
+        {
+            for (var i = 0; i < 20; i++) RegistroLocal.Advertencia(Canal.Comunicacion, $"e{i}", $"m{i}");
+            Assert.Equal(5, RegistroLocal.CuentaPendientes);
+            Assert.True(Lineas(RegistroLocal.RutaPendientes).Count <= 5 + 1);   // se reescribe al recortar; a lo sumo el último anexado
+            Assert.Equal("e19", Lineas(RegistroLocal.RutaPendientes)[^1].GetProperty("evento").GetString());
+        }
+        finally { RegistroLocal.PendientesMaximos = antes; }
     }
 }
 
@@ -414,5 +558,71 @@ public sealed class CabecerasYClientesTests : IDisposable
         ClienteJson.Token = "pase";
         Assert.NotNull(await entregador.EntregarAhoraAsync());
         Assert.Single(manejador.Peticiones);
+    }
+
+    /// <summary>Los mensajes de los renglones de un cuerpo de entrega (el JSON escapa las tildes: se lee, no se busca en el texto crudo).</summary>
+    private static List<string> Mensajes(string? cuerpo)
+    {
+        using var doc = JsonDocument.Parse(cuerpo!);
+        return doc.RootElement.GetProperty("renglones").EnumerateArray().Select(r => r.GetProperty("mensaje").GetString()!).ToList();
+    }
+
+    private static async Task<bool> EsperarHasta(Func<bool> condicion, TimeSpan limite)
+    {
+        var fin = DateTime.UtcNow + limite;
+        while (DateTime.UtcNow < fin)
+        {
+            if (condicion()) return true;
+            await Task.Delay(50);
+        }
+        return condicion();
+    }
+
+    [Fact]
+    public async Task UnError_LlegaAlNodoSinEsperarAlMinuto_YUnWarningEsperaAlCicloNormal()
+    {
+        var manejador = new ManejadorFalso(_ => Task.FromResult(Respuesta(HttpStatusCode.Accepted, """{"recibidos":2,"escritos":2,"descartados":0,"dispositivo_id":"d-1"}""")));
+        var api = new LogsApi(new HttpClient(manejador), new Uri("http://127.0.0.1:8000/"));
+        AparatoRegistrado.Recordar("d-1");
+        using var entregador = new EntregadorDeLogs(() => api, "ops", () => "0.9", cada: TimeSpan.FromMinutes(10));
+        entregador.Iniciar();
+        Assert.NotNull(RegistroDeFallos.EntregaUrgente);
+
+        RegistroLocal.Advertencia(Canal.Dispositivo, "bateria.baja", "Batería al 9 %");
+        await Task.Delay(EntregadorDeLogs.EsperaTrasError + TimeSpan.FromMilliseconds(800));
+        Assert.Empty(manejador.Peticiones);                                     // un WARNING no apura nada
+
+        RegistroLocal.Error(Canal.Aplicacion, "aula.visor.fallo", "No se pudo mostrar la Teoría");
+        Assert.True(await EsperarHasta(() => manejador.Peticiones.Count == 1, TimeSpan.FromSeconds(8)), "el ERROR no se entregó a tiempo");
+        var mensajes = Mensajes(manejador.Cuerpos[0]);
+        Assert.Contains("No se pudo mostrar la Teoría", mensajes);              // el error viaja…
+        Assert.True(mensajes.Contains("Batería al 9 %"), manejador.Cuerpos[0]);   // …con lo que esperaba
+        Assert.Equal(0, RegistroLocal.CuentaPendientes);
+        Assert.False(File.Exists(RegistroLocal.RutaPendientes));                // confirmado: nada pendiente en disco
+
+        entregador.Detener();
+        Assert.Null(RegistroDeFallos.EntregaUrgente);
+    }
+
+    [Fact]
+    public void UnaCaida_LlevaElErrorAlNodoAntesDeMorir()
+    {
+        Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", carpeta);
+        try
+        {
+            var manejador = new ManejadorFalso(_ => Task.FromResult(Respuesta(HttpStatusCode.Accepted, """{"recibidos":1,"escritos":1,"descartados":0,"dispositivo_id":"d-1"}""")));
+            var api = new LogsApi(new HttpClient(manejador), new Uri("http://127.0.0.1:8000/"));
+            AparatoRegistrado.Recordar("d-1");
+            using var entregador = new EntregadorDeLogs(() => api, "ops", () => "0.9", cada: TimeSpan.FromMinutes(10));
+            entregador.Iniciar();
+
+            RegistroDeFallos.Escribir("ops", "WinUI.UnhandledException", new InvalidOperationException("la interfaz falló"), fatal: true);
+
+            Assert.Single(manejador.Peticiones);                                // ya salió: no se esperó ni al minuto ni al 1,5 s
+            var mensaje = Assert.Single(Mensajes(manejador.Cuerpos[0]));
+            Assert.Contains("Falló la interfaz de Windows y la aplicación se cerró", mensaje);
+            Assert.Contains("InvalidOperationException: la interfaz falló", mensaje);
+        }
+        finally { RegistroDeFallos.EntregaUrgente = null; Environment.SetEnvironmentVariable("AVACOM_LMS_DIR_FALLOS", null); }
     }
 }
