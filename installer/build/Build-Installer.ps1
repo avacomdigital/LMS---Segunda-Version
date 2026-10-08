@@ -531,8 +531,10 @@ esta abierto, el aula arranca igual y los cursos aparecen cuando lo este.
 
 PRIMER ARRANQUE (instalacion nueva): el nodo queda sin organizacion. Al abrir AVACOM OPS
 Master por primera vez, la aplicacion lo detecta y abre el primer arranque: pais y nombre del
-aula, el administrador (documento, nombres, apellidos, contrasena) y el PIN maestro (seis
-digitos). La hoja de acceso se muestra UNA vez y el PIN maestro no se puede volver a ver.
+aula, el administrador (documento, nombres y apellidos; la contrasena inicial la genera el
+sistema) y el PIN maestro (seis digitos, con un teclado propio en pantalla). La hoja de acceso
+se muestra UNA vez y el PIN maestro no se puede volver a ver. El instalador deja encendido el
+teclado tactil de Windows para quien da la clase, para que salga solo al tocar un campo.
 Despues, desde OPS (Grupos) se crean los grupos y los alumnos, o los alumnos se crean solos y
 los profesores se registran con el PIN maestro. Cada tableta se registra sola al conectar.
 ACTUALIZACION de un nodo que ya tenia organizacion: no tiene PIN maestro hasta que la
@@ -564,8 +566,11 @@ Paso '7/8  Verificando el codigo del asistente en este Windows'
 #   AVACOM-Probar-Comunicacion.bat     diagnostico a fondo de la comunicacion con AVACOM Contenido
 & (Join-Path $PSScriptRoot 'New-ProbadorBat.ps1') | Out-Null
 & (Join-Path $PSScriptRoot 'New-VerificadorBat.ps1') | Out-Null
+#   AVACOM-Medir-Red.bat               latencia, bajada y subida entre una laptop (o este equipo) y el nodo, pasando por el router
+& (Join-Path $PSScriptRoot 'New-MedidorRedBat.ps1') | Out-Null
 # La carpeta de entrega (la release) lleva todo junto: el diagnostico de Contenido se copia junto al instalador.
 Copy-Item (Join-Path $raiz 'installer\tools\AVACOM-Probar-Comunicacion.bat') (Join-Path $salida 'AVACOM-Probar-Comunicacion.bat') -Force
+Copy-Item (Join-Path $raiz 'installer\tools\AVACOM-Medir-Red.bat') (Join-Path $salida 'AVACOM-Medir-Red.bat') -Force
 
 # ----------------------------------------------------- 7b. Ensayo del paquete
 if ($OmitirEnsayo) {
@@ -656,6 +661,9 @@ if (-not (Test-Path (Join-Path $salida 'AVACOM-Verificar-Instalador.bat'))) {
 if (-not (Test-Path (Join-Path $salida 'AVACOM-Probar-Comunicacion.bat'))) {
     Fallar 'Falta installer\latest\AVACOM-Probar-Comunicacion.bat: la carpeta de entrega esta incompleta.'
 }
+if (-not (Test-Path (Join-Path $salida 'AVACOM-Medir-Red.bat'))) {
+    Fallar 'Falta installer\latest\AVACOM-Medir-Red.bat: la carpeta de entrega esta incompleta.'
+}
 
 @"
 AVACOM OPS Master $Version (revision $revision)
@@ -668,6 +676,9 @@ Esta carpeta es lo que se sube como release de GitHub:
                                         el error exacto cuando algo falla. NO modifica nada.
   AVACOM-Probar-Comunicacion.bat        el diagnostico a fondo de la comunicacion con AVACOM
                                         Contenido (por que el aula no ve cursos). NO modifica nada.
+  AVACOM-Medir-Red.bat                  mide la red del aula: latencia, bajada y subida entre una laptop
+                                        (por Wi-Fi) y el nodo, pasando por el router. Para saber si la red
+                                        aguanta 35 tabletas. NO modifica nada.
   LEEME.txt                             este archivo
 
 PARA INSTALAR: toca el instalador. Todo se maneja con toques: no hay que escribir nada.
@@ -681,12 +692,21 @@ Visor de eventos de Windows). Deja un informe y un .zip con las evidencias en el
 
 Esta version incluye: Modo Estudio, Evaluacion y entrega, Auditoria y registros del nodo, y el
 acceso con PIN maestro (alta propia de profesores y alumnos, visitante, traspaso entre OPS y Student).
+Novedades de la 2.5.1: el nodo aguanta 35 tabletas descargando a la vez sin errores (antes respondia 500 por
+"database is locked") y el aviso de cambio de lamina llega en menos de un segundo; la sesion de fabrica dura
+8 horas; AVACOM Student distingue cada tableta aunque todas tengan el mismo nombre de fabrica y recuerda la
+direccion del aula; y AVACOM-Medir-Red.bat mide la red.
+Novedades de la 2.4.0: los videos, audios e imagenes del aula llegan con un pase de medios dentro de
+la direccion (con la sesion obligatoria ya no fallan con 401) y el contrato 2 de AVACOM Contenido
+(laminas html, pausas y portada de video, arrastrar y soltar). Las tabletas con Student 2.3.x siguen
+entrando, pero no reproducen medios con la sesion obligatoria: actualiza tambien AVACOM Student.
 
 PRIMER ARRANQUE: tras una instalacion nueva, abre AVACOM OPS Master. Pedira (con el teclado tactil
-de Windows) pais y nombre del aula, el administrador (documento, contrasena) y el PIN maestro de
-seis digitos. La hoja de acceso se muestra una sola vez. Luego crea los grupos y alumnos en Grupos
-(o deja que se registren solos). En cada tableta, AVACOM Student pide la direccion del aula que
-muestra la ultima pantalla del instalador.
+de Windows, que el instalador deja encendido) pais y nombre del aula, el administrador (documento,
+nombres y apellidos: la contrasena inicial la genera el sistema) y el PIN maestro de seis digitos.
+La hoja de acceso se muestra una sola vez. Luego el administrador entra con documento, contrasena
+inicial y PIN maestro. Crea los grupos y alumnos en Grupos (o deja que se registren solos). En
+cada tableta, AVACOM Student pide la direccion del aula que muestra la ultima pantalla del instalador.
 Politica de datos de esta version: $PoliticaDatos.
 "@ | Set-Content -Path (Join-Path $salida 'LEEME.txt') -Encoding utf8
 

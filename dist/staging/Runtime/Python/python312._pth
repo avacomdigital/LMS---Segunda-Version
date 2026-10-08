@@ -1,7 +1,0 @@
-python312.zip
-.
-Lib\site-packages
-..\..\Backend
-
-# AVACOM OPS Master: site.main() habilita site-packages en el runtime embebido.
-import site

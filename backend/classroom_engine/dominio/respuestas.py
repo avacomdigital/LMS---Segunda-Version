@@ -27,6 +27,7 @@ FORMAS_RESPUESTA: dict[str, tuple[str, ...]] = {
     "matching": ("pairs",),
     "ordering": ("order",),
     "open": ("text", "drawingRef", "audioRef"),
+    "drag_drop": ("placements",),      # contrato 2 (2026-10-07): [{itemId, targetId}], una pieza en una zona como mucho
 }
 
 
@@ -106,6 +107,24 @@ def validar_respuesta(pregunta: dict, respuesta: Any) -> dict:
         if set(orden) != elementos or len(orden) != len(elementos):
             raise DatosInvalidos("`order` debe contener exactamente los elementos de la pregunta, una vez cada uno.", pregunta_ref=ref)
         return {"order": list(orden)}
+
+    if tipo == "drag_drop":
+        colocaciones = respuesta.get("placements")
+        if not isinstance(colocaciones, list) or not colocaciones:
+            raise DatosInvalidos("`placements` debe ser una lista no vacía de {itemId, targetId}.", pregunta_ref=ref)
+        piezas, zonas = _refs(pregunta, "elementos", "ref"), _refs(pregunta, "zonas", "zona_ref")
+        salida, vistas = [], set()
+        for c in colocaciones:
+            if not isinstance(c, dict) or not c.get("itemId") or not c.get("targetId"):
+                raise DatosInvalidos("Cada colocación exige itemId y targetId.", pregunta_ref=ref)
+            pieza, zona = str(c["itemId"]), str(c["targetId"])
+            if pieza not in piezas or zona not in zonas:
+                raise DatosInvalidos(f"La colocación {pieza} → {zona} usa referencias que no están en la pregunta.", pregunta_ref=ref)
+            if pieza in vistas:
+                raise DatosInvalidos(f"La pieza {pieza} se colocó más de una vez.", pregunta_ref=ref)
+            vistas.add(pieza)
+            salida.append({"itemId": pieza, "targetId": zona})
+        return {"placements": salida}
 
     # open
     presentes = [k for k in ("text", "drawingRef", "audioRef") if respuesta.get(k)]

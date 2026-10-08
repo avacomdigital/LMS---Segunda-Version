@@ -181,8 +181,9 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
     }),
 }
 
-_BASE = dict(intentos_maximos=5, ventana_intentos_min=15, bloqueo_minutos=15, duracion_sesion_min=240,
-             vigencia_credencial_dias=None, inactividad_min=240)
+# 480 min = ocho horas: una jornada escolar completa (la prueba de 35 tabletas y cualquier clase larga), sin que la sesión se cierre a media clase.
+_BASE = dict(intentos_maximos=5, ventana_intentos_min=15, bloqueo_minutos=15, duracion_sesion_min=480,
+             vigencia_credencial_dias=None, inactividad_min=480)
 
 # perfil -> columnas de la política por defecto (BR-023: personal y alumnos por separado)
 POLITICAS_POR_DEFECTO: dict[Menu, dict] = {

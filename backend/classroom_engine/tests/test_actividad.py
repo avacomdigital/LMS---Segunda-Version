@@ -295,3 +295,55 @@ class CierreSinPerderEntregasTests(ConActividad):
             ca.EnviarRespuestas(con_reloj(cierre + MIN)).ejecutar(
                 self.s["id"], d["id"], self.ana, {"respuestas": [self.q("l1-act-q3", 1, {"blanks": {"b1": "x"}}, capturada_en=cierre - 1_000)],
                                                   "intento_numero": 1})
+
+
+class CalificarSinRetenerLaBaseTests(ConActividad):
+    """La calificación va a AVACOM Contenido y tarda: hecha dentro de la transacción retenía el turno de escritura de SQLite durante todo el viaje y, con 35
+    tabletas entregando a la vez, cada respuesta esperaba a las demás (p95 de 5 s; prueba del 2026-10-08). Ahora se pregunta ANTES de abrir la transacción."""
+
+    def con_fuente_que_mide(self, profundidades):
+        from django.db import connection
+
+        class Mide(FuenteConNotas):
+            def evaluar_lote(self, curso_ref, version, items):
+                profundidades.append(len(connection.savepoint_ids))
+                return super().evaluar_lote(curso_ref, version, items)
+
+        return mock.patch("classroom_engine.infraestructura.contenedor.fuente", side_effect=lambda nombre=None, curso_ref="": Mide(ruta_ejemplo()))
+
+    def test_la_fuente_se_consulta_fuera_de_la_transaccion_y_una_sola_vez(self):
+        from django.db import connection
+        d = self.lanzar()
+        base = len(connection.savepoint_ids)
+        profundidades: list[int] = []
+        with self.con_fuente_que_mide(profundidades):
+            r = self.responder(d, self.ana, [self.q("l1-act-q1", 1, Q1)])
+        self.assertEqual(r["aceptadas"], ["l1-act-q1"])
+        self.assertEqual(profundidades, [base])           # una sola llamada, y sin la transacción del caso de uso abierta
+        f = m.Intento.objects.get(participante_id=self.ana)
+        self.assertEqual((f.puntaje, f.respuestas[0]["veredicto"]["correcta"]), (1.0, True))      # el veredicto llegó a la fila igual que antes
+
+    def test_un_reenvio_con_otra_respuesta_se_vuelve_a_calificar_dentro(self):
+        # Lo calificado antes sólo se reutiliza si es EXACTAMENTE la respuesta que quedó aceptada; si no, se califica con lo que quedó.
+        d = self.lanzar()
+        profundidades: list[int] = []
+        with self.con_fuente_que_mide(profundidades):
+            self.responder(d, self.ana, [self.q("l1-act-q1", 1, Q1)])
+            self.responder(d, self.ana, [self.q("l1-act-q1", 2, {"selectedOptionIds": ["b"]})])
+        f = m.Intento.objects.get(participante_id=self.ana)
+        self.assertEqual(len(f.respuestas), 1)
+        self.assertEqual(f.respuestas[0]["respuesta"], {"selectedOptionIds": ["b"]})
+        self.assertIsNotNone(f.respuestas[0]["veredicto"])
+
+    def test_sin_carpeta_de_lectura_se_califica_dentro_como_antes(self):
+        import dataclasses
+        from ..aplicacion import casos_uso_actividad as ca
+        from django.db import connection
+        d = self.lanzar()
+        base = len(connection.savepoint_ids)
+        profundidades: list[int] = []
+        with self.con_fuente_que_mide(profundidades):
+            s = dataclasses.replace(servicios(), uow_lectura=None)     # `servicios()` toma la fuente al construirse: dentro del parche
+            r = ca.EnviarRespuestas(s).ejecutar(self.s["id"], d["id"], self.ana, {"respuestas": [self.q("l1-act-q1", 1, Q1)]})
+        self.assertEqual(r["aceptadas"], ["l1-act-q1"])
+        self.assertEqual(profundidades, [base + 1])       # la prueba de arriba mide algo real: aquí SÍ se llamó con la transacción abierta

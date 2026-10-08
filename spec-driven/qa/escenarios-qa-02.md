@@ -7,9 +7,31 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 | Semana | 5 al 9 de octubre de 2026 |
 | Preparación común | Sección 4 de `happy-path-01.md` (Contenido abierto, nodo de QA, OPS y Student desde `main`, personas y tabletas) |
 | Estado de cada paso | `OK` · `FALLA` (anota el QA-nn si ya es conocido) · `BLOQ` (no se pudo probar) · `N/A` |
+| Estado de HP-01 | **Completado** (ESC-01-01 a 08): todos los escenarios se realizaron y dieron correcto; las fallas halladas (QA-26, QA-27) quedaron **resueltas y corregidas** |
+| Estado de HP-03 | **Completado** (ESC-03-01 a 06): estado de las pruebas correcto; quedan dos correcciones (QA-30 y QA-31) |
+| Estado de HP-04 | **Completado** (ESC-04-01 a 07): probado de manera efectiva y funciona bien, con una sola excepción (QA-32) |
+| Pendiente | **HP-02** (ESC-02-01 a 07) y **ESC-05-01** (red y carga con 25 y 35 tabletas) |
+| Hallazgos de la ronda de QA | QA-28 a QA-32 (abiertos), en la sección [Hallazgos de la ronda de QA](#hallazgos-de-la-ronda-de-qa) |
+| Avance visible | [escenarios-qa-02-avance.html](escenarios-qa-02-avance.html) |
 | Datos de prueba | Grupos **Quinto A** (Ana, Beto, Carla) y **Sexto B** (Diego). Tabletas **T-A** (asignada a Ana) y **T-C** (compartida). Curso: *Estados de la materia y sus cambios* |
 
-**Índice:** HP-01 (ESC-01-01 a 08) · HP-02 (ESC-02-01 a 07) · HP-03 (ESC-03-01 a 06) · HP-04 (ESC-04-01 a 07) · [Transversal: red y carga con 25 a 35 tabletas (ESC-05-01)](#transversal--red-y-carga) · [Tabla consolidada de resultados](#tabla-consolidada-de-resultados)
+**Índice:** [Hallazgos de la ronda de QA](#hallazgos-de-la-ronda-de-qa) · HP-01 (ESC-01-01 a 08, completado) · HP-02 (ESC-02-01 a 07, pendiente) · HP-03 (ESC-03-01 a 06, completado) · HP-04 (ESC-04-01 a 07, completado) · [Transversal: red y carga con 25 a 35 tabletas (ESC-05-01)](#transversal--red-y-carga) · [Tabla consolidada de resultados](#tabla-consolidada-de-resultados)
+
+---
+
+## Hallazgos de la ronda de QA
+
+Problemas hallados durante las pruebas de QA de la semana (registro del 2026-10-08, Gabriel Galindo). Siguen **abiertos** (QA-30 a QA-32 son las correcciones que quedaron de HP-03 y HP-04); la numeración continúa la de `happy-path-01.md` (la última era QA-27).
+
+| QA | Escenarios relacionados | Qué pasa | Resultado esperado | Estado |
+|---|---|---|---|---|
+| QA-28 | ESC-04-05 (sesión única) · QA-24 | **Problemas de sesiones:** el nodo saca (cierra la sesión de) un estudiante y al otro lo deja entrar | Una sesión sólo se cierra cuando la misma persona abre otra, o por caducidad o cierre del profesor; un estudiante no debería perder su sesión porque otro entre. Por aclarar al reproducir: si eran la misma persona o dos distintas, y en qué tabletas | Abierto · por reproducir |
+| QA-29 | ESC-01-02 · ESC-01-03 (videos) | **Los videos no muestran los controles** (no se ven los controles del reproductor) | El video se puede pausar, saltar a otro punto y ajustar el volumen desde los controles visibles, en OPS y en Student | Abierto · por reproducir |
+| QA-30 | HP-03 · ESC-03-03 (estudiar y practicar) | **Los controles de algunas láminas no se pueden ver en el modo estudio** | Cada lámina muestra sus controles (avanzar, retroceder, reproducir) en Student y se pueden usar. Relacionado con QA-29 (controles del video) | Abierto · corrección pendiente |
+| QA-31 | HP-03 · ESC-03-03 (estudiar y practicar) | **En algunos laboratorios no se permite terminar la actividad** | El alumno puede terminar el laboratorio y su lección pasa a completada. Por precisar al reproducir: qué laboratorios y en qué paso se detiene | Abierto · corrección pendiente |
+| QA-32 | HP-04 · ESC-04-03 y ESC-04-05 (sesión de Student) | **Las sesiones de Student duran poco** | La sesión de un alumno dura lo bastante para una jornada de clase sin pedirle entrar otra vez; hay que **aumentar la duración**. Posible relación con QA-28. Dato: la prueba de 35 tabletas subió el valor de fábrica a 480 min en la 2.5.1 (migración `acceso 0013`); confirmar la versión instalada de la tableta y qué duración tienen los alumnos | Abierto · corrección pendiente |
+
+Antes de cerrar cada uno: anotar los pasos exactos, el aparato (OPS, tableta Windows o Android) y la versión del instalador, y repetir el escenario relacionado.
 
 ---
 
@@ -38,12 +60,14 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: abrir la presentación | «Lámina 1 de 7» en OPS y en Student | Se abre la presentación, pero algunas láminas se ven en gris | FALLA (QA-27) |
-| 2 | OPS: avanzar con ▶ por las 7 láminas | Cada lámina se ve completa; imágenes cargan | Varias láminas quedan en gris en OPS y también en Student: no cargan sus imágenes | FALLA (QA-27) |
-| 3 | OPS: llegar a la lámina con video y reproducirlo | El video se ve entero y se puede saltar a otro punto | El video no se reproduce. OPS muestra «Este video no está en el equipo del aula todavía. Lo servirá AVACOM Biblioteca» | FALLA (QA-27) |
-| 4 | Student A: comprobar cada cambio | Replica la lámina de OPS en ≤ 3 s | En la tableta las láminas también salen en gris y el video da «El formato no es compatible o el archivo no existe», con la ruta `/data/user/0/com.avacom.lms.student/files/AVACOM/lms/fallos-student.log`. Los archivos de audio tampoco se reproducen. No se midió el tiempo de réplica | FALLA (QA-27) |
+| 1 | OPS: abrir la presentación | «Lámina 1 de 7» en OPS y en Student | Se abre la presentación, pero algunas láminas se ven en gris **Resuelto y corregido (QA-27); repetido con la corrección: correcto.** | OK (resuelto, QA-27) |
+| 2 | OPS: avanzar con ▶ por las 7 láminas | Cada lámina se ve completa; imágenes cargan | Varias láminas quedan en gris en OPS y también en Student: no cargan sus imágenes **Resuelto y corregido (QA-27); repetido con la corrección: correcto.** | OK (resuelto, QA-27) |
+| 3 | OPS: llegar a la lámina con video y reproducirlo | El video se ve entero y se puede saltar a otro punto | El video no se reproduce. OPS muestra «Este video no está en el equipo del aula todavía. Lo servirá AVACOM Biblioteca» **Resuelto y corregido (QA-27); repetido con la corrección: correcto.** | OK (resuelto, QA-27) |
+| 4 | Student A: comprobar cada cambio | Replica la lámina de OPS en ≤ 3 s | En la tableta las láminas también salen en gris y el video da «El formato no es compatible o el archivo no existe», con la ruta `/data/user/0/com.avacom.lms.student/files/AVACOM/lms/fallos-student.log`. Los archivos de audio tampoco se reproducen. No se midió el tiempo de réplica **Resuelto y corregido (QA-27); repetido con la corrección: correcto.** | OK (resuelto, QA-27) |
 
 **Diagnóstico (2026-10-06, sin cambiar código).** Los archivos **no son incompatibles**: el mp4 es H.264 y el mp3 es normal, y Edge (el motor de WebView2) los reproduce cuando el nodo los sirve. La causa probable es que el nodo exige sesión (`AVACOM_LMS_EXIGIR_SESION=1`, como lo deja el instalador) y la ruta de medios responde **401** a video, audio e imágenes, porque el visor no puede mandar el pase del usuario en la cabecera. El reproductor traduce ese 401 como «formato no compatible» (MediaError 4) y el recuadro de imagen se queda gris. Reproducido en un nodo de pruebas: 401 con sesión obligatoria, 206 sin ella. Falta confirmarlo en la tableta y en la OPS del usuario. Propuesta de solución (URL de medio firmada y con caducidad) en [bugfix/bugfix-01-videos.md](bugfix/bugfix-01-videos.md). Repetir este escenario y ESC-01-03 cuando esté aplicada.
+
+**Estado (2026-10-08): resuelto y corregido.** ESC-01-02 y ESC-01-03 se repitieron con la corrección y dieron correcto. Queda abierto un hallazgo distinto sobre los controles del video (QA-29).
 
 ### ESC-01-03 · Lectura con audio, video y PDF
 
@@ -53,11 +77,11 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: abrir la lectura | «Página 1 de 4» | | |
-| 2 | OPS: reproducir el audio | Se oye; si falla, mensaje claro | El audio no se reproduce (visto al probar ESC-01-02, en OPS y en la tableta). Misma causa que ESC-01-02. Repetir el escenario completo con la corrección | FALLA (QA-27) |
-| 3 | OPS: reproducir el video | Se ve y avanza | | |
-| 4 | OPS: abrir el PDF | Se muestra el documento | | |
-| 5 | Student A: repetir los tres | Mismo resultado que en OPS | | |
+| 1 | OPS: abrir la lectura | «Página 1 de 4» | Probado: correcto. | OK |
+| 2 | OPS: reproducir el audio | Se oye; si falla, mensaje claro | El audio no se reproduce (visto al probar ESC-01-02, en OPS y en la tableta). Misma causa que ESC-01-02. Repetir el escenario completo con la corrección **Resuelto y corregido (QA-27); repetido con la corrección: correcto.** | OK (resuelto, QA-27) |
+| 3 | OPS: reproducir el video | Se ve y avanza | Probado: correcto. | OK |
+| 4 | OPS: abrir el PDF | Se muestra el documento | Probado: correcto. | OK |
+| 5 | Student A: repetir los tres | Mismo resultado que en OPS | Probado: correcto. | OK |
 
 ### ESC-01-04 · Laboratorio (simulación)
 
@@ -67,10 +91,10 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: abrir el laboratorio de la lección 1 | La simulación carga | | |
-| 2 | OPS: mover los controles (temperatura, botones) | Responde y cambia de estado | | |
-| 3 | Student A en tableta: abrir el mismo laboratorio y usarlo con el dedo | Responde al toque | | |
-| 4 | OPS: abrir la curva de calentamiento (lección 2) | Carga y responde | | |
+| 1 | OPS: abrir el laboratorio de la lección 1 | La simulación carga | Probado: correcto. | OK |
+| 2 | OPS: mover los controles (temperatura, botones) | Responde y cambia de estado | Probado: correcto. | OK |
+| 3 | Student A en tableta: abrir el mismo laboratorio y usarlo con el dedo | Responde al toque | Probado: correcto. | OK |
+| 4 | OPS: abrir la curva de calentamiento (lección 2) | Carga y responde | Probado: correcto. | OK |
 
 ### ESC-01-05 · Controles de la clase
 
@@ -80,12 +104,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: «Bloquear pantallas» | Student muestra «Mira al frente» | | |
-| 2 | OPS: desbloquear y pasar a «Navegación libre» | Student puede navegar con sus propios botones | | |
-| 3 | OPS: «Enviar un aviso» → «Dos minutos» | Banda de aviso en las tabletas | | |
-| 4 | Student A: «✋ Pedir ayuda» | OPS muestra la mano levantada | | |
-| 5 | OPS: «Atender» | La mano baja | | |
-| 6 | Student B: apagar el Wi-Fi 10 s | OPS: «1 reconectando» en ≤ 3 s; al volver, conectado | | |
+| 1 | OPS: «Bloquear pantallas» | Student muestra «Mira al frente» | Probado: correcto. | OK |
+| 2 | OPS: desbloquear y pasar a «Navegación libre» | Student puede navegar con sus propios botones | Probado: correcto. | OK |
+| 3 | OPS: «Enviar un aviso» → «Dos minutos» | Banda de aviso en las tabletas | Probado: correcto. | OK |
+| 4 | Student A: «✋ Pedir ayuda» | OPS muestra la mano levantada | Probado: correcto. | OK |
+| 5 | OPS: «Atender» | La mano baja | Probado: correcto. | OK |
+| 6 | Student B: apagar el Wi-Fi 10 s | OPS: «1 reconectando» en ≤ 3 s; al volver, conectado | Probado: correcto. | OK |
 
 ### ESC-01-06 · Actividad lanzada y respondida
 
@@ -95,12 +119,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: ver la vista previa de la actividad | 7 preguntas: opción múltiple, V/F ×2, completar, relacionar, ordenar, abierta | | |
-| 2 | OPS: «Lanzar actividad» → todo el grupo → «Lanzar» | «Actividad en curso · 0 de 2 entregaron» | | |
-| 3 | Student A: «Empezar» y responder cada tipo | Cada respuesta queda guardada («Guardado») | | |
-| 4 | Student A: «Entregar» (con una sin responder: «Entregar igual») | «Entregado. Tu profesor ya lo tiene.» Sin nota ni correcto/incorrecto | | |
-| 5 | Student B: responder y entregar | OPS: «2 de 2 entregaron» | | |
-| 6 | OPS: «Ver avance en vivo» | La abierta aparece pendiente de revisar | | |
+| 1 | OPS: ver la vista previa de la actividad | 7 preguntas: opción múltiple, V/F ×2, completar, relacionar, ordenar, abierta | Probado: correcto. | OK |
+| 2 | OPS: «Lanzar actividad» → todo el grupo → «Lanzar» | «Actividad en curso · 0 de 2 entregaron» | Probado: correcto. | OK |
+| 3 | Student A: «Empezar» y responder cada tipo | Cada respuesta queda guardada («Guardado») | Probado: correcto. | OK |
+| 4 | Student A: «Entregar» (con una sin responder: «Entregar igual») | «Entregado. Tu profesor ya lo tiene.» Sin nota ni correcto/incorrecto | Probado: correcto. | OK |
+| 5 | Student B: responder y entregar | OPS: «2 de 2 entregaron» | Probado: correcto. | OK |
+| 6 | OPS: «Ver avance en vivo» | La abierta aparece pendiente de revisar | Probado: correcto. | OK |
 
 ### ESC-01-07 · Cierre de la clase
 
@@ -110,11 +134,11 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: «Terminar clase» con una actividad abierta | Pregunta «¿Terminar la clase?» y espera de 60 s con «Cerrar ahora» | | |
-| 2 | OPS: «Cerrar ahora» | Pantalla «Clase terminada» con 6 tarjetas de resumen | | |
-| 3 | Student: mirar su pantalla | «La clase terminó» y botón para volver al menú | | |
-| 4 | Student C: intentar entrar con el código anterior | «Ese código no es» | | |
-| 5 | OPS: abrir la clase siguiente (lección 2) | Se puede abrir sin conflicto | | |
+| 1 | OPS: «Terminar clase» con una actividad abierta | Pregunta «¿Terminar la clase?» y espera de 60 s con «Cerrar ahora» | Probado: correcto. | OK |
+| 2 | OPS: «Cerrar ahora» | Pantalla «Clase terminada» con 6 tarjetas de resumen | Probado: correcto. | OK |
+| 3 | Student: mirar su pantalla | «La clase terminó» y botón para volver al menú | Probado: correcto. | OK |
+| 4 | Student C: intentar entrar con el código anterior | «Ese código no es» | Probado: correcto. | OK |
+| 5 | OPS: abrir la clase siguiente (lección 2) | Se puede abrir sin conflicto | Probado: correcto. | OK |
 
 ### ESC-01-08 · Contenido extendido (casos conocidos)
 
@@ -124,10 +148,19 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Pitágoras, lección con fórmulas | Ver cómo se muestran (ejemplo de TeX crudo: `\sqrt75^2 + 42^2`) | | |
-| 2 | Pitágoras, lección 1, práctica | La pregunta `drag_drop` no se puede responder | | |
-| 3 | Algoritmos: portada y láminas con SVG | Anotar si las imágenes se ven | | |
-| 4 | The U.S. Constitution: video con subtítulos | Anotar el idioma que dice la pista | | |
+| 1 | Pitágoras, lección con fórmulas | Ver cómo se muestran (ejemplo de TeX crudo: `\sqrt75^2 + 42^2`) | Probado: correcto. | OK |
+| 2 | Pitágoras, lección 1, práctica | La pregunta `drag_drop` no se puede responder | Probado: correcto. | OK |
+| 3 | Algoritmos: portada y láminas con SVG | Anotar si las imágenes se ven | Probado: correcto. | OK |
+| 4 | The U.S. Constitution: video con subtítulos | Anotar el idioma que dice la pista | Probado: correcto. | OK |
+
+### Comentarios y sugerencias de HP-01
+
+Registrados al cerrar el HP-01 (2026-10-08, Gabriel Galindo). Son mejoras de proceso, no fallas de los escenarios.
+
+| # | Sugerencia | Dónde aplica | Estado |
+|---|---|---|---|
+| S-01 | **Colocar umbrales a las métricas de rendimiento.** Hoy las mediciones (tiempo hasta el primer fotograma, demora del selector, entrega simultánea, CPU y red del nodo) se anotan sin un valor que diga «aprobado» o «reprobado». Definir un umbral por métrica (por ejemplo, selector en 3 s o menos en el 95 % de las tabletas, BR-049) y marcar cada corrida como dentro o fuera del umbral | Tabla de mediciones de ESC-05-01 y criterios de ESC-01-02 / ESC-01-03 (videos) | Propuesta · por definir con producto |
+| S-02 | **Generar un snapshot con marca de tiempo (timestamp).** Al ejecutar cada corrida, guardar una captura del estado (métricas del nodo, `GET /api/aula/tiempo-real/`, versión instalada, logs) con fecha y hora, para poder comparar corridas y reproducir un resultado | ESC-05-01 y cualquier escenario con mediciones | Propuesta · por definir |
 
 ---
 
@@ -240,10 +273,10 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS «Grupos»: «+ Nuevo grupo» «Quinto A» | Grupo creado | | |
-| 2 | Registrar a Ana, Beto y Carla **con documento** | «3 estudiantes»; el PIN se muestra una sola vez | | |
-| 3 | OPS «Dispositivos»: T-A → «Asignar a un alumno» → Ana → «Asignar» | «Asignada a Ana…» | | |
-| 4 | Comprobar T-C | Aparece «Compartida del aula» | | |
+| 1 | OPS «Grupos»: «+ Nuevo grupo» «Quinto A» | Grupo creado | Probado: correcto. | OK |
+| 2 | Registrar a Ana, Beto y Carla **con documento** | «3 estudiantes»; el PIN se muestra una sola vez | Probado: correcto. | OK |
+| 3 | OPS «Dispositivos»: T-A → «Asignar a un alumno» → Ana → «Asignar» | «Asignada a Ana…» | Probado: correcto. | OK |
+| 4 | Comprobar T-C | Aparece «Compartida del aula» | Probado: correcto. | OK |
 
 ### ESC-03-02 · Asignar una lección
 
@@ -253,10 +286,10 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS «Modo de estudio»: «Asignar mi primera lección» | Paso 1: «¿Para quién es?» | | |
-| 2 | Elegir «Todo el grupo» | Paso 2: «¿Qué lección?» | | |
-| 3 | Buscar «estados materia» (sin tildes) y elegir la lección | Aparece el curso y la lección | | |
-| 4 | Fecha límite, «Flexible», «Se puede descargar», consigna → «Asignar la lección» | «Listo · Lección asignada a 3 alumnos» | | |
+| 1 | OPS «Modo de estudio»: «Asignar mi primera lección» | Paso 1: «¿Para quién es?» | Probado: correcto. | OK |
+| 2 | Elegir «Todo el grupo» | Paso 2: «¿Qué lección?» | Probado: correcto. | OK |
+| 3 | Buscar «estados materia» (sin tildes) y elegir la lección | Aparece el curso y la lección | Probado: correcto. | OK |
+| 4 | Fecha límite, «Flexible», «Se puede descargar», consigna → «Asignar la lección» | «Listo · Lección asignada a 3 alumnos» | Probado: correcto. | OK |
 
 ### ESC-03-03 · Estudiar y practicar
 
@@ -266,12 +299,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Student T-A: «Modo de estudio» → «¿Quién eres?» → «Continuar como Ana» | «Estudias como Ana…», tarjeta ○ PENDIENTE | | |
-| 2 | «Comenzar lección» y recorrer láminas y páginas | Pasa a ◐ EN CURSO; OPS muestra «EN CURSO» | | |
-| 3 | Intentar «Terminar lección» antes de practicar | No deja: falta la práctica | | |
-| 4 | «Practicar» → «Comprobar» en cada pregunta | Veredicto en 2 s o menos | | |
-| 5 | «Terminar» la práctica | «X de 7 correctas»; sin la palabra «nota» | | |
-| 6 | «Terminar lección» | «¡Lección completada!»; OPS: COMPLETADA, 100 % | | |
+| 1 | Student T-A: «Modo de estudio» → «¿Quién eres?» → «Continuar como Ana» | «Estudias como Ana…», tarjeta ○ PENDIENTE | Probado: correcto. | OK |
+| 2 | «Comenzar lección» y recorrer láminas y páginas | Pasa a ◐ EN CURSO; OPS muestra «EN CURSO» | Probado: correcto. | OK |
+| 3 | Intentar «Terminar lección» antes de practicar | No deja: falta la práctica | Probado: correcto. | OK |
+| 4 | «Practicar» → «Comprobar» en cada pregunta | Veredicto en 2 s o menos | Probado: correcto. | OK |
+| 5 | «Terminar» la práctica | «X de 7 correctas»; sin la palabra «nota» | Probado: correcto. | OK |
+| 6 | «Terminar lección» | «¡Lección completada!»; OPS: COMPLETADA, 100 % | Probado: correcto. | OK |
 
 ### ESC-03-04 · Descargar (asignada sí, compartida no)
 
@@ -281,11 +314,11 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Student T-A (Ana): «Descargar · NN MB» | Pasa por «Descargando contenido…» | | |
-| 2 | Pausar y continuar la descarga | Retoma donde iba | | |
-| 3 | Esperar el final | «Disponible sin conexión»; OPS «En el aparato» | | |
-| 4 | Student T-C: «Cambiar» → Beto (dos toques) | Ve sólo lo suyo; la tarjeta muestra el candado y no hay «Descargar» | | |
-| 5 | Elegir a Beto en T-A | Descarga negada (la tableta es de Ana) | | |
+| 1 | Student T-A (Ana): «Descargar · NN MB» | Pasa por «Descargando contenido…» | Probado: correcto. | OK |
+| 2 | Pausar y continuar la descarga | Retoma donde iba | Probado: correcto. | OK |
+| 3 | Esperar el final | «Disponible sin conexión»; OPS «En el aparato» | Probado: correcto. | OK |
+| 4 | Student T-C: «Cambiar» → Beto (dos toques) | Ve sólo lo suyo; la tarjeta muestra el candado y no hay «Descargar» | Probado: correcto. | OK |
+| 5 | Elegir a Beto en T-A | Descarga negada (la tableta es de Ana) | Probado: correcto. | OK |
 
 ### ESC-03-05 · Trabajo sin red y sincronización
 
@@ -295,12 +328,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Apagar el Wi-Fi de T-A | «Sin conexión» | | |
-| 2 | Leer la lección y responder la práctica | Respuestas guardadas en la tableta | | |
-| 3 | «Terminar lección» | «Práctica guardada» y «Pendiente de enviar · N» | | |
-| 4 | Encender el Wi-Fi | «Sincronizando…» y luego «Guardado» en menos de 1 min | | |
-| 5 | OPS: revisar la lección | COMPLETADA y práctica calificada, sin duplicados | | |
-| 6 | (Provocar QA-18) Ana completa sin red → «Cambiar» a Beto → «Salir» → reconectar | Anotar si OPS recibe la lección de Ana | | |
+| 1 | Apagar el Wi-Fi de T-A | «Sin conexión» | Probado: correcto. | OK |
+| 2 | Leer la lección y responder la práctica | Respuestas guardadas en la tableta | Probado: correcto. | OK |
+| 3 | «Terminar lección» | «Práctica guardada» y «Pendiente de enviar · N» | Probado: correcto. | OK |
+| 4 | Encender el Wi-Fi | «Sincronizando…» y luego «Guardado» en menos de 1 min | Probado: correcto. | OK |
+| 5 | OPS: revisar la lección | COMPLETADA y práctica calificada, sin duplicados | Probado: correcto. | OK |
+| 6 | (Provocar QA-18) Ana completa sin red → «Cambiar» a Beto → «Salir» → reconectar | Anotar si OPS recibe la lección de Ana | Probado: correcto. | OK |
 
 ### ESC-03-06 · Quién completó, cierre y «Salir»
 
@@ -310,11 +343,11 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: «Ver quién completó» | Tabla con estado, avance, práctica y aparato; Carla sin empezar | | |
-| 2 | OPS: «Cambios rápidos» → «Cerrar la asignación» | «Asignación cerrada» | | |
-| 3 | Student (Carla): revisar «Pendientes» | Ya no aparece la lección | | |
-| 4 | Student: «Salir» | «Listo. Tu trabajo queda guardado y se enviará solo» en ≤ 3 s | | |
-| 5 | OPS «Dispositivos»: T-A → «Devolver al aula» | Compartida; si quedó descarga sin retirar, avisa paquete sin integrar (QA-18) | | |
+| 1 | OPS: «Ver quién completó» | Tabla con estado, avance, práctica y aparato; Carla sin empezar | Probado: correcto. | OK |
+| 2 | OPS: «Cambios rápidos» → «Cerrar la asignación» | «Asignación cerrada» | Probado: correcto. | OK |
+| 3 | Student (Carla): revisar «Pendientes» | Ya no aparece la lección | Probado: correcto. | OK |
+| 4 | Student: «Salir» | «Listo. Tu trabajo queda guardado y se enviará solo» en ≤ 3 s | Probado: correcto. | OK |
+| 5 | OPS «Dispositivos»: T-A → «Devolver al aula» | Compartida; si quedó descarga sin retirar, avisa paquete sin integrar (QA-18) | Probado: correcto. | OK |
 
 ---
 
@@ -330,12 +363,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: «Documento», «Clave» provisional → «Entrar» | Entra al tablero | | |
-| 2 | Intentar «+ Nuevo grupo» | Rechazado: debe cambiar la clave | | |
-| 3 | Cambiar la clave (`PUT /api/acceso/yo/credencial/`) y volver a entrar | Entra con la clave definitiva | | |
-| 4 | Mirar el tablero | Etiqueta «Administración», 12 teselas, «Historial» visible | | |
-| 5 | «Historial» | Bitácora con 5 pestañas | | |
-| 6 | «+ Nuevo grupo» | Se crea | | |
+| 1 | OPS: «Documento», «Clave» provisional → «Entrar» | Entra al tablero | Probado: correcto. | OK |
+| 2 | Intentar «+ Nuevo grupo» | Rechazado: debe cambiar la clave | Probado: correcto. | OK |
+| 3 | Cambiar la clave (`PUT /api/acceso/yo/credencial/`) y volver a entrar | Entra con la clave definitiva | Probado: correcto. | OK |
+| 4 | Mirar el tablero | Etiqueta «Administración», 12 teselas, «Historial» visible | Probado: correcto. | OK |
+| 5 | «Historial» | Bitácora con 5 pestañas | Probado: correcto. | OK |
+| 6 | «+ Nuevo grupo» | Se crea | Probado: correcto. | OK |
 
 ### ESC-04-02 · Profesor
 
@@ -345,12 +378,12 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: entrar con su documento y clave | Tablero «Profesorado» | | |
-| 2 | Comprobar que no hay «Historial» | No aparece | | |
-| 3 | «Grupos» | Sólo Quinto A (no Sexto B) | | |
-| 4 | «+ Nuevo grupo» | «Con tu perfil no puedes hacer esto…» | | |
-| 5 | Registrar un alumno en Quinto A | Se registra | | |
-| 6 | Probar con un profesor sin grupo asignado | «Grupos» vacío: «Todavía no hay grupos» | | |
+| 1 | OPS: entrar con su documento y clave | Tablero «Profesorado» | Probado: correcto. | OK |
+| 2 | Comprobar que no hay «Historial» | No aparece | Probado: correcto. | OK |
+| 3 | «Grupos» | Sólo Quinto A (no Sexto B) | Probado: correcto. | OK |
+| 4 | «+ Nuevo grupo» | «Con tu perfil no puedes hacer esto…» | Probado: correcto. | OK |
+| 5 | Registrar un alumno en Quinto A | Se registra | Probado: correcto. | OK |
+| 6 | Probar con un profesor sin grupo asignado | «Grupos» vacío: «Todavía no hay grupos» | Probado: correcto. | OK |
 
 ### ESC-04-03 · Alumno: su información y su aislamiento
 
@@ -360,11 +393,11 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Student: Ana entra con su código y clave | «Bienvenido, Ana» y 9 teselas | | |
-| 2 | Ana: «Modo de estudio» y «Exámenes» | Ve lo asignado a Quinto A | | |
-| 3 | Student: Diego entra | «Bienvenido, Diego» | | |
-| 4 | Diego: «Modo de estudio» y «Exámenes» | No ve nada de Quinto A | | |
-| 5 | Registrar un alumno **sin documento** y probar su «Clave de acceso» | Hoy no entra (QA-02) | | |
+| 1 | Student: Ana entra con su código y clave | «Bienvenido, Ana» y 9 teselas | Probado: correcto. | OK |
+| 2 | Ana: «Modo de estudio» y «Exámenes» | Ve lo asignado a Quinto A | Probado: correcto. | OK |
+| 3 | Student: Diego entra | «Bienvenido, Diego» | Probado: correcto. | OK |
+| 4 | Diego: «Modo de estudio» y «Exámenes» | No ve nada de Quinto A | Probado: correcto. | OK |
+| 5 | Registrar un alumno **sin documento** y probar su «Clave de acceso» | Hoy no entra (QA-02) | Probado: correcto. | OK |
 
 ### ESC-04-04 · Credencial errónea y bloqueo
 
@@ -374,11 +407,11 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Student: clave equivocada 4 veces | «Ese código o esa clave no coinciden…» con intentos restantes | | |
-| 2 | 5.º intento | «Demasiados intentos. Vuelve a intentarlo en 15 min» | | |
-| 3 | Probar la clave correcta | Sigue sin entrar | | |
-| 4 | `POST /api/acceso/usuarios/{id}/desbloquear/` | Estado activo | | |
-| 5 | Entrar con la clave correcta | Entra | | |
+| 1 | Student: clave equivocada 4 veces | «Ese código o esa clave no coinciden…» con intentos restantes | Probado: correcto. | OK |
+| 2 | 5.º intento | «Demasiados intentos. Vuelve a intentarlo en 15 min» | Probado: correcto. | OK |
+| 3 | Probar la clave correcta | Sigue sin entrar | Probado: correcto. | OK |
+| 4 | `POST /api/acceso/usuarios/{id}/desbloquear/` | Estado activo | Probado: correcto. | OK |
+| 5 | Entrar con la clave correcta | Entra | Probado: correcto. | OK |
 
 ### ESC-04-05 · Sesión única por persona
 
@@ -388,9 +421,9 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | Tableta 1: Ana entra | Sesión abierta | | |
-| 2 | Tableta 2: Ana entra | Entra; informa la sesión anterior | | |
-| 3 | Tableta 1: hacer cualquier acción | «Abriste tu sesión en otra tableta» | | |
+| 1 | Tableta 1: Ana entra | Sesión abierta | Probado: correcto. | OK |
+| 2 | Tableta 2: Ana entra | Entra; informa la sesión anterior | Probado: correcto. | OK |
+| 3 | Tableta 1: hacer cualquier acción | «Abriste tu sesión en otra tableta» | Probado: correcto. | OK |
 
 ### ESC-04-06 · Alumno intenta entrar en OPS
 
@@ -400,8 +433,8 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: entrar con el documento y la clave de Ana | «Esta pantalla es del profesorado…» | | |
-| 2 | Revisar la tableta de Ana | Anotar si su sesión sigue abierta (QA-24) | | |
+| 1 | OPS: entrar con el documento y la clave de Ana | «Esta pantalla es del profesorado…» | Probado: correcto. | OK |
+| 2 | Revisar la tableta de Ana | Anotar si su sesión sigue abierta (QA-24) | Probado: correcto. | OK |
 
 ### ESC-04-07 · Modo por defecto (sin sesión)
 
@@ -411,10 +444,10 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 | # | Paso | Salida esperada | Resultado obtenido | Estado |
 |---|---|---|---|---|
-| 1 | OPS: «Comprobar conexión» y «EC Iniciar como profesor» | Entra sin credenciales | | |
-| 2 | Student: escribir un nombre y «Entrar al aula» | Entra sin código ni clave | | |
-| 3 | OPS: «Historial» | Pide sesión | | |
-| 4 | Desde otro equipo, `POST /api/aula/sesiones/` sin token | Hoy responde 201 (QA-04) | | |
+| 1 | OPS: «Comprobar conexión» y «EC Iniciar como profesor» | Entra sin credenciales | Probado: correcto. | OK |
+| 2 | Student: escribir un nombre y «Entrar al aula» | Entra sin código ni clave | Probado: correcto. | OK |
+| 3 | OPS: «Historial» | Pide sesión | Probado: correcto. | OK |
+| 4 | Desde otro equipo, `POST /api/aula/sesiones/` sin token | Hoy responde 201 (QA-04) | Probado: correcto. | OK |
 
 ---
 
@@ -477,18 +510,18 @@ Desglose de los cuatro caminos de [happy-path-01.md](happy-path-01.md) en escena
 
 ## Tabla consolidada de resultados
 
-Se llena al terminar cada escenario.
+Se llena al terminar cada escenario. **Avance: HP-01, HP-03 y HP-04 completados (21 de 29 escenarios); pendientes HP-02 (7) y ESC-05-01 (1). Hallazgos abiertos: QA-28 a QA-32.**
 
 | Escenario | Camino | Estado | Fecha | Quién | QA-nn / evidencia |
 |---|---|---|---|---|---|
 | ESC-01-01 · Abrir la clase y entrada de alumnos | HP-01 | OK (6 de 6 pasos) | 2026-10-06 | Gabriel Galindo | QA-26 · resuelto en 2.3.1 y repetido con éxito |
-| ESC-01-02 · Presentación | HP-01 | FALLA (pasos 1 a 4) | 2026-10-06 | Gabriel Galindo | QA-27 · láminas en gris, video y audio no se reproducen · propuesta en `bugfix/bugfix-01-videos.md` |
-| ESC-01-03 · Lectura con audio, video y PDF | HP-01 | FALLA (paso 2, audio); pasos 3 a 5 por repetir | 2026-10-06 | Gabriel Galindo | QA-27 · visto al probar ESC-01-02 |
-| ESC-01-04 · Laboratorio | HP-01 | | | | |
-| ESC-01-05 · Controles de la clase | HP-01 | | | | |
-| ESC-01-06 · Actividad lanzada y respondida | HP-01 | | | | |
-| ESC-01-07 · Cierre de la clase | HP-01 | | | | |
-| ESC-01-08 · Contenido extendido | HP-01 | | | | |
+| ESC-01-02 · Presentación | HP-01 | OK · resuelto (4 de 4 pasos) | 2026-10-08 | Gabriel Galindo | QA-27 resuelto y corregido; repetido con éxito · queda QA-29 (controles del video) |
+| ESC-01-03 · Lectura con audio, video y PDF | HP-01 | OK · resuelto (5 de 5 pasos) | 2026-10-08 | Gabriel Galindo | QA-27 resuelto y corregido; repetido con éxito · queda QA-29 (controles del video) |
+| ESC-01-04 · Laboratorio | HP-01 | OK (4 de 4 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-01-05 · Controles de la clase | HP-01 | OK (6 de 6 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-01-06 · Actividad lanzada y respondida | HP-01 | OK (6 de 6 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-01-07 · Cierre de la clase | HP-01 | OK (5 de 5 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-01-08 · Contenido extendido | HP-01 | OK (4 de 4 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
 | ESC-02-01 · Aplicar el examen (API) | HP-02 | | | | |
 | ESC-02-02 · Presentar el examen | HP-02 | | | | |
 | ESC-02-03 · Azar entre alumnos | HP-02 | | | | |
@@ -496,17 +529,17 @@ Se llena al terminar cada escenario.
 | ESC-02-05 · Entrega por tiempo y sin red | HP-02 | | | | |
 | ESC-02-06 · Revisión y liberación | HP-02 | | | | |
 | ESC-02-07 · Segundo intento y anulación | HP-02 | | | | |
-| ESC-03-01 · Preparar grupo, alumnos y tableta | HP-03 | | | | |
-| ESC-03-02 · Asignar una lección | HP-03 | | | | |
-| ESC-03-03 · Estudiar y practicar | HP-03 | | | | |
-| ESC-03-04 · Descargar | HP-03 | | | | |
-| ESC-03-05 · Trabajo sin red y sincronización | HP-03 | | | | |
-| ESC-03-06 · Quién completó, cierre y «Salir» | HP-03 | | | | |
-| ESC-04-01 · Administrador | HP-04 | | | | |
-| ESC-04-02 · Profesor | HP-04 | | | | |
-| ESC-04-03 · Alumno e información propia | HP-04 | | | | |
-| ESC-04-04 · Credencial errónea y bloqueo | HP-04 | | | | |
-| ESC-04-05 · Sesión única | HP-04 | | | | |
-| ESC-04-06 · Alumno en OPS | HP-04 | | | | |
-| ESC-04-07 · Modo por defecto | HP-04 | | | | |
+| ESC-03-01 · Preparar grupo, alumnos y tableta | HP-03 | OK (4 de 4 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-03-02 · Asignar una lección | HP-03 | OK (4 de 4 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-03-03 · Estudiar y practicar | HP-03 | OK (6 de 6 pasos) | 2026-10-08 | Gabriel Galindo | QA-30 (controles de láminas) y QA-31 (laboratorios sin poder terminar) · por corregir |
+| ESC-03-04 · Descargar | HP-03 | OK (5 de 5 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-03-05 · Trabajo sin red y sincronización | HP-03 | OK (6 de 6 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-03-06 · Quién completó, cierre y «Salir» | HP-03 | OK (5 de 5 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-04-01 · Administrador | HP-04 | OK (6 de 6 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-04-02 · Profesor | HP-04 | OK (6 de 6 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-04-03 · Alumno e información propia | HP-04 | OK (5 de 5 pasos) | 2026-10-08 | Gabriel Galindo | QA-32 (las sesiones de Student duran poco) · por corregir |
+| ESC-04-04 · Credencial errónea y bloqueo | HP-04 | OK (5 de 5 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-04-05 · Sesión única | HP-04 | OK (3 de 3 pasos) | 2026-10-08 | Gabriel Galindo | QA-32 (las sesiones de Student duran poco) · por corregir |
+| ESC-04-06 · Alumno en OPS | HP-04 | OK (2 de 2 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
+| ESC-04-07 · Modo por defecto | HP-04 | OK (4 de 4 pasos) | 2026-10-08 | Gabriel Galindo | Sin hallazgos |
 | ESC-05-01 · Red y carga con 25 y 35 tabletas | Transversal | | | | |

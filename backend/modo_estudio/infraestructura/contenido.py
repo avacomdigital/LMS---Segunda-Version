@@ -16,12 +16,15 @@ import dataclasses
 import hashlib
 from urllib.parse import quote, urlencode
 
+from acceso.interfaces.medios import con_pase
 from classroom_engine.aplicacion import casos_uso as casos_aula
 from classroom_engine.aplicacion.puertos import Bytes
 from classroom_engine.dominio import curso as curso_aula
 from classroom_engine.dominio import errores as e7
 from classroom_engine.dominio import respuestas as respuestas_aula
 from classroom_engine.infraestructura.contenedor import servicios as servicios_aula
+
+from cola_medios import servicio as cola
 
 from ..dominio import bloques as bloques_dom
 from ..dominio import errores as e8
@@ -61,7 +64,7 @@ class ContenidoAula:
             base = f"/api/modo-estudio/asignaciones/{quote(asignacion_id, safe='')}/medios/{quote(media_ref, safe='')}/"
             if ruta:
                 base += quote(ruta.strip("/"), safe="/")
-            return f"{base}?{consulta}" if consulta else base
+            return con_pase(f"{base}?{consulta}" if consulta else base)
 
         return url
 
@@ -101,11 +104,18 @@ class ContenidoAula:
             raise traducir(error) from error
 
     def abrir_medio(self, fuente: str, curso_ref: str, media_ref: str, ruta: str | None, rango: str | None, metodo: str) -> Bytes:
-        return self._abrir(fuente, curso_ref, media_ref, ruta, rango, metodo)
+        """Por la cola de medios del nodo: lo trae de la fuente UNA vez y lo reparte a todas las tabletas. Si la cola no puede ayudar, se abre en
+        paso a través como siempre. La asignación ya decidió que este alumno puede leerlo: la cola sólo reparte bytes."""
+        try:
+            return cola.abrir_medio(fuente=fuente or None, curso_ref=curso_ref, media_ref=media_ref, ruta=ruta, rango=rango, metodo=metodo,
+                                    modulo=cola.MODULO_ESTUDIO, prioridad=cola.ESTUDIO,
+                                    directo=lambda: self._abrir(fuente, curso_ref, media_ref, ruta, rango, metodo))
+        except e7.ErrorAula as error:
+            raise traducir(error) from error
 
     def tamano_de(self, fuente: str, curso_ref: str, media_ref: str) -> int | None:
         try:
-            medio = self._abrir(fuente, curso_ref, media_ref, None, None, "HEAD")
+            medio = self.abrir_medio(fuente, curso_ref, media_ref, None, None, "HEAD")
         except Exception:      # noqa: BLE001 — sólo es una estimación
             return None
         if medio.datos is not None:
@@ -120,7 +130,18 @@ class ContenidoAula:
             if flujo is not None:
                 flujo.close()
 
-    def medir(self, fuente: str, curso_ref: str, media_ref: str, tope_bytes: int) -> dict:
+    def medir(self, fuente: str, curso_ref: str, media_ref: str, tope_bytes: int, contexto_ref: str = "") -> dict:
+        """Tamaño y SHA-256 del medio. Por la cola: el primer alumno que pide un paquete lo trae a la caché del nodo y los demás reutilizan la medida
+        (con 35 tabletas, una descarga en vez de 35). Sin la cola, se lee entero como siempre."""
+        try:
+            medido = cola.medir_medio(fuente=fuente or None, curso_ref=curso_ref, media_ref=media_ref, tope_bytes=tope_bytes,
+                                      modulo=cola.MODULO_ESTUDIO, prioridad=cola.PAQUETE, contexto_ref=contexto_ref)
+        except cola.DemasiadoGrande as error:
+            raise e8.MedioDemasiadoGrande(f"El medio «{media_ref}» supera el tope de {tope_bytes} bytes.", media_ref=media_ref) from error
+        except e7.ErrorAula as error:
+            raise traducir(error) from error
+        if medido is not None:
+            return medido
         medio = self._abrir(fuente, curso_ref, media_ref, None, None, "GET")
         if medio.datos is not None:      # el manifiesto de ejemplo genera los bytes en memoria
             if len(medio.datos) > tope_bytes:

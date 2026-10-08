@@ -393,15 +393,9 @@ public partial class LoginPage : ContentPage
         CamposGrupo.IsVisible = true;
     }
 
-    /// <summary>El equipo donde estaba la otra sesión, sin el prefijo interno de la app («ops-», «student-»).</summary>
-    private static string NombreDeEquipo(string? dispositivo)
-    {
-        if (string.IsNullOrWhiteSpace(dispositivo)) return "otro equipo";
-        foreach (var prefijo in new[] { "ops-", "student-" })
-            if (dispositivo.StartsWith(prefijo, StringComparison.OrdinalIgnoreCase) && dispositivo.Length > prefijo.Length)
-                return dispositivo[prefijo.Length..];
-        return dispositivo;
-    }
+    /// <summary>El equipo donde estaba la otra sesión, sin el prefijo interno de la app («ops-», «student-») ni el código de instalación de la tableta.</summary>
+    private static string NombreDeEquipo(string? dispositivo) =>
+        string.IsNullOrWhiteSpace(dispositivo) ? "otro equipo" : Identidad.EquipoLegible(dispositivo);
 
     private void Estado(string texto, Tono tono)
     {

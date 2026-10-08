@@ -47,6 +47,13 @@ internal static class Rutas
     public static string CarpetaDatos => Path.Combine(RaizDatos, "Data");
     public static string CarpetaLogs => Path.Combine(RaizDatos, "Logs");
     public static string CarpetaRespaldos => Path.Combine(RaizDatos, "Respaldos");
+
+    /// <summary>
+    /// La cache de medios del nodo: los videos, audios, imagenes, PDF y paginas html que el nodo trae de AVACOM Contenido una sola vez y reparte a las
+    /// tabletas. Es REGENERABLE (si se borra, se vuelve a llenar sola), asi que no entra en las copias de seguridad y se borra al desinstalar. Solo el
+    /// servicio (SYSTEM) y los administradores la leen: lo que hay ahi son medios de examen, y no deben quedar a la mano de cualquier usuario del equipo.
+    /// </summary>
+    public static string CarpetaCacheMedios => Path.Combine(RaizDatos, "CacheMedios");
     public static string ArchivoManifiesto => Path.Combine(RaizInstalacion, "manifiesto.json");
 
     public static string ArchivoConfig => Path.Combine(CarpetaConfig, "backend.env");
@@ -83,6 +90,44 @@ internal static class Rutas
         Directory.CreateDirectory(CarpetaDatos);
         Directory.CreateDirectory(CarpetaLogs);
         Directory.CreateDirectory(CarpetaRespaldos);
+        Directory.CreateDirectory(CarpetaCacheMedios);
+        RestringirALaAdministracion(CarpetaCacheMedios);
+    }
+
+    /// <summary>
+    /// Quita los permisos heredados de ProgramData (donde los usuarios pueden leer) y deja control total solo a SYSTEM y a los administradores. Si no se
+    /// puede (un ensayo sin privilegios, un disco sin permisos), la cache sigue funcionando con los permisos que tenga: no es motivo para no arrancar.
+    /// </summary>
+    private static void RestringirALaAdministracion(string carpeta)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        try
+        {
+            var info = new DirectoryInfo(carpeta);
+            var seguridad = info.GetAccessControl();
+            seguridad.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+            foreach (var identidad in new[] { System.Security.Principal.WellKnownSidType.LocalSystemSid, System.Security.Principal.WellKnownSidType.BuiltinAdministratorsSid })
+            {
+                seguridad.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
+                    new System.Security.Principal.SecurityIdentifier(identidad, null), System.Security.AccessControl.FileSystemRights.FullControl,
+                    System.Security.AccessControl.InheritanceFlags.ContainerInherit | System.Security.AccessControl.InheritanceFlags.ObjectInherit,
+                    System.Security.AccessControl.PropagationFlags.None, System.Security.AccessControl.AccessControlType.Allow));
+            }
+            // Quien prepara el nodo (el administrador que instala, o el usuario de un ensayo sin privilegios) conserva el acceso: sin esto, un token sin elevar
+            // —en el que «Administradores» solo niega— se quedaba fuera de la carpeta que acababa de crear.
+            if (System.Security.Principal.WindowsIdentity.GetCurrent().User is { } actual)
+            {
+                seguridad.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(
+                    actual, System.Security.AccessControl.FileSystemRights.FullControl,
+                    System.Security.AccessControl.InheritanceFlags.ContainerInherit | System.Security.AccessControl.InheritanceFlags.ObjectInherit,
+                    System.Security.AccessControl.PropagationFlags.None, System.Security.AccessControl.AccessControlType.Allow));
+            }
+            info.SetAccessControl(seguridad);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or System.Security.SecurityException)
+        {
+            // Sin privilegios no se restringe; el instalador (que si los tiene) lo vuelve a intentar en la siguiente preparacion.
+        }
     }
 
     private static string ResolverRaiz()

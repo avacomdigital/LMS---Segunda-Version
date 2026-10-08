@@ -411,7 +411,9 @@ class HostContenidoV2Pruebas:
         urls, extras = {}, {}
         for m in pedidos:
             medio = medios[m]
-            urls[m] = f"{base}{m}/{medio['entry']}" if medio.get("kind") == "simulation" and medio.get("entry") else f"{base}{m}"
+            # Contrato 2 (2026-10-07): una lección `html` se abre por su `entry` como una simulación, y un video con `posterPath` publica
+            # `extras[mediaId].poster` en <baseUrl><mediaId>/@poster.
+            urls[m] = f"{base}{m}/{medio['entry']}" if medio.get("kind") in ("simulation", "html") and medio.get("entry") else f"{base}{m}"
             extra = {}
             if medio.get("kind") == "simulation":
                 extra["files"] = f"{base}{m}/@files"
@@ -419,6 +421,8 @@ class HostContenidoV2Pruebas:
                 extra["captions"] = f"{base}{m}/@captions"
             if medio.get("transcriptPath"):
                 extra["transcript"] = f"{base}{m}/@transcript"
+            if medio.get("kind") == "video" and medio.get("posterPath"):
+                extra["poster"] = f"{base}{m}/@poster"
             if extra:
                 extras[m] = extra
         expira = (datetime.now(timezone.utc) + timedelta(seconds=ttl)).isoformat()

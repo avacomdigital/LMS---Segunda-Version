@@ -116,6 +116,8 @@ set AVACOM_CONTENIDO_ENLACE_V2=%TEMP%\link-pruebas.json
 | `/api/auditoria/tecnico/accesos/` | GET | «Accesos del técnico» (019-10): acciones y denegaciones de quienes tienen rol TECHNICIAN, con `sin_acceso_a_datos_personales` y `cadena_verificada` |
 | `/api/logs/` | GET | Últimas líneas de los logs JSON Lines del nodo por `canal`, `nivel`, `app`, `ruta`, `desde`, `corr`, `dispositivo`, `evento`, `archivo`, `ultimos`. Exige `diagnostics.read` (Técnico y Administrador). Sin datos personales |
 | `/api/logs/clientes/` | POST | OPS y Student entregan sus renglones `WARNING+` (`{app, version_app, renglones:[{ts, nivel, canal, app, modulo, evento, ruta, mensaje, detalle, traza, corr}]}`) con `X-Avacom-Dispositivo` (equipo activo) o sesión; van a `backend-clientes.log`, nunca a la bitácora. Tope de renglones por entrega y por minuto. Responde 202 `{recibidos, escritos, descartados}` |
+| `/api/medios/cola/` · `recursos/?contexto=&estado=` · `recursos/{id}/` | GET | **Cola de medios** (app `cola_medios`, tablas `cm_*`, diseño en [`spec-driven/11-cola-de-medios.md`](../spec-driven/11-cola-de-medios.md)): cómo van los recursos (video, audio, imagen, PDF, html) que el nodo trae de AVACOM Contenido a su caché de disco y reparte a las tabletas: cola, caché (bytes y espacio), cupos de transferencia, límites y contadores; con `contexto` (sesión de clase, asignación o intento) el avance de lo que esa clase espera |
+| `/api/medios/cola/recursos/{id}/cancelar/` · `reintentar/` · `/api/medios/cola/limpiar/` | POST | Sólo el personal (no una tableta de alumno): cancelar una preparación, reintentar una fallida, vaciar lo que nadie lee |
 | `/api/acceso/sesiones/` | POST · GET | Iniciar sesión (JWT de 4 h, **una sola por persona**, rol efectivo elegible) · listar sesiones |
 | `/api/acceso/sesiones/actual/`, `/api/acceso/sesiones/{id}/`, `/api/acceso/usuarios/{id}/sesiones/` | DELETE | Cerrar la propia · revocar ajena · revocar todas las de un usuario |
 | `/api/acceso/yo/`, `/api/acceso/yo/credencial/` | GET · PUT | Identidad, rol efectivo, roles disponibles, permisos y menú · cambiar la propia clave |
@@ -137,6 +139,15 @@ lección en vivo por los casos de uso del aula (no guarda ningún curso ni ningu
 en una actividad separada de la evaluación formal (nunca toca `m07_intento` ni `m10_intento`), entrega un paquete descargable sólo al dueño de una
 tableta asignada (`perfil = asignado`, MOD-009) e integra sin duplicar el trabajo que la tableta hizo sin red. Sirve en cualquier tableta registrada: quien
 la tiene en la mano elige quién es (`GET /api/modo-estudio/estudiantes/`), sin código ni contraseña, y el nodo sólo comprueba que exista y esté activo.
+
+La app `cola_medios/` es la **cola de medios** del nodo (hexagonal también; ver [`spec-driven/11-cola-de-medios.md`](../spec-driven/11-cola-de-medios.md)). Los
+videos, audios, imágenes, PDF y páginas html de un curso los sirve AVACOM Contenido por loopback; antes el nodo los pasaba tableta por tableta (35 tabletas = 35
+descargas, y bajo Daphne cada respuesta se cargaba entera en memoria). Ahora `classroom_engine` (aula), `modo_estudio` y `evaluacion` piden cada medio a
+`cola_medios.servicio.abrir_medio`: se trae **una vez** a una caché de disco (`AVACOM_COLA_DIR`, con su SHA-256, reanudable con `Range`, con tope y expulsión del menos
+usado), las tabletas la leen con `Range` por un cuerpo asíncrono con cupo de transferencia y tope de ancho de banda, y lo que el profesor proyecta o lanza, los medios de
+un examen en curso y los de un paquete de estudio entran a la cola con su prioridad. La autorización sigue siendo de cada módulo y el curso de la biblioteca (se confirma su
+versión cada minuto); si la cola no puede ayudar a tiempo, o falla, el medio se sirve en paso a través como antes. Índice en la base (`cm_recurso`, `cm_solicitud`: estados
+`pendiente · descargando · disponible · fallido · cancelado`), bytes en disco, índice caliente y medios pequeños en `LocMemCache`. Variables `AVACOM_COLA_*` en `settings.py`.
 
 La app `audit/` implementa **MOD-019 · Audit** con la misma arquitectura hexagonal. Dos registros que comparten infraestructura y nunca se
 mezclan: la **bitácora** (`m19_bitacora`, de sólo inserción: cada asiento lleva `secuencia` monótona y `huella = SHA-256(huella_previa ‖ asiento)`;

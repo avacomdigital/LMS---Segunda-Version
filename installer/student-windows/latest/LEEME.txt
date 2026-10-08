@@ -1,6 +1,6 @@
-﻿AVACOM Student 2.3.0 para Windows (revision 4d4df002)
+﻿AVACOM Student 2.5.0 para Windows (revision 5cbd37eb)
 
-  AVACOM-Student-Setup-2.3.0.exe      el instalador (no se versiona: supera los 100 MB de GitHub)
+  AVACOM-Student-Setup-2.5.0.exe      el instalador (no se versiona: supera los 100 MB de GitHub)
   SHA256.txt                           la huella del instalador y del codigo que lleva
   AVACOM-Verificar-Student.bat         revisa el equipo, el instalador y lo ya instalado, y busca el
                                        error exacto cuando algo falla. NO modifica nada.

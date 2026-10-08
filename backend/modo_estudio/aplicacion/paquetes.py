@@ -199,7 +199,7 @@ class SolicitarPaquete(_CasoDePaquete):
                 no_incluidos.append(paquete_dom.no_incluido(ref, cat.NO_INCLUIDO_SIMULACION))
                 continue
             try:
-                medido = self.s.contenido.medir(leida["fuente"], asignacion["curso_ref"], ref, self.s.config.medio_max_bytes)
+                medido = self.s.contenido.medir(leida["fuente"], asignacion["curso_ref"], ref, self.s.config.medio_max_bytes, asignacion["id"])
             except MedioDemasiadoGrande:
                 no_incluidos.append(paquete_dom.no_incluido(ref, cat.NO_INCLUIDO_DEMASIADO_GRANDE))
             except (NoEncontrado, FuenteError):

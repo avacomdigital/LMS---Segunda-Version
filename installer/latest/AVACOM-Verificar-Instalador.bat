@@ -113,7 +113,7 @@ Set-StrictMode -Version Latest
 # que falla no sirve para nada. Cada bloque maneja su error.
 $ErrorActionPreference = 'Continue'
 
-$VersionVerificador = '2.3.0'
+$VersionVerificador = '2.4.0'
 $NombreServicio = 'AVACOMOPSBackend'
 $IdInstalacion = '{B6D1F0A4-3C57-4E2B-9A18-7F5C2E8D4A31}_is1'
 
@@ -717,6 +717,26 @@ if (-not $InstalacionPresente) {
             Anotar 'AVISO' 'La base de datos configurada no es la del nodo' "Configurada: $($Config['AVACOM_LMS_DB'])`nDel nodo:     $BaseDeDatos" `
                 'Las copias de seguridad miran la ruta del nodo.'
         }
+        # Cola de medios (2.5.0): la cache de disco con la que el nodo reparte videos, audios, imagenes y PDF a las tabletas.
+        if ($Config.ContainsKey('AVACOM_COLA_ACTIVA') -and $Config['AVACOM_COLA_ACTIVA'] -eq '0') {
+            Anotar 'AVISO' 'La cola de medios está apagada (AVACOM_COLA_ACTIVA=0)' '' `
+                'Cada tableta pide sus medios directo a AVACOM Contenido, sin caché ni límite de transferencias. Ponla en 1 y reinicia el servicio.'
+        } elseif (-not $Config.ContainsKey('AVACOM_COLA_ACTIVA')) {
+            Anotar 'INFO' 'La configuración es de una versión anterior (no trae la cola de medios)' '' 'Funciona con los valores de fábrica. Se completa al actualizar.'
+        }
+        if ($Config.ContainsKey('AVACOM_COLA_DIR') -and $Config['AVACOM_COLA_DIR']) {
+            $cache = $Config['AVACOM_COLA_DIR']
+            if (Test-Path -LiteralPath $cache) {
+                try {
+                    $tam = (Get-ChildItem -LiteralPath $cache -Recurse -File -ErrorAction Stop | Measure-Object Length -Sum).Sum
+                    Escribir "            caché de medios: $([math]::Round(($tam | ForEach-Object { if ($_) { $_ } else { 0 } }) / 1MB)) MB en $cache" 'DarkGray'
+                } catch {
+                    Escribir "            caché de medios en $cache (sólo SYSTEM y administradores la leen: sin permiso para medirla desde esta cuenta)" 'DarkGray'
+                }
+            } else {
+                Anotar 'AVISO' 'No existe la carpeta de la caché de medios' $cache 'Se crea al reiniciar el servicio. Si no, vuelve a ejecutar el instalador.'
+            }
+        }
         $claves = @('AVACOM_LMS_CLAVE_DATOS', 'AVACOM_LMS_CLAVE_INDICE', 'AVACOM_LMS_CLAVE_TOKENS') | Where-Object { $Config.ContainsKey($_) -and $Config[$_] }
         Escribir "            claves de acceso propias: $(@($claves).Count) de 3 (los valores nunca se muestran)" 'DarkGray'
     }
@@ -865,6 +885,25 @@ if ($versionWebView) {
     Anotar 'AVISO' 'Falta el runtime de WebView2 de Microsoft' '' `
         'Las lecciones con audio, video, PDF o laboratorio pueden cerrar la aplicación. Instálalo desde Microsoft (Evergreen WebView2 Runtime).'
 }
+
+# Teclado táctil de Windows: el primer arranque de OPS pide texto (nombre del aula, documento y nombres del administrador) y el equipo
+# del aula no tiene teclado. Si Windows no lo muestra solo al tocar un campo, el primer arranque (y con él el PIN maestro) no se puede
+# hacer. El instalador lo enciende para quien lo ejecuta; aquí se comprueba para quien ejecuta este archivo.
+$tecladoAuto = $null
+try { $tecladoAuto = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\TabletTip\1.7' -Name 'EnableDesktopModeAutoInvoke' -ErrorAction Stop).EnableDesktopModeAutoInvoke } catch { }
+if ($tecladoAuto -eq 1) {
+    Anotar 'OK' 'Teclado táctil de Windows: sale solo al tocar un campo (aunque no haya teclado conectado)'
+} else {
+    Anotar 'AVISO' 'Teclado táctil de Windows: no está configurado para salir solo al tocar un campo' '' `
+        'Sin teclado conectado, el primer arranque de OPS (aula, documento, nombres) no se podría escribir. Vuelve a ejecutar el instalador, o activa en Configuración > Dispositivos > Escritura la opción «Mostrar el teclado táctil cuando no hay un teclado conectado».'
+}
+try {
+    $servicioTeclado = Get-Service -Name 'TabletInputService' -ErrorAction Stop
+    if ("$($servicioTeclado.StartType)" -eq 'Disabled') {
+        Anotar 'AVISO' 'El servicio «Teclado táctil y panel de escritura manuscrita» está deshabilitado' '' `
+            'Windows no podrá mostrar el teclado táctil. Ponlo en Manual (services.msc > TabletInputService) o consulta con quien administra el equipo.'
+    }
+} catch { }
 
 # ============================================================== 5 · Registros
 Seccion '5 · Registros del nodo'

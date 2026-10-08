@@ -10,14 +10,14 @@ namespace Avacom.Lms.Ops.Pages;
 /// · Administrador: Comportamiento (la bitácora, sólo lectura, con filtros y detalle), Integridad (semáforo de la cadena, tramos, verificar
 ///   ahora, tamaño frente al umbral), Exportaciones (alcance declarado, motivo de lista, autorización de salida PAN-241, descarga),
 ///   Accesos del técnico y Errores (los logs del nodo y de los equipos).
-/// · Técnico: Estado del equipo (servicios, espacio, cola pendiente, diagnóstico) y Errores. Nunca la bitácora (BR-097).
+/// · Técnico: Estado del equipo (servicios, espacio, cola pendiente, diagnóstico), Errores y Medios (la cola de medios del nodo). Nunca la bitácora (BR-097).
 /// Todo exige sesión de usuario: sin ella el nodo responde 401 y aquí se ofrece ir al acceso. Nada de esta pantalla interrumpe una clase:
 /// no hay ventanas emergentes, sólo tarjetas. Mientras carga, esqueleto; ante un error de red, el motivo y «Reintentar» (y la línea al log
 /// local, canal comunicacion, la deja el propio cliente).
 /// </summary>
 public partial class BitacoraPage : ContentPage
 {
-    private enum Pestana { Comportamiento, Integridad, Exportaciones, Tecnico, Errores, Equipo, Rendimiento }
+    private enum Pestana { Comportamiento, Integridad, Exportaciones, Tecnico, Errores, Equipo, Medios, Rendimiento }
 
     private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
     private static readonly Color TintaExito = Color.FromArgb("#017A48");
@@ -61,8 +61,9 @@ public partial class BitacoraPage : ContentPage
             SubtituloLabel.Text = "Escritura, red y dispositivos, sin datos de alumnos. La bitácora de auditoría no se ve desde el perfil técnico.";
             Agregar(Pestana.Equipo, "Estado del equipo");
             Agregar(Pestana.Errores, "Errores");
+            Agregar(Pestana.Medios, "Medios");
             Agregar(Pestana.Rendimiento, "Rendimiento");
-            if (_actual is not (Pestana.Equipo or Pestana.Errores or Pestana.Rendimiento)) _actual = Pestana.Equipo;
+            if (_actual is not (Pestana.Equipo or Pestana.Errores or Pestana.Medios or Pestana.Rendimiento)) _actual = Pestana.Equipo;
         }
         else
         {
@@ -74,6 +75,7 @@ public partial class BitacoraPage : ContentPage
             Agregar(Pestana.Exportaciones, "Exportaciones");
             Agregar(Pestana.Tecnico, "Accesos del técnico");
             Agregar(Pestana.Errores, "Errores");
+            Agregar(Pestana.Medios, "Medios");
             Agregar(Pestana.Rendimiento, "Rendimiento");
             if (_actual == Pestana.Equipo) _actual = Pestana.Comportamiento;
         }
@@ -120,6 +122,7 @@ public partial class BitacoraPage : ContentPage
                 Pestana.Exportaciones => await ExportacionesAsync(),
                 Pestana.Tecnico => await AccesosDelTecnicoAsync(),
                 Pestana.Errores => await ErroresAsync(),
+                Pestana.Medios => await MediosAsync(),
                 Pestana.Rendimiento => await RendimientoAsync(),
                 _ => await EstadoDelEquipoAsync(),
             };

@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 from acceso.interfaces.permisos import SesionSiSeExige, principal_de
 from biblioteca import cliente as cliente_biblioteca
 from biblioteca.views import _reenviar_flujo, respuesta_de_error
+from cola_medios import servicio as cola
 
 from ..aplicacion import casos_uso as cu
 from ..aplicacion import casos_uso_actividad as ca
@@ -87,7 +88,10 @@ class VistaAula(APIView):
 
 
 def _respuesta_bytes(request, medio: Bytes, metodo: str):
-    """Bytes generados (ejemplo) con soporte de Range, o paso a través del flujo de la biblioteca."""
+    """Bytes de la cola de medios del nodo (caché en disco con Range), bytes generados (ejemplo) con soporte de Range, o paso a través del flujo de la biblioteca."""
+    de_la_cola = cola.responder(request, medio, metodo)
+    if de_la_cola is not None:
+        return de_la_cola
     if medio.flujo is not None:
         salida = _reenviar_flujo(medio.flujo, metodo)
     else:
@@ -165,13 +169,19 @@ class EvaluarView(VistaAula):
 class MedioView(VistaAula):
     """Bytes de un medio del curso (imagen, audio, pdf, simulación y sus archivos internos, subtítulos, transcripción)."""
 
+    def _servir(self, request, curso_ref: str, media_ref: str, ruta: str | None, metodo: str):
+        """Por la cola de medios del nodo: lo que 35 tabletas piden a la vez se trae de la fuente una sola vez. Sin la cola, paso a través como siempre."""
+        fuente, rango = self._fuente(request), request.headers.get("Range")
+        medio = cola.abrir_medio(fuente=fuente, curso_ref=curso_ref, media_ref=media_ref, ruta=ruta, rango=rango, metodo=metodo,
+                                 modulo=cola.MODULO_AULA, prioridad=cola.CLASE,
+                                 directo=lambda: cu.AbrirMedio(servicios()).ejecutar(curso_ref, media_ref, ruta, rango, metodo, fuente))
+        return _respuesta_bytes(request, medio, metodo)
+
     def get(self, request, curso_ref: str, media_ref: str, ruta: str | None = None):
-        medio = cu.AbrirMedio(servicios()).ejecutar(curso_ref, media_ref, ruta, request.headers.get("Range"), "GET", self._fuente(request))
-        return _respuesta_bytes(request, medio, "GET")
+        return self._servir(request, curso_ref, media_ref, ruta, "GET")
 
     def head(self, request, curso_ref: str, media_ref: str, ruta: str | None = None):
-        medio = cu.AbrirMedio(servicios()).ejecutar(curso_ref, media_ref, ruta, request.headers.get("Range"), "HEAD", self._fuente(request))
-        return _respuesta_bytes(request, medio, "HEAD")
+        return self._servir(request, curso_ref, media_ref, ruta, "HEAD")
 
 
 class PruebasCursoView(VistaAula):

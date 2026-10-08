@@ -4,10 +4,14 @@ y cómo se construyen las URL de los medios que consume el cliente MAUI.
 """
 from __future__ import annotations
 
+import logging
 import time
 from urllib.parse import quote
 
 from django.conf import settings
+from django.db import transaction
+
+from acceso.interfaces.medios import con_pase
 
 from ..aplicacion.casos_uso import Servicios
 from ..aplicacion.configuracion import ConfigAula
@@ -63,10 +67,12 @@ def _es_el_ejemplo(curso_ref: str) -> bool:
 
 
 def url_medio(nombre_fuente: str, curso_ref: str, media_ref: str, ruta: str | None) -> str:
+    """La dirección de un medio para el visor. Con sesión (la petición que arma la lección la trae) lleva el pase en el camino
+    (`/api/m/<pase>/aula/…`, ver `acceso/interfaces/medios.py`): quien la abre es una WebView o una `Image`, que no mandan `Authorization`."""
     base = f"/api/aula/cursos/{quote(curso_ref, safe='')}/medios/{quote(media_ref, safe='')}/"
     if ruta:
         base += quote(ruta.strip("/"), safe="/")
-    return f"{base}?fuente={nombre_fuente}"
+    return con_pase(f"{base}?fuente={nombre_fuente}")
 
 
 def configuracion() -> ConfigAula:
@@ -94,13 +100,30 @@ def limitador() -> LimitadorEnMemoria:
     return _limitador
 
 
+def preparar_medios_del_aula(sesion_id: str, fuente: str | None, curso_ref: str, estructura, reemplazar_proyeccion: bool, actor_id: str) -> None:
+    """Lo que el profesor proyecta o lanza se pone en la cola de medios del nodo (`cola_medios`) con la prioridad más alta, al confirmarse la transacción
+    del caso de uso: así las tabletas lo encuentran ya en la caché del nodo en vez de pedirlo todas a la vez a AVACOM Contenido."""
+    from cola_medios import servicio as cola    # importación tardía: `cola_medios` importa este módulo
+
+    def preparar() -> None:
+        try:
+            cola.preparar_objeto(estructura, fuente=fuente, curso_ref=curso_ref, modulo=cola.MODULO_AULA, contexto_ref=sesion_id, prioridad=cola.PROYECCION,
+                                 persona_id=actor_id, reemplazar=reemplazar_proyeccion)
+        except Exception:   # noqa: BLE001 — un fallo al confirmar no puede convertir en error una clase que ya quedó escrita
+            logging.getLogger("avacom.aula").exception("No se pudieron preparar los medios de la clase", extra={"evento": "medios.cola.preparar_fallo"})
+
+    transaction.on_commit(preparar)
+
+
 def servicios() -> Servicios:
     return Servicios(
         uow=FabricaUoWAula(),
+        uow_lectura=FabricaUoWAula(solo_lectura=True),
         fuente=fuente,
         reloj=RelojNodo(),
         autorizacion=AutorizacionAula(),
         url_medio=url_medio,
         config=configuracion(),
         limitador=limitador(),
+        preparar_medios=preparar_medios_del_aula,
     )

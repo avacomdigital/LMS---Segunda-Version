@@ -26,6 +26,7 @@ from ..dominio.valores import (
     TipoIdentificador,
     TipoSecreto,
 )
+from .invalidacion import invalida
 
 CTX_NOMBRES, CTX_APELLIDOS, CTX_NACIMIENTO, CTX_TELEFONO, CTX_IDENT = (
     "persona.nombres", "persona.apellidos", "persona.fecha_nacimiento", "persona.telefono", "identificador.valor")
@@ -71,6 +72,7 @@ class PoliticasDjango:
         f = m.PoliticaCredencial.objects.filter(id=politica_id).first()
         return self._a_entidad(f) if f else None
 
+    @invalida
     def guardar(self, p: e.PoliticaCredencial) -> None:
         m.PoliticaCredencial.objects.update_or_create(id=p.id, defaults=dict(
             organizacion_id=p.organizacion_id, perfil=p.perfil.value, tipo_identificador=p.tipo_identificador.value,
@@ -133,6 +135,7 @@ class RolesDjango:
             .prefetch_related("permisos").order_by("-es_sistema", "nivel", "codigo")
         return [self._a_entidad(f) for f in filas]
 
+    @invalida
     def guardar(self, r: e.Rol) -> None:
         fila, _ = m.Rol.objects.update_or_create(id=r.id, defaults=dict(
             organizacion_id=r.organizacion_id, codigo=r.codigo, nombre=r.nombre, menu_principal=r.menu_principal.value,
@@ -166,6 +169,7 @@ class UsuariosDjango:
             return None
         return self._a_entidad(f.usuario), self._ident(f)
 
+    @invalida
     def guardar(self, u: e.Usuario) -> None:
         m.Usuario.objects.update_or_create(id=u.id, defaults=dict(
             organizacion_id=u.organizacion_id, rol_id=u.rol_id, estado=u.estado.value, alias=u.alias, idioma=u.idioma,
@@ -178,6 +182,7 @@ class UsuariosDjango:
                              f.asignado_por_id, f.revocado_en)
                 for f in m.UsuarioRol.objects.filter(usuario_id=usuario_id).order_by("desde")]
 
+    @invalida
     def guardar_asignacion(self, a: e.UsuarioRol) -> None:
         m.UsuarioRol.objects.update_or_create(id=a.id, defaults=dict(
             usuario_id=a.usuario_id, rol_id=a.rol_id, alcance_tipo=a.alcance_tipo.value, alcance_id=a.alcance_id,
@@ -289,11 +294,13 @@ class CredencialesDjango:
     def historial(self, usuario_id: str, cantidad: int) -> list[e.Credencial]:
         return [self._a_entidad(f) for f in m.Credencial.objects.filter(usuario_id=usuario_id).order_by("-creado_en")[:cantidad]]
 
+    @invalida
     def guardar(self, c: e.Credencial) -> None:
         m.Credencial.objects.update_or_create(id=c.id, defaults=dict(
             usuario_id=c.usuario_id, tipo=c.tipo.value, hash=c.hash, activa=c.activa, debe_cambiar=c.debe_cambiar,
             creado_en=c.creado_en, expira_en=c.expira_en, sustituida_en=c.sustituida_en, creado_por_id=c.creado_por))
 
+    @invalida
     def desactivar(self, usuario_id: str, ahora: int) -> None:
         m.Credencial.objects.filter(usuario_id=usuario_id, activa=True).update(activa=False, sustituida_en=ahora)
 
@@ -342,6 +349,7 @@ class GruposDjango:
             consulta = consulta.filter(id__in=list(solo_ids))
         return [self._a_entidad(f) for f in consulta.order_by("periodo", "codigo")]
 
+    @invalida
     def guardar(self, g: e.Grupo) -> None:
         m.Grupo.objects.update_or_create(id=g.id, defaults=dict(
             organizacion_id=g.organizacion_id, codigo=g.codigo, nombre=g.nombre, periodo=g.periodo,
@@ -379,6 +387,7 @@ class GruposDjango:
             consulta = consulta.filter(hasta__isnull=True)
         return [self._miembro(f) for f in consulta.order_by("desde")]
 
+    @invalida
     def guardar_miembro(self, mg: e.MiembroGrupo) -> None:
         m.MiembroGrupo.objects.update_or_create(id=mg.id, defaults=dict(
             grupo_id=mg.grupo_id, usuario_id=mg.usuario_id, papel=mg.papel.value, desde=mg.desde, hasta=mg.hasta))
@@ -427,6 +436,7 @@ class DispositivosDjango:
         from device_manager import servicios as dispositivos
         return [self._a_entidad(f) for f in dispositivos.listar(organizacion_id, solo_activos)]
 
+    @invalida
     def guardar(self, d: e.Dispositivo) -> None:
         """Lo único que el login cambia de un dispositivo: su último latido y, si cambió, su nombre."""
         from device_manager import servicios as dispositivos
@@ -449,11 +459,16 @@ class SesionesDjango:
         f = m.Sesion.objects.filter(id=sesion_id).first()
         return self._a_entidad(f) if f else None
 
+    @invalida
     def guardar(self, s: e.Sesion) -> None:
         m.Sesion.objects.update_or_create(id=s.id, defaults=dict(
             usuario_id=s.usuario_id, dispositivo_id=s.dispositivo_id, clase=s.clase.value, emitida_en=s.emitida_en,
             expira_en=s.expira_en, ultimo_uso_en=s.ultimo_uso_en, revocada_en=s.revocada_en,
             motivo_revocacion=s.motivo_revocacion, evaluacion_ref=s.evaluacion_ref, rol_id=s.rol_id))
+
+    def tocar(self, sesion_id: str, ahora: int) -> None:
+        """Sólo el «último uso»: lo que mide la inactividad. No cambia quién es la persona de la sesión, así que NO vacía la caché de pases."""
+        m.Sesion.objects.filter(id=sesion_id).update(ultimo_uso_en=ahora)
 
     def abiertas_de_usuario(self, usuario_id: str, ahora: int) -> list[e.Sesion]:
         filas = m.Sesion.objects.filter(usuario_id=usuario_id, revocada_en__isnull=True, expira_en__gt=ahora)
@@ -474,6 +489,7 @@ class SesionesDjango:
             consulta = consulta.filter(revocada_en__isnull=True, expira_en__gt=ahora)
         return [self._a_entidad(f) for f in consulta.order_by("-emitida_en")[:500]]
 
+    @invalida
     def revocar_de_usuario(self, usuario_id: str, motivo: str, ahora: int, excepto: str | None = None) -> int:
         consulta = m.Sesion.objects.filter(usuario_id=usuario_id, revocada_en__isnull=True, expira_en__gt=ahora)
         if excepto:

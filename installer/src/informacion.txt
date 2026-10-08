@@ -16,6 +16,10 @@ Qué queda instalado en este equipo
     · Los registros y la auditoría del aula, en la carpeta de datos del
       equipo (fuera de la carpeta del programa), con los permisos que el
       servicio necesita para guardarlos.
+    · Una caché de medios (los videos, audios, imágenes y PDF de los cursos)
+      en la carpeta de datos del equipo, para que las tabletas los reciban de
+      aquí sin pedírselos todas a la vez a AVACOM Contenido. Se vuelve a llenar
+      sola, no entra en las copias de seguridad y se borra al desinstalar.
 
 Todo lo que la API necesita para funcionar viaja dentro de este instalador.
 No hace falta internet, ni instalar nada más, ni escribir ningún comando.
@@ -44,15 +48,21 @@ La primera vez que se abra AVACOM OPS Master (instalación nueva)
 
     El instalador deja la API local lista, pero sin organización. Al abrir
     AVACOM OPS Master por primera vez, la aplicación lo detecta y abre el
-    primer arranque, todo con toques y el teclado táctil de Windows:
+    primer arranque, todo con toques y el teclado táctil de Windows (el
+    instalador lo deja activado para que salga solo al tocar un campo, aunque
+    el equipo no tenga teclado):
 
       1. País y nombre del aula (la organización).
-      2. El administrador: documento, nombres, apellidos y contraseña.
-      3. El PIN maestro (seis dígitos): con él los profesores crean su
-         usuario y restablecen su contraseña.
+      2. El administrador: documento, nombres y apellidos. La contraseña
+         inicial no se escribe: la genera el sistema y aparece en la hoja de
+         acceso.
+      3. El PIN maestro (seis dígitos, con un teclado propio en pantalla): con
+         él los profesores crean su usuario y restablecen su contraseña, y la
+         administración lo pide al entrar.
 
     La hoja de acceso se muestra UNA sola vez, y el PIN maestro no se puede
-    volver a ver: anótalos antes de continuar.
+    volver a ver: anótalos antes de continuar. El administrador entra después
+    con su documento, la contraseña inicial y el PIN maestro, y elige la suya.
 
     Después, desde OPS (pantalla Grupos) el profesorado crea los grupos y los
     alumnos; o los alumnos se crean solos desde su tableta, y los profesores

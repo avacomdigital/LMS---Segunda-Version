@@ -34,6 +34,8 @@ def servicios() -> Servicios:
         _cache.clear()
         _cache[huella] = Servicios(
             uow=FabricaUoWDjango(cifrador),
+            uow_lectura=FabricaUoWDjango(cifrador, solo_lectura=True),
+            cache_pases_seg=float(getattr(settings, "AVACOM_PASE_MEDIOS_CACHE_SEG", 15)),
             hasher=HasherArgon2(**argon),
             cifrador=cifrador,
             tokens=EmisorJwt(claves),

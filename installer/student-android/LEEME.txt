@@ -1,6 +1,6 @@
-﻿Student LMS 2.3.0  (codigo de version 20300, android-arm64)
-Archivo : Student LMS 2.3.0.apk
-SHA-256 : 709FD6D80A8115B1294C2F6ED7F1834AA723DE17F51C4711381D2095ED1CB09D
+﻿Student LMS 2.5.0  (codigo de version 20500, android-arm64)
+Archivo : Student LMS 2.5.0.apk
+SHA-256 : D673C5E2BEEE226612597F0F96F5D9800DBB698CF0C4A0304B0B4DB05F8A1D60
 Firma   : Signer #1 certificate SHA-256 digest: 16efdeaffb023e8b5b6704d9412911652bc7e4f405fcc3faf23eb92511a65ce0
-Git     : 4d4df002  (con cambios sin confirmar en src)
+Git     : 5cbd37eb  (con cambios sin confirmar en src)
 Paquete : com.avacom.lms.student  |  Android minimo declarado: 5.0 (API 21)  |  Objetivo de pruebas: Android 13 y 14 (API 33 y 34)

@@ -6,7 +6,22 @@
 | Quién lo usa | Quien ejecute las pruebas (QA, desarrollo, producto) |
 | Qué contiene | Qué hace el producto · por qué estos cuatro caminos · cómo prepararse · los pasos de cada camino · lo que ya se sabe que falla · calendario |
 | Base | Código en `main` (`9ef86b74`), documentos de `spec-driven/` y un recorrido previo **por API** (sin pantallas) el 5-oct-2026 contra la biblioteca real instalada |
+| Estado de la ejecución | **2026-10-08**: HP-01, HP-03 y HP-04 probados; **pendientes HP-02 y ESC-05-01**. Cinco hallazgos abiertos (QA-28 a QA-32, sección 9). Detalle por escenario en [escenarios-qa-02.md](escenarios-qa-02.md) y [avance](escenarios-qa-02-avance.html) |
 | Planes por módulo | Estos pasos son el resumen de la semana. El detalle fino vive en `04-modo-estudio/testing.md` (HP-EST), `06-evaluation-delivery/testing.md` (HP-EVA) y `05-audit-logs/testing.md` (HP-AUD) |
+
+---
+
+## 0 · Estado de la ejecución (2026-10-08)
+
+| Camino | Estado | Qué quedó |
+|---|---|---|
+| HP-01 · Clase completa | **Hecho** | Los 8 escenarios dieron correcto. Las fallas halladas (QA-26 y QA-27) quedaron resueltas y corregidas |
+| HP-02 · Examen aleatorio | **Pendiente** | Sin ejecutar |
+| HP-03 · Modo estudio | **Hecho** | Estado de las pruebas correcto. Dos correcciones por hacer: **QA-30** (los controles de algunas láminas no se ven en el modo estudio) y **QA-31** (en algunos laboratorios no se puede terminar la actividad) |
+| HP-04 · Acceso por rol | **Hecho** | Probado de manera efectiva y funciona bien. Una sola excepción: **QA-32** (las sesiones de Student duran poco; hay que aumentar la duración) |
+| ESC-05-01 · Red y carga (25 y 35 tabletas) | **Pendiente** | Sin ejecutar |
+
+Hallazgos nuevos de la ejecución, todos en la sección 9: **QA-28** (una sesión saca a un estudiante y deja entrar al otro), **QA-29** (los videos no muestran sus controles), **QA-30**, **QA-31** y **QA-32**. Sugerencias de mejora (umbrales en las métricas de rendimiento y un snapshot con timestamp) en `escenarios-qa-02.md`.
 
 ---
 
@@ -127,6 +142,8 @@ Invoke-RestMethod "$NODO/api/acceso/grupos/$GRUPO_ID/miembros/" -Method Post -He
 
 ## 5 · HP-01 · Clase completa
 
+> **Estado (2026-10-08): hecho.** Los 8 escenarios dieron correcto; QA-26 y QA-27 quedaron resueltos y corregidos. Abierto: QA-29 (controles del video).
+
 **Objetivo.** Dar una clase de principio a fin con los cuatro tipos de objeto que entran en una clase (presentación, lectura, laboratorio y actividad) y comprobar que cada medio (imagen, video, audio, PDF y simulación) se ve en OPS y en Student. El quinto tipo, el examen, se prueba en HP-02.
 
 **Curso:** *Estados de la materia y sus cambios* · **Lección 1:** «Los tres estados de la materia» (presentación de 7 láminas, lectura de 4 páginas con audio, video y PDF, laboratorio PhET y actividad de 7 preguntas) · **Lección 2:** «Cambios de estado».
@@ -165,6 +182,8 @@ Invoke-RestMethod "$NODO/api/acceso/grupos/$GRUPO_ID/miembros/" -Method Post -He
 ---
 
 ## 6 · HP-02 · Examen con preguntas aleatorias
+
+> **Estado (2026-10-08): pendiente.** Aún no se ejecuta.
 
 **Objetivo.** Un examen de la clase que cada alumno presenta en Student con **preguntas distintas**, y comprobar que el azar existe y que no cambia al reabrir.
 
@@ -208,6 +227,8 @@ $asig.armado_previo     # estrategia random_balanced · 6 por alumno · banco 18
 
 ## 7 · HP-03 · Modo estudio completo
 
+> **Estado (2026-10-08): hecho, con dos correcciones.** QA-30: los controles de algunas láminas no se ven en el modo estudio. QA-31: en algunos laboratorios no se puede terminar la actividad.
+
 **Objetivo.** Que un profesor asigne una lección y que un alumno la estudie, practique, descargue, trabaje sin red y termine, y que el profesor vea quién completó.
 
 **Lección:** «Los tres estados de la materia» · **Tabletas:** T-A (asignada a Ana) y T-C (compartida).
@@ -239,6 +260,8 @@ $asig.armado_previo     # estrategia random_balanced · 6 por alumno · banco 18
 ---
 
 ## 8 · HP-04 · Acceso por rol
+
+> **Estado (2026-10-08): hecho; funciona bien con una sola excepción.** QA-32: las sesiones de Student duran poco y hay que aumentar la duración.
 
 **Objetivo.** Entrar como alumno, profesor y administrador y comprobar que cada uno ve **la información que le corresponde** y no ve la de otros.
 
@@ -312,7 +335,18 @@ $asig.armado_previo     # estrategia random_balanced · 6 por alumno · banco 18
 | QA-18 | HP-03 | «Salir» borra la cola de **otro** alumno si no hay aula; los rechazos del nodo no se muestran; «Salir» deja paquetes huérfanos en el nodo (la tableta no se puede devolver al aula) | Ana completa sin red; «Cambiar» → Beto → «Salir»; reconectar | En el código |
 | QA-19 | HP-03 | Con práctica, sólo la práctica es obligatoria y el avance es 0 % hasta terminarla; los documentos dicen 75 % | Ver láminas y mirar OPS | Comprobado |
 | QA-20 | HP-03 | Dos alumnos con el mismo nombre se ven iguales; la huella de la tableta es `student-<nombre del equipo>` (dos con igual nombre son una) | Registrar dos «Ana» en «Grupos» | En el código |
-| QA-26 | HP-01 | La sesión del profesor se denegaba a los pocos minutos: el pase dura 240 min pero la inactividad de fábrica la cerraba a los 20 (30 el alumno) mientras la clase seguía en pantalla | «Clase de hoy» con el instalador 2.3.0, dejar la clase sin tocar y volver a usar OPS | Corregido en 2.3.1 (por repetir) |
+| QA-26 | HP-01 | La sesión del profesor se denegaba a los pocos minutos: el pase dura 240 min pero la inactividad de fábrica la cerraba a los 20 (30 el alumno) mientras la clase seguía en pantalla | «Clase de hoy» con el instalador 2.3.0, dejar la clase sin tocar y volver a usar OPS | Corregido en 2.3.1 y repetido con éxito |
+
+**Hallazgos de la ejecución (semana del 5 al 9)**
+
+| ID | Camino | Qué pasa | Cómo verlo | Estado |
+|---|---|---|---|---|
+| QA-27 | HP-01 | Láminas en gris y video y audio que no se reproducen: con sesión obligatoria la ruta de medios respondía 401 porque el visor no mandaba el pase | Abrir la presentación con el nodo con sesión obligatoria | Resuelto y corregido (propuesta en `bugfix/bugfix-01-videos.md`) |
+| QA-28 | HP-04 | Problemas de sesiones: el nodo saca a un estudiante y al otro lo deja entrar | Dos estudiantes con sesión abierta; ver si uno pierde la suya sin motivo | Abierto · por reproducir |
+| QA-29 | HP-01 · HP-03 | Los videos no muestran sus controles | Reproducir un video en OPS y en Student | Abierto |
+| QA-30 | HP-03 | Los controles de algunas láminas no se pueden ver en el modo estudio | Modo de estudio → recorrer las láminas de una lección | Abierto · corrección pendiente |
+| QA-31 | HP-03 | En algunos laboratorios no se permite terminar la actividad | Modo de estudio → abrir los laboratorios de la lección y terminar | Abierto · corrección pendiente |
+| QA-32 | HP-04 | Las sesiones de Student duran poco; hay que aumentar la duración | Entrar como alumno y dejar la tableta; ver cuándo pide entrar otra vez | Abierto · corrección pendiente |
 
 **De preparación**
 
@@ -337,6 +371,8 @@ $asig.armado_previo     # estrategia random_balanced · 6 por alumno · banco 18
 | **Mié 7** | **HP-02** (examen aleatorio con 4 a 6 alumnos) | QA + una persona de apoyo |
 | **Jue 8** | **HP-03** (modo estudio, con el corte de red) | QA |
 | **Vie 9** | Repetir lo corregido, extras de HP-01 (Pitágoras, SVG, simulaciones con el dedo) y decidir | QA + desarrollo + producto |
+
+**Avance real al 2026-10-08:** HP-04, HP-01 y HP-03 hechos; falta **HP-02** y el escenario transversal **ESC-05-01** (red y carga con 25 y 35 tabletas).
 
 **Decisiones que conviene tomar el lunes**
 

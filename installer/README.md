@@ -115,6 +115,7 @@ Y fuera de la carpeta del programa, porque cambia con el uso:
 %ProgramData%\AVACOM\OPS Master\Data        ops-master.sqlite3 (+ -wal y -shm): la base del nodo
 %ProgramData%\AVACOM\OPS Master\Respaldos   copias previas a cada actualización (las últimas 5)
 %ProgramData%\AVACOM\OPS Master\Logs        registros del nodo (ver «Registros»)
+%ProgramData%\AVACOM\OPS Master\CacheMedios  caché de medios (ver «Caché de medios»)
 %LOCALAPPDATA%\AVACOM\OPS Master\WebView2   perfil de WebView2 de cada usuario (lo crea el icono)
 ```
 
@@ -224,6 +225,7 @@ del administrador).
 | `App\Avacom.Lms.Ops.exe.WebView2\` | control total | **modificar** | WebView2, solo si la aplicación se abre sin el icono |
 | `%ProgramData%\AVACOM\OPS Master\Config`, `Data`, `Respaldos` | **control total, explícito** | lo que hereden (leer) | el servicio y el instalador |
 | `…\Logs` y `Logs\auditoria` | **control total, explícito** | modificar | el servicio (registros y bitácora), el lanzador |
+| `…\CacheMedios` | **control total, explícito** | **nada** (se les quitan los permisos heredados) | el servicio |
 | `%LOCALAPPDATA%\AVACOM\OPS Master\WebView2` | — | su propio perfil | WebView2, vía el icono |
 | `%LOCALAPPDATA%\AVACOM\lms` | — | su propio perfil | la aplicación (`fallos-ops.log` y `logs\ops-*.log`) |
 
@@ -645,6 +647,23 @@ y token), y lo hace el backend en tiempo de ejecución, no el instalador.
 donde la biblioteca la publica. Sin biblioteca el producto instala y arranca,
 pero el aula no tendrá cursos.
 
+## Caché de medios
+
+Desde la 2.5.0 el nodo no reenvía cada medio de AVACOM Contenido tableta por tableta: trae cada video, audio, imagen, PDF o página html **una vez** a
+`%ProgramData%\AVACOM\OPS Master\CacheMedios`, con su SHA-256, y desde ahí lo reparte a las tabletas con `Range`, con un límite de transferencias a la vez
+y, si se quiere, de ancho de banda. El diseño completo está en `spec-driven/11-cola-de-medios.md`.
+
+- **Es regenerable**: se puede borrar la carpeta con el servicio detenido (o con «Vaciar la caché» en la pestaña **Medios** de la bitácora de OPS) y se vuelve a
+  llenar sola. Por eso **no entra en las copias de seguridad** y **se borra al desinstalar** (puede ocupar varios GB).
+- **Sólo la leen `SYSTEM` y los administradores**: son medios de examen y no deben quedar a la mano de cualquier usuario del equipo. El host le quita los permisos
+  heredados de ProgramData al preparar el nodo (si no puede, por ejemplo en un ensayo sin privilegios, queda con los que tenga y lo intenta de nuevo la próxima vez).
+- **Se ajusta en `backend.env`** (`AVACOM_COLA_*`, reinicia el servicio `AVACOMOPSBackend`): `AVACOM_COLA_ACTIVA` (0 = cada tableta pide directo a AVACOM
+  Contenido, como antes), `AVACOM_COLA_MAX_MB` (4096), `AVACOM_COLA_LIBRE_MIN_MB` (1024), `AVACOM_COLA_DESCARGAS` (3), `AVACOM_COLA_TRANSFERENCIAS` (24),
+  `AVACOM_COLA_ANCHO_ENTRADA_KBPS` y `AVACOM_COLA_ANCHO_SALIDA_KBPS` (0 = sin tope). Ninguna se fuerza: una actualización agrega las que falten y respeta las que el
+  técnico haya cambiado.
+- **El ensayo del paquete** (`Ensayar-Paquete.ps1`) comprueba que las claves están, que la caché es la del nodo y no la de un entorno ajeno, y que `/api/medios/cola/` responde.
+- **El verificador** (`Verificar-Instalador.ps1`) avisa si la cola está apagada y cuánto ocupa la caché.
+
 ## Desinstalar
 
 Desde «Aplicaciones instaladas» de Windows y desde el menú Inicio. Detiene el
@@ -682,6 +701,15 @@ que la versión sube cuando eso ocurre. Una OPS con la 2.2.0 y una Student nueva
 al revés) no son compatibles. La misma versión sale en los tres entregables: este
 instalador, `student-windows/` y el APK de `student-android/`.
 
+**Versión 2.4.0.** Trae el arreglo de los medios del aula (bugfix 01: los videos, audios e
+imágenes llegan con un *pase de medios* dentro de la dirección, `/api/m/<pase>/…`, que el
+visor abre sin cabeceras aunque la sesión sea obligatoria; antes respondían 401 y se veía
+«formato no compatible») y el contrato 2 de AVACOM Contenido (láminas html, pausas y portada
+de video, arrastrar y soltar). Una Student 2.3.x sigue entrando al aula, pero no reproduce
+medios con la sesión obligatoria ni ve las lecciones html: hay que actualizar también las
+tabletas. Además, el ensayo del paquete ahora recorre el **primer arranque completo** (ver
+abajo) y la actualización de una base que ya tiene PIN maestro.
+
 ## La primera instalación: qué pide el instalador y qué pide OPS
 
 El instalador **no pide ningún dato**: deja la API lista, con
@@ -704,16 +732,60 @@ maestro, que se configura en OPS → Seguridad del aula. El ensayo del paquete
 comprueba el nodo nuevo (sin organización, sesión obligatoria, sin PIN maestro) y
 el actualizado desde la 2.2.0.
 
+**Lo que demuestra el ensayo del paquete (`Ensayar-Paquete.ps1`, bloque A2).** Con el backend
+EMPAQUETADO en un puerto libre, el nodo recién instalado: rechaza un PIN maestro fácil (`123456`)
+y uno corto, y sigue vacío; acepta el primer arranque real (organización, administrador con
+documento, nombres y apellidos, y PIN maestro) con un 201, devuelve la contraseña inicial
+generada —y no el PIN—, pasa a `instalado` con PIN vigente, rechaza un segundo primer arranque
+(409), registra al equipo de OPS como MASTER y deja entrar al administrador solo con
+documento + contraseña inicial + PIN maestro (sin PIN: `pin_maestro_requerido`; PIN equivocado:
+`pin_maestro_invalido`), con la contraseña marcada como provisional, el aula respondiendo 200
+con esa sesión y `validar` ya viendo organización y PIN configurados. La actualización (B)
+también se ensaya con una base que ya tenía PIN maestro: lo conserva y el administrador entra.
+
 **Nunca viaja** configuración de desarrollo: `backend/.env` (con la sesión
 obligatoria y un PIN maestro de ejemplo) y las bases SQLite sueltas se excluyen del
 paquete y de la huella, y el build falla si se cuelan. Las pruebas del backend del
 build corren sin la sesión obligatoria (el modo para el que se escribieron).
 
-**Requisito del equipo:** el primer arranque pide texto (documento, nombres, nombre
-del aula) y la OPS no tiene teclado: el teclado táctil de Windows tiene que salir
-solo al tocar un campo («Mostrar el teclado táctil cuando no hay un teclado
-conectado», en Configuración → Dispositivos → Escritura). El instalador no cambia
-esa opción; queda como requisito del equipo hasta que se decida.
+**El teclado táctil (desde la 2.4.0).** El primer arranque pide texto (documento,
+nombres, nombre del aula) y la OPS no tiene teclado: el teclado táctil de Windows
+tiene que salir solo al tocar un campo. Windows 10 trae apagada esa opción fuera del
+modo tableta («Mostrar el teclado táctil cuando no hay un teclado conectado», en
+Configuración → Dispositivos → Escritura), y sin ella el primer arranque —y con él el
+PIN maestro— no se puede hacer. El instalador la **enciende** para quien da la clase:
+dos valores de usuario en `HKCU\Software\Microsoft\TabletTip\1.7`
+(`EnableDesktopModeAutoInvoke` y `TipbandDesiredVisibility`, este último deja además el
+botón del teclado en la barra de tareas como segunda vía). Va en `[Run]` con
+`runasoriginaluser`: el `HKCU` tiene que ser el de la persona de la clase y no el del
+administrador que elevó el instalador. No toca servicios ni nada de administración y se
+revierte desde esa misma pantalla de Configuración; si fallara, no rompe la instalación y
+`AVACOM-Verificar-Instalador.bat` lo avisa (y avisa también si el servicio
+`TabletInputService` está deshabilitado). Si quien da la clase usa otra cuenta de Windows
+que la que instaló, esa cuenta lo activa una vez desde Configuración.
+
+## Instalar muchas tabletas Android (servidor local del APK)
+
+`installer/student-android/` es la carpeta de entrega del APK y se copia entera a un USB o al equipo que
+va a repartirlo. `Servir-APK.bat` enciende un servidor local para que las tabletas descarguen el APK por
+la red del aula, sin cable: pide el permiso de administrador **una** vez, abre el puerto 8080 en el
+firewall **solo para la red local y solo mientras corre** (lo cierra al detenerse, incluso si se cierra la
+ventana), abre en ese equipo un **panel con el código QR**, la dirección y un contador «N de 55», y la
+página que ve la tableta lleva los pasos, la huella SHA-256 y la dirección del aula si OPS corre en el mismo
+equipo. El Python viaja en la carpeta (`python\`, el mismo 3.12 embebido del paquete de OPS; se copia de la
+caché de compilación y no se versiona), así que sirve en cualquier Windows sin instalar nada. La guía de
+campo, con los pasos de cada tableta y los problemas típicos, es `student-android/GUIA-55-TABLETAS.txt`.
+
+Cómo se probó: `Servir-APK.py` se ejercitó con **55 clientes simultáneos** (cada uno con su propia dirección
+de origen) y con el Python embebido: 55 de 55 descargas con la misma huella en menos de un segundo en local,
+una descarga reanudada tras un corte, otra en tres trozos paralelos (como hace Chrome), rangos, HEAD, descarga
+cortada (no cuenta), una tableta que baja dos veces (cuenta una), el CSV `descargas-apk.csv`, y que «Detener»
+sólo lo acepta el propio equipo. **Una tableta cuenta cuando recibió el archivo entero** (cobertura de bytes por
+dirección) **y su conexión terminó con cierre limpio**: una petición `Range` que llega al final no basta. El
+codificador de QR es propio (modo byte, niveles L y M, versiones 1 a 6) y se verificó con los vectores
+publicados de Reed-Solomon («HELLO WORLD» 1-M y 1-Q), las 16 cadenas de formato de la norma y un decodificador
+escrito aparte (184 códigos en las 8 máscaras); **no** se escaneó con la cámara de una tableta real, y por eso la
+dirección también sale en letra grande.
 
 ## Pendiente
 

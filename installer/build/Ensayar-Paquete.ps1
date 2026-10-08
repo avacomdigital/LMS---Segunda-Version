@@ -86,12 +86,13 @@ function Puerto-Libre {
 
 # Peticion HTTP que no lanza por el codigo de estado; devuelve Estado, Cuerpo y Json.
 function Pedir {
-    param([string] $Url, [string] $Metodo = 'GET', [string] $Cuerpo = '', [int] $Segundos = 20)
+    param([string] $Url, [string] $Metodo = 'GET', [string] $Cuerpo = '', [int] $Segundos = 20, [string] $Pase = '')
     $r = [pscustomobject]@{ Estado = 0; Cuerpo = ''; Json = $null; Error = '' }
     $respuesta = $null
     try {
         $p = [System.Net.HttpWebRequest]::Create($Url)
         $p.Method = $Metodo; $p.Timeout = $Segundos * 1000; $p.ReadWriteTimeout = $Segundos * 1000; $p.Proxy = $null
+        if ($Pase) { $p.Headers.Add('Authorization', "Bearer $Pase") }
         if ($Cuerpo) {
             $bytes = [Text.Encoding]::UTF8.GetBytes($Cuerpo)
             $p.ContentType = 'application/json'; $p.ContentLength = $bytes.Length
@@ -244,6 +245,8 @@ try {
     $env:AVACOM_LMS_DIR_LOGS = Join-Path $Raiz 'logs-ajenos'
     $env:AVACOM_LMS_DEBUG = '1'
     $env:AVACOM_LMS_ENTORNO = 'desarrollo'
+    $env:AVACOM_COLA_ACTIVA = '0'
+    $env:AVACOM_COLA_DIR = Join-Path $Raiz 'cache-ajena'
 
     $codigo = Host-Ejecutar $instA @('preparar')
     Comprobar ($codigo -eq 0) 'preparar termina bien (configuracion, claves, migraciones)' "preparar devolvio $codigo`: $(Leer-Texto (Join-Path $datosA 'Logs\preparacion-estado.txt'))"
@@ -259,6 +262,13 @@ try {
         Comprobar ((Leer-Valor $configA $par[0]) -eq $par[1]) "$($par[0])=$($par[1]) en backend.env" "$($par[0]) deberia ser $($par[1]) y es $(Leer-Valor $configA $par[0])"
     }
     Comprobar ((Leer-Valor $configA 'AVACOM_LMS_DIR_LOGS') -eq (Join-Path $datosA 'Logs')) 'La carpeta de registros es la del nodo' 'AVACOM_LMS_DIR_LOGS no es la carpeta Logs del nodo'
+    # Cola de medios: la configuracion trae sus valores, la cache vive en la carpeta del nodo y nada del entorno ajeno la mueve ni la apaga.
+    foreach ($par in @(@('AVACOM_COLA_ACTIVA', '1'), @('AVACOM_COLA_MAX_MB', '4096'), @('AVACOM_COLA_DESCARGAS', '3'), @('AVACOM_COLA_TRANSFERENCIAS', '24'))) {
+        Comprobar ((Leer-Valor $configA $par[0]) -eq $par[1]) "$($par[0])=$($par[1]) en backend.env" "$($par[0]) deberia ser $($par[1]) y es $(Leer-Valor $configA $par[0])"
+    }
+    Comprobar ((Leer-Valor $configA 'AVACOM_COLA_DIR') -eq (Join-Path $datosA 'CacheMedios')) 'La cache de medios es la del nodo (CacheMedios)' 'AVACOM_COLA_DIR no es la carpeta CacheMedios del nodo'
+    Comprobar (Test-Path (Join-Path $datosA 'CacheMedios')) 'La carpeta de la cache de medios existe' 'No se creo la carpeta CacheMedios'
+    Comprobar (-not (Test-Path (Join-Path $Raiz 'cache-ajena'))) 'No se uso la carpeta de cache del entorno ajeno' 'Se uso la carpeta de cache del entorno ajeno'
     Comprobar ($registroA -match 'curso de ejemplo=apagado' -and $registroA -match 'depuracion=apagada') `
         'La configuracion EFECTIVA que ve Django ignora lo envenenado (ejemplo apagado, sin depuracion)' `
         'Django vio la configuracion ajena: el entorno de Windows se colo en el backend'
@@ -302,6 +312,13 @@ try {
         } else {
             Comprobar ($fuente.Estado -eq 200) '/api/aula/fuente/ responde 200 (nunca 503) con o sin biblioteca' "/api/aula/fuente/ respondio $($fuente.Estado)"
         }
+        # La cola de medios esta en el paquete: sus rutas responden (con la sesion obligatoria, 401; sin ella, el estado con la cola encendida).
+        $cola = Pedir "http://127.0.0.1:$puertoA/api/medios/cola/"
+        if ($exigeSesion) {
+            Comprobar ($cola.Estado -eq 401) '/api/medios/cola/ exige sesion (401): la cola de medios esta en el paquete' "/api/medios/cola/ respondio $($cola.Estado): $($cola.Cuerpo)"
+        } else {
+            Comprobar ($cola.Estado -eq 200 -and $cola.Json.activa -eq $true) '/api/medios/cola/ responde con la cola de medios activa' "/api/medios/cola/ respondio $($cola.Estado): $($cola.Cuerpo)"
+        }
         $auditoria = Pedir "http://127.0.0.1:$puertoA/api/auditoria/estado/"
         Comprobar ($auditoria.Estado -in 200, 401, 403) 'El modulo de auditoria esta en el paquete (/api/auditoria/ responde)' "/api/auditoria/estado/ respondio $($auditoria.Estado)"
         $evaluacion = Pedir "http://127.0.0.1:$puertoA/api/evaluacion/asignaciones/"
@@ -331,6 +348,95 @@ try {
             Comprobar ($textoV -match 'canal en tiempo real del aula \(WebSocket\) acepta') 'El verificador comprueba el WebSocket' 'El verificador no comprobo el WebSocket'
             Comprobar ($textoV -match 'backend est. escribiendo sus registros') 'El verificador comprueba que se escriben los registros' 'El verificador no comprobo los registros'
         }
+
+        # ------------------------------------------------------------------------------------------------------------------
+        # A2 · El primer arranque COMPLETO, con la misma API que usa OPS: un nodo recien instalado tiene que poder recibir la
+        # organizacion, el administrador (documento, nombres, apellidos) y el PIN maestro, y despues dejar entrar al
+        # administrador con documento + contrasena inicial + PIN maestro, obligarlo a elegir su propia contrasena y dejarlo
+        # trabajar. Antes solo se comprobaba que una instalacion VACIA se rechazaba: nada probaba que la buena funcionara
+        # dentro del paquete (runtime embebido, migraciones, argon2, claves).
+        # ------------------------------------------------------------------------------------------------------------------
+        Titulo 'A2 · El primer arranque completo: organizacion, administrador y PIN maestro (como lo hace OPS)'
+        $baseA = "http://127.0.0.1:$puertoA"
+        $documentoAdmin = '1042888795'
+        $pinMaestro = '739104'
+        $claveElegida = 'Aula.Ensayo.2026!'
+        $cuerpoInstalacion = {
+            param([string] $pin)
+            (@{ organizacion = @{ codigo = 'ENSAYO'; nombre = 'Aula de ensayo del instalador'; pais = 'CO'; idioma = 'es'; locale = 'es-CO' }
+                administrador = @{ alias = 'Administracion'; nombres = 'Ana'; apellidos = 'Del Ensayo'; dni = $documentoAdmin }
+                pin_maestro = $pin } | ConvertTo-Json -Depth 5 -Compress)
+        }
+
+        # Un PIN facil de adivinar o mal formado se rechaza explicando por que y deja el equipo vacio (OPS pide otro PIN).
+        $pinDebil = Pedir "$baseA/api/acceso/instalacion/" 'POST' (& $cuerpoInstalacion '123456')
+        Comprobar ($pinDebil.Estado -eq 400 -and $pinDebil.Json.codigo -eq 'pin_debil') 'Un PIN maestro facil (123456) se rechaza con su explicacion' "PIN facil: respondio $($pinDebil.Estado) $($pinDebil.Cuerpo)"
+        $pinCorto = Pedir "$baseA/api/acceso/instalacion/" 'POST' (& $cuerpoInstalacion '12345')
+        Comprobar ($pinCorto.Estado -eq 400 -and $pinCorto.Json.codigo -eq 'pin_invalido') 'Un PIN maestro de cinco digitos se rechaza' "PIN corto: respondio $($pinCorto.Estado) $($pinCorto.Cuerpo)"
+        $sigueVacio = Pedir "$baseA/api/acceso/configuracion/"
+        Comprobar ($sigueVacio.Estado -eq 200 -and $sigueVacio.Json.instalado -eq $false) 'Tras los rechazos el nodo sigue vacio (no queda un aula a medias)' "El nodo ya no esta vacio: $($sigueVacio.Cuerpo)"
+
+        # El primer arranque bueno. La contrasena NO se escribe: la genera el nodo y llega una sola vez (la hoja de acceso).
+        $instalacion = Pedir "$baseA/api/acceso/instalacion/" 'POST' (& $cuerpoInstalacion $pinMaestro) 60
+        Comprobar ($instalacion.Estado -eq 201) 'El primer arranque crea la organizacion, el administrador y el PIN maestro (201)' "La instalacion respondio $($instalacion.Estado): $($instalacion.Cuerpo)"
+        $claveInicial = if ($instalacion.Json -and $instalacion.Json.PSObject.Properties['password_inicial']) { [string]$instalacion.Json.password_inicial } else { '' }
+        Comprobar ($claveInicial.Length -ge 8) 'La contrasena inicial del administrador la genera el nodo y llega en la respuesta (la hoja de acceso)' 'La respuesta no trae la contrasena inicial generada'
+        Comprobar ($instalacion.Cuerpo -notmatch [regex]::Escape($pinMaestro)) 'La respuesta no devuelve el PIN maestro (no se puede volver a ver)' 'La respuesta de la instalacion trae el PIN maestro en claro'
+
+        $despues = Pedir "$baseA/api/acceso/configuracion/"
+        Comprobar ($despues.Estado -eq 200 -and $despues.Json.instalado -eq $true -and $despues.Json.pin_maestro.configurado -eq $true -and $despues.Json.pin_maestro.vencido -eq $false) `
+            'Con el primer arranque hecho, el nodo dice instalado y con PIN maestro vigente' "Configuracion tras instalar: $($despues.Cuerpo)"
+        $otraVez = Pedir "$baseA/api/acceso/instalacion/" 'POST' (& $cuerpoInstalacion '482915') 30
+        Comprobar ($otraVez.Estado -eq 409) 'Un segundo primer arranque se rechaza (409): nadie puede reinstalar encima de un aula en uso' "La segunda instalacion respondio $($otraVez.Estado): $($otraVez.Cuerpo)"
+
+        # OPS se presenta ante el nodo como equipo MASTER con el latido (publico): el PIN maestro solo se acepta desde el equipo del
+        # profesor, no desde una tableta.
+        $equipo = Pedir "$baseA/api/dispositivos/latido/" 'POST' '{"identificador_hw":"ensayo-ops-master","nombre":"OPS de ensayo","plataforma":"windows","version_app":"2.4.0","tipo":"MASTER"}' 30
+        Comprobar ($equipo.Estado -in 200, 201 -and $equipo.Json.tipo -eq 'MASTER') 'El equipo de OPS se presenta ante el nodo como MASTER (latido publico)' "El latido del equipo respondio $($equipo.Estado): $($equipo.Cuerpo)"
+
+        # El administrador entra: contrasena sola -> pide el PIN; PIN equivocado -> lo rechaza; PIN bueno -> sesion.
+        $login = { param([string] $secreto, [string] $pin)
+            $c = @{ identificador = $documentoAdmin; secreto = $secreto; dispositivo = 'ensayo-ops-master' }
+            if ($pin) { $c.pin_maestro = $pin }
+            Pedir "$baseA/api/acceso/sesiones/" 'POST' ($c | ConvertTo-Json -Compress) 60 }
+        $sinPin = & $login $claveInicial ''
+        Comprobar ($sinPin.Estado -eq 401 -and $sinPin.Json.codigo -eq 'pin_maestro_requerido') 'Con documento y contrasena, la administracion todavia debe dar el PIN maestro (pin_maestro_requerido)' "Sin PIN respondio $($sinPin.Estado): $($sinPin.Cuerpo)"
+        $pinMalo = & $login $claveInicial '906531'
+        Comprobar ($pinMalo.Estado -eq 401 -and $pinMalo.Json.codigo -eq 'pin_maestro_invalido') 'Un PIN maestro equivocado se rechaza (pin_maestro_invalido)' "PIN malo respondio $($pinMalo.Estado): $($pinMalo.Cuerpo)"
+        $conPin = & $login $claveInicial $pinMaestro
+        Comprobar ($conPin.Estado -eq 200 -and [bool]$conPin.Json.token) 'Documento + contrasena inicial + PIN maestro abren la sesion del administrador' "Con el PIN bueno respondio $($conPin.Estado): $($conPin.Cuerpo)"
+        if ($conPin.Estado -eq 200) {
+            Comprobar ($conPin.Json.usuario.rol -eq 'ADMIN') 'La sesion es de la administracion (rol ADMIN)' "Rol inesperado: $($conPin.Json.usuario.rol)"
+            Comprobar ($conPin.Json.usuario.debe_cambiar_credencial -eq $true) 'La contrasena inicial es provisional: la sesion nace marcada para que elija otra' 'La contrasena inicial no quedo como provisional'
+            $pase = [string]$conPin.Json.token
+
+            # Con la contrasena provisional la sesion solo sirve para elegir la propia: lo demas responde 403 debe_cambiar_credencial.
+            $bloqueada = Pedir "$baseA/api/acceso/pin-maestro/" 'GET' '' 30 $pase
+            Comprobar ($bloqueada.Estado -eq 403 -and $bloqueada.Json.codigo -eq 'debe_cambiar_credencial') `
+                'Hasta elegir su contrasena, el administrador no puede hacer nada mas (403 debe_cambiar_credencial)' "Con la clave provisional, el estado del PIN respondio $($bloqueada.Estado): $($bloqueada.Cuerpo)"
+            $cambio = Pedir "$baseA/api/acceso/yo/credencial/" 'PUT' (@{ secreto_actual = $claveInicial; secreto_nuevo = $claveElegida } | ConvertTo-Json -Compress) 60 $pase
+            Comprobar ($cambio.Estado -eq 200) 'El administrador elige su propia contrasena (PUT yo/credencial)' "Cambiar la contrasena respondio $($cambio.Estado): $($cambio.Cuerpo)"
+
+            $viejaClave = & $login $claveInicial $pinMaestro
+            Comprobar ($viejaClave.Estado -eq 401) 'La contrasena provisional de la hoja de acceso ya no sirve' "La clave provisional siguio entrando ($($viejaClave.Estado))"
+            $segundo = & $login $claveElegida $pinMaestro
+            Comprobar ($segundo.Estado -eq 200 -and $segundo.Json.usuario.debe_cambiar_credencial -eq $false) 'Entra con su contrasena propia y el PIN maestro, ya sin la marca de provisional' "El segundo ingreso respondio $($segundo.Estado): $($segundo.Cuerpo)"
+            if ($segundo.Estado -eq 200) {
+                $pase = [string]$segundo.Json.token
+                # Con la sesion ya definitiva, el estado del PIN maestro: configurado y vigente, sin verse.
+                $estadoPin = Pedir "$baseA/api/acceso/pin-maestro/" 'GET' '' 30 $pase
+                Comprobar ($estadoPin.Estado -eq 200 -and $estadoPin.Json.configurado -eq $true -and $estadoPin.Json.vencido -eq $false) 'La administracion ve el PIN maestro como configurado y vigente' "Estado del PIN: $($estadoPin.Estado) $($estadoPin.Cuerpo)"
+                Comprobar ($estadoPin.Cuerpo -notmatch [regex]::Escape($pinMaestro)) 'El estado del PIN maestro no lo revela' 'El estado del PIN maestro trae el PIN'
+                $fuenteConSesion = Pedir "$baseA/api/aula/fuente/" 'GET' '' 30 $pase
+                Comprobar ($fuenteConSesion.Estado -eq 200) 'Con la sesion del administrador /api/aula/fuente/ responde 200 (con o sin AVACOM Contenido)' "/api/aula/fuente/ con sesion respondio $($fuenteConSesion.Estado)"
+            }
+        }
+
+        # El nodo ya se ve instalado desde el host (lo que lee la pantalla final del instalador).
+        $codigoV2 = Host-Ejecutar $instA @('validar', '60')
+        $resumenV2 = Leer-Texto (Join-Path $datosA 'Logs\resumen-nodo.txt')
+        Comprobar ($codigoV2 -eq 0 -and $resumenV2 -match 'organizacion=si' -and $resumenV2 -match '(?m)^pin_maestro=configurado') `
+            'validar ya ve la organizacion y el PIN maestro configurado (la pantalla final dejara de avisar)' "validar devolvio $codigoV2; resumen: $resumenV2"
 
         # El lanzador (D): se prueba con el nodo vivo, porque espera /health/ antes de abrir la aplicacion.
         Titulo 'D · El lanzador abre la aplicacion con el perfil de WebView2 de quien da la clase'
@@ -404,9 +510,15 @@ public static class Prueba {
         $puertoB = Puerto-Libre
         Poner-Valor $configB 'AVACOM_OPS_BACKEND_PORT' $puertoB
 
+        # Una version con PIN maestro (2.3 en adelante) no instala sin PIN: acceso_instalar lo toma de la variable de entorno (nunca como
+        # argumento). La 2.2.0 y las anteriores no lo conocen: se actualiza un nodo SIN PIN, que es lo que ven esas aulas.
+        $versionConPin = Test-Path (Join-Path $instB 'Backend\acceso\management\commands\acceso_pin_maestro.py')
+        $pinDeLaBaseVieja = '739104'
+        if ($versionConPin) { $env:AVACOM_LMS_PIN_MAESTRO = $pinDeLaBaseVieja }
         $instalacion = Python-Del-Nodo $instB $datosB @('manage.py', 'acceso_instalar', '--codigo', 'ENSAYO', '--nombre', 'Ensayo del instalador', '--pais', 'CO',
             '--admin-dni', '1000000001', '--admin-nombres', 'Ensayo', '--admin-apellidos', 'Del Instalador', '--admin-password', 'Ensayo.2026!')
-        Comprobar ($instalacion.Codigo -eq 0) 'Se creo la organizacion y el administrador con el backend viejo' "acceso_instalar fallo: $($instalacion.Salida)"
+        Remove-Item Env:\AVACOM_LMS_PIN_MAESTRO -ErrorAction SilentlyContinue
+        Comprobar ($instalacion.Codigo -eq 0) "Se creo la organizacion y el administrador con el backend viejo$(if ($versionConPin) { ' (con PIN maestro)' })" "acceso_instalar fallo: $($instalacion.Salida)"
         Limpiar-Entorno
         Fijar-Datos $datosB
 
@@ -457,10 +569,17 @@ public static class Prueba {
             $codigo = Host-Ejecutar $instB @('validar', '60')
             Comprobar ($codigo -eq 0) 'validar correcto sobre el nodo actualizado' "validar devolvio $codigo"
             Comprobar ((Leer-Texto (Join-Path $datosB 'Logs\resumen-nodo.txt')) -match 'organizacion=si') 'El nodo sigue teniendo su organizacion' 'El nodo perdio su organizacion'
-            # Un nodo que ya tenia organizacion antes del PIN maestro no lo tiene tras actualizar: lo dice el resumen que lee la pantalla final.
-            Comprobar ((Leer-Texto (Join-Path $datosB 'Logs\resumen-nodo.txt')) -match '(?m)^pin_maestro=sin_configurar') 'El nodo actualizado avisa que le falta el PIN maestro (se configura en OPS, Seguridad del aula)' 'El resumen del nodo actualizado no dice pin_maestro=sin_configurar'
-            $login = Pedir "http://127.0.0.1:$puertoB/api/acceso/sesiones/" 'POST' '{"identificador":"1000000001","secreto":"Ensayo.2026!"}' 30
-            Comprobar ($login.Estado -eq 200) 'El administrador inicia sesion tras actualizar: sus datos siguen legibles con las mismas claves' "El inicio de sesion respondio $($login.Estado): $($login.Cuerpo)"
+            # Un nodo que ya tenia organizacion antes del PIN maestro no lo tiene tras actualizar (lo dice el resumen que lee la pantalla final);
+            # uno que ya lo tenia (2.3 en adelante) lo conserva: la actualizacion no lo toca.
+            if ($versionConPin) {
+                Comprobar ((Leer-Texto (Join-Path $datosB 'Logs\resumen-nodo.txt')) -match '(?m)^pin_maestro=configurado') 'El nodo actualizado conserva su PIN maestro (la actualizacion no lo toca)' 'El resumen del nodo actualizado no dice pin_maestro=configurado: la actualizacion perdio el PIN maestro'
+                $cuerpoLogin = '{"identificador":"1000000001","secreto":"Ensayo.2026!","pin_maestro":"' + $pinDeLaBaseVieja + '"}'
+            } else {
+                Comprobar ((Leer-Texto (Join-Path $datosB 'Logs\resumen-nodo.txt')) -match '(?m)^pin_maestro=sin_configurar') 'El nodo actualizado avisa que le falta el PIN maestro (se configura en OPS, Seguridad del aula)' 'El resumen del nodo actualizado no dice pin_maestro=sin_configurar'
+                $cuerpoLogin = '{"identificador":"1000000001","secreto":"Ensayo.2026!"}'
+            }
+            $login = Pedir "http://127.0.0.1:$puertoB/api/acceso/sesiones/" 'POST' $cuerpoLogin 30
+            Comprobar ($login.Estado -eq 200) "El administrador inicia sesion tras actualizar$(if ($versionConPin) { ' (documento, contrasena y PIN maestro)' }): sus datos siguen legibles con las mismas claves" "El inicio de sesion respondio $($login.Estado): $($login.Cuerpo)"
             $audito = Pedir "http://127.0.0.1:$puertoB/api/auditoria/estado/"
             Comprobar ($audito.Estado -in 200, 401, 403) 'El modulo de auditoria responde en el nodo actualizado' "auditoria respondio $($audito.Estado)"
         }

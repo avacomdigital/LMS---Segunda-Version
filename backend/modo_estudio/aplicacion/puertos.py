@@ -117,10 +117,11 @@ class Contenido(Protocol):
         """La versión del curso instalada AHORA; None si no se puede saber. Nunca lanza."""
     def tamano_de(self, fuente: str, curso_ref: str, media_ref: str) -> int | None:
         """Lo que pesa un medio sin bajarlo (HEAD); None si no se sabe. Nunca lanza."""
-    def medir(self, fuente: str, curso_ref: str, media_ref: str, tope_bytes: int) -> dict:
-        """Lee el medio COMPLETO y devuelve `{bytes, sha256, mime}`. Lanza NoEncontrado, MedioDemasiadoGrande o FuenteNoDisponible."""
+    def medir(self, fuente: str, curso_ref: str, media_ref: str, tope_bytes: int, contexto_ref: str = "") -> dict:
+        """Devuelve `{bytes, sha256, mime}` del medio COMPLETO (la cola de medios lo trae una vez a la caché del nodo y lo reutiliza; `contexto_ref` es la
+        asignación que lo pidió). Lanza NoEncontrado, MedioDemasiadoGrande o FuenteNoDisponible."""
     def abrir_medio(self, fuente: str, curso_ref: str, media_ref: str, ruta: str | None, rango: str | None, metodo: str) -> Bytes:
-        """Los bytes de un medio (o de un archivo interno de una simulación), en paso a través."""
+        """Los bytes de un medio (o de un archivo interno de una simulación), de la caché del nodo o en paso a través (ver `cola_medios`)."""
     def calificar(self, fuente: str, curso_ref: str, version: str, items: list[dict]) -> dict[str, dict | None]:
         """La clave se compara DONDE VIVE (`POST /v2/evaluate`). `items`: `[{objeto_ref, pregunta_ref, respuesta}]`. Devuelve el
         veredicto de cada pregunta (la traducción del aula) o None si no se pudo calificar. Nunca lanza: sin biblioteca la respuesta

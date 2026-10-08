@@ -40,8 +40,25 @@ public partial class ConnectionPage : ContentPage
     {
         base.OnAppearing();
         if (!Preferences.Default.ContainsKey("student_name")) NameEntry.Text = ConnectionOptions.Default.StudentName;
+        RecordarDireccionDelAula();
         AlVolverAlAcceso();
         if (TraspasoEntreApps.TomarDeLaLinea() is { } entrante) _ = CanjearEntranteAsync(entrante);
+    }
+
+    /// <summary>
+    /// La dirección del aula es la de la institución, no la de una persona: se queda guardada aunque la app se cierre y la tableta la muestra al
+    /// abrir (antes mostraba siempre la del XAML y había que escribirla en cada una de las tabletas cada vez que la app arrancaba). Sólo se
+    /// sustituye si el campo sigue con la dirección de fábrica: lo que alguien escribió en esta misma ejecución no se pisa.
+    /// </summary>
+    private void RecordarDireccionDelAula()
+    {
+        try
+        {
+            if (!string.Equals(ServerEntry.Text?.Trim(), ConnectionOptions.Default.ServerAddress, StringComparison.OrdinalIgnoreCase)) return;
+            var guardada = Preferences.Default.Get<string?>("student_server", null);
+            if (!string.IsNullOrWhiteSpace(guardada)) ServerEntry.Text = guardada;
+        }
+        catch { /* sin preferencias legibles, se queda la de fábrica */ }
     }
 
     private async void OnCheck(object? sender, EventArgs e)
@@ -215,7 +232,7 @@ public partial class ConnectionPage : ContentPage
         var donde = anterior.Dispositivo;
         // Si la sesión anterior era de esta misma tableta (la app se cerró sin «Salir») no hay nada que contar.
         if (!string.IsNullOrWhiteSpace(donde) && (string.Equals(donde, Sesion.Dispositivo, StringComparison.OrdinalIgnoreCase) || string.Equals(donde, DeviceInfo.Current.Name, StringComparison.OrdinalIgnoreCase))) return null;
-        return $"Tenías tu sesión abierta en {(string.IsNullOrWhiteSpace(donde) ? "otra tableta" : donde)}. Se cerró allí y todo tu trabajo está a salvo. Continúa aquí.";
+        return $"Tenías tu sesión abierta en {(string.IsNullOrWhiteSpace(donde) ? "otra tableta" : Identidad.EquipoLegible(donde))}. Se cerró allí y todo tu trabajo está a salvo. Continúa aquí.";
     }
 
     private void OnPageSizeChanged(object? sender, EventArgs e) => AjustarComposicion();

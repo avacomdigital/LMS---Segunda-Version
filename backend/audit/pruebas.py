@@ -21,11 +21,22 @@ from django.test.runner import DiscoverRunner
 from . import contexto
 
 
+def _reiniciar_cola_de_medios() -> None:
+    """La cola de medios guarda en memoria y en disco lo que ya trajo de la fuente: cada caso empieza con la suya vacía (los casos usan servidores de
+    contenido distintos y no deben verse entre sí)."""
+    try:
+        from cola_medios.infraestructura import contenedor
+        contenedor.reiniciar()
+    except Exception:   # noqa: BLE001 — sin la app (o sin migrar) las pruebas siguen
+        pass
+
+
 class ResultadoConCaso(unittest.TextTestResult):
     """Fija `caso` en el contexto al empezar cada test y lo limpia al terminar."""
 
     def startTest(self, test):   # noqa: N802 — nombre de unittest
         self._token_caso = contexto.establecer(caso=test.id(), origen=contexto.ORIGEN_PRUEBA)
+        _reiniciar_cola_de_medios()
         super().startTest(test)
 
     def stopTest(self, test):   # noqa: N802

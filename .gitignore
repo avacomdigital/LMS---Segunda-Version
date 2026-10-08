@@ -80,6 +80,8 @@ Desktop.ini
 # Backend Django (AVACOM LMS)
 backend/.venv/
 backend/db.sqlite3
+# Caché de medios del nodo (bytes de video, audio, imagen, PDF y html que trae de AVACOM Contenido)
+backend/cache_medios/
 backend/**/__pycache__/
 
 # Instalador (installer/build/Build-Installer.ps1)
@@ -94,6 +96,10 @@ installer/latest/*.exe
 installer/build/PruebaAsistente.exe
 installer/student-windows/latest/*.exe
 installer/student-windows/build/PruebaAsistenteStudent.exe
+# Servidor local del APK (installer/student-android): el Python embebido que viaja con la carpeta de entrega (se copia de la
+# cache de compilacion, ~22 MB) y el registro de descargas de cada jornada de instalacion de tabletas.
+installer/student-android/python/
+installer/student-android/descargas-apk.csv
 
 # Presentaciones y discusiones privadas con el CTO
 /specs/presentaciones/

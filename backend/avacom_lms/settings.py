@@ -16,7 +16,9 @@ def _cargar_env_de_desarrollo() -> None:
     """Lee `backend/.env` (clave=valor por línea) para el desarrollo local. NUNCA pisa una variable que ya venga del entorno: en el equipo instalado la
     configuración llega desde backend.env por el servicio, y este archivo (que no se versiona: está en .gitignore) no existe."""
     ruta = BASE_DIR / ".env"
-    if not ruta.is_file():
+    # `manage.py test` NO lo lee: las pruebas fijan su propia configuración (con la sesión obligatoria del .env de desarrollo, el `setUp` de todas
+    # las de API fallaba al instalar el nodo) y no deben depender de la base ni de las claves de quien las corre.
+    if "test" in sys.argv[1:2] or not ruta.is_file():
         return
     for linea in ruta.read_text(encoding="utf-8-sig").splitlines():
         linea = linea.strip()
@@ -49,6 +51,7 @@ INSTALLED_APPS = [
     "classroom_engine",
     "modo_estudio",
     "evaluacion",
+    "cola_medios",
     "audit",
 ]
 
@@ -56,6 +59,9 @@ MIDDLEWARE = [
     # MOD-019: `corr` por petición (X-Avacom-Correlacion), aparato validado (X-Avacom-Dispositivo), línea por petición
     # en backend-app.log y asiento de denegación en todo 403. Va primero para envolver a todo lo demás.
     "audit.middleware.CorrelacionMiddleware",
+    # Bugfix 01 (QA-27): las direcciones `/api/m/<pase>/…` de los medios llevan su permiso en el camino (el visor no manda cabeceras). Reescribe la ruta
+    # a la normal ANTES de `CommonMiddleware`, y por dentro de la auditoría, que registra ya la ruta sin el pase.
+    "acceso.interfaces.medios.PaseDeMediosMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -95,6 +101,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # y no exige Redis. Si algún día el nodo corre en varios procesos, aquí se cambia por `channels_redis`.
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
+# --------------------------------------------------------- Caché en memoria (cola de medios)
+# `LocMemCache`: el nodo es UN proceso, así que una caché por proceso basta. La usa la cola de medios (alias `medios`) para el índice caliente de recursos,
+# los medios pequeños y la versión vigente de cada curso. Los medios grandes no pasan por aquí: viven en disco (AVACOM_COLA_DIR).
+CACHES = {
+    "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "avacom-default"},
+    "medios": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "avacom-medios", "OPTIONS": {"MAX_ENTRIES": 2000, "CULL_FREQUENCY": 4}},
+}
+
 LANGUAGE_CODE = "es"
 TIME_ZONE = "America/Bogota"
 USE_I18N = True
@@ -106,7 +120,10 @@ REST_FRAMEWORK = {
     # El módulo `acceso` aporta la autenticación JWT. Sin cabecera Authorization el
     # portador es anónimo, así que las rutas del expediente siguen abiertas (Q-04)
     # hasta que AVACOM_LMS_EXIGIR_SESION=1 las cierre (Q-34).
-    "DEFAULT_AUTHENTICATION_CLASSES": ["acceso.interfaces.autenticacion.AutenticacionJwt"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "acceso.interfaces.medios.AutenticacionPaseDeMedios",   # sólo opina si el middleware resolvió un pase de medios
+        "acceso.interfaces.autenticacion.AutenticacionJwt",
+    ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
@@ -135,6 +152,12 @@ AVACOM_CONTENIDO_ENLACE_V2 = os.environ.get("AVACOM_CONTENIDO_ENLACE_V2") or Non
 # Tiempo de espera hacia la biblioteca. Es loopback: si no contesta en tres
 # segundos, no va a contestar, y esperar más congela la pantalla del profesor.
 AVACOM_CONTENIDO_TIEMPO_ESPERA_SEG = float(os.environ.get("AVACOM_CONTENIDO_TIEMPO_ESPERA_SEG", "3"))
+# Segundos que el nodo reutiliza una sesión de medios de Contenido por (curso, medio) en vez de abrir una por cada trozo (`Range`) que
+# pide un reproductor: con 35 tabletas ahorra un `POST /v2/media-sessions` (~45 ms) por trozo. 0 = una sesión por petición (como antes).
+AVACOM_CONTENIDO_SESION_MEDIOS_SEG = int(os.environ.get("AVACOM_CONTENIDO_SESION_MEDIOS_SEG", str(15 * 60)))
+# Segundos que el nodo recuerda la persona de un pase de medios en vez de comprobar la sesión entera (8 consultas) en CADA imagen, audio o trozo de video.
+# Cerrar la sesión, cambiar la clave o mover a la persona lo vacía al instante; el tiempo sólo cubre la caducidad y la inactividad. 0 = comprobar siempre.
+AVACOM_PASE_MEDIOS_CACHE_SEG = int(os.environ.get("AVACOM_PASE_MEDIOS_CACHE_SEG", "15"))
 
 # ---------------------------------------------------- Classroom Engine (MOD-007)
 # App `classroom_engine`. Los cursos salen SIEMPRE de la biblioteca (AVACOM Contenido, API v2). El manifiesto de
@@ -221,3 +244,26 @@ AVACOM_EVAL_MAX_RESPUESTAS = int(os.environ.get("AVACOM_EVAL_MAX_RESPUESTAS", "2
 AVACOM_EVAL_DESFASE_RELOJ_MS = int(os.environ.get("AVACOM_EVAL_DESFASE_RELOJ_MS", "5000"))
 # Combinaciones que prueba el armado `random_balanced` antes de quedarse con la mejor.
 AVACOM_EVAL_ARMADO_INTENTOS = int(os.environ.get("AVACOM_EVAL_ARMADO_INTENTOS", "200"))
+
+# ---------------------------------------------------------------- Cola de medios
+# App `cola_medios` (`/api/medios/cola/`, tablas cm_*). Reparte los bytes de video, audio, imagen, PDF y html que vienen de AVACOM Contenido a las tabletas:
+# los trae UNA vez a una caché de disco con su SHA-256, regula cuántos y a qué ritmo, y los sirve con `Range` a las tres rutas de medios del aula, del modo
+# estudio y de la evaluación. Ver spec-driven/11-cola-de-medios.md.
+_EN_PRUEBAS = "test" in sys.argv[1:2]
+# "0" apaga la cola: todos los medios vuelven al paso a través de siempre.
+AVACOM_COLA_ACTIVA = os.environ.get("AVACOM_COLA_ACTIVA", "1") == "1"
+# Dónde viven los bytes. Desarrollo: backend/cache_medios. Instalado: %ProgramData%\AVACOM\OPS Master\CacheMedios (lo fija el instalador). Pruebas: temporal.
+AVACOM_COLA_DIR = os.environ.get("AVACOM_COLA_DIR") or ("" if _EN_PRUEBAS else str(BASE_DIR / "cache_medios"))
+AVACOM_COLA_MAX_MB = int(os.environ.get("AVACOM_COLA_MAX_MB", "4096"))                 # tope de la caché en disco
+AVACOM_COLA_LIBRE_MIN_MB = int(os.environ.get("AVACOM_COLA_LIBRE_MIN_MB", "1024"))     # espacio que debe quedar libre en el disco
+# Descargas simultáneas desde la fuente (hilos). 0 = sin hilos: la descarga se hace dentro de la propia petición (así corren las pruebas).
+AVACOM_COLA_DESCARGAS = int(os.environ.get("AVACOM_COLA_DESCARGAS", "0" if _EN_PRUEBAS else "3"))
+AVACOM_COLA_TRANSFERENCIAS = int(os.environ.get("AVACOM_COLA_TRANSFERENCIAS", "24"))   # transferencias simultáneas hacia las tabletas
+AVACOM_COLA_ANCHO_ENTRADA_KBPS = int(os.environ.get("AVACOM_COLA_ANCHO_ENTRADA_KBPS", "0"))   # tope global fuente → nodo; 0 = sin tope
+AVACOM_COLA_ANCHO_SALIDA_KBPS = int(os.environ.get("AVACOM_COLA_ANCHO_SALIDA_KBPS", "0"))     # tope global nodo → tabletas; 0 = sin tope
+AVACOM_COLA_REVALIDAR_SEG = int(os.environ.get("AVACOM_COLA_REVALIDAR_SEG", "60"))     # cada cuánto se pregunta a la biblioteca si el curso sigue y en qué versión
+AVACOM_COLA_ESPERA_INICIO_SEG = float(os.environ.get("AVACOM_COLA_ESPERA_INICIO_SEG", "6"))   # menos que la paciencia de los clientes (audio 10 s, imagen 10 s)
+AVACOM_COLA_ESPERA_PAQUETE_SEG = float(os.environ.get("AVACOM_COLA_ESPERA_PAQUETE_SEG", "120"))
+AVACOM_COLA_ESPERA_CUPO_SEG = float(os.environ.get("AVACOM_COLA_ESPERA_CUPO_SEG", "20"))
+AVACOM_COLA_REINTENTOS = int(os.environ.get("AVACOM_COLA_REINTENTOS", "3"))
+AVACOM_COLA_SERVIR_SIN_BIBLIOTECA = os.environ.get("AVACOM_COLA_SERVIR_SIN_BIBLIOTECA", "0") == "1"

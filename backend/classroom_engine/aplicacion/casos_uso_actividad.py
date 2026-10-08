@@ -92,6 +92,23 @@ class EnviarRespuestas(_Actividad):
     aprendió de `servidor_en`; la hora cruda del aparato (`capturada_en_tableta`) sólo se conserva como dato adicional
     (AC-072). Sin ella se toma la de recepción."""
 
+    def _calificar_antes(self, sesion_id: str, distribucion_id: str, limpias: list[dict]) -> dict:
+        """`{(pregunta_ref, secuencia): (respuesta, veredicto)}` de lo que llega, calculado SIN el turno de escritura de la base.
+
+        Lo único que necesita es leer la sesión y la distribución (sin transacción) y preguntarle a la fuente: no depende de lo que ya haya guardado el intento.
+        Dentro de la transacción se reutiliza sólo si la respuesta que quedó aceptada es EXACTAMENTE la que se calificó; lo demás se califica allí como siempre.
+        Es una ayuda: ante cualquier fallo devuelve vacío y todo sigue como antes (más lento, igual de correcto)."""
+        if self.s.uow_lectura is None or not limpias:
+            return {}
+        try:
+            with self.s.uow_lectura() as uow:
+                sesion = self._sesion(uow, sesion_id)
+                distribucion = self._distribucion_de_actividad(uow, sesion_id, distribucion_id)
+            veredictos = self._calificar(sesion, distribucion, [dict(r, veredicto=None) for r in limpias])
+            return {(r["pregunta_ref"], r["secuencia"]): (r["respuesta"], veredictos[r["pregunta_ref"]]) for r in limpias if r["pregunta_ref"] in veredictos}
+        except Exception:   # noqa: BLE001
+            return {}
+
     def ejecutar(self, sesion_id: str, distribucion_id: str, participante_id: str, datos: dict,
                  persona_autenticada: str | None = None) -> dict:
         entrada = datos.get("respuestas")
@@ -122,6 +139,9 @@ class EnviarRespuestas(_Actividad):
                             "capturada_en": _entera(r.get("capturada_en")), "capturada_en_tableta": _entera(r.get("capturada_en_tableta"))})
 
         ahora = self.s.reloj.ahora_ms()
+        # La calificación va a AVACOM Contenido (`/v2/evaluate/batch`, ~50 ms o más). Hecha DENTRO de la transacción retenía el turno de escritura de SQLite
+        # durante todo el viaje: con 35 tabletas entregando a la vez cada respuesta esperaba a las demás (p95 de 5 s, hasta 7 s: prueba del 2026-10-08).
+        previos = self._calificar_antes(sesion_id, distribucion_id, limpias)
         with self.s.uow() as uow:
             sesion = self._sesion(uow, sesion_id)
             distribucion = self._distribucion_de_actividad(uow, sesion_id, distribucion_id)
@@ -186,7 +206,16 @@ class EnviarRespuestas(_Actividad):
             fusionadas, resultado = act.fusionar_respuestas(intento["respuestas"], nuevas, sesion_usuario_id=participante.get("sesion_usuario_id", ""))
             a_calificar = [r for r in fusionadas if r["pregunta_ref"] in set(resultado.aceptadas)]
             if politica == act.ACEPTAR and a_calificar:
-                veredictos = self._calificar(sesion, distribucion, a_calificar)
+                veredictos = {}
+                faltan = []
+                for r in a_calificar:
+                    previo = previos.get((r["pregunta_ref"], r["secuencia"]))
+                    if previo is not None and previo[0] == r["respuesta"]:
+                        veredictos[r["pregunta_ref"]] = previo[1]
+                    else:
+                        faltan.append(r)
+                if faltan:
+                    veredictos.update(self._calificar(sesion, distribucion, faltan))
                 for r in fusionadas:
                     if r["pregunta_ref"] in veredictos:
                         r["veredicto"] = veredictos[r["pregunta_ref"]]

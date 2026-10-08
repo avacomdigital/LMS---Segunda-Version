@@ -162,6 +162,10 @@ Name: "{commonappdata}\AVACOM\{#NombreCorto}\Logs"; Permissions: users-modify sy
 ; La bitacora rota y exportada va aqui (la crea el backend; existir desde ya
 ; evita que la primera exportacion dependa de un permiso de creacion).
 Name: "{commonappdata}\AVACOM\{#NombreCorto}\Logs\auditoria"; Permissions: system-full admins-full; Flags: uninsneveruninstall
+; Cache de medios del nodo (cola de medios): los videos, audios, imagenes, PDF y paginas html que el nodo trae de AVACOM Contenido una vez y reparte a las
+; tabletas. Es regenerable, asi que SE BORRA al desinstalar (ver [UninstallDelete]) y no entra en las copias de seguridad. Solo SYSTEM y los administradores
+; la leen: el host le quita los permisos heredados de ProgramData al preparar el nodo.
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\CacheMedios"; Permissions: system-full admins-full
 
 ; --------------------------------------------------------------------------
 ; WebView2 (audio, video, PDF y laboratorios de las lecciones) guarda su perfil
@@ -202,6 +206,24 @@ Name: "{group}\Desinstalar {#NombreProducto}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#NombreProducto}"; Filename: "{app}\Runtime\{#EjecutableHost}"; Parameters: "iniciar"; WorkingDir: "{app}"; IconFilename: "{app}\App\{#EjecutableApp}"; IconIndex: 0; Comment: "Abre {#NombreProducto} y su API local"
 
 [Run]
+; --------------------------------------------------------------------------
+; Teclado tactil de Windows. El primer arranque de OPS pide texto (nombre del aula,
+; documento, nombres y apellidos del administrador) y el equipo del aula no tiene
+; teclado: si Windows no muestra solo su teclado tactil al tocar un campo, el
+; primer arranque (y con el, el PIN maestro) no se puede hacer. Windows 10 trae esa
+; opcion apagada cuando no esta en modo tableta («Mostrar el teclado tactil cuando
+; no hay un teclado conectado»). Aqui se enciende, y se muestra tambien el boton del
+; teclado en la barra de tareas como segunda via. Son dos valores del usuario
+; (HKCU\Software\Microsoft\TabletTip\1.7): sin servicios, sin administracion y
+; reversibles desde Configuracion > Dispositivos > Escritura.
+;
+; runasoriginaluser: HKCU tiene que ser el de QUIEN DA LA CLASE, no el del token de
+; administrador del instalador (sin la marca, con otra cuenta de administrador, se
+; escribiria en el perfil equivocado). Si falla, no rompe nada: el verificador lo avisa.
+; --------------------------------------------------------------------------
+Filename: "{sys}\reg.exe"; Parameters: "add ""HKCU\Software\Microsoft\TabletTip\1.7"" /v EnableDesktopModeAutoInvoke /t REG_DWORD /d 1 /f"; StatusMsg: "Activando el teclado táctil de Windows..."; Flags: runhidden waituntilterminated runasoriginaluser
+Filename: "{sys}\reg.exe"; Parameters: "add ""HKCU\Software\Microsoft\TabletTip\1.7"" /v TipbandDesiredVisibility /t REG_DWORD /d 1 /f"; Flags: runhidden waituntilterminated runasoriginaluser
+
 ; Casilla en la ultima pantalla: un toque y se abre.
 ;
 ; runasoriginaluser importa: sin esa marca la aplicacion heredaria el token de
@@ -237,6 +259,8 @@ Type: filesandordirs; Name: "{app}\Runtime\Python"
 Type: filesandordirs; Name: "{app}\App"
 Type: filesandordirs; Name: "{app}\Anterior"
 Type: dirifempty; Name: "{app}"
+; La cache de medios no es expediente: se vuelve a llenar sola (pueden ser varios GB).
+Type: filesandordirs; Name: "{commonappdata}\AVACOM\{#NombreCorto}\CacheMedios"
 
 ; ============================================================================
 [Code]

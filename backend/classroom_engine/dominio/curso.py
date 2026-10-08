@@ -166,6 +166,8 @@ def clasificacion_de(manifiesto: dict) -> dict:
         "pista": c.get("track") or "school",
         "nivel": _nodo(c.get("level")),
         "grado": _nodo(c.get("grade")),
+        "area": _nodo(c.get("area")),      # sólo en la pista complementaria (idiomas, artes): ocupa el lugar del nivel escolar
+
         "asignatura": {"codigo": str(asignatura.get("code", "")), "nombre": str(asignatura.get("name", ""))},
         "tema": _nodo(c.get("topic")),
     }
@@ -189,17 +191,18 @@ def clasificacion_contrato1(curso: dict) -> dict:
 
 # ------------------------------------------------------------------- medios
 
-def _medio(m: dict, url_medio: UrlMedio) -> dict:
+def _medio(m: dict, url_medio: UrlMedio, rol: str = "docente") -> dict:
     clase = str(m.get("kind", ""))
     media_ref = str(m.get("id", ""))
-    entrada = m.get("entry")
+    entrada = str(m.get("entry") or "").strip("/") or None
     salida = {
         "media_ref": media_ref,
         "clase": clase,
         "componente": cat.CLASES_MEDIO.get(clase, "no_soportado"),
         "titulo": m.get("title"),
         "mime": m.get("mimeType"),
-        "url": url_medio(media_ref, entrada if clase == "simulation" and entrada else None),
+        # Una simulación y una lección html se abren por su página de entrada; lo demás, por el archivo.
+        "url": url_medio(media_ref, entrada if clase in ("simulation", "html") and entrada else None),
         "ancho": m.get("width"),
         "alto": m.get("height"),
         "duracion_seg": m.get("durationSec"),
@@ -211,9 +214,17 @@ def _medio(m: dict, url_medio: UrlMedio) -> dict:
         "transcripcion_url": url_medio(media_ref, "transcripcion") if (m.get("transcriptPath") or m.get("hasTranscript")) else None,
         "licencia": _licencia(m.get("license")),
     }
+    if clase == "video":
+        # Contrato 2 (2026-10-07): la imagen fija antes de reproducir y las pausas para pensar (`interactions`). El resumen de medios de la
+        # API (`CourseOutline.media`) no lista `posterPath`: sólo la sesión de medios dice si hay póster (`extras[mediaId].poster`), así
+        # que la dirección se entrega SIEMPRE y la ruta responde 404 cuando el video no lo tiene (el reproductor lo ignora).
+        salida["poster_url"] = url_medio(media_ref, "poster")
+        salida["pausas"] = _pausas(m.get("interactions"), rol)
+    if clase in ("simulation", "html"):
+        salida["base_url"] = url_medio(media_ref, None)
+        salida["entrada"] = entrada
     if clase == "simulation":
         sim = m.get("simulation") or {}
-        salida["base_url"] = url_medio(media_ref, None)
         salida["simulacion"] = {
             "entrada": entrada,
             "proveedor": sim.get("provider"),
@@ -224,6 +235,29 @@ def _medio(m: dict, url_medio: UrlMedio) -> dict:
             "ancho_diseno": sim.get("designWidth"),
             "alto_diseno": sim.get("designHeight"),
         }
+    return salida
+
+
+def _pausas(lista, rol: str) -> list[dict]:
+    """`interactions` de un video (contrato 2): pausas para pensar. Son formativas y el contrato manda que el reproductor muestre la respuesta
+    con su razón al elegir, así que `es_respuesta` y `explicacion` SÍ viajan (no son claves de un examen: nada se califica). El consejo para
+    el profesor (`teacherTip`) sólo va con el rol docente. Un reproductor que no las conoce reproduce el video sin más."""
+    salida = []
+    for p in lista or []:
+        if not isinstance(p, dict):
+            continue
+        pausa = {
+            "pausa_ref": str(p.get("id", "")),
+            "en_seg": p.get("atSec"),
+            "enunciado": p.get("prompt", ""),
+            "enunciado_tramos": tramos(p.get("prompt")),
+            "opciones": [{"opcion_ref": str(o.get("id", "")), "texto": o.get("text", ""), "tramos": tramos(o.get("text")),
+                          "es_respuesta": bool(o.get("isCorrect")), "explicacion": o.get("feedback", "")}
+                         for o in (p.get("options") or []) if isinstance(o, dict)],
+        }
+        if rol == "docente" and p.get("teacherTip"):
+            pausa["consejo_docente"] = p["teacherTip"]
+        salida.append(pausa)
     return salida
 
 
@@ -278,7 +312,8 @@ def _bloque(b: dict, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
             salida.update(desde_seg=b.get("startSec"), hasta_seg=b.get("endSec"), autoplay=bool(b.get("autoplay")),
                           duracion_seg=medio.get("duracion_seg"), subtitulos_url=medio.get("subtitulos_url"),
                           transcripcion_url=medio.get("transcripcion_url"),
-                          ancho=medio.get("ancho"), alto=medio.get("alto"))
+                          ancho=medio.get("ancho"), alto=medio.get("alto"),
+                          poster_url=medio.get("poster_url"), pausas=list(medio.get("pausas") or []))
         elif tipo == "audio":
             salida.update(duracion_seg=medio.get("duracion_seg"), transcripcion_url=medio.get("transcripcion_url"))
         elif tipo == "pdf":
@@ -370,6 +405,13 @@ def _pregunta(p: dict, medios: dict[str, dict], url_medio: UrlMedio, rol: str = 
         salida["elementos"] = [_item(i, medios, url_medio) for i in (p.get("items") or []) if isinstance(i, dict)]
         if rol != "docente":
             salida["elementos"] = _barajadas(salida["elementos"], f"aula|elementos|{salida['pregunta_ref']}")
+    elif tipo == "drag_drop":
+        # Contrato 2 (2026-10-07): piezas (`items`, ChoiceItem) y zonas (`targets`, DragTarget: rótulo o imagen). Las colocaciones correctas
+        # (`placements`) y las anticipadas (`wrongPlacements`) nunca salen de aquí. El orden de las piezas no dice nada (una puede no ir a
+        # ninguna zona), así que no hace falta barajarlas.
+        salida["elementos"] = [_item(i, medios, url_medio) for i in (p.get("items") or []) if isinstance(i, dict)]
+        salida["zonas"] = [_con_imagen({"zona_ref": str(z.get("id", "")), "rotulo": z.get("label")}, z, medios, url_medio)
+                           for z in (p.get("targets") or []) if isinstance(z, dict)]
     elif tipo == "open":
         salida["formato_respuesta"] = p.get("responseFormat", "text")
         salida["longitud_maxima"] = p.get("maxLength")
@@ -394,11 +436,17 @@ def _objeto(o: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> 
     }
     _con_notas(salida, rol, o)
 
+    if tipo in ("lecture", "explanation"):
+        # Contrato 2 (2026-10-07): la misma cátedra o explicación maquetada por el curso (`html {mediaId, entry}`, un medio de clase `html`).
+        # El visor que sabe html carga `url` en un marco y va de sección en sección con `#s{n}`; los bloques siguen siendo la verdad para
+        # accesibilidad, búsqueda y respaldo, así que se entregan siempre.
+        html_url = _html_de_objeto(salida, o.get("html"), medios, url_medio)
     if tipo == "lecture":
         laminas = []
         for indice, s in enumerate(o.get("slides") or [], start=1):
             lamina = {"unidad_ref": str(s.get("id", "")), "indice": indice, "titulo": s.get("title", ""),
-                      "duracion_seg": s.get("estimatedSec"), "bloques": _bloques(s.get("blocks"), medios, url_medio)}
+                      "duracion_seg": s.get("estimatedSec"), "bloques": _bloques(s.get("blocks"), medios, url_medio),
+                      "url_html": f"{html_url}#s{indice}" if html_url else None}
             laminas.append(_con_notas(lamina, rol, s))
         salida["laminas"] = laminas
         salida["total_unidades"] = len(laminas)
@@ -406,7 +454,8 @@ def _objeto(o: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> 
         paginas = []
         for indice, pg in enumerate(o.get("pages") or [], start=1):
             pagina = {"unidad_ref": str(pg.get("id", "")), "indice": indice, "titulo": pg.get("title", ""),
-                      "duracion_seg": pg.get("estimatedSec"), "bloques": _bloques(pg.get("blocks"), medios, url_medio)}
+                      "duracion_seg": pg.get("estimatedSec"), "bloques": _bloques(pg.get("blocks"), medios, url_medio),
+                      "url_html": f"{html_url}#s{indice}" if html_url else None}
             paginas.append(_con_notas(pagina, rol, pg))
         salida["paginas"] = paginas
         salida["total_unidades"] = len(paginas)
@@ -474,6 +523,19 @@ def _objeto(o: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> 
     else:
         salida["crudo"] = sin_claves({k: v for k, v in o.items() if k not in ("id", "type", "teacherNotes")})
     return salida
+
+
+def _html_de_objeto(salida: dict, html, medios: dict[str, dict], url_medio: UrlMedio) -> str | None:
+    """`html {mediaId, entry}` de una cátedra o explicación → `salida["html"]` y la URL de su página. Sin él (o mal formado), nada."""
+    if not isinstance(html, dict) or not html.get("mediaId") or not html.get("entry"):
+        salida["html"] = None
+        return None
+    media_ref, entrada = str(html["mediaId"]), str(html["entry"]).strip("/")
+    medio = medios.get(media_ref)
+    url = url_medio(media_ref, entrada)
+    salida["html"] = {"media_ref": media_ref, "entrada": entrada, "url": url, "base_url": url_medio(media_ref, None),
+                      "ausente": medio is None or medio.get("clase") != "html"}
+    return url
 
 
 def _leccion(l: dict, rol: str, medios: dict[str, dict], url_medio: UrlMedio) -> dict:
@@ -574,7 +636,7 @@ def normalizar(datos: dict, *, rol: str, fuente: str, url_medio: UrlMedio,
 
 
 def _normalizar_manifiesto(m: dict, rol: str, fuente: str, url_medio: UrlMedio) -> dict:
-    medios_lista = [_medio(x, url_medio) for x in (m.get("media") or []) if isinstance(x, dict)]
+    medios_lista = [_medio(x, url_medio, rol) for x in (m.get("media") or []) if isinstance(x, dict)]
     medios = {x["media_ref"]: x for x in medios_lista}
     lecciones = [_leccion(l, rol, medios, url_medio) for l in (m.get("lessons") or []) if isinstance(l, dict)]
     creditos = m.get("credits") or {}

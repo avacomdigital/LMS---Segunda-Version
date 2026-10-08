@@ -55,6 +55,11 @@ class Servicios:
     url_medio: UrlMedioDeFuente
     config: ConfigAula = field(default_factory=ConfigAula)
     limitador: Limitador | None = None
+    # Cola de medios del nodo (opcional): `(sesion_id, fuente, curso_ref, estructura, reemplazar_proyeccion, actor_id)`. Pone en cola, sin esperar y sin lanzar, los
+    # medios de lo que el profesor proyecta o lanza, para que estén en la caché del nodo cuando las tabletas los pidan. Sin ella, todo sigue en paso a través.
+    preparar_medios: Callable[..., None] | None = None
+    # Carpeta de sólo lectura (sin transacción de escritura) para leer antes de una llamada lenta a otro servicio. None = no hay: se hace dentro, como antes.
+    uow_lectura: Callable[[], UnidadDeTrabajo] | None = None
 
 
 def _id() -> str:
@@ -281,6 +286,15 @@ class _CasoDeSesion(_CasoDeUso):
         """Con sesión (MOD-001), una tableta sólo habla por SU participante: la identidad es de la persona."""
         if persona_autenticada and participante["persona_id"] != persona_autenticada:
             raise PersonaAjena("Ese participante es de otra persona.", participante_id=participante["id"])
+
+    def _preparar_medios(self, sesion_id: str, fuente: str | None, curso_ref: str, estructura, *, reemplazar_proyeccion: bool, actor_id: str) -> None:
+        """Prioriza en la cola de medios lo que se proyecta o se lanza. Nunca lanza: preparar es una cortesía, no una condición de la clase."""
+        if self.s.preparar_medios is None:
+            return
+        try:
+            self.s.preparar_medios(sesion_id, fuente, curso_ref, estructura, reemplazar_proyeccion, actor_id)
+        except Exception:   # noqa: BLE001
+            pass
 
     def _difundir(self, uow: UnidadDeTrabajo, sesion_id: str, que: str, *, conteo: bool = False, **carga) -> None:
         """Avisa a las pantallas conectadas (007-01). Sale al confirmarse la transacción."""
@@ -579,6 +593,7 @@ class IniciarSesion(_CasoDeSesion):
             uow.sesiones.abrir_control(sesion["id"], dom.SEGUIMIENTO, ahora, actor.id, "inicio de la sesión")
             if selector_inicial:
                 uow.sesiones.declarar_selector(sesion["id"], {**selector_inicial, "declarado_por": actor.id}, ahora)
+                self._preparar_medios(sesion["id"], fuente_nombre, via.curso_ref, inicial["objeto"], reemplazar_proyeccion=True, actor_id=actor.id)
 
             self._publicar(uow, sesion["id"], dom.EV_SESION_INICIADA, {
                 "grupo_id": grupo_id, "plan_id": sesion["plan_id"], "profesor_id": actor.id, "via_origen": via.via,
@@ -887,10 +902,14 @@ class DeclararSelector(_CasoDeSesion):
                 if hallado["objeto"]["fuera_de_alcance"]:
                     raise DatosInvalidos(f"El objeto «{selector.objeto_ref}» es de {hallado['objeto']['modulo']} y no se proyecta desde el aula.")
                 registro = _selector_de(hallado, vista, selector.unidad_ref)
+                self._preparar_medios(sesion_id, datos.get("fuente") or sesion["fuente_curso"] or None, selector.curso_ref, hallado["objeto"],
+                                      reemplazar_proyeccion=True, actor_id=actor.id)
             else:
                 registro = {"curso_ref": selector.curso_ref, "curso_version": sesion["curso_version"], "leccion_ref": selector.leccion_ref,
                             "objeto_ref": "", "objeto_tipo": "medio", "unidad_ref": "", "unidad_indice": None,
                             "media_ref": selector.media_ref, "rotulo": selector.rotulo}
+                self._preparar_medios(sesion_id, datos.get("fuente") or sesion["fuente_curso"] or None, selector.curso_ref, {"media_ref": selector.media_ref},
+                                      reemplazar_proyeccion=True, actor_id=actor.id)
             registro["declarado_por"] = actor.id
             vigente = uow.sesiones.declarar_selector(sesion_id, registro, ahora)
             self._publicar(uow, sesion_id, dom.EV_RECURSO_PROYECTADO, {**registro, "instante": ahora})
@@ -983,6 +1002,8 @@ class Distribuir(_CasoDeSesion):
                     raise DatosInvalidos(f"Sólo se lanza como actividad un objeto de tipo «activity»; «{objeto_ref}» es «{objeto['tipo']}».")
                 registro.update(leccion_ref=hallado["leccion"]["leccion_ref"], objeto_tipo=objeto["tipo"],
                                 rotulo=registro["rotulo"] or objeto["titulo"], curso_ref=vista.get("curso_ref", curso_ref))
+                self._preparar_medios(sesion_id, datos.get("fuente") or sesion["fuente_curso"] or None, registro["curso_ref"], objeto,
+                                      reemplazar_proyeccion=False, actor_id=actor.id)
                 if clase == dom.ACTIVIDAD:
                     # El curso no se cachea (artículo 14): lo que hace falta para el avance se fija al lanzar.
                     registro.update(total_preguntas=int(objeto.get("total_unidades") or len(objeto.get("preguntas") or [])),
@@ -990,6 +1011,9 @@ class Distribuir(_CasoDeSesion):
             if clase == dom.ACTIVIDAD:
                 registro["asignacion_ref"] = uow.evaluacion.preparar_asignacion(
                     sesion_id, registro["curso_ref"], objeto_ref, [p["persona_id"] for p in destinatarios])
+            if media_ref and not objeto_ref:
+                self._preparar_medios(sesion_id, datos.get("fuente") or sesion["fuente_curso"] or None, curso_ref, {"media_ref": media_ref},
+                                      reemplazar_proyeccion=False, actor_id=actor.id)
             distribucion = uow.sesiones.crear_distribucion(registro, [p["id"] for p in destinatarios])
             if clase == dom.ACTIVIDAD:
                 self._publicar(uow, sesion_id, dom.EV_ACTIVIDAD_LANZADA, {

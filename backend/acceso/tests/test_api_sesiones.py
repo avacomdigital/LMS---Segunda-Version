@@ -29,7 +29,7 @@ class InstalacionYConfiguracionTests(BaseAcceso):
         self.assertEqual(student["niveles"], {})
         self.assertEqual(datos["perfiles"]["teacher"]["tipo_secreto"], "PASSWORD")
         self.assertEqual(set(datos["perfiles"]), {"student", "teacher", "admin", "reports", "technician"})
-        self.assertEqual((datos["duracion_sesion_min"], datos["inactividad_min"]), (240, 240))
+        self.assertEqual((datos["duracion_sesion_min"], datos["inactividad_min"]), (480, 480))
         self.assertIn("preescolar", datos["niveles_educativos"])
         self.assertTrue(datos["claves_derivadas"])  # el prototipo deriva de SECRET_KEY y lo dice
 
@@ -63,8 +63,8 @@ class LoginTests(BaseAcceso):
         self.assertFalse(datos["usuario"]["debe_cambiar_credencial"])
         self.assertIsNone(datos["sesion_anterior"])
         self.assertEqual(datos["roles_disponibles"], ["STUDENT"])
-        self.assertEqual(datos["inactividad_min"], 240)
-        self.assertAlmostEqual(datos["expira_en"] - m.Sesion.objects.get(id=datos["sesion_id"]).emitida_en, 240 * 60_000, delta=5)
+        self.assertEqual(datos["inactividad_min"], 480)
+        self.assertAlmostEqual(datos["expira_en"] - m.Sesion.objects.get(id=datos["sesion_id"]).emitida_en, 480 * 60_000, delta=5)
         yo = self.con_token(datos["token"]).get("/api/acceso/yo/").json()
         self.assertEqual(yo["usuario"]["rol"], "STUDENT")
         self.assertEqual(yo["rol_efectivo"], {"codigo": "STUDENT", "menu": "student", "alcance_asignacion": "ORGANIZATION"})

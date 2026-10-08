@@ -293,7 +293,7 @@ class NormalizadorTests(TestCase):
         self.assertEqual(set(catalogos.TIPOS_BLOQUE), {"heading", "text", "list", "formula", "image", "video", "audio", "pdf"})
         formula = cur._bloque({"type": "formula", "latex": "\\frac{1}{3} \\times 2", "display": True}, {}, lambda m, r: "")
         self.assertEqual((formula["componente"], formula["latex"], formula["texto"], formula["en_bloque"]), ("formula", "\\frac{1}{3} \\times 2", "1/3 × 2", True))
-        self.assertEqual(len(catalogos.TIPOS_PREGUNTA), 6)
+        self.assertEqual(len(catalogos.TIPOS_PREGUNTA), 7)   # los seis del validador + drag_drop (contrato 2, 2026-10-07)
 
     def test_sin_claves_limpia_camel_y_espanol(self):
         sucio = {"options": [{"id": "a", "isCorrect": True, "feedback": "x"}], "answer": False, "clave_respuesta": "3",
@@ -461,9 +461,10 @@ class ConLaApiDeContenidoV2Tests(TestCase):
         r = self.api.get(f"/api/aula/cursos/{CURSO}/medios/img-particles/?fuente=biblioteca")
         self.assertEqual((r.status_code, r["Content-Type"]), (200, "image/png"))
         self.assertEqual(b"".join(r.streaming_content)[:8], b"\x89PNG\r\n\x1a\n")
-        # Una sesión de medios de un minuto sólo para ese medio, y los bytes del servidor de medios (sin token).
+        # Una sesión de medios sólo para ese medio (reutilizada 15 min por (curso, medio) desde el 2026-10-07: ver test_contrato_html), y
+        # los bytes del servidor de medios (sin token).
         self.assertEqual(self.host.peticiones[-2:][0], "POST /v2/media-sessions")
-        self.assertEqual(self.host.cuerpos[-1], {"courseId": CURSO, "mediaIds": ["img-particles"], "ttlSec": 60})
+        self.assertEqual(self.host.cuerpos[-1], {"courseId": CURSO, "mediaIds": ["img-particles"], "ttlSec": 15 * 60})
         self.assertTrue(self.host.peticiones[-1].startswith("MEDIA GET /s/") and self.host.peticiones[-1].endswith("/img-particles"))
         r = self.api.get(f"/api/aula/cursos/{CURSO}/medios/vid-changes/?fuente=biblioteca", HTTP_RANGE="bytes=0-9")
         self.assertEqual((r.status_code, r["Content-Range"]), (206, "bytes 0-9/102400"))

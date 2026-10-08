@@ -74,7 +74,7 @@ class EsquemaYValidadorTests(SimpleTestCase):
             self.assertTrue((CARPETA_CONTRATO / nombre).exists(), nombre)
         esquema = json.loads(RUTA_ESQUEMA.read_text(encoding="utf-8"))
         self.assertEqual(esquema["$id"], "urn:avacom:content:course:1.0")
-        self.assertEqual(esquema["properties"]["schemaVersion"], {"const": "1.0"})
+        self.assertEqual(esquema["properties"]["schemaVersion"]["const"], "1.0")
         # Los conjuntos cerrados del esquema son los catálogos del aula (lo que llegue de más se muestra, no se descarta).
         defs = esquema["$defs"]
         self.assertEqual(set(defs["LessonObject"]["properties"]["type"]["enum"]), set(catalogos.TIPOS_OBJETO))
@@ -88,7 +88,10 @@ class EsquemaYValidadorTests(SimpleTestCase):
         declaradas = set(constantes["ANSWER_KEY_OPTION_FIELDS"]) | set(constantes["ANSWER_KEY_BLANK_FIELDS"])
         for campos in constantes["ANSWER_KEY_FIELDS"].values():
             declaradas |= set(campos)
-        self.assertEqual(set(constantes["ANSWER_KEY_FIELDS"]), set(catalogos.TIPOS_PREGUNTA))
+        # El validador entregado (2026-09-28, igual el 2026-10-01) aún no conoce `drag_drop`, que el esquema del 2026-10-07 sí trae: el aula
+        # cubre los seis del validador y el séptimo con `placements`/`wrongPlacements` (vistos en AVACOM Contenido 2.1.7).
+        self.assertTrue(set(constantes["ANSWER_KEY_FIELDS"]) <= set(catalogos.TIPOS_PREGUNTA))
+        self.assertEqual(set(catalogos.TIPOS_PREGUNTA) - set(constantes["ANSWER_KEY_FIELDS"]), {"drag_drop"})
         self.assertTrue(declaradas <= catalogos.CLAVES_DE_CORRECCION, declaradas - catalogos.CLAVES_DE_CORRECCION)
 
     def test_el_ejemplo_cumple_el_esquema_y_las_reglas_del_validador(self):
@@ -279,7 +282,9 @@ class NormalizadorSegunElEsquemaTests(SimpleTestCase):
                            "placements": [{"itemId": "i1", "targetId": "t1"}], "wrongPlacements": []}],
         }, "estudiante", {}, self.url)
         arrastrar = actividad["preguntas"][0]
-        self.assertEqual((arrastrar["tipo"], arrastrar["componente"], arrastrar["puntos"]), ("drag_drop", "no_soportado", 2))
+        self.assertEqual((arrastrar["tipo"], arrastrar["componente"], arrastrar["puntos"]), ("drag_drop", "arrastrar", 2))   # desde el contrato 2 (2026-10-07) tiene componente; el editor táctil sigue pendiente
+        self.assertEqual([e["ref"] for e in arrastrar["elementos"]], ["i1"])
+        self.assertEqual(arrastrar["zonas"], [{"zona_ref": "t1", "rotulo": "Uno", "media_ref": None, "url": None, "texto_alternativo": None}])
         self.assertIsNone(cur.contiene_clave(actividad))        # placements y wrongPlacements no se copian: la vista es por campos
         self.assertEqual(actividad["referencias_curriculares"][0]["relacion"], "teaches")
         vista = cur.normalizar({"schemaVersion": "1.0", "id": "c", "version": "1.0.0", "title": "T", "language": "es-CO",

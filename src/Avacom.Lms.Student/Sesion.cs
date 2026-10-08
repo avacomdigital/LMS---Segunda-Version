@@ -259,8 +259,34 @@ public static class Sesion
     public static SesionDeExamen NuevaSesionDeExamen() =>
         new(Evaluacion, ColaDeExamen, Kiosco, Dispositivo, AlumnoParaEvaluar, new DatosDeTableta(DeviceInfo.Current.Name, Plataforma, VersionApp), PinDeSalida);
 
-    /// <summary>La huella con la que MOD-009 reconoce esta tableta en el inventario del aula.</summary>
-    public static string Dispositivo => $"student-{DeviceInfo.Current.Name}";
+    /// <summary>
+    /// La huella con la que MOD-009 reconoce esta tableta en el inventario del aula: el nombre del aparato MÁS el código de esta instalación
+    /// (<see cref="Instalacion"/>). Sólo con el nombre, 35 tabletas del mismo modelo (mismo nombre de fábrica) serían un solo dispositivo.
+    /// </summary>
+    public static string Dispositivo => Identidad.HuellaDeTableta(DeviceInfo.Current.Name, Instalacion);
+
+    /// <summary>
+    /// Código corto de esta instalación de Student. Nace la primera vez que se pide y se guarda en <c>Preferences</c>: sobrevive a las
+    /// actualizaciones y a reiniciar la tableta; se pierde si se borran los datos de la app o se desinstala (la tableta pasa a ser otra para
+    /// el nodo, como cualquier equipo nuevo).
+    /// </summary>
+    public static string Instalacion
+    {
+        get
+        {
+            if (_instalacion is not null) return _instalacion;
+            string? guardado = null;
+            try { guardado = Preferences.Default.Get<string?>("student_instalacion", null); } catch { /* sin preferencias: se usa uno de esta ejecución */ }
+            if (string.IsNullOrWhiteSpace(guardado) || guardado.Length < 6)
+            {
+                guardado = Identidad.NuevaInstalacion();
+                try { Preferences.Default.Set("student_instalacion", guardado); } catch { /* idem */ }
+            }
+            return _instalacion = guardado;
+        }
+    }
+
+    private static string? _instalacion;
 
     /// <summary>El cliente de <c>/api/logs/</c> (MOD-019): la tableta entrega sus avisos WARNING+ al nodo, de mejor esfuerzo. Nunca lee la bitácora.</summary>
     public static ILogsApi Logs

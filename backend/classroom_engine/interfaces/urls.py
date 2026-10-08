@@ -11,6 +11,9 @@ urlpatterns = [
     path("cursos/<str:curso_ref>/lecciones/<str:leccion_ref>/", views.LeccionView.as_view(), name="aula-leccion"),
     path("cursos/<str:curso_ref>/objetos/<str:objeto_ref>/", views.ObjetoView.as_view(), name="aula-objeto"),
     path("cursos/<str:curso_ref>/medios/<str:media_ref>/", views.MedioView.as_view(), name="aula-medio"),
+    # Sin barra final: es como una página html del curso nombra a otro medio (`../vid-changes`, `../vid-changes/@captions`). Con la barra,
+    # la redirección de CommonMiddleware perdería el pase de medios del camino (`/api/m/<pase>/…`).
+    re_path(r"^cursos/(?P<curso_ref>[^/]+)/medios/(?P<media_ref>[^/]+)$", views.MedioView.as_view(), name="aula-medio-sin-barra"),
     re_path(r"^cursos/(?P<curso_ref>[^/]+)/medios/(?P<media_ref>[^/]+)/(?P<ruta>.+)$", views.MedioView.as_view(), name="aula-medio-interno"),
     # --- el endpoint de prueba: el manifiesto de ejemplo («Ciencias naturales») ---
     path("pruebas/cursos/", views.PruebasCursosView.as_view(), name="aula-pruebas-cursos"),

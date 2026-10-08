@@ -11,6 +11,8 @@ urlpatterns = [
     path("api/modo-estudio/", include("modo_estudio.interfaces.urls")),
     # MOD-010: asignaciones, intentos, respuestas con secuencia, incidentes y nivel de control de los exámenes.
     path("api/evaluacion/", include("evaluacion.interfaces.urls")),
+    # Cola de medios: estado de los recursos que el nodo trae de AVACOM Contenido y reparte a las tabletas.
+    path("api/medios/", include("cola_medios.interfaces.urls")),
     # MOD-019: bitácora (sólo lectura, audit.read/audit.export) y logs de diagnóstico (diagnostics.read; entrega de OPS/Student).
     path("api/auditoria/", include("audit.interfaces.urls")),
     path("api/logs/", include("audit.interfaces.urls_logs")),

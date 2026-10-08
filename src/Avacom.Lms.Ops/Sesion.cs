@@ -213,6 +213,24 @@ public static class Sesion
         }
     }
 
+    private static ColaDeMediosApi? _colaDeMedios;
+    private static Uri? _baseColaDeMedios;
+
+    /// <summary>El cliente de la cola de medios del nodo (recursos que trae de AVACOM Contenido y reparte a las tabletas) para la pestaña «Medios» de la bitácora.</summary>
+    public static ColaDeMediosApi ColaDeMedios
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_colaDeMedios is null || _baseColaDeMedios != actual)
+            {
+                _colaDeMedios = new ColaDeMediosApi(Http, actual);
+                _baseColaDeMedios = actual;
+            }
+            return _colaDeMedios;
+        }
+    }
+
     /// <summary>Arranca (una sola vez) la medición de rendimiento de este equipo contra el nodo actual: CPU, RAM, red, disco y latencias.</summary>
     public static MonitorDeRendimiento IniciarMonitor()
     {

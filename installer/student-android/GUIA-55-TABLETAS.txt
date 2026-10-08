@@ -1,0 +1,112 @@
+﻿AVACOM Student para Android · instalar muchas tabletas por la red del aula
+==========================================================================
+
+Esta carpeta es todo lo que hace falta. No hay que instalar nada en el equipo que sirve el APK
+(el Python va dentro) ni conectar cables a las tabletas.
+
+  Student LMS <version>.apk   La aplicación (arm64). Se prueba en Android 13 y 14; declara Android 5.0 como mínimo.
+  Servir-APK.bat              Enciende el servidor local: las tabletas descargan el APK por Wi-Fi.
+  Servir-APK.py, python\      Lo que usa el .bat (Python incluido).
+  LEEME.txt                   Versión, huella SHA-256 y firma del APK que se compiló.
+  descargas-apk.csv           Se crea solo: una línea por tableta que terminó de descargar (fecha, dirección IP).
+
+
+LO MÁS IMPORTANTE: UN NOMBRE DIFERENTE PARA CADA TABLETA
+--------------------------------------------------------
+Student se presenta ante el aula con el «Nombre del dispositivo» de Android. Si dos tabletas tienen el mismo nombre
+(y las del mismo modelo traen el mismo de fábrica, por ejemplo «Galaxy Tab A9»), el aula las toma por UNA SOLA:
+se ven como una tableta en la lista de dispositivos, se bloquean juntas (cinco PIN equivocados en cualquiera bloquean
+a todas durante quince minutos) y no se pueden asignar por separado. Se comprobó con una tableta de prueba: al cambiarle
+el nombre, el aula la registró como otro dispositivo.
+
+  En cada tableta, ANTES de abrir Student:  Ajustes → Acerca de la tableta → Nombre del dispositivo → «Tableta-01», «Tableta-02»…
+  (el mismo número que la etiqueta que le pegues). Con cable USB y «adb» se puede hacer sin tocar la pantalla:
+      adb shell settings put global device_name Tableta-07
+  Si el nombre ya era único (cada tableta con el suyo), no hace falta cambiarlo.
+
+
+ANTES DE EMPEZAR (una sola vez)
+-------------------------------
+1. AVACOM OPS Master ya instalado y con su primer arranque hecho (aula, administrador y PIN maestro). La dirección
+   del aula que verán las tabletas es  http://<IP de la OPS>:8000  (la muestra la última pantalla del instalador de OPS).
+2. El equipo que sirve el APK y las tabletas deben estar en la MISMA red Wi-Fi. Si el router tiene «aislamiento de
+   clientes» o «AP isolation», apágalo: con eso activo, las tabletas no pueden ver ningún equipo de la red.
+3. La dirección del aula se escribe en CADA tableta y la app NO la recuerda: al cerrarse la app (por ejemplo, porque Android
+   la cierra en segundo plano) vuelve a mostrar  http://192.168.1.10:8000.  Si la red de la sede es 192.168.1.x, reserva en el
+   router la IP 192.168.1.10 para la OPS y no habrá que escribir nada nunca. Si no, hay que escribirla al abrir la app.
+4. Tabletas con batería suficiente (más del 30 %) y con la hora y fecha correctas.
+5. Las tabletas con una Student 2.3.x pueden actualizarse instalando encima este APK (misma firma, número de versión mayor).
+   Una OPS 2.4.x con tabletas 2.3.x entra pero no reproduce videos, audios ni imágenes con la sesión obligatoria: actualiza todas.
+
+
+EN EL EQUIPO QUE SIRVE EL APK (la OPS o un portátil)
+----------------------------------------------------
+1. Toca  Servir-APK.bat.  Windows pide permiso de administrador: toca Sí. Sirve para abrir el puerto 8080 en el firewall
+   SOLO para la red local y SOLO mientras el servidor esté encendido.
+2. Se abre el panel en el navegador: un código QR grande, la dirección en letra grande y el contador «0 de 55».
+   Déjalo abierto y a la vista de quien reparte las tabletas.
+3. El contador sube cuando una tableta TERMINA de descargar el APK completo (no cuenta si se corta, y si se reanuda sigue
+   contando una sola vez). Cuando llega a 55 de 55 ya se descargó en todas. Descargar no es instalar: falta cada toque en «Instalar».
+4. Al terminar: toca «Detener el servidor» en el panel (o cierra la ventana negra). El puerto se cierra solo.
+   Si el servidor se cae de golpe, la próxima vez que toques Servir-APK.bat se limpia la regla anterior.
+
+Para otro puerto u otra cantidad:  Servir-APK.bat 8081 30   (puerto 8081, 30 tabletas).
+
+
+EN CADA TABLETA (unos 2 minutos)
+--------------------------------
+0. Nombre único (ver arriba), si todavía no lo tiene.
+1. Conectada al Wi-Fi del aula. Abre la cámara (o Google Lens), apunta al código QR del panel y toca el aviso.
+   Si no lo lee: abre Chrome y escribe la dirección que muestra el panel (algo como  http://192.168.0.25:8080/download/).
+2. Toca «Descargar e instalar». Si Chrome avisa que el archivo puede dañar el dispositivo o que la descarga no es segura,
+   toca «Descargar de todos modos» (o «Mantener»): es normal, el aula no usa HTTPS.
+3. Abre el archivo descargado (en la notificación o en la carpeta Descargas). La primera vez Android pide
+   «Permitir desde esta fuente» (instalar apps desconocidas): actívalo para Chrome y vuelve atrás.
+4. Toca «Instalar». Si Play Protect pregunta, toca «Instalar de todos modos».
+5. Abre «Student LMS». En «Dirección del aula» pon la de la OPS (por ejemplo http://192.168.0.25:8000; la página de
+   descarga y el panel la muestran si la OPS está en el mismo equipo), toca «Comprobar conexión» y luego «Entrar al aula».
+   La tableta se registra sola en la OPS en ese momento. Después el alumno toca su grupo y su nombre y marca su PIN.
+6. Marca la tableta con su número (etiqueta) para no repetirla.
+
+Si la lista de grupos sale vacía, falta crear grupos y alumnos en AVACOM OPS Master (pantalla Grupos), o el estudiante puede crear
+su usuario si el aula lo permite.
+
+La primera vez que se abre en una tableta, Android tarda unos segundos en arrancar la app; en una tableta lenta, hasta medio minuto.
+
+
+SI ALGO NO FUNCIONA
+-------------------
+· La tableta no abre la página:  ¿mismo Wi-Fi?  ¿«aislamiento de clientes» apagado?  ¿Aceptaste el permiso de administrador
+  al tocar Servir-APK.bat?  Prueba la dirección del panel desde otro equipo de la red antes de culpar a la tableta. Si el
+  equipo tiene varias redes (Wi-Fi y cable, VPN), el panel muestra una dirección y un QR por cada una: usa la de la red del aula.
+· El QR no se lee:  usa la dirección en letra grande del panel.
+· La OPS muestra una sola tableta aunque hay muchas, o al fallar un PIN se bloquean todas:  tienen el mismo nombre de dispositivo.
+  Cámbiaselo (ver arriba). La tableta se registra de nuevo con el nombre nuevo; la lista de la OPS conserva la entrada vieja.
+· «App no instalada» o «Conflicto con un paquete existente»:  la tableta ya tiene una Student LMS firmada con otra llave.
+  Desinstálala y vuelve a instalar (se pierden sus datos locales: respuestas aún no entregadas y material descargado).
+· «Archivo dañado» o «paquete no válido»:  compara la huella SHA-256 que muestra la página con la de LEEME.txt. Si no coincide, el
+  APK se copió mal: vuelve a copiarlo a esta carpeta. El servidor lo avisa al arrancar.
+· Chrome no deja descargar:  prueba con otro navegador (Samsung Internet, Firefox) o desactiva la «navegación segura» de Chrome.
+· El servidor dice que no pudo escuchar en el puerto:  otro programa usa el 8080. Toca  Servir-APK.bat 8081.
+· No hay Python:  copia la carpeta «python» de esta entrega junto al .bat, o instala AVACOM OPS Master en el equipo.
+· «Asignaturas» dice «Biblioteca no disponible» aunque AVACOM Contenido esté abierto:  esa pantalla de Student todavía pregunta por la
+  biblioteca del contrato anterior; las clases en vivo que da el profesor desde OPS sí usan AVACOM Contenido.
+
+
+QUÉ PERMISOS PIDE LA APLICACIÓN EN LA TABLETA
+---------------------------------------------
+· Internet y estado de la red: se conceden al instalar, sin preguntar nada. Student solo hace conexiones SALIENTES hacia la OPS;
+  no abre puertos ni instala servicios.
+· Ninguno más. Todo lo que guarda (la dirección del aula, las respuestas pendientes de entregar, el material de estudio descargado
+  y sus registros) vive en la carpeta PRIVADA de la aplicación, donde leer, escribir y borrar no requiere ningún permiso.
+· Actualizar encima conserva todo eso. Desinstalar la app lo borra siempre.
+· El tráfico HTTP sin cifrar hacia la red local del aula está permitido a propósito (el aula no usa HTTPS).
+
+
+ACTUALIZAR A UNA VERSIÓN NUEVA
+------------------------------
+Mismo procedimiento. Android actualiza encima si el APK nuevo (a) tiene el mismo identificador (com.avacom.lms.student), (b) está firmado
+con la MISMA llave y (c) trae un código de versión mayor (2.4.1 = 20401). La llave de firma de esta entrega la custodia quien compila el APK
+(hoy es la de depuración de Android del equipo de compilación, %USERPROFILE%\.android\debug.keystore): si se pierde, hay que desinstalar la
+app en cada tableta antes de instalar una versión firmada con otra llave. Haz una copia de esa llave en un lugar seguro.
+Mantén el APK y la OPS en la misma versión del producto (2.4.x): una OPS más nueva que sus tabletas puede responderles con errores.

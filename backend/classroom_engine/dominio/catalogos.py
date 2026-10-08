@@ -45,6 +45,9 @@ TIPOS_PREGUNTA: dict[str, str] = {
     "matching": "relacionar",
     "ordering": "ordenar",
     "open": "abierta",
+    # Séptimo tipo del contrato 2 (course.schema 1.0 de 2026-10-07; AVACOM Contenido 2.1.7 ya lo sirve). El aula lo muestra con su
+    # enunciado; el editor táctil para responderlo queda pendiente en los clientes («se responde con tu profesor»).
+    "drag_drop": "arrastrar",
 }
 
 # ----------------------------------------------------------------------- medios
@@ -55,6 +58,9 @@ CLASES_MEDIO: dict[str, str] = {
     "audio": "audio",
     "pdf": "pdf",
     "simulation": "webview",
+    # Contrato 2 (course.schema 1.0 de 2026-10-07): la lección maquetada por el curso (carpeta con páginas, estilos y fuentes; `entry` es la
+    # primera página). Una cátedra o explicación la referencia con `html {mediaId, entry}` y su sección n es `entry#s{n}`.
+    "html": "html",
 }
 
 # Ítems del contrato 1 de la biblioteca (secciones/items) → objeto normalizado.

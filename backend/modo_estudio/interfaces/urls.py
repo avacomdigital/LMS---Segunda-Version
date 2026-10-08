@@ -13,6 +13,9 @@ urlpatterns = [
     path("asignaciones/", views.AsignacionesView.as_view(), name="estudio-asignaciones"),
     path("asignaciones/<str:asignacion_id>/", views.AsignacionView.as_view(), name="estudio-asignacion"),
     path("asignaciones/<str:asignacion_id>/medios/<str:media_ref>/", views.MedioDeAsignacionView.as_view(), name="estudio-medio"),
+    # Sin barra final: así nombra una página html del curso a otro medio (`../vid-changes`); la redirección perdería el pase del camino.
+    re_path(r"^asignaciones/(?P<asignacion_id>[^/]+)/medios/(?P<media_ref>[^/]+)$", views.MedioDeAsignacionView.as_view(),
+            name="estudio-medio-sin-barra"),
     re_path(r"^asignaciones/(?P<asignacion_id>[^/]+)/medios/(?P<media_ref>[^/]+)/(?P<ruta>.+)$", views.MedioDeAsignacionView.as_view(),
             name="estudio-medio-interno"),
     path("lecciones/<str:asignacion_id>/", views.LeccionView.as_view(), name="estudio-leccion"),

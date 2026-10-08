@@ -38,6 +38,7 @@ public partial class ClaseSiguiendoPage : ContentPage
     private string? _selectorPintado;
     private long _ultimoAvisoVisto;
     private bool _refrescando, _refrescoPendiente, _saliendo, _httpOk = true;
+    private bool _abriendoLanzada;
     private bool _mostrandoPendiente;
     private readonly Stopwatch _sinNodo = new();
     private AulaSocketClient? _socket;
@@ -399,6 +400,19 @@ public partial class ClaseSiguiendoPage : ContentPage
         _firmaPendientes = firma;
         PendientesHost.Clear();
         if (pendientes.Count == 0) return;
+        // QA 2026-10-07 («las preguntas no se podían seleccionar»): la actividad que el profesor acaba de lanzar se abre sola para responder, sin
+        // que el alumno tenga que descubrir la tarjeta de abajo. Sólo la recién llegada (sin recibir todavía), sólo si no hay otra cosa abierta.
+        var recienLanzada = pendientes.FirstOrDefault(p => p.Clase == "actividad" && p.Entrega != "entregado" && p.Intento is null);
+        if (recienLanzada is not null && !_mostrandoPendiente && !_abriendoLanzada)
+        {
+            _abriendoLanzada = true;
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try { await AbrirPendienteAsync(recienLanzada); }
+                catch (Exception ex) { RegistroDeFallos.Escribir("student", "ClaseSiguiendoPage.AbrirLanzada", ex); }
+                finally { _abriendoLanzada = false; }
+            });
+        }
         foreach (var d in pendientes)
         {
             var esActividad = d.Clase == "actividad";

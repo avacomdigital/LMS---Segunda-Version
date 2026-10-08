@@ -14,12 +14,17 @@ from __future__ import annotations
 
 from urllib.parse import quote, urlencode
 
+from django.db import transaction
+
+from acceso.interfaces.medios import con_pase
 from classroom_engine.aplicacion import casos_uso as casos_aula
 from classroom_engine.aplicacion.puertos import Bytes
 from classroom_engine.dominio import curso as curso_aula
 from classroom_engine.dominio import errores as e7
 from classroom_engine.dominio import respuestas as respuestas_aula
 from classroom_engine.infraestructura.contenedor import servicios as servicios_aula
+
+from cola_medios import servicio as cola
 
 from ..dominio import armado as armado_dom
 from ..dominio import errores as e10
@@ -122,7 +127,7 @@ class ContenidoEvaluacion:
             base = f"/api/evaluacion/intentos/{quote(intento_id, safe='')}/medios/{quote(media_ref, safe='')}/"
             if ruta:
                 base += quote(ruta.strip("/"), safe="/")
-            return f"{base}?{consulta}" if consulta else base
+            return con_pase(f"{base}?{consulta}" if consulta else base)
 
         return url
 
@@ -137,6 +142,13 @@ class ContenidoEvaluacion:
             except e7.ErrorAula as error:
                 raise traducir(error) from error
         vistas = fuentes_examen.preguntas_de_examen(crudas, medios, self._url_de_medios(intento_id, dispositivo, alumno_id))
+        # Los medios de ESTAS preguntas (las de este alumno en este intento, no el banco entero) quedan en la cola del nodo con la prioridad de un examen:
+        # el reloj del alumno corre. Se hace al confirmarse la transacción (la cola escribe en su propia tabla y no debe esperar a ésta).
+        medios_del_intento = [(ref, "") for ref in sorted(medios_de_preguntas(crudas))]
+        if medios_del_intento:
+            transaction.on_commit(lambda: cola.preparar_medios(medios_del_intento, fuente=fuente or None, curso_ref=curso_ref, modulo=cola.MODULO_EVALUACION,
+                                                               contexto_ref=intento_id, prioridad=cola.EVALUACION, persona_id=alumno_id,
+                                                               dispositivo_id=dispositivo))
         por_ref = {p["pregunta_ref"]: p for p in vistas}
         return {"titulo": datos.get("title"), "instrucciones": datos.get("instructions"),
                 "instrucciones_tramos": curso_aula.tramos(datos.get("instructions")), "version": str(datos.get("version") or ""),
@@ -147,8 +159,17 @@ class ContenidoEvaluacion:
         return medios_de_preguntas([q for q in datos.get("questions") or []])
 
     def abrir_medio(self, fuente: str, curso_ref: str, media_ref: str, ruta: str | None, rango: str | None, metodo: str) -> Bytes:
+        """Por la cola de medios del nodo (con la prioridad de un examen). Quien llama (`MedioDelIntento`) ya comprobó que el medio es de ESTE examen y de
+        ESTE alumno: la cola sólo reparte bytes, nunca decide quién los lee. Sin la cola, paso a través como siempre."""
+        def directo() -> Bytes:
+            try:
+                return casos_aula.AbrirMedio(servicios_aula()).ejecutar(curso_ref, media_ref, ruta, rango, metodo, fuente or None)
+            except e7.ErrorAula as error:
+                raise traducir(error) from error
+
         try:
-            return casos_aula.AbrirMedio(servicios_aula()).ejecutar(curso_ref, media_ref, ruta, rango, metodo, fuente or None)
+            return cola.abrir_medio(fuente=fuente or None, curso_ref=curso_ref, media_ref=media_ref, ruta=ruta, rango=rango, metodo=metodo,
+                                    modulo=cola.MODULO_EVALUACION, prioridad=cola.EVALUACION, directo=directo)
         except e7.ErrorAula as error:
             raise traducir(error) from error
 

@@ -80,6 +80,7 @@ from ..dominio.valores import (
     TipoSecreto,
     UserId,
 )
+from . import cache_pases
 from .puertos import Azar, Cifrador, EmisorTokens, FabricaUoW, Hasher, Reloj, UnidadDeTrabajo
 
 MINUTO_MS = 60_000
@@ -98,6 +99,10 @@ class Servicios:
     tokens: EmisorTokens
     reloj: Reloj
     azar: Azar
+    # Carpeta de sólo lectura (sin transacción de escritura): la validación de sesión de cada petición. None = no hay, se usa `uow` como siempre.
+    uow_lectura: FabricaUoW | None = None
+    # Segundos que se guarda la persona de un pase de medios (ver `cache_pases`). 0 = se comprueba entera en cada petición, como antes.
+    cache_pases_seg: float = 0.0
 
 
 def _nuevo_id() -> str:
@@ -595,7 +600,7 @@ class ConsultarConfiguracion(Base):
             if org is None:
                 return {"instalado": False, "claves_derivadas": self.s.cifrador.claves_derivadas()}
             perfiles: dict[str, dict] = {}
-            duracion, inactividad = 240, 240
+            duracion, inactividad = 480, 480
             registro_propio: dict[str, bool] = {}
             for p in uow.politicas.por_organizacion(org.id):
                 resumen = {"tipo_identificador": p.tipo_identificador.value, "tipo_secreto": p.tipo_secreto.value,
@@ -738,11 +743,54 @@ class AutenticarUsuario(Base):
         secreto = str(secreto or "")
         if (not identificador and not usuario_id) or not secreto:
             raise errores.DatosInvalidos("Faltan identificador o clave.")
+        # Argon2id tarda ~0,2 s y 64 MiB. Dentro de la transacción de escritura, 35 tabletas que entran a la vez hacían fila por el turno de SQLite y el
+        # último esperaba ~12 s (prueba de 35 tabletas, 2026-10-08). Fuera, corren en paralelo (Argon2 suelta el GIL) y dentro sólo queda lo breve.
+        previa = self._verificar_antes(identificador, usuario_id, secreto)
         # Los intentos fallidos deben quedar escritos aunque la respuesta sea un error.
-        return self.ejecutar_registrando(lambda uow: self._autenticar(uow, identificador, usuario_id, secreto, dispositivo, rol, pin_maestro))
+        return self.ejecutar_registrando(lambda uow: self._autenticar(uow, identificador, usuario_id, secreto, dispositivo, rol, pin_maestro, previa))
+
+    def _verificar_antes(self, identificador: str, usuario_id: str | None, secreto: str) -> dict[str, bool]:
+        """`{hash de la credencial: ¿coincide con el secreto?}` calculado SIN el turno de escritura, para que `_autenticar` lo use en vez de repetirlo.
+
+        Es el mismo cálculo (una función pura del hash y del secreto) hecho antes: si la credencial cambia entre una cosa y otra, el hash no coincide con
+        la clave y `_autenticar` verifica como siempre. Nunca impide ni cambia un inicio de sesión: ante cualquier duda devuelve vacío. Sólo se gasta
+        Argon2 en cuentas que podrían entrar (existen, activas y no bloqueadas a mano): lo demás se rechaza barato, como antes."""
+        if self.s.uow_lectura is None:
+            return {}
+        try:
+            with self.s.uow_lectura() as uow:
+                org = uow.organizaciones.unica()
+                if org is None:
+                    return {}
+                if usuario_id:
+                    usuario = uow.usuarios.por_id(usuario_id)
+                    if usuario is None or usuario.organizacion_id != org.id:
+                        return {}
+                else:
+                    como_documento, como_email = DocumentNumber.normalizar_entrada(identificador)
+                    encontrado = uow.usuarios.por_identificador(self.s.cifrador.indice(como_documento))
+                    if encontrado is None and "@" in identificador:
+                        encontrado = uow.usuarios.por_identificador(self.s.cifrador.indice(como_email))
+                    if encontrado is None:
+                        return {}
+                    usuario = encontrado[0]
+                if usuario.estado is EstadoUsuario.BLOQUEADO or not usuario.activo:
+                    return {}
+                credencial = uow.credenciales.activa(usuario.id)
+            if credencial is None:
+                return {}
+            return {credencial.hash: self.s.hasher.verificar(credencial.hash, secreto)}
+        except Exception:   # noqa: BLE001 — la verificación previa es una ayuda: sin ella el inicio de sesión funciona igual, un poco más lento
+            return {}
+
+    def _coincide(self, previa: dict[str, bool], hash_: str, secreto: str) -> bool:
+        """El resultado de `_verificar_antes` si es de ESTE hash (se gasta una sola vez); si no, se verifica aquí."""
+        if previa and hash_ in previa:
+            return previa.pop(hash_)
+        return self.s.hasher.verificar(hash_, secreto)
 
     def _autenticar(self, uow: UnidadDeTrabajo, identificador: str, usuario_id: str | None, secreto: str, dispositivo: str | None,
-                    rol_codigo: str | None, pin_maestro: str | None) -> dict:
+                    rol_codigo: str | None, pin_maestro: str | None, previa: dict[str, bool] | None = None) -> dict:
         org = uow.organizaciones.unica()
         if org is None:
             raise errores.CredencialesInvalidas()
@@ -835,7 +883,7 @@ class AutenticarUsuario(Base):
                                            reintentar_en_seg=bloqueo.segundos_restantes(ahora), bloqueado_hasta=bloqueo.hasta)
 
         credencial = uow.credenciales.activa(usuario.id)
-        if credencial is None or not self.s.hasher.verificar(credencial.hash, secreto):
+        if credencial is None or not self._coincide(previa or {}, credencial.hash, secreto):
             if credencial is None:
                 self.s.hasher.verificar(self._senuelo(), secreto)
             fallo(usuario.id, "sin_credencial" if credencial is None else "secreto_invalido")
@@ -877,6 +925,10 @@ class AutenticarUsuario(Base):
         return salida
 
 
+class _NecesitaEscritura(Exception):
+    """Señal interna de `ResolverPrincipal`: la comprobación de sólo lectura llegó a algo que hay que escribir; se repite con transacción."""
+
+
 class ResolverPrincipal(Base):
     """Token → Principal. Lo usa el adaptador de autenticación de DRF en cada petición.
 
@@ -887,11 +939,26 @@ class ResolverPrincipal(Base):
 
     def ejecutar(self, token: str) -> Principal:
         claims = self.s.tokens.leer(token)
+        return self.resolver_sesion(claims)
+
+    def resolver_sesion(self, claims: dict) -> Principal:
+        """La persona de la sesión `claims["jti"]`, comprobada: primero SÓLO LEYENDO, sin turno de escritura.
+
+        Esto corre en cada petición con sesión y en cada medio con pase. Con una transacción de escritura por petición, 35 tabletas pidiendo
+        medios a la vez hacían fila en SQLite hasta agotar el `timeout` y el nodo respondía 500 «database is locked» (prueba de 35 tabletas,
+        2026-10-08). Sólo cuando hay algo que escribir —se refresca el «último uso» (una vez por minuto y sesión) o la sesión se cierra por
+        inactividad— se repite la comprobación con la transacción de siempre."""
+        if self.s.uow_lectura is not None:
+            try:
+                with self.s.uow_lectura() as uow:
+                    return self._resolver(uow, claims, solo_lectura=True)
+            except _NecesitaEscritura:
+                pass
         # Si la sesión se cierra aquí por inactividad, ese cierre debe quedar escrito aunque la
         # respuesta sea un error: por eso se confirma la transacción antes de relanzarlo.
         return self.ejecutar_registrando(lambda uow: self._resolver(uow, claims))
 
-    def _resolver(self, uow: UnidadDeTrabajo, claims: dict) -> Principal:
+    def _resolver(self, uow: UnidadDeTrabajo, claims: dict, solo_lectura: bool = False) -> Principal:
         sesion = uow.sesiones.por_id(str(claims.get("jti", "")))
         if sesion is None or sesion.usuario_id != claims.get("sub"):
             raise errores.SesionInvalida()
@@ -910,19 +977,76 @@ class ResolverPrincipal(Base):
         rol = self.rol_de(uow, usuario, sesion.rol_id)
         politica = self.politica_de(uow, usuario, rol)
         if sesion.inactiva(ahora, politica.inactividad_min):
+            if solo_lectura:
+                raise _NecesitaEscritura()
             self.cerrar_sesion(uow, sesion, MotivoCierre.INACTIVIDAD)
             raise errores.SesionInactiva()
         credencial = uow.credenciales.activa(usuario.id)
         debe_cambiar = bool(credencial and (credencial.debe_cambiar or credencial.expirada(ahora)))
         if sesion.ultimo_uso_en is None or ahora - sesion.ultimo_uso_en > MINUTO_MS:
-            sesion.ultimo_uso_en = ahora
-            uow.sesiones.guardar(sesion)
+            if solo_lectura:
+                raise _NecesitaEscritura()
+            uow.sesiones.tocar(sesion.id, ahora)
         return Principal(
             usuario_id=usuario.id, organizacion_id=usuario.organizacion_id, rol_id=rol.id, rol_codigo=rol.codigo,
             menu=rol.menu_principal, nivel=rol.nivel, sesion_id=sesion.id, clase_sesion=sesion.clase,
             debe_cambiar_credencial=debe_cambiar and sesion.clase is ClaseSesion.NORMAL,
             dispositivo_id=sesion.dispositivo_id, evaluacion_ref=sesion.evaluacion_ref,
         )
+
+
+PASE_MEDIOS_VIDA_SEG = 24 * 3600   # lo más que dura una sesión (la de visitante, RN-45); la que mande es la sesión, que se comprueba en CADA petición
+PASE_MEDIOS_CUBETA_SEG = 900
+
+
+class PaseDeMedios(Base):
+    """El pase que viaja EN LA DIRECCIÓN de cada medio del curso (`/api/m/<pase>/aula/cursos/…/medios/…`).
+
+    Quien reproduce un video, un audio o dibuja una imagen es el visor (la etiqueta `<video>` de la WebView, `Image` de MAUI), no el código de la app: no sabe
+    mandar `Authorization: Bearer`. Con la sesión obligatoria (Q-34) todo medio daba 401 y el reproductor lo contaba como «formato no compatible». El nodo
+    entrega entonces, junto a cada medio, una dirección que ya lleva su permiso, en el mismo molde que el traspaso entre apps (`EmitirTraspaso`):
+
+      · es un JWT firmado por el nodo con `tipo = medio` y atado a la sesión de origen (`sid`); su `jti` NO es una sesión, así que nunca vale como pase
+        de API (`ResolverPrincipal` lo rechaza como `sesion_invalida`);
+      · al llegar, `resolver` lo traduce a la MISMA persona de esa sesión (rol, nivel, dispositivo): cada vista de medios aplica sus reglas de siempre
+        (la asignación le alcanza al alumno, el medio es de ese examen…). Si la sesión se cierra, caduca o se revoca, el pase muere con ella: por eso su
+        propia vida (24 h) no necesita ser corta ni renovarse a mitad de una clase;
+      · sólo lo acepta el middleware, sólo para GET/HEAD y sólo en rutas de medios (ver `acceso/interfaces/medios.py`);
+      · va en el camino, no en `?token=`, porque las simulaciones piden sus archivos con rutas relativas y un prefijo de camino sí se hereda.
+
+    El pase se redondea a cubetas de 15 min (`iat`) y su `jti` se deriva de la sesión: dentro de una cubeta la dirección de un medio no cambia."""
+
+    def emitir(self, usuario_id: str, sesion_id: str, ahora_ms: int | None = None) -> str:
+        ahora_s = (self.ahora() if ahora_ms is None else ahora_ms) // 1000
+        iat = ahora_s // PASE_MEDIOS_CUBETA_SEG * PASE_MEDIOS_CUBETA_SEG
+        return self.s.tokens.emitir({
+            "sub": usuario_id, "jti": f"medio-{sesion_id}", "sid": sesion_id, "tipo": "medio",
+            "iat": iat, "exp": iat + PASE_MEDIOS_VIDA_SEG,
+        })
+
+    def resolver(self, pase: str) -> Principal:
+        try:
+            claims = self.s.tokens.leer(str(pase or ""))
+        except errores.SesionExpirada:
+            raise errores.PaseDeMediosVencido()
+        except errores.SesionInvalida:
+            raise errores.PaseDeMediosInvalido()
+        if claims.get("tipo") != "medio" or not claims.get("sid"):
+            raise errores.PaseDeMediosInvalido()
+        # La sesión se comprueba como en cada petición con Bearer: caducidad, revocación, inactividad y cuenta activa. Con una salvedad: el resultado se
+        # guarda unos segundos (`cache_pases`), porque la comprobación entera era la mitad del trabajo del nodo cuando 35 tabletas piden medios a la vez, y
+        # cualquier escritura que pueda cambiar la respuesta (cerrar la sesión, cambiar la clave, mover o desactivar a la persona…) la vacía al instante.
+        vigencia = float(self.s.cache_pases_seg or 0)
+        clave = (str(claims["sid"]), claims.get("sub"))
+        if vigencia > 0:
+            if (guardada := cache_pases.tomar(clave, vigencia)) is not None:
+                return guardada
+        epoca = cache_pases.epoca()
+        origen = {"jti": clave[0], "sub": clave[1]}
+        principal = ResolverPrincipal(self.s).resolver_sesion(origen)
+        if vigencia > 0:
+            cache_pases.guardar(clave, principal, epoca, vigencia)
+        return principal
 
 
 class ConsultarIdentidad(Base):

@@ -1,8 +1,8 @@
-﻿AVACOM OPS Master 2.3.1 (revision 4d4df002)
+﻿AVACOM OPS Master 2.5.0 (revision 5cbd37eb)
 
 Esta carpeta es lo que se sube como release de GitHub:
 
-  AVACOM-OPS-Master-Setup-2.3.1.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
+  AVACOM-OPS-Master-Setup-2.5.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
   SHA256.txt                            la huella del instalador y del codigo que lleva
   AVACOM-Verificar-Instalador.bat       revisa el equipo, el instalador y lo ya instalado, y busca
                                         el error exacto cuando algo falla. NO modifica nada.
@@ -21,10 +21,15 @@ Visor de eventos de Windows). Deja un informe y un .zip con las evidencias en el
 
 Esta version incluye: Modo Estudio, Evaluacion y entrega, Auditoria y registros del nodo, y el
 acceso con PIN maestro (alta propia de profesores y alumnos, visitante, traspaso entre OPS y Student).
+Novedades de la 2.4.0: los videos, audios e imagenes del aula llegan con un pase de medios dentro de
+la direccion (con la sesion obligatoria ya no fallan con 401) y el contrato 2 de AVACOM Contenido
+(laminas html, pausas y portada de video, arrastrar y soltar). Las tabletas con Student 2.3.x siguen
+entrando, pero no reproducen medios con la sesion obligatoria: actualiza tambien AVACOM Student.
 
 PRIMER ARRANQUE: tras una instalacion nueva, abre AVACOM OPS Master. Pedira (con el teclado tactil
-de Windows) pais y nombre del aula, el administrador (documento, contrasena) y el PIN maestro de
-seis digitos. La hoja de acceso se muestra una sola vez. Luego crea los grupos y alumnos en Grupos
-(o deja que se registren solos). En cada tableta, AVACOM Student pide la direccion del aula que
-muestra la ultima pantalla del instalador.
+de Windows, que el instalador deja encendido) pais y nombre del aula, el administrador (documento,
+nombres y apellidos: la contrasena inicial la genera el sistema) y el PIN maestro de seis digitos.
+La hoja de acceso se muestra una sola vez. Luego el administrador entra con documento, contrasena
+inicial y PIN maestro. Crea los grupos y alumnos en Grupos (o deja que se registren solos). En
+cada tableta, AVACOM Student pide la direccion del aula que muestra la ultima pantalla del instalador.
 Politica de datos de esta version: reemplazables.

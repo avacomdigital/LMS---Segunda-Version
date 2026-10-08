@@ -64,6 +64,7 @@ internal abstract class EditorPregunta
                 "completar" when p.Espacios is { Count: > 0 } => new EditorCompletar(p, cx),
                 "relacionar" when p.Izquierda is { Count: > 0 } && p.Derecha is { Count: > 0 } => new EditorRelacionar(p, cx),
                 "ordenar" when p.Elementos is { Count: > 0 } => new EditorOrdenar(p, cx),
+                "arrastrar" when p.Elementos is { Count: > 0 } && p.Zonas is { Count: > 0 } => new EditorArrastrar(p, cx),
                 "abierta" when EsTexto(p) => new EditorAbierta(p, cx),
                 _ => new EditorNoSoportado(p, cx),
             };
@@ -907,4 +908,180 @@ internal sealed class EditorNoSoportado : EditorPregunta
     }
 
     public override View Vista => _vista;
+}
+
+
+// --------------------------------------------------------------------------------------------- arrastrar y soltar (contrato 2)
+
+/// <summary>
+/// <c>arrastrar</c> (<c>drag_drop</c> del contrato 2 de Contenido, 2026-10-07) → <c>{"placements":[{itemId, targetId}…]}</c>. Sin arrastre real: en una
+/// tableta táctil arrastrar y desplazar la página compiten, así que se TOCA una pieza y luego la zona donde va; tocar una pieza ya colocada la
+/// devuelve a la bandeja. Una pieza puede quedarse sin zona a propósito (las distractoras no van a ninguna). Se guarda con cada colocación
+/// (hace falta al menos una: una lista vacía no es una respuesta que el nodo acepte).
+/// </summary>
+internal sealed class EditorArrastrar : EditorPregunta
+{
+    private readonly List<ElementoAula> _piezas;
+    private readonly List<ZonaAula> _zonas;
+    private readonly Dictionary<string, string> _colocadas = [];           // pieza → zona
+    private readonly Dictionary<string, Border> _chips = [];
+    private readonly Dictionary<string, FlexLayout> _cajasZona = [];
+    private readonly Dictionary<string, Border> _marcosZona = [];
+    private readonly FlexLayout _bandeja = Caja();
+    private readonly Label _pista;
+    private readonly Label _estado;
+    private readonly View _quitar;
+    private readonly VerticalStackLayout _vista = new() { Spacing = 12 };
+    private string? _elegida;
+    private string? _ultimo;
+
+    public EditorArrastrar(PreguntaAula p, ContextoEditor cx) : base(p, cx)
+    {
+        _piezas = [.. p.Elementos!];
+        _zonas = [.. p.Zonas!];
+        _pista = Ds.Secundario(string.Empty, 16 * cx.Escala);
+        _estado = new Label { FontFamily = Ds.FuenteMedia, FontSize = 17 * cx.Escala, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap };
+        var quitar = Ds.Boton("Devolver todas las piezas", Ds.Rango.Secondary, (_, _) => QuitarTodas(), Math.Max(44, cx.AreaTactil * 0.85));
+        quitar.HorizontalOptions = LayoutOptions.Start;
+        _quitar = Ds.Capsula(quitar);
+        _quitar.HorizontalOptions = LayoutOptions.Start;
+
+        foreach (var pieza in _piezas)
+        {
+            var contenido = VistasActividad.TextoOImagen(cx, pieza.Tramos, pieza.Texto, pieza.Url, pieza.TextoAlternativo, "Pieza", 18 * cx.Escala);
+            contenido.VerticalOptions = LayoutOptions.Center;
+            var chip = new Border
+            {
+                Padding = new Thickness(14, 8), Margin = new Thickness(0, 0, 8, 8), MinimumHeightRequest = cx.Alto, BackgroundColor = Colors.White,
+                StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = contenido, AutomationId = $"act-pieza-{pieza.Ref}",
+            };
+            var referencia = pieza.Ref;
+            var toque = new TapGestureRecognizer();
+            toque.Tapped += (_, _) => TocarPieza(referencia);
+            chip.GestureRecognizers.Add(toque);
+            _chips[referencia] = chip;
+        }
+
+        _vista.Add(_pista);
+        _vista.Add(new Border
+        {
+            StrokeThickness = 1.5, Stroke = VistasActividad.BrochaReposo, BackgroundColor = Colors.White, Padding = new Thickness(10, 10, 2, 2),
+            StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = _bandeja, MinimumHeightRequest = cx.Alto + 20, AutomationId = "act-bandeja",
+        });
+        foreach (var zona in _zonas)
+        {
+            var cabecera = VistasActividad.TextoOImagen(cx, null, zona.Rotulo, zona.Url, zona.TextoAlternativo, "Zona", 18 * cx.Escala);
+            var piezas = Caja();
+            piezas.MinimumHeightRequest = cx.Alto;
+            var pila = new VerticalStackLayout { Spacing = 6, Children = { cabecera, piezas } };
+            var marco = new Border
+            {
+                StrokeThickness = 1.5, Stroke = VistasActividad.BrochaReposo, BackgroundColor = Ds.Lienzo, Padding = new Thickness(12, 10, 4, 2),
+                StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = pila, AutomationId = $"act-zona-{zona.ZonaRef}",
+            };
+            SemanticProperties.SetDescription(marco, $"Zona {zona.Rotulo ?? zona.TextoAlternativo ?? zona.ZonaRef}");
+            var referencia = zona.ZonaRef;
+            var toque = new TapGestureRecognizer();
+            toque.Tapped += (_, _) => TocarZona(referencia);
+            marco.GestureRecognizers.Add(toque);
+            _cajasZona[referencia] = piezas;
+            _marcosZona[referencia] = marco;
+            _vista.Add(marco);
+        }
+        _vista.Add(_estado);
+        _vista.Add(_quitar);
+        Pintar();
+    }
+
+    public override View Vista => _vista;
+
+    private static FlexLayout Caja() => new()
+    {
+        Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, JustifyContent = Microsoft.Maui.Layouts.FlexJustify.Start,
+        AlignItems = Microsoft.Maui.Layouts.FlexAlignItems.Start, AlignContent = Microsoft.Maui.Layouts.FlexAlignContent.Start,
+    };
+
+    private void TocarPieza(string pieza)
+    {
+        if (!Cx.Editable) return;
+        if (_colocadas.Remove(pieza)) { _elegida = null; Pintar(); Guardar(); return; }   // colocada: vuelve a la bandeja
+        _elegida = _elegida == pieza ? null : pieza;                                        // tocarla otra vez la suelta
+        Pintar();
+    }
+
+    private void TocarZona(string zona)
+    {
+        if (!Cx.Editable || _elegida is null) return;
+        _colocadas[_elegida] = zona;
+        _elegida = null;
+        Pintar();
+        Guardar();
+    }
+
+    private void QuitarTodas()
+    {
+        if (!Cx.Editable) return;
+        _colocadas.Clear();
+        _elegida = null;
+        Pintar();
+    }
+
+    private void Pintar()
+    {
+        foreach (var pieza in _piezas)
+        {
+            var chip = _chips[pieza.Ref];
+            var destino = _colocadas.TryGetValue(pieza.Ref, out var zona) && _cajasZona.TryGetValue(zona, out var caja) ? caja : _bandeja;
+            if (!ReferenceEquals(chip.Parent, destino))
+            {
+                (chip.Parent as Layout)?.Remove(chip);
+                destino.Add(chip);
+            }
+            var elegida = _elegida == pieza.Ref;
+            var colocada = _colocadas.ContainsKey(pieza.Ref);
+            chip.BackgroundColor = colocada ? Ds.InfoSuave : Colors.White;
+            chip.Stroke = elegida || colocada ? VistasActividad.BrochaTinta : VistasActividad.BrochaReposo;
+            chip.StrokeThickness = elegida ? 4 : colocada ? 2.5 : 1.5;
+            SemanticProperties.SetDescription(chip, $"{VistasActividad.Rotulo(pieza.Texto, pieza.TextoAlternativo, "Pieza")}. {(elegida ? "Elegida" : colocada ? "Colocada" : "En la bandeja")}");
+        }
+        foreach (var (referencia, marco) in _marcosZona)
+        {
+            marco.Stroke = _elegida is not null ? VistasActividad.BrochaTinta : VistasActividad.BrochaReposo;
+            marco.StrokeThickness = _elegida is not null ? 3 : 1.5;
+        }
+        _pista.Text = _elegida is null
+            ? "Toca una pieza de la bandeja y luego la zona donde va. Tocar una pieza colocada la devuelve."
+            : "Ahora toca la zona donde va.";
+        _estado.Text = $"Colocaste {_colocadas.Count} de {_piezas.Count} piezas.{(_colocadas.Count < _piezas.Count ? " Las que no van a ninguna zona pueden quedarse en la bandeja." : string.Empty)}";
+        _quitar.IsVisible = Cx.Editable && _colocadas.Count > 0;
+    }
+
+    private JsonElement Instantanea() =>
+        VistasActividad.Json(new { placements = _piezas.Where(e => _colocadas.ContainsKey(e.Ref)).Select(e => new { itemId = e.Ref, targetId = _colocadas[e.Ref] }).ToArray() });
+
+    private void Guardar()
+    {
+        if (!Cx.Editable || _colocadas.Count == 0) return;
+        var json = Instantanea();
+        var texto = json.GetRawText();
+        if (texto == _ultimo) return;
+        _ultimo = texto;
+        Confirmar(json);
+    }
+
+    public override void Aplicar(JsonElement r)
+    {
+        if (r.ValueKind != JsonValueKind.Object || !r.TryGetProperty("placements", out var colocaciones) || colocaciones.ValueKind != JsonValueKind.Array) return;
+        _colocadas.Clear();
+        foreach (var c in colocaciones.EnumerateArray())
+        {
+            if (c.ValueKind != JsonValueKind.Object) continue;
+            var pieza = c.TryGetProperty("itemId", out var pi) && pi.ValueKind == JsonValueKind.String ? pi.GetString() : null;
+            var zona = c.TryGetProperty("targetId", out var zi) && zi.ValueKind == JsonValueKind.String ? zi.GetString() : null;
+            if (pieza is not null && zona is not null && _chips.ContainsKey(pieza) && _cajasZona.ContainsKey(zona)) _colocadas[pieza] = zona;
+        }
+        _elegida = null;
+        Pintar();
+        if (_colocadas.Count > 0) _ultimo = Instantanea().GetRawText();
+    }
 }

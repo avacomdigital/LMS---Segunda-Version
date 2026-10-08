@@ -75,6 +75,19 @@ internal static class Configuracion
             "Carpeta de los registros del nodo (JSON Lines) y de los archivos de la bitacora.\n" +
             "Es la misma que usan el instalador y el diagnostico."),
 
+        new("AVACOM_COLA_ACTIVA", "1", false,
+            "Cola de medios: el nodo trae cada video, audio, imagen, PDF o pagina html de AVACOM Contenido UNA vez a una cache de disco y la reparte a\n" +
+            "las tabletas (con limite de transferencias a la vez). 0 = cada tableta los pide directo a AVACOM Contenido, como antes de la cola."),
+        new("AVACOM_COLA_DIR", Rutas.CarpetaCacheMedios, false,
+            "Carpeta de la cache de medios. Es regenerable: se puede borrar con el servicio detenido y se vuelve a llenar sola."),
+        new("AVACOM_COLA_MAX_MB", "4096", false, "Tope de la cache de medios, en MB. Al llenarse, sale lo que lleva mas tiempo sin usarse."),
+        new("AVACOM_COLA_LIBRE_MIN_MB", "1024", false, "Espacio que debe quedar libre en el disco, en MB, antes de traer un medio nuevo."),
+        new("AVACOM_COLA_DESCARGAS", "3", false, "Descargas simultaneas desde AVACOM Contenido hacia el nodo."),
+        new("AVACOM_COLA_TRANSFERENCIAS", "24", false,
+            "Transferencias simultaneas del nodo hacia las tabletas. Bajalo si la Wi-Fi del aula se satura con muchas tabletas; subelo si sobra ancho de banda."),
+        new("AVACOM_COLA_ANCHO_ENTRADA_KBPS", "0", false, "Tope de ancho de banda de AVACOM Contenido hacia el nodo, en KB/s. 0 = sin tope."),
+        new("AVACOM_COLA_ANCHO_SALIDA_KBPS", "0", false, "Tope de ancho de banda del nodo hacia las tabletas, en KB/s (entre todas). 0 = sin tope."),
+
         new("AVACOM_OPS_BACKEND_HOST", HostPorDefecto, !Rutas.EsEnsayo,
             "Escucha de la API local (HTTP y WebSocket, un solo puerto). Las tabletas llegan\n" +
             "por la IP del equipo maestro: debe ser 0.0.0.0:8000."),
@@ -335,7 +348,7 @@ internal static class Configuracion
     private static bool Coincide(string clave, string actual, string esperado)
     {
         // Las rutas se comparan ya normalizadas: C:\ProgramData\x y c:\programdata\x\ son lo mismo.
-        if (clave is "AVACOM_LMS_DB" or "AVACOM_LMS_DIR_LOGS")
+        if (clave is "AVACOM_LMS_DB" or "AVACOM_LMS_DIR_LOGS" or "AVACOM_COLA_DIR")
         {
             try
             {

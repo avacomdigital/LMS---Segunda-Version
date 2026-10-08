@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avance de QA</title>
+<meta name="description" content="Avance de los escenarios de prueba QA de AVACOM LMS: HP-01 completado, hallazgos abiertos y sugerencias.">
+<style>
+:root {
+  --lienzo:#F1F1F1; --superficie:#FFFFFF; --tinta:#18181B; --tinta-2:#3F3F46; --tinta-3:#5B5B63;
+  --filo:rgba(24,24,27,.12); --marca:#E5262B;
+  --hp1:#A81D81; --hp2:#019D60; --hp3:#C9A000; --hp4:#01A4E1;
+  --ok:#0E7A4B; --ok-s:#E6F5EE; --falla:#C82230; --falla-s:#FDECEC; --pend:#5B5B63; --pend-s:#ECECEE; --bloq:#8A5A00; --bloq-s:#FFF1D6;
+  --fuente: system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --mono: ui-monospace,'Cascadia Mono',Consolas,Menlo,monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lienzo:#111113; --superficie:#1B1B1F; --tinta:#F4F4F5; --tinta-2:#D4D4D8; --tinta-3:#A1A1AA; --filo:rgba(255,255,255,.14); --marca:#FF5A5F;
+    --hp1:#D860B5; --hp2:#19B97C; --hp3:#F3C701; --hp4:#3CC3F2;
+    --ok:#4ADE9B; --ok-s:#0E2B21; --falla:#FF7B84; --falla-s:#3A1519; --pend:#A1A1AA; --pend-s:#2A2A30; --bloq:#F3C701; --bloq-s:#33290A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --lienzo:#111113; --superficie:#1B1B1F; --tinta:#F4F4F5; --tinta-2:#D4D4D8; --tinta-3:#A1A1AA; --filo:rgba(255,255,255,.14); --marca:#FF5A5F;
+  --hp1:#D860B5; --hp2:#19B97C; --hp3:#F3C701; --hp4:#3CC3F2;
+  --ok:#4ADE9B; --ok-s:#0E2B21; --falla:#FF7B84; --falla-s:#3A1519; --pend:#A1A1AA; --pend-s:#2A2A30; --bloq:#F3C701; --bloq-s:#33290A;
+  color-scheme: dark;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--lienzo); color:var(--tinta); font:16px/1.5 var(--fuente); }
+header.top { border-top:6px solid var(--marca); background:var(--superficie); border-bottom:1px solid var(--filo); }
+.wrap { max-width:1180px; margin:0 auto; padding:0 16px; }
+header.top .wrap { padding-top:28px; padding-bottom:24px; }
+.eyebrow { margin:0; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--tinta-3); }
+h1 { margin:4px 0 8px; font-size:clamp(28px,5vw,40px); line-height:1.1; }
+.sub { margin:0; color:var(--tinta-2); max-width:70ch; }
+.meta { margin-top:14px; display:flex; flex-wrap:wrap; gap:8px 20px; font-size:14px; color:var(--tinta-3); }
+section { margin:32px 0; }
+h2 { font-size:22px; margin:0 0 12px; }
+.kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:24px; }
+.kpi { background:var(--superficie); border:1px solid var(--filo); border-radius:14px; padding:16px; }
+.kpi b { display:block; font-size:34px; line-height:1.1; }
+.kpi span { color:var(--tinta-3); font-size:14px; }
+.caminos { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+.camino { background:var(--superficie); border:1px solid var(--filo); border-top:5px solid var(--c); border-radius:14px; padding:16px; }
+.camino h3 { margin:0; font-size:18px; }
+.camino .nom { margin:0; color:var(--tinta-3); font-size:14px; }
+.camino .num { margin:10px 0 6px; font-size:40px; font-weight:700; line-height:1; }
+.camino .num span { font-size:20px; color:var(--tinta-3); }
+.barra { height:8px; background:var(--pend-s); border-radius:99px; overflow:hidden; }
+.barra i { display:block; height:100%; background:var(--c); }
+.camino .det { margin:8px 0; font-size:13px; color:var(--tinta-3); }
+.chip { display:inline-block; margin:0; padding:2px 10px; border-radius:99px; font-size:12px; font-weight:600; background:var(--pend-s); color:var(--pend); }
+.chip.ok { background:var(--ok-s); color:var(--ok); }
+.chip.falla { background:var(--falla-s); color:var(--falla); }
+.chip.bloq { background:var(--bloq-s); color:var(--bloq); }
+.filtros { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.filtros button { font:inherit; font-size:14px; padding:6px 14px; border-radius:99px; border:1px solid var(--filo); background:var(--superficie); color:var(--tinta); cursor:pointer; }
+.filtros button[aria-pressed="true"] { background:var(--tinta); color:var(--superficie); border-color:var(--tinta); }
+.tabla { overflow-x:auto; background:var(--superficie); border:1px solid var(--filo); border-radius:14px; }
+table { border-collapse:collapse; width:100%; min-width:760px; font-size:14px; }
+th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--filo); vertical-align:top; }
+th { font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--tinta-3); }
+tr:last-child td { border-bottom:0; }
+td.id { font-family:var(--mono); white-space:nowrap; font-weight:600; }
+td.ev { color:var(--tinta-2); }
+code { font-family:var(--mono); font-size:.9em; }
+.segs { display:flex; gap:2px; margin-bottom:3px; }
+.s { width:14px; height:8px; border-radius:2px; background:var(--pend-s); }
+.s.ok { background:var(--ok); } .s.falla { background:var(--falla); } .s.bloq { background:var(--bloq); }
+small { color:var(--tinta-3); }
+.nota { background:var(--superficie); border:1px solid var(--filo); border-left:5px solid var(--marca); border-radius:10px; padding:12px 16px; color:var(--tinta-2); font-size:14px; }
+footer { padding:8px 0 40px; color:var(--tinta-3); font-size:13px; }
+@media (max-width:600px) { .kpi b { font-size:28px; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <p class="eyebrow">AVACOM LMS · QA del 5 al 9 de octubre de 2026</p>
+  <h1>Avance de las pruebas QA</h1>
+  <p class="sub">Estado de los escenarios de <code>escenarios-qa-02.md</code>. HP-01, HP-03 y HP-04 se realizaron y dieron bien; quedan tres correcciones menores (QA-30, QA-31, QA-32) y dos cosas por probar: HP-02 y ESC-05-01.</p>
+  <div class="meta"><span>Actualizado: 2026-10-08</span><span>Responsable: Gabriel Galindo</span><span>Fuente: spec-driven/qa/escenarios-qa-02.md</span></div>
+  <div class="kpis">
+    <div class="kpi"><b>21 de 29</b><span>escenarios completados (72 %)</span></div>
+    <div class="kpi"><b>101 de 149</b><span>pasos correctos (68 %)</span></div>
+    <div class="kpi"><b>5</b><span>hallazgos abiertos (QA-28 a QA-32)</span></div>
+    <div class="kpi"><b>0</b><span>pasos con falla vigente</span></div>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <section aria-labelledby="h-caminos">
+    <h2 id="h-caminos">Avance por camino</h2>
+    <div class="caminos">
+    <article class="camino" style="--c:var(--hp1)">
+      <h3>HP-01</h3><p class="nom">Clase completa</p>
+      <p class="num">100<span>%</span></p>
+      <div class="barra" role="img" aria-label="100 por ciento de pasos correctos"><i style="width:100%"></i></div>
+      <p class="det">8 de 8 escenarios · 40 de 40 pasos</p>
+      <p class="chip ok">Completado</p>
+    </article>
+    <article class="camino" style="--c:var(--hp2)">
+      <h3>HP-02</h3><p class="nom">Examen aleatorio</p>
+      <p class="num">0<span>%</span></p>
+      <div class="barra" role="img" aria-label="0 por ciento de pasos correctos"><i style="width:0%"></i></div>
+      <p class="det">0 de 7 escenarios · 0 de 32 pasos</p>
+      <p class="chip pend">Pendiente</p>
+    </article>
+    <article class="camino" style="--c:var(--hp3)">
+      <h3>HP-03</h3><p class="nom">Modo estudio</p>
+      <p class="num">100<span>%</span></p>
+      <div class="barra" role="img" aria-label="100 por ciento de pasos correctos"><i style="width:100%"></i></div>
+      <p class="det">6 de 6 escenarios · 30 de 30 pasos</p>
+      <p class="chip ok">Completado</p>
+    </article>
+    <article class="camino" style="--c:var(--hp4)">
+      <h3>HP-04</h3><p class="nom">Acceso por rol</p>
+      <p class="num">100<span>%</span></p>
+      <div class="barra" role="img" aria-label="100 por ciento de pasos correctos"><i style="width:100%"></i></div>
+      <p class="det">7 de 7 escenarios · 31 de 31 pasos</p>
+      <p class="chip ok">Completado</p>
+    </article>
+    <article class="camino" style="--c:var(--marca)">
+      <h3>Transversal</h3><p class="nom">Red y carga</p>
+      <p class="num">0<span>%</span></p>
+      <div class="barra" role="img" aria-label="0 por ciento de pasos correctos"><i style="width:0%"></i></div>
+      <p class="det">0 de 1 escenarios · 0 de 16 pasos</p>
+      <p class="chip pend">Pendiente</p>
+    </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-hallazgos">
+    <h2 id="h-hallazgos">Hallazgos de la ronda de QA (abiertos)</h2>
+    <div class="tabla"><table>
+      <thead><tr><th>QA</th><th>Escenarios</th><th>Qué pasa</th><th>Resultado esperado</th><th>Estado</th></tr></thead>
+      <tbody><tr><td class='id'>QA-28</td><td>ESC-04-05 (sesión única) · QA-24</td><td><b>Problemas de sesiones:</b> el nodo saca (cierra la sesión de) un estudiante y al otro lo deja entrar</td><td>Una sesión sólo se cierra cuando la misma persona abre otra, o por caducidad o cierre del profesor; un estudiante no debería perder su sesión porque otro entre. Por aclarar al reproducir: si eran la misma persona o dos distintas, y en qué tabletas</td><td><span class='chip falla'>Abierto · por reproducir</span></td></tr><tr><td class='id'>QA-29</td><td>ESC-01-02 · ESC-01-03 (videos)</td><td><b>Los videos no muestran los controles</b> (no se ven los controles del reproductor)</td><td>El video se puede pausar, saltar a otro punto y ajustar el volumen desde los controles visibles, en OPS y en Student</td><td><span class='chip falla'>Abierto · por reproducir</span></td></tr><tr><td class='id'>QA-30</td><td>HP-03 · ESC-03-03 (estudiar y practicar)</td><td><b>Los controles de algunas láminas no se pueden ver en el modo estudio</b></td><td>Cada lámina muestra sus controles (avanzar, retroceder, reproducir) en Student y se pueden usar. Relacionado con QA-29 (controles del video)</td><td><span class='chip falla'>Abierto · corrección pendiente</span></td></tr><tr><td class='id'>QA-31</td><td>HP-03 · ESC-03-03 (estudiar y practicar)</td><td><b>En algunos laboratorios no se permite terminar la actividad</b></td><td>El alumno puede terminar el laboratorio y su lección pasa a completada. Por precisar al reproducir: qué laboratorios y en qué paso se detiene</td><td><span class='chip falla'>Abierto · corrección pendiente</span></td></tr><tr><td class='id'>QA-32</td><td>HP-04 · ESC-04-03 y ESC-04-05 (sesión de Student)</td><td><b>Las sesiones de Student duran poco</b></td><td>La sesión de un alumno dura lo bastante para una jornada de clase sin pedirle entrar otra vez; hay que <b>aumentar la duración</b>. Posible relación con QA-28. Dato: la prueba de 35 tabletas subió el valor de fábrica a 480 min en la 2.5.1 (migración <code>acceso 0013</code>); confirmar la versión instalada de la tableta y qué duración tienen los alumnos</td><td><span class='chip falla'>Abierto · corrección pendiente</span></td></tr></tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="h-sug">
+    <h2 id="h-sug">Comentarios y sugerencias de HP-01</h2>
+    <div class="tabla"><table>
+      <thead><tr><th>#</th><th>Sugerencia</th><th>Dónde aplica</th><th>Estado</th></tr></thead>
+      <tbody><tr><td class='id'>S-01</td><td><b>Colocar umbrales a las métricas de rendimiento.</b> Hoy las mediciones (tiempo hasta el primer fotograma, demora del selector, entrega simultánea, CPU y red del nodo) se anotan sin un valor que diga «aprobado» o «reprobado». Definir un umbral por métrica (por ejemplo, selector en 3 s o menos en el 95 % de las tabletas, BR-049) y marcar cada corrida como dentro o fuera del umbral</td><td>Tabla de mediciones de ESC-05-01 y criterios de ESC-01-02 / ESC-01-03 (videos)</td><td><span class='chip pend'>Propuesta · por definir con producto</span></td></tr><tr><td class='id'>S-02</td><td><b>Generar un snapshot con marca de tiempo (timestamp).</b> Al ejecutar cada corrida, guardar una captura del estado (métricas del nodo, <code>GET /api/aula/tiempo-real/</code>, versión instalada, logs) con fecha y hora, para poder comparar corridas y reproducir un resultado</td><td>ESC-05-01 y cualquier escenario con mediciones</td><td><span class='chip pend'>Propuesta · por definir</span></td></tr></tbody>
+    </table></div>
+  </section>
+
+  <section aria-labelledby="h-esc">
+    <h2 id="h-esc">Escenarios</h2>
+    <div class="filtros" role="group" aria-label="Filtrar por camino">
+      <button aria-pressed="true" data-f="todos">Todos</button>
+      <button aria-pressed="false" data-f="HP-01">HP-01</button>
+      <button aria-pressed="false" data-f="HP-02">HP-02</button>
+      <button aria-pressed="false" data-f="HP-03">HP-03</button>
+      <button aria-pressed="false" data-f="HP-04">HP-04</button>
+      <button aria-pressed="false" data-f="Transversal">Transversal</button>
+    </div>
+    <div class="tabla"><table id="tabla-esc">
+      <thead><tr><th>Escenario</th><th>Nombre</th><th>Camino</th><th>Pasos</th><th>Estado</th><th>Fecha</th><th>QA-nn / evidencia</th></tr></thead>
+      <tbody>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-01</td><td>Abrir la clase y entrada de alumnos</td><td>HP-01</td>
+        <td><div class="segs" title="6 de 6 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>6/6</small></td>
+        <td><span class="chip ok">OK (6 de 6 pasos)</span></td>
+        <td>2026-10-06</td><td class="ev">QA-26 · resuelto en 2.3.1 y repetido con éxito</td>
+      </tr>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-02</td><td>Presentación (láminas)</td><td>HP-01</td>
+        <td><div class="segs" title="4 de 4 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>4/4</small></td>
+        <td><span class="chip ok">OK · resuelto (4 de 4 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">QA-27 resuelto y corregido; repetido con éxito · queda QA-29 (controles del video)</td>
+      </tr>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-03</td><td>Lectura con audio, video y PDF</td><td>HP-01</td>
+        <td><div class="segs" title="5 de 5 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>5/5</small></td>
+        <td><span class="chip ok">OK · resuelto (5 de 5 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">QA-27 resuelto y corregido; repetido con éxito · queda QA-29 (controles del video)</td>
+      </tr>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-04</td><td>Laboratorio (simulación)</td><td>HP-01</td>
+        <td><div class="segs" title="4 de 4 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>4/4</small></td>
+        <td><span class="chip ok">OK (4 de 4 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-05</td><td>Controles de la clase</td><td>HP-01</td>
+        <td><div class="segs" title="6 de 6 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>6/6</small></td>
+        <td><span class="chip ok">OK (6 de 6 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-06</td><td>Actividad lanzada y respondida</td><td>HP-01</td>
+        <td><div class="segs" title="6 de 6 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>6/6</small></td>
+        <td><span class="chip ok">OK (6 de 6 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-07</td><td>Cierre de la clase</td><td>HP-01</td>
+        <td><div class="segs" title="5 de 5 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>5/5</small></td>
+        <td><span class="chip ok">OK (5 de 5 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-01" data-estado="ok">
+        <td class="id">ESC-01-08</td><td>Contenido extendido (casos conocidos)</td><td>HP-01</td>
+        <td><div class="segs" title="4 de 4 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>4/4</small></td>
+        <td><span class="chip ok">OK (4 de 4 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-02" data-estado="pend">
+        <td class="id">ESC-02-01</td><td>Aplicar el examen (por API)</td><td>HP-02</td>
+        <td><div class="segs" title="0 de 3 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/3</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr>
+      <tr data-camino="HP-02" data-estado="pend">
+        <td class="id">ESC-02-02</td><td>Presentar el examen (Alumno A)</td><td>HP-02</td>
+        <td><div class="segs" title="0 de 6 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/6</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr>
+      <tr data-camino="HP-02" data-estado="pend">
+        <td class="id">ESC-02-03</td><td>Comprobar el azar entre alumnos</td><td>HP-02</td>
+        <td><div class="segs" title="0 de 5 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/5</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr>
+      <tr data-camino="HP-02" data-estado="pend">
+        <td class="id">ESC-02-04</td><td>Reabrir no cambia el examen</td><td>HP-02</td>
+        <td><div class="segs" title="0 de 3 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/3</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr>
+      <tr data-camino="HP-02" data-estado="pend">
+        <td class="id">ESC-02-05</td><td>Entrega por tiempo y sin red</td><td>HP-02</td>
+        <td><div class="segs" title="0 de 4 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/4</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr>
+      <tr data-camino="HP-02" data-estado="pend">
+        <td class="id">ESC-02-06</td><td>Revisión del profesor y liberación de resultados</td><td>HP-02</td>
+        <td><div class="segs" title="0 de 6 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/6</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr>
+      <tr data-camino="HP-02" data-estado="pend">
+        <td class="id">ESC-02-07</td><td>Segundo intento y anulación</td><td>HP-02</td>
+        <td><div class="segs" title="0 de 5 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/5</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr>
+      <tr data-camino="HP-03" data-estado="ok">
+        <td class="id">ESC-03-01</td><td>Preparar grupo, alumnos y tableta asignada</td><td>HP-03</td>
+        <td><div class="segs" title="4 de 4 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>4/4</small></td>
+        <td><span class="chip ok">OK (4 de 4 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-03" data-estado="ok">
+        <td class="id">ESC-03-02</td><td>Asignar una lección</td><td>HP-03</td>
+        <td><div class="segs" title="4 de 4 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>4/4</small></td>
+        <td><span class="chip ok">OK (4 de 4 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-03" data-estado="ok">
+        <td class="id">ESC-03-03</td><td>Estudiar y practicar</td><td>HP-03</td>
+        <td><div class="segs" title="6 de 6 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>6/6</small></td>
+        <td><span class="chip ok">OK (6 de 6 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">QA-30 (controles de láminas) y QA-31 (laboratorios sin poder terminar) · por corregir</td>
+      </tr>
+      <tr data-camino="HP-03" data-estado="ok">
+        <td class="id">ESC-03-04</td><td>Descargar (asignada sí, compartida no)</td><td>HP-03</td>
+        <td><div class="segs" title="5 de 5 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>5/5</small></td>
+        <td><span class="chip ok">OK (5 de 5 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-03" data-estado="ok">
+        <td class="id">ESC-03-05</td><td>Trabajo sin red y sincronización</td><td>HP-03</td>
+        <td><div class="segs" title="6 de 6 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>6/6</small></td>
+        <td><span class="chip ok">OK (6 de 6 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-03" data-estado="ok">
+        <td class="id">ESC-03-06</td><td>Quién completó, cierre y «Salir»</td><td>HP-03</td>
+        <td><div class="segs" title="5 de 5 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>5/5</small></td>
+        <td><span class="chip ok">OK (5 de 5 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-04" data-estado="ok">
+        <td class="id">ESC-04-01</td><td>Administrador: primer ingreso y cambio de clave</td><td>HP-04</td>
+        <td><div class="segs" title="6 de 6 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>6/6</small></td>
+        <td><span class="chip ok">OK (6 de 6 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-04" data-estado="ok">
+        <td class="id">ESC-04-02</td><td>Profesor</td><td>HP-04</td>
+        <td><div class="segs" title="6 de 6 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>6/6</small></td>
+        <td><span class="chip ok">OK (6 de 6 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-04" data-estado="ok">
+        <td class="id">ESC-04-03</td><td>Alumno: su información y su aislamiento</td><td>HP-04</td>
+        <td><div class="segs" title="5 de 5 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>5/5</small></td>
+        <td><span class="chip ok">OK (5 de 5 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">QA-32 (las sesiones de Student duran poco) · por corregir</td>
+      </tr>
+      <tr data-camino="HP-04" data-estado="ok">
+        <td class="id">ESC-04-04</td><td>Credencial errónea y bloqueo</td><td>HP-04</td>
+        <td><div class="segs" title="5 de 5 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>5/5</small></td>
+        <td><span class="chip ok">OK (5 de 5 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-04" data-estado="ok">
+        <td class="id">ESC-04-05</td><td>Sesión única por persona</td><td>HP-04</td>
+        <td><div class="segs" title="3 de 3 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>3/3</small></td>
+        <td><span class="chip ok">OK (3 de 3 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">QA-32 (las sesiones de Student duran poco) · por corregir</td>
+      </tr>
+      <tr data-camino="HP-04" data-estado="ok">
+        <td class="id">ESC-04-06</td><td>Alumno intenta entrar en OPS</td><td>HP-04</td>
+        <td><div class="segs" title="2 de 2 pasos correctos"><i class="s ok"></i><i class="s ok"></i></div><small>2/2</small></td>
+        <td><span class="chip ok">OK (2 de 2 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="HP-04" data-estado="ok">
+        <td class="id">ESC-04-07</td><td>Modo por defecto (sin sesión)</td><td>HP-04</td>
+        <td><div class="segs" title="4 de 4 pasos correctos"><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i><i class="s ok"></i></div><small>4/4</small></td>
+        <td><span class="chip ok">OK (4 de 4 pasos)</span></td>
+        <td>2026-10-08</td><td class="ev">Sin hallazgos</td>
+      </tr>
+      <tr data-camino="Transversal" data-estado="pend">
+        <td class="id">ESC-05-01</td><td>Ancho de banda del router y transmisión de objetos pesados con 25 y 35 tabletas</td><td>Transversal</td>
+        <td><div class="segs" title="0 de 16 pasos correctos"><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i><i class="s pend"></i></div><small>0/16</small></td>
+        <td><span class="chip pend">Pendiente</span></td>
+        <td></td><td class="ev"></td>
+      </tr></tbody>
+    </table></div>
+    <p class="nota" style="margin-top:12px">Los pasos de HP-01 se dieron por correctos según el reporte del responsable; el detalle de cada falla y su diagnóstico está en el archivo de escenarios. HP-02 y ESC-05-01 todavía no se ejecutan. HP-03 y HP-04 se dieron por correctos según el reporte del responsable; sus correcciones (QA-30, QA-31 y QA-32) están en la tabla de hallazgos.</p>
+  </section>
+</main>
+<footer><div class="wrap">Generado desde <code>escenarios-qa-02.md</code>. Se regenera al actualizar el registro.</div></footer>
+<script>
+document.querySelectorAll('.filtros button').forEach(function(b) {
+  b.addEventListener('click', function() {
+    document.querySelectorAll('.filtros button').forEach(function(x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    var f = b.dataset.f;
+    document.querySelectorAll('#tabla-esc tbody tr').forEach(function(tr) {
+      tr.hidden = !(f === 'todos' || tr.dataset.camino === f);
+    });
+  });
+});
+</script>
+</body>
+</html>

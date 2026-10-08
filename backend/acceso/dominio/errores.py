@@ -89,6 +89,16 @@ class SesionInactiva(SesionInvalida):
     codigo = "sesion_inactiva"
 
 
+class PaseDeMediosInvalido(SesionInvalida):
+    """El pase de medios de la dirección no es válido (firma, tipo o forma)."""
+    codigo = "pase_de_medios_invalido"
+
+
+class PaseDeMediosVencido(PaseDeMediosInvalido):
+    """El pase de medios caducó: hay que volver a pedir la lección para recibir direcciones nuevas."""
+    codigo = "pase_de_medios_vencido"
+
+
 class SesionCerradaEnOtroDispositivo(SesionInvalida):
     """La sesión se cerró porque la persona entró desde otro dispositivo (sesión única, INV-011)."""
     codigo = "sesion_cerrada_otro_dispositivo"

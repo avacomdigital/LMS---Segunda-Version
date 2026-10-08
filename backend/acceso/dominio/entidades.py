@@ -72,7 +72,7 @@ class PoliticaCredencial:
     intentos_maximos: int                   # cuántas veces puede equivocarse antes de quedar bloqueado
     ventana_intentos_min: int               # en cuántos minutos se cuentan esos errores (pasado ese rato, borrón y cuenta nueva)
     bloqueo_minutos: int                    # cuánto dura el castigo. El docente puede levantarlo antes
-    duracion_sesion_min: int                # 240 = cuatro horas: más que una jornada de clase
+    duracion_sesion_min: int                # 480 = ocho horas: una jornada escolar completa
     vigencia_credencial_dias: int | None    # cada cuánto caduca la clave. None = no caduca nunca
     permite_acceso_temporal: bool           # si a este perfil se le puede dar el «pase de emergencia» de examen
     creado_en: int

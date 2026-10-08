@@ -39,6 +39,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -64,7 +66,11 @@ RUTA_SESIONES_MEDIOS = "/v2/media-sessions"
 
 LOTE_MAXIMO = 200          # «hasta 200 respuestas dentro de items»
 PAGINA_CURSOS = 100
-TTL_SESION_MEDIOS_SEG = 60  # una sesión por petición de bytes; muere sola, no se guarda
+TTL_SESION_MEDIOS_SEG = 60  # sin reutilización: una sesión por petición de bytes; muere sola, no se guarda
+TTL_SESION_MEDIOS_REUSO_SEG = 15 * 60   # con reutilización (lo normal desde el 2026-10-07): una por (curso, medio) cada 15 min
+MARGEN_SESION_MEDIOS_SEG = 60           # con menos de un minuto de vida no se reutiliza: un video largo no debe cortarse a mitad
+_sesiones_medios: dict[tuple, tuple[float, dict]] = {}
+_candado_sesiones = threading.Lock()
 
 # Enumeraciones del contrato. Si llega un valor fuera de estas listas, el contrato subió
 # de versión: el LMS lo MUESTRA con rótulo genérico, no lo descarta (§9 del mapeo).
@@ -393,40 +399,101 @@ def sesion_medios(curso_ref: str, media_refs: list[str] | None = None, leccion_r
     return _pedir("POST", RUTA_SESIONES_MEDIOS, cuerpo=cuerpo)
 
 
-def abrir_medio(curso_ref: str, media_ref: str, ruta_interna: str | None = None, rango: str | None = None, metodo: str = "GET"):
-    """Bytes de un medio del paquete, en paso a través: abre una sesión de medios de un
-    minuto sólo para ese medio y pide la URL que devuelve. Devuelve la respuesta HTTP cruda
-    (Content-Type, Content-Length, Content-Range, Accept-Ranges); quien la pide la cierra.
-
-    `ruta_interna`: `subtitulos` (VTT) o `transcripcion` (texto) para audio y video, o la
-    ruta de un archivo dentro de la carpeta de una simulación (`index.html`, `js/app.js`)."""
+def ttl_sesion_medios() -> int:
+    """Segundos que se reutiliza una sesión de medios por (curso, medio). `AVACOM_CONTENIDO_SESION_MEDIOS_SEG=0` vuelve a «una sesión por
+    petición de bytes» (lo de antes del 2026-10-07)."""
     try:
-        sesion = sesion_medios(curso_ref, [media_ref])
+        return max(0, int(getattr(settings, "AVACOM_CONTENIDO_SESION_MEDIOS_SEG", TTL_SESION_MEDIOS_REUSO_SEG)))
+    except (TypeError, ValueError):
+        return TTL_SESION_MEDIOS_REUSO_SEG
+
+
+def _sesion_de_medio(curso_ref: str, media_ref: str, *, renovar: bool = False) -> dict:
+    """La sesión de medios de ESE medio. Con reutilización, la misma mientras le queden más de `MARGEN_SESION_MEDIOS_SEG`: un reproductor
+    pide un video en varios trozos (`Range`) y 35 tabletas a la vez multiplican esas peticiones; cada `POST /v2/media-sessions` cuesta ~45 ms
+    en AVACOM Contenido (medido el 2026-10-07) y no hace falta repetirlo por trozo. Lo guardado es sólo la URL-capacidad efímera que la
+    propia Contenido emitió con ese fin (`ttlSec`): ni el curso ni el token se guardan nunca."""
+    ttl = ttl_sesion_medios()
+    # La clave lleva el servidor de medios y el token vigentes (link.json se relee en cada petición, como manda el contrato): si Contenido
+    # se reinicia, sus capacidades viejas no se vuelven a usar aunque no hayan vencido.
+    nota = leer_enlace()
+    clave = (curso_ref, media_ref, str(nota.get("puerto_medios")), hashlib.sha256(str(nota.get("token")).encode("utf-8")).hexdigest()[:16])
+    ahora = time.monotonic()
+    if ttl and not renovar:
+        with _candado_sesiones:
+            guardada = _sesiones_medios.get(clave)
+        if guardada and guardada[0] - ahora > MARGEN_SESION_MEDIOS_SEG:
+            return guardada[1]
+    try:
+        sesion = sesion_medios(curso_ref, [media_ref], ttl_seg=ttl or TTL_SESION_MEDIOS_SEG)
     except BibliotecaError as error:
         # La API responde 400 invalid_parameter a un mediaId que no está en el curso: para el aula es «no existe».
         if error.codigo == "invalid_parameter" and "media" in error.detalle.lower():
             raise BibliotecaError(404, error.detalle, codigo="not_found") from error
         raise
+    if ttl:
+        with _candado_sesiones:
+            if len(_sesiones_medios) > 2000:   # un nodo con muchos cursos: se descartan las vencidas antes de crecer
+                for k in [k for k, (vence, _) in _sesiones_medios.items() if vence <= ahora]:
+                    _sesiones_medios.pop(k, None)
+            _sesiones_medios[clave] = (ahora + ttl, sesion)
+    return sesion
+
+
+def olvidar_sesiones_medios() -> None:
+    """Lo usan las pruebas y el estado de la fuente cuando Contenido se reinicia (otro `link.json`): las capacidades viejas ya no sirven."""
+    with _candado_sesiones:
+        _sesiones_medios.clear()
+
+
+def _url_de_medio(sesion: dict, media_ref: str, ruta_interna: str | None) -> str:
     urls = sesion.get("urls") or {}
     url = urls.get(media_ref)
     if not url:
         raise BibliotecaError(404, f"El medio «{media_ref}» no está en el curso.", codigo="not_found")
-    if ruta_interna:
-        ruta_interna = ruta_interna.strip("/")
-        extras = (sesion.get("extras") or {}).get(media_ref) or {}
-        if ruta_interna in ("subtitulos", "captions"):
-            url = extras.get("captions")
-            if not url:
-                raise BibliotecaError(404, "Este medio no tiene subtítulos.", codigo="not_found")
-        elif ruta_interna in ("transcripcion", "transcript"):
-            url = extras.get("transcript")
-            if not url:
-                raise BibliotecaError(404, "Este medio no tiene transcripción.", codigo="not_found")
-        else:
-            # Archivo dentro de la simulación: <baseUrl><mediaId>/<ruta>. La URL del medio apunta a su entrada.
-            base = str(sesion.get("baseUrl") or url.rsplit("/", 1)[0] + "/")
-            url = f"{base}{_ref(media_ref)}/{urllib.parse.quote(ruta_interna, safe='/')}"
-    return _pedir_medio(url, rango, metodo)
+    if not ruta_interna:
+        return url
+    ruta_interna = ruta_interna.strip("/")
+    extras = (sesion.get("extras") or {}).get(media_ref) or {}
+    # Los nombres del aula (`subtitulos`, `transcripcion`, `poster`) y los del contrato tal como los escribe una página html del curso
+    # (`../{mediaId}/@captions`, `../{mediaId}/@poster`): las dos formas llegan aquí.
+    if ruta_interna in ("subtitulos", "captions", "@captions"):
+        url = extras.get("captions")
+        if not url:
+            raise BibliotecaError(404, "Este medio no tiene subtítulos.", codigo="not_found")
+        return url
+    if ruta_interna in ("transcripcion", "transcript", "@transcript"):
+        url = extras.get("transcript")
+        if not url:
+            raise BibliotecaError(404, "Este medio no tiene transcripción.", codigo="not_found")
+        return url
+    if ruta_interna in ("poster", "@poster"):
+        url = extras.get("poster")
+        if not url:
+            raise BibliotecaError(404, "Este video no tiene imagen de portada.", codigo="not_found")
+        return url
+    # Archivo dentro de la simulación o de la lección html: <baseUrl><mediaId>/<ruta>. La URL del medio apunta a su entrada.
+    base = str(sesion.get("baseUrl") or url.rsplit("/", 1)[0] + "/")
+    return f"{base}{_ref(media_ref)}/{urllib.parse.quote(ruta_interna, safe='/')}"
+
+
+def abrir_medio(curso_ref: str, media_ref: str, ruta_interna: str | None = None, rango: str | None = None, metodo: str = "GET"):
+    """Bytes de un medio del paquete, en paso a través: una sesión de medios sólo para ese medio (reutilizada mientras viva, ver
+    `_sesion_de_medio`) y la URL que devuelve. Devuelve la respuesta HTTP cruda (Content-Type, Content-Length, Content-Range,
+    Accept-Ranges); quien la pide la cierra.
+
+    `ruta_interna`: `subtitulos` (VTT), `transcripcion` (texto) o `poster` (imagen fija) para audio y video —también `@captions`,
+    `@transcript` y `@poster`, como los nombra una página html del curso—, o la ruta de un archivo dentro de la carpeta de una simulación
+    o de una lección html (`index.html`, `js/app.js`, `estilos.css`)."""
+    sesion = _sesion_de_medio(curso_ref, media_ref)
+    try:
+        return _pedir_medio(_url_de_medio(sesion, media_ref, ruta_interna), rango, metodo)
+    except BibliotecaError as error:
+        # Una sesión guardada que Contenido ya no reconoce (se reinició, la revocó): una sola vez, con sesión nueva.
+        if error.codigo != "media_session_not_found" or not ttl_sesion_medios():
+            raise
+        sesion = _sesion_de_medio(curso_ref, media_ref, renovar=True)
+        return _pedir_medio(_url_de_medio(sesion, media_ref, ruta_interna), rango, metodo)
 
 
 # -------------------------------------------------------------------- estado
