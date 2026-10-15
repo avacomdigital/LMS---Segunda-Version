@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Prefijo | `/api/acceso/` (incluido desde `avacom_lms/urls.py`) · 38 rutas (6 de ellas, `padron/`, nacieron el 2026-10-01) |
+| Prefijo | `/api/acceso/` (incluido desde `avacom_lms/urls.py`) · 39 rutas (7 de ellas, `padron/`) |
 | Estilo | `APIView` de DRF, JSON, sin `ModelSerializer` hacia el dominio: las vistas traducen HTTP ↔ casos de uso |
 | Autenticación | `Authorization: Bearer <JWT>`; la clase `AutenticacionJwt` resuelve la sesión (única, con rol efectivo, sujeta a inactividad) y construye un `Principal` |
 | Autorización | Cada vista declara `permiso` (`identity.*`) y calcula el `objetivo`; la decisión la toma `PoliticaAutorizacion` (dominio), nunca la vista |
@@ -291,6 +291,7 @@ Estudiantes y grupos en pocas llamadas, pensadas para una pantalla táctil. No h
 | `/api/acceso/padron/` | GET | `{ instalado, organizacion{codigo,nombre}, grupos[{id,codigo,nombre,periodo,nivel_clave,activo,estudiantes[{id,alias,estado,provisional,origen,confirmado,pin_pendiente}],docentes}], sin_grupo[{id,alias}] }`. Nodo vacío: `{ instalado:false, … }` con **200** (no es un error). Con sesión, sólo los grupos que el alcance permite |
 | `/api/acceso/padron/preparar/` | POST | Sin cuerpo. Crea la organización `AULA-PRUEBA` (día cero de prueba). `201 { organizacion }`; `409` si el nodo ya está instalado |
 | `/api/acceso/padron/grupos/` | POST | `{ "nombre", "codigo"?, "periodo"?, "nivel_clave"? }`. El código sale del nombre («Sexto A» → `SEXTO-A`) y el periodo es el año si no se dan. `201`; `409` si ya existe ese código en ese periodo; `403` si el rol no tiene `identity.group.manage` |
+| `/api/acceso/padron/grupos/{id}/` | PATCH | `{ "nivel_clave" }` (uno de los cinco niveles; obligatorio). Le pone o cambia el nivel a un grupo que ya existe: un grupo creado sin nivel no tiene sistema de calificación (MOD-011) hasta que lo recibe. Con sesión, `identity.group.manage` sobre ese grupo (su profesor o la administración; un grupo ajeno, `403`); sin sesión, la administración del aula. `200` con el grupo; `400` si el nivel no es válido; `404` si no existe |
 | `/api/acceso/padron/estudiantes/` | POST | `{ "nombres", "apellidos"?, "documento"?, "pin"?, "grupo_id" }` → `201 { id, alias, grupo_id, identificador, pin_pendiente }`. **Sin `pin` la cuenta queda en PIN pendiente** (RB-26): ya no se genera ni se entrega `secreto_inicial`. `400 identificador_duplicado`; `404` grupo inexistente; `403` grupo ajeno |
 | `/api/acceso/padron/grupos/{id}/estudiantes/` | POST | `{ "usuario_id" }`: agrega a un estudiante existente (o lo reincorpora, reabriendo su pertenencia). `201`, o `200` con `ya_estaba: true` |
 | `/api/acceso/padron/grupos/{id}/estudiantes/{usuario_id}/` | DELETE | Lo saca del grupo (`hasta = ahora`); la persona no se borra. `204` |
