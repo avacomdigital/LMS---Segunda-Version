@@ -54,6 +54,7 @@ class CapturarContratoTests(BaseGradebook):
         abiertas = self.pendientes(i)
         puntos = self.puntos_de(i)
         self.guardar("libro_con_revision", self.libro())
+        self.guardar("registrar_con_pendientes", self.gb(f"/asignaciones/{a['id']}/registrar/", {}))        # en revisión docente: no se puede registrar todavía, y se dice por qué
         self.guardar("bandeja", self.leer("/revisiones/", grupo_id=self.grupo["id"]))
         detalle = self.leer(f"/revisiones/{i}/")
         self.guardar("revision", detalle)
@@ -96,6 +97,7 @@ class CapturarContratoTests(BaseGradebook):
         a2, i2, _, _ = self.examen_entregado(abiertas=False, asignacion=self.crear_asignacion("supervisado", tiempo={"modo": "sin_limite"}))
         self.sincronizar()
         self.guardar("publicar_asignacion", self.gb(f"/asignaciones/{a2['id']}/publicar/", {}))
+        self.guardar("registrar_ya_registrada", self.gb(f"/asignaciones/{a2['id']}/registrar/", {}))
         self.guardar("asignacion", self.leer(f"/asignaciones/{a2['id']}/"))
         self.guardar("clasificacion", self.gb(f"/asignaciones/{a2['id']}/clasificacion/", {"tipo_evaluacion": "formativa", "objetivos": ["obj-1"]}, metodo="put"))
         self.guardar("resumen", self.leer("/resumen/", grupo_id=self.grupo["id"]))
@@ -114,4 +116,5 @@ class CapturarContratoTests(BaseGradebook):
         _, i3, _, _ = self.examen_entregado(abiertas=False, asignacion=a3, hw=hw, alumno_id=ana_id)
         self.accion(f"/intentos/{i3}/liberar-resultado/", {})
         self.guardar("mias_simple", self.leer("/mias/", cliente=self.api, alumno_id=ana_id))
+        self.guardar("registrar_modo_simple", self.gb(f"/asignaciones/{a3['id']}/registrar/", {}))          # en modo simple no se registra nada y se dice
         self.guardar("libro_simple", self.libro(grupo_id=grupo_pre["id"]))

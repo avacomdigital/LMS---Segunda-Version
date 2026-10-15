@@ -189,6 +189,71 @@ public sealed class CalificacionesTests
         Assert.Equal("0 calificaciones · 1 por completar", VistaDelLibro.DetalleDeAgregado(vacio));
     }
 
+    // ----------------------------------------------------------------------------------- registrar lo calificado
+
+    [Fact]
+    public void Lo_calificado_antes_de_elegir_el_sistema_se_cuenta_por_columna_y_solo_si_el_estudiante_completo()
+    {
+        var libro = Cargar<LibroDelGrupo>("libro");
+        var columna = libro.Asignaciones[0].Id;
+        var celda = PrimeraCelda(libro);
+        Assert.Equal(0, VistaDelLibro.SinRegistrar(libro, columna));                            // ya tiene nota registrada
+        var sinRegistro = libro with { Alumnos = [libro.Alumnos[0] with { Celdas = new() { [columna] = celda with { Estado = EstadosDeResultado.SinRegistro, CalificacionId = null, Presentacion = null } } }] };
+        Assert.Equal(1, VistaDelLibro.SinRegistrar(sinRegistro, columna));
+        Assert.Equal(0, VistaDelLibro.SinRegistrar(sinRegistro, "otra"));
+        var enProgreso = libro with { Alumnos = [libro.Alumnos[0] with { Celdas = new() { [columna] = celda with { Estado = EstadosDeResultado.SinRegistro, EstadoSimple = EstadosSimples.EnProgreso } } }] };
+        Assert.Equal(0, VistaDelLibro.SinRegistrar(enProgreso, columna));                       // quien no terminó no tiene nada que registrar
+    }
+
+    [Fact]
+    public void Una_celda_sin_registro_no_se_pinta_como_nota_ni_como_cero()
+    {
+        var libro = Cargar<LibroDelGrupo>("libro");
+        var celda = PrimeraCelda(libro) with { Estado = EstadosDeResultado.SinRegistro, CalificacionId = null, Presentacion = null, PuntajeEfectivo = null, PuntajeOriginal = null };
+        var c = VistaDelLibro.Describir(celda, modoCalificaciones: true);
+        Assert.Equal("Sin registro", c.Estado);
+        Assert.NotEqual("0", c.Principal);
+        Assert.Null(c.CalificacionId);
+    }
+
+    [Fact]
+    public void Registrar_una_asignacion_dice_cuantas_se_registraron_y_que_siguen_sin_publicar()
+    {
+        var r = new RegistroDeAsignacion("asg", 2, 1, [], 0);
+        var (titulo, detalle, problemas) = VistaDelLibro.DescribirRegistro(r, id => "Julian");
+        Assert.Equal("Se registraron 2 calificaciones", titulo);
+        Assert.False(problemas);
+        Assert.Contains("sistema de calificación", detalle);
+        Assert.Contains("hasta que las publiques", detalle);
+        Assert.Contains("1 ya estaba registrada.", detalle);
+        Assert.Equal("Se registró 1 calificación", VistaDelLibro.DescribirRegistro(new RegistroDeAsignacion("asg", 1, 0, [], 0), id => "x").Titulo);
+    }
+
+    [Fact]
+    public void Lo_que_no_se_pudo_registrar_se_dice_con_quien_y_por_que_sin_tumbar_lo_demas()
+    {
+        var r = Cargar<RegistroDeAsignacion>("registrar_con_pendientes");
+        var (titulo, detalle, problemas) = VistaDelLibro.DescribirRegistro(r, id => "Juan P.");
+        Assert.Equal("No se registró ninguna: 1 aún no se puede", titulo);
+        Assert.True(problemas);
+        Assert.Contains("Sin registrar: Juan P. · Quedan respuestas por revisar", detalle);
+        var mezcla = new RegistroDeAsignacion("asg", 1, 0, r.NoRegistrables, 1);
+        var (tituloMezcla, detalleMezcla, _) = VistaDelLibro.DescribirRegistro(mezcla, id => "Juan P.");
+        Assert.Equal("Se registró 1 calificación", tituloMezcla);
+        Assert.Contains("1 es de un nivel en modo simple y no se registró.", detalleMezcla);
+    }
+
+    [Fact]
+    public void En_un_nivel_en_modo_simple_no_se_registra_nada_y_se_dice()
+    {
+        var r = Cargar<RegistroDeAsignacion>("registrar_modo_simple");
+        var (titulo, detalle, problemas) = VistaDelLibro.DescribirRegistro(r, id => "Ana");
+        Assert.Equal("Este nivel está en modo simple: no se registra nada", titulo);
+        Assert.Null(detalle);
+        Assert.False(problemas);
+        Assert.Equal("No había nada por registrar", VistaDelLibro.DescribirRegistro(new RegistroDeAsignacion("asg", 0, 0, [], 0), id => "x").Titulo);
+    }
+
     // ----------------------------------------------------------------------------------- publicar lo revisado
 
     [Fact]

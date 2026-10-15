@@ -15,7 +15,7 @@ from __future__ import annotations
 from ..dominio import catalogos as cat
 from ..dominio import puntaje as pj
 from ..dominio.errores import ConflictoDeVersion, IntentoNoCalificable, ModoSimple, NoEncontrado
-from .base import _CasoDeUso, contexto_de, exigir_sobre_resultado, modo_del_nivel, nuevo_id, salida_calificacion
+from .base import _CasoDeUso, contexto_de, exigir_en_asignacion, exigir_sobre_resultado, modo_del_nivel, nuevo_id, salida_calificacion
 from .derivados import RecalcularResultado
 from .puertos import Actor, UnidadDeTrabajo
 
@@ -187,3 +187,36 @@ class RegistrarCalificacion(_CasoDeUso):
                 raise ModoSimple("El nivel de este grupo está en modo simple: no se registran calificaciones. Un administrador puede activar el modo calificaciones.",
                                  nivel_clave=contexto["nivel_clave"] or None)
             return {"resultado": resultado, "calificacion": salida_calificacion(uow, fila, intento=intento) if fila else None, "servidor_en": ahora, "modo": modo}
+
+
+class RegistrarAsignacion(_CasoDeUso):
+    """Registra de una vez las calificaciones de TODOS los intentos ya calificados de una evaluación (`POST …/asignaciones/{id}/registrar/`): lo mismo que `RegistrarCalificacion`
+    para cada intento, a petición del profesor. Es el camino cuando el nivel pasó de modo simple (o de no tener nivel) a modo calificaciones y la evaluación ya estaba calificada:
+    ese paso NO registra nada solo, y sin esto el libro dice «sin registro» y no hay nota que ver. Los intentos que aún no se pueden registrar se cuentan con su motivo y no
+    impiden los demás. Idempotente: repetirlo no crea nada dos veces. Lo registrado queda `revisada` (provisional, sin publicar): publicar es otra decisión."""
+
+    def ejecutar(self, actor: Actor, asignacion_id: str) -> dict:
+        ahora = self.s.reloj.ahora_ms()
+        with self.s.uow() as uow:
+            asignacion = uow.evaluacion.asignacion(asignacion_id)
+            if asignacion is None:
+                raise NoEncontrado("No existe esa asignación.", asignacion_id=asignacion_id)
+            exigir_en_asignacion(uow, self.s.autorizacion, actor, cat.P_MODIFY, asignacion)
+            registrador = Registrador(self.s)
+            registradas, ya_registradas, en_modo_simple = [], 0, 0
+            omitidas: list[dict] = []
+            for intento in uow.evaluacion.intentos_de_asignacion(asignacion_id):
+                contexto = contexto_de(uow, asignacion, intento["alumno_id"])
+                modo, _ = modo_del_nivel(uow, contexto["nivel_clave"])
+                if modo == cat.SIMPLE and uow.calificaciones.por_intento(intento["id"]) is None:
+                    en_modo_simple += 1
+                    continue
+                fila, resultado, motivo = registrador.registrar(uow, intento["id"], ahora, actor_id=actor.id or cat.SISTEMA)
+                if resultado == "creada" and fila:
+                    registradas.append(fila["id"])
+                elif resultado == "no_calificable":
+                    omitidas.append({"intento_id": intento["id"], "alumno_id": intento["alumno_id"], "motivo": motivo, "detalle": _MOTIVOS.get(motivo or "", "")})
+                elif resultado in ("sin_cambios", "reabierta", "recalculada"):
+                    ya_registradas += 1
+            return {"asignacion_id": asignacion_id, "registradas": len(registradas), "calificaciones": registradas, "ya_registradas": ya_registradas,
+                    "no_registrables": omitidas, "en_modo_simple": en_modo_simple, "servidor_en": ahora}

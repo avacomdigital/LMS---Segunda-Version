@@ -370,6 +370,12 @@ class PadronGruposView(VistaPadron):
         return Response(pad.RegistrarGrupo(self.s).ejecutar(self.actor(request), datos), status=201)
 
 
+class PadronGrupoView(VistaPadron):
+    def patch(self, request, pk: str):
+        datos = _validar(s.GrupoNivelEntrada, request.data)
+        return Response(pad.CambiarNivelDeGrupo(self.s).ejecutar(self.actor(request), pk, datos["nivel_clave"]))
+
+
 class PadronEstudiantesView(VistaPadron):
     def post(self, request):
         datos = _validar(s.EstudiantePadronEntrada, request.data)

@@ -536,6 +536,23 @@ public sealed record ResumenDePeriodo(
     [property: JsonPropertyName("ponderado")] bool Ponderado,
     [property: JsonPropertyName("aviso")] string Aviso);
 
+/// <summary>
+/// Lo que responde «registrar lo calificado» de una evaluación: cuántas calificaciones se registraron, cuántas ya lo estaban, qué intentos aún no se pueden registrar (con su motivo) y cuántos
+/// son de un nivel en modo simple (ahí no se registra nada).
+/// </summary>
+public sealed record RegistroDeAsignacion(
+    [property: JsonPropertyName("asignacion_id")] string AsignacionId,
+    [property: JsonPropertyName("registradas")] int Registradas,
+    [property: JsonPropertyName("ya_registradas")] int YaRegistradas,
+    [property: JsonPropertyName("no_registrables")] IReadOnlyList<IntentoNoRegistrable> NoRegistrables,
+    [property: JsonPropertyName("en_modo_simple")] int EnModoSimple);
+
+public sealed record IntentoNoRegistrable(
+    [property: JsonPropertyName("intento_id")] string IntentoId,
+    [property: JsonPropertyName("alumno_id")] string AlumnoId,
+    [property: JsonPropertyName("motivo")] string? Motivo,
+    [property: JsonPropertyName("detalle")] string? Detalle);
+
 public sealed record PublicacionDeAsignacion(
     [property: JsonPropertyName("asignacion_id")] string AsignacionId,
     [property: JsonPropertyName("total_publicadas")] int TotalPublicadas,

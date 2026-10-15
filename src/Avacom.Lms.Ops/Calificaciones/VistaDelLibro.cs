@@ -117,6 +117,34 @@ internal static class VistaDelLibro
     public static int PorPublicar(LibroDelGrupo libro, string asignacionId) =>
         libro.Alumnos.Count(a => a.Celdas.TryGetValue(asignacionId, out var c) && c.Estado == EstadosDeResultado.Revisado && !c.Publicada);
 
+    /// <summary>
+    /// Cuántos estudiantes completaron una evaluación que está calificada en MOD-010 pero SIN calificación registrada: pasa cuando el nivel estaba en modo simple (o sin nivel) al calificarse y después
+    /// se eligió un sistema. Pasar de modo no registra nada solo; «Registrar lo calificado» lo hace.
+    /// </summary>
+    public static int SinRegistrar(LibroDelGrupo libro, string asignacionId) =>
+        libro.Alumnos.Count(a => a.Celdas.TryGetValue(asignacionId, out var c) && c.Estado == EstadosDeResultado.SinRegistro && c.EstadoSimple == EstadosSimples.Completado);
+
+    /// <summary>El aviso de «Registrar lo calificado»: cuántas se registraron y, de lo que no, quién y por qué (lo que no se pudo no tumba a lo demás).</summary>
+    public static (string Titulo, string? Detalle, bool Problemas) DescribirRegistro(RegistroDeAsignacion r, Func<string, string> rotuloDeAlumno)
+    {
+        var titulo = r.Registradas switch
+        {
+            0 when r.NoRegistrables.Count == 0 && r.EnModoSimple > 0 => "Este nivel está en modo simple: no se registra nada",
+            0 when r.NoRegistrables.Count == 0 => "No había nada por registrar",
+            0 => r.NoRegistrables.Count == 1 ? "No se registró ninguna: 1 aún no se puede" : $"No se registró ninguna: {r.NoRegistrables.Count} aún no se pueden",
+            1 => "Se registró 1 calificación",
+            var n => $"Se registraron {n} calificaciones",
+        };
+        var lineas = new List<string>();
+        if (r.Registradas > 0) lineas.Add("Ya se ven con el sistema de calificación del nivel, sin publicar: el alumno no las ve hasta que las publiques.");
+        if (r.YaRegistradas > 0) lineas.Add(r.YaRegistradas == 1 ? "1 ya estaba registrada." : $"{r.YaRegistradas} ya estaban registradas.");
+        if (r.EnModoSimple > 0 && r.Registradas > 0) lineas.Add($"{r.EnModoSimple} {(r.EnModoSimple == 1 ? "es" : "son")} de un nivel en modo simple y no se registr{(r.EnModoSimple == 1 ? "ó" : "aron")}.");
+        foreach (var o in r.NoRegistrables.Take(6))
+            lineas.Add($"Sin registrar: {rotuloDeAlumno(o.AlumnoId)} · {(string.IsNullOrWhiteSpace(o.Detalle) ? "todavía no se puede registrar" : o.Detalle)}");
+        if (r.NoRegistrables.Count > 6) lineas.Add($"…y {r.NoRegistrables.Count - 6} más.");
+        return (titulo, lineas.Count == 0 ? null : string.Join("\n", lineas), r.NoRegistrables.Count > 0);
+    }
+
     public static int Reabiertas(LibroDelGrupo libro) =>
         libro.Alumnos.Sum(a => a.Celdas.Values.Count(c => c.Estado == EstadosDeResultado.Reabierto));
 

@@ -7,6 +7,7 @@ que ya existen en una API pensada para una pantalla:
 
   · EstadoPadron          → una sola lectura con los grupos, sus estudiantes y los estudiantes sin grupo.
   · RegistrarGrupo        → CrearGrupo (+ el docente que lo crea queda como DOCENTE del grupo).
+  · CambiarNivelDeGrupo   → ActualizarGrupo (sólo el nivel): un grupo creado sin nivel puede recibirlo después.
   · RegistrarEstudiante   → CrearUsuario(rol STUDENT, grupo_id): persona + identificador + PIN + pertenencia, en una transacción.
   · MatricularEstudiante  → AgregarMiembro (el estudiante ya existe y entra a otro grupo).
   · RetirarEstudiante     → RetirarMiembro.
@@ -96,6 +97,14 @@ class RegistrarGrupo(_Padron):
                    "periodo": str(datos.get("periodo") or "").strip() or _periodo_actual(),
                    "nivel_clave": datos.get("nivel_clave") or None}
         return cu.CrearGrupo(self.s).ejecutar(actor, entrada)
+
+
+class CambiarNivelDeGrupo(_Padron):
+    """Le pone (o cambia) el nivel educativo a un grupo que ya existe. El sistema de calificación se elige por nivel: un grupo creado sin nivel (la pantalla «Grupos» lo deja
+    opcional) está siempre en modo simple. Con sesión lo hace quien tenga `identity.group.manage` sobre ese grupo (su profesor o la administración); sin sesión, la administración."""
+
+    def ejecutar(self, principal: Principal | None, grupo_id: str, nivel_clave: str) -> dict:
+        return cu.ActualizarGrupo(self.s).ejecutar(self.actor(principal), grupo_id, {"nivel_clave": nivel_clave})
 
 
 class RegistrarEstudiante(_Padron):

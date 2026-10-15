@@ -106,6 +106,9 @@ public sealed class GradebookApi(HttpClient http, Uri baseUri) : ClienteJson(htt
     public Task<PublicacionDeAsignacion?> PublicarAsignacionAsync(string actor, string asignacionId, CancellationToken ct = default) =>
         EnviarAsync<PublicacionDeAsignacion>(Base + $"asignaciones/{Esc(asignacionId)}/publicar/", Docente(actor), ct);
 
+    public Task<RegistroDeAsignacion?> RegistrarAsignacionAsync(string actor, string asignacionId, CancellationToken ct = default) =>
+        EnviarAsync<RegistroDeAsignacion>(Base + $"asignaciones/{Esc(asignacionId)}/registrar/", Docente(actor), ct);
+
     // ====================================================================================== configuración
 
     public Task<ConfiguracionAcademica?> ConfiguracionAsync(string actor, CancellationToken ct = default) =>

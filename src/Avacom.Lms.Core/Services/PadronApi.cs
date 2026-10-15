@@ -86,6 +86,11 @@ public interface IPadronApi
     Task<bool> ReiniciarPinAsync(string usuarioId, CancellationToken ct = default);
     /// <summary>«Confirmar» (RB-20): el profesor respalda a un alumno que se registró solo.</summary>
     Task<bool> ConfirmarAsync(string usuarioId, CancellationToken ct = default);
+    /// <summary>
+    /// Le pone nivel educativo a un grupo que ya existe. El sistema de calificación se elige por nivel: un grupo sin nivel está siempre en modo simple. Lo puede quien administra ese
+    /// grupo (su profesor o la administración); si no, <c>false</c> con <c>sin_permiso</c> en <see cref="UltimoError"/>.
+    /// </summary>
+    Task<bool> AsignarNivelAsync(string grupoId, string nivelClave, CancellationToken ct = default);
 }
 
 public sealed class PadronApi(HttpClient http, Uri baseUri) : ClienteJson(http, baseUri), IPadronApi
@@ -115,4 +120,7 @@ public sealed class PadronApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
 
     public async Task<bool> ConfirmarAsync(string usuarioId, CancellationToken ct = default) =>
         await EnviarAsync<System.Text.Json.JsonElement?>($"api/acceso/usuarios/{Uri.EscapeDataString(usuarioId)}/confirmar/", new Vacio(), ct) is not null;
+
+    public async Task<bool> AsignarNivelAsync(string grupoId, string nivelClave, CancellationToken ct = default) =>
+        await ParchearAsync<System.Text.Json.JsonElement?>($"api/acceso/padron/grupos/{Uri.EscapeDataString(grupoId)}/", new { nivel_clave = nivelClave }, ct) is not null;
 }

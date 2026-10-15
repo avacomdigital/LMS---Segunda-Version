@@ -161,6 +161,20 @@ public sealed class ContratoGradebookTests
     }
 
     [Fact]
+    public void RegistrarLoCalificado_DiceCuantasSeRegistraronCuantasYaEstabanYLoQueAunNoSePuede()
+    {
+        var ya = Cargar<RegistroDeAsignacion>("registrar_ya_registrada");
+        Assert.Equal((0, 1, 0, 0), (ya.Registradas, ya.YaRegistradas, ya.NoRegistrables.Count, ya.EnModoSimple));
+        var simple = Cargar<RegistroDeAsignacion>("registrar_modo_simple");
+        Assert.Equal((0, 0, 1), (simple.Registradas, simple.YaRegistradas, simple.EnModoSimple));
+        var pendiente = Assert.Single(Cargar<RegistroDeAsignacion>("registrar_con_pendientes").NoRegistrables);
+        Assert.Equal("revision_pendiente", pendiente.Motivo);
+        Assert.Contains("respuestas por revisar", pendiente.Detalle);
+        Assert.NotEmpty(pendiente.IntentoId);
+        Assert.NotEmpty(pendiente.AlumnoId);
+    }
+
+    [Fact]
     public void Publicacion_EstampaLaPresentacionYSeRetiraConMotivo()
     {
         var p = Cargar<CambioDeCalificacion>("publicada").Calificacion;

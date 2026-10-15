@@ -58,6 +58,7 @@ urlpatterns = [
     path("padron/", views.PadronView.as_view(), name="acceso-padron"),
     path("padron/preparar/", views.PadronPrepararView.as_view(), name="acceso-padron-preparar"),
     path("padron/grupos/", views.PadronGruposView.as_view(), name="acceso-padron-grupos"),
+    path("padron/grupos/<str:pk>/", views.PadronGrupoView.as_view(), name="acceso-padron-grupo"),
     path("padron/grupos/<str:pk>/estudiantes/", views.PadronMatriculaView.as_view(), name="acceso-padron-matricula"),
     path("padron/grupos/<str:pk>/estudiantes/<str:usuario_id>/", views.PadronMatriculaView.as_view(), name="acceso-padron-retiro"),
     path("padron/estudiantes/", views.PadronEstudiantesView.as_view(), name="acceso-padron-estudiantes"),

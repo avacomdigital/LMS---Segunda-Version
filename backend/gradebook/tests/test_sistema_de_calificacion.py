@@ -9,6 +9,10 @@ from decimal import Decimal as D
 
 from ..dominio import escala as esc
 from ..dominio import plantillas_escalas as plantillas
+from evaluacion import models as m10
+from evaluacion.dominio import catalogos as cat10
+
+from .. import models as m
 from .base import GB, BaseGradebook
 
 
@@ -113,3 +117,102 @@ class SistemaVisibleTests(BaseGradebook):
         self.assertEqual(self.libro()["escala"]["pais"], "ES")                            # el nivel ya usa el sistema español…
         e = self.lo_de_juan()["calificacion"]["escala"]
         self.assertEqual((e["pais"], e["aprobacion_minima"], e["aprueba_desde"]), ("CO", 3.0, "Básico"))     # …y la nota publicada sigue siendo la colombiana
+
+
+class NivelDelGrupoTests(BaseGradebook):
+    """Un grupo sin nivel está siempre en modo simple (el sistema de calificación se elige por nivel): quien lo administra puede asignarle uno desde OPS."""
+
+    def sin_nivel(self) -> dict:
+        r = self.admin.post("/api/acceso/grupos/", {"codigo": "OB", "nombre": "Octavo B", "periodo": "2026"}, format="json")
+        self.assertEqual(r.status_code, 201, r.content)
+        grupo = r.json()
+        self.assertFalse(grupo["nivel_clave"])
+        self.admin.post(f"/api/acceso/grupos/{grupo['id']}/miembros/", {"usuario_id": self.docente_id, "papel": "DOCENTE"}, format="json")
+        return grupo
+
+    def test_un_grupo_sin_nivel_esta_en_modo_simple_aunque_el_nivel_secundaria_tenga_sistema(self):
+        grupo = self.sin_nivel()
+        libro = self.libro(grupo_id=grupo["id"])
+        self.assertEqual((libro["modo"], libro["escala"], libro["grupo"]["nivel_clave"]), ("simple", None, ""))
+
+    def test_el_profesor_asigna_el_nivel_de_su_grupo_y_el_libro_pasa_al_sistema_de_ese_nivel(self):
+        grupo = self.sin_nivel()
+        r = self.docente.patch(f"/api/acceso/grupos/{grupo['id']}/", {"nivel_clave": "secundaria"}, format="json")
+        self.assertEqual(r.status_code, 200, r.content)
+        libro = self.libro(grupo_id=grupo["id"])
+        self.assertEqual((libro["modo"], libro["escala"]["codigo"], libro["grupo"]["nivel_clave"]), ("calificaciones", "gen-0-100", "secundaria"))
+
+    def test_el_profesor_no_cambia_el_nivel_de_un_grupo_que_no_es_suyo(self):
+        r = self.docente.patch(f"/api/acceso/grupos/{self.otro_grupo['id']}/", {"nivel_clave": "primaria"}, format="json")
+        self.assertEqual(r.status_code, 403, r.content)
+
+
+class EvaluacionCalificadaAntesDelSistemaTests(BaseGradebook):
+    """Julian completó su examen cuando el nivel estaba en modo simple; después la administración eligió el sistema. Pasar de modo NO registra nada solo (D-2), así que su celda
+    decía «sin registro» y no había nota que ver: el profesor registra lo ya calificado y la nota sale con el sistema elegido (sin publicar: publicar es otra decisión)."""
+
+    activar_modo = False
+    plantilla = "co-1-5"
+
+    def examen_ya_calificado_y_sistema_elegido(self, **extra):
+        a, i, _, _ = self.examen_entregado(abiertas=False, **extra)
+        self.sincronizar()
+        self.assertEqual(m.Calificacion.objects.count(), 0)                              # en modo simple no hay calificación registrada
+        m10.Asignacion.objects.filter(pk=a["id"]).update(estado=cat10.CERRADA, cerrada_en=1)          # terminó: ya no impide cambiar el modo del nivel
+        self.avanzar(seg=5)
+        self.activar_calificaciones(self.nivel, self.plantilla)
+        self.sincronizar()
+        return a, i
+
+    def celda(self, a: dict) -> dict:
+        return self.libro()["alumnos"][0]["celdas"][a["id"]]
+
+    def test_antes_de_registrar_la_celda_dice_sin_registro_y_no_hay_nota(self):
+        a, _ = self.examen_ya_calificado_y_sistema_elegido()
+        celda = self.celda(a)
+        self.assertEqual((celda["estado"], celda["calificacion_id"], celda["presentacion"]), ("sin_registro", None, None))
+
+    def test_registrar_la_evaluacion_hace_aparecer_la_nota_con_el_sistema_elegido(self):
+        a, i = self.examen_ya_calificado_y_sistema_elegido()
+        r = self.gb(f"/asignaciones/{a['id']}/registrar/", {})
+        self.assertEqual((r["registradas"], r["ya_registradas"], r["no_registrables"], r["en_modo_simple"]), (1, 0, [], 0))
+        celda = self.celda(a)
+        self.assertEqual((celda["estado"], celda["publicada"]), ("revisado", False))
+        self.assertTrue(celda["presentacion"]["provisional"])                             # sin publicar: provisional
+        self.assertEqual(celda["presentacion"]["escala"]["codigo"], "co-1-5")            # con el sistema elegido
+        self.assertIsNotNone(celda["presentacion"]["presentada"]["valor"])
+        self.assertEqual(m.Calificacion.objects.get(intento_id=i).estado, "revisada")
+
+    def test_registrar_dos_veces_no_duplica_y_el_alumno_no_ve_nada_hasta_publicar(self):
+        a, i = self.examen_ya_calificado_y_sistema_elegido()
+        self.gb(f"/asignaciones/{a['id']}/registrar/", {})
+        otra = self.gb(f"/asignaciones/{a['id']}/registrar/", {})
+        self.assertEqual((otra["registradas"], otra["ya_registradas"]), (0, 1))
+        self.assertEqual(m.Calificacion.objects.filter(intento_id=i).count(), 1)
+        item = self.leer("/mias/", cliente=self.api, alumno_id=self.estudiante_id)["items"][0]
+        self.assertIsNone(item["calificacion"])
+        self.assertNotIn("valor", str(item))
+        cal = self.calificacion(i)
+        self.gb(f"/calificaciones/{cal['id']}/publicar/", {})
+        item = self.leer("/mias/", cliente=self.api, alumno_id=self.estudiante_id)["items"][0]
+        self.assertEqual(item["calificacion"]["escala"]["codigo"], "co-1-5")
+
+    def test_lo_que_aun_no_se_puede_registrar_se_cuenta_con_su_motivo(self):
+        a, i, _, _ = self.examen_entregado(abiertas=True)                                 # con abiertas: queda en revisión docente
+        m10.Asignacion.objects.filter(pk=a["id"]).update(estado=cat10.CERRADA, cerrada_en=1)
+        self.activar_calificaciones(self.nivel, self.plantilla)
+        r = self.gb(f"/asignaciones/{a['id']}/registrar/", {})
+        self.assertEqual((r["registradas"], len(r["no_registrables"])), (0, 1))
+        self.assertEqual((r["no_registrables"][0]["intento_id"], r["no_registrables"][0]["motivo"]), (i, "revision_pendiente"))
+
+    def test_en_un_nivel_en_modo_simple_no_se_registra_nada_y_se_dice(self):
+        a, i, _, _ = self.examen_entregado(abiertas=False)
+        r = self.gb(f"/asignaciones/{a['id']}/registrar/", {})
+        self.assertEqual((r["registradas"], r["en_modo_simple"]), (0, 1))
+        self.assertEqual(m.Calificacion.objects.count(), 0)
+
+    def test_quien_no_enseña_en_ese_grupo_no_registra(self):
+        a, _ = self.examen_ya_calificado_y_sistema_elegido()
+        _, ruiz, _ = self.otro_docente()
+        self.gb(f"/asignaciones/{a['id']}/registrar/", {}, cliente=ruiz, esperado=403)
+        self.assertEqual(m.Calificacion.objects.count(), 0)

@@ -1,0 +1,16 @@
+{
+  "asignacion_id": "c3f8b8bc-0530-4b13-bcad-a442e62a12ba",
+  "calificaciones": [],
+  "en_modo_simple": 0,
+  "no_registrables": [
+    {
+      "alumno_id": "5bc2bb96-0ce3-4dcf-bd07-ca2e0a15530b",
+      "detalle": "Quedan respuestas por revisar: no se registra una calificación definitiva mientras haya componentes pendientes.",
+      "intento_id": "8dbbaf3f-1a4f-49cb-b096-ea0f87800348",
+      "motivo": "revision_pendiente"
+    }
+  ],
+  "registradas": 0,
+  "servidor_en": 1790000000000,
+  "ya_registradas": 0
+}

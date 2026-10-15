@@ -249,6 +249,12 @@ class EstudiantePadronEntrada(serializers.Serializer):
     grupo_id = serializers.CharField(max_length=36)
 
 
+class GrupoNivelEntrada(serializers.Serializer):
+    """Cambiar el nivel de un grupo desde OPS: el nivel es obligatorio (quitarlo no se ofrece: un grupo sin nivel no tiene sistema de calificación)."""
+
+    nivel_clave = serializers.ChoiceField(choices=NIVELES)
+
+
 class MatriculaEntrada(serializers.Serializer):
     usuario_id = serializers.CharField(max_length=36)
 

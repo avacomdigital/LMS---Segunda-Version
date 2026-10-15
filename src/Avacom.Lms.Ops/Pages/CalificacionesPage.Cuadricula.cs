@@ -11,7 +11,7 @@ namespace Avacom.Lms.Ops.Pages;
 // simple). Con muchas evaluaciones se desplaza de lado y el alumno sigue a la vista; el desplazamiento vertical es el de la pantalla.
 public partial class CalificacionesPage
 {
-    private const double AnchoAlumno = 210, AnchoCelda = 224, AltoCabecera = 214, Separacion = 8;
+    private const double AnchoAlumno = 210, AnchoCelda = 224, AltoCabecera = 236, Separacion = 8;
     private const double AltoFilaCalificaciones = 132, AltoFilaSimple = 92;
 
     private void Pintar()
@@ -27,6 +27,7 @@ public partial class CalificacionesPage
         Buscador.IsVisible = true;
         ContenidoHost.Clear();
         _horizontal = null;
+        if (AsignarNivel(libro) is { } sinNivel) ContenidoHost.Add(sinNivel);
         ContenidoHost.Add(Resumen(libro));
         ContenidoHost.Add(Cuadricula(libro));
         if (y > 1 || x > 1)
@@ -88,6 +89,12 @@ public partial class CalificacionesPage
         pila.Add(Ds.Secundario(calif
             ? "El promedio simple de cada estudiante es informativo: no es una nota oficial ni está ponderado. Una calificación provisional puede cambiar hasta que se publique."
             : "Cada celda dice en qué va cada estudiante: ○ no ha empezado · ◐ va en progreso · ● completó. No hay notas ni números.", 14));
+
+        // Lo calificado antes de elegir el sistema no tiene nota hasta registrarlo: se dice aquí, donde se mira, y se arregla en la columna de cada evaluación.
+        var sinRegistrar = calif ? libro.Asignaciones.Sum(a => VistaDelLibro.SinRegistrar(libro, a.Id)) : 0;
+        if (sinRegistrar > 0)
+            pila.Add(ExamenUi.Aviso(sinRegistrar == 1 ? "Hay 1 evaluación calificada sin nota registrada" : $"Hay {sinRegistrar} evaluaciones calificadas sin nota registrada",
+                "Se calificaron cuando este nivel aún estaba en modo simple, y pasar de modo no registra nada solo. Toca «Registrar lo calificado» en la columna de cada evaluación: la nota aparece con el sistema de calificación, sin publicar.", Tono.Info));
 
         var acciones = ExamenUi.Fila();
         if (calif && CalificacionesUi.PuedeCalificar)
@@ -210,6 +217,16 @@ public partial class CalificacionesPage
         // «Publicar lo revisado»: un toque y un aviso con el resultado; no se pregunta dos veces. Sólo si hay algo revisado sin publicar y quien está al frente califica.
         if (calif && CalificacionesUi.PuedeCalificar)
         {
+            // «Registrar lo calificado»: lo que se calificó cuando el nivel aún estaba en modo simple no tiene nota hasta que el profesor lo registra.
+            var sinRegistrar = VistaDelLibro.SinRegistrar(libro, col.Id);
+            if (sinRegistrar > 0)
+            {
+                var registrar = ExamenUi.Accion($"Registrar lo calificado ({sinRegistrar})", Ds.Rango.Primary,
+                    CalificacionesUi.Seguro(nameof(CalificacionesPage), "Registrar", () => RegistrarColumnaAsync(libro, col)), null, $"calificaciones-registrar-{col.Id}", 48, margen: false);
+                registrar.Boton.FontSize = 14;
+                registrar.Boton.Padding = new Thickness(10, 0);
+                pila.Add(registrar.Vista);
+            }
             var porPublicar = VistaDelLibro.PorPublicar(libro, col.Id);
             if (porPublicar > 0)
             {
@@ -219,7 +236,7 @@ public partial class CalificacionesPage
                 publicar.Boton.Padding = new Thickness(10, 0);
                 pila.Add(publicar.Vista);
             }
-            else pila.Add(Ds.Secundario("Nada por publicar", 13));
+            else if (sinRegistrar == 0) pila.Add(Ds.Secundario("Nada por publicar", 13));
         }
         return new Border
         {
@@ -308,6 +325,25 @@ public partial class CalificacionesPage
 
     private Task AbrirBandejaAsync(string? asignacionId) =>
         Shell.Current.GoToAsync($"calificaciones-revision?grupo={Uri.EscapeDataString(_grupoDelLibro)}" + (asignacionId is null ? string.Empty : $"&asignacion={Uri.EscapeDataString(asignacionId)}"));
+
+    /// <summary>
+    /// «Registrar lo calificado» de una evaluación: un toque. Registra las calificaciones de lo que MOD-010 ya calificó y aún no tenía nota en el libro (el nivel estaba en modo simple al calificarse),
+    /// y se ven con el sistema elegido, sin publicar. Es idempotente: reintentarlo tras perder la señal es seguro.
+    /// </summary>
+    private async Task RegistrarColumnaAsync(LibroDelGrupo libro, ColumnaDelLibro col)
+    {
+        var api = Api;
+        var r = await api.RegistrarAsignacionAsync(CalificacionesUi.Actor, col.Id);
+        if (!_visible) return;
+        if (r is null) _aviso.Mostrar($"No se pudo registrar lo calificado de «{col.Titulo}»", CalificacionesUi.Error(api), Tono.Ambar);
+        else
+        {
+            var nombres = libro.Alumnos.ToDictionary(a => a.AlumnoId, a => a.Rotulo);
+            var (titulo, detalle, problemas) = VistaDelLibro.DescribirRegistro(r, id => nombres.TryGetValue(id, out var nombre) ? nombre : "un estudiante");
+            _aviso.Mostrar($"{col.Titulo}: {titulo}", detalle, problemas ? Tono.Ambar : Tono.Exito);
+        }
+        await CargarAsync(forzar: true);
+    }
 
     /// <summary>
     /// «Publicar lo revisado» de una evaluación: un toque, sin pedir confirmación dos veces. El aviso dice cuántas se publicaron y, de las omitidas, quién y por qué (una omitida no

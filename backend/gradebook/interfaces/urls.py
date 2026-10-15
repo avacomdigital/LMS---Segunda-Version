@@ -9,6 +9,7 @@ urlpatterns = [
     path("estudiantes/<str:alumno_id>/", v.EstudianteView.as_view(), name="gradebook-estudiante"),
     path("asignaciones/<str:asignacion_id>/", v.AsignacionView.as_view(), name="gradebook-asignacion"),
     path("asignaciones/<str:asignacion_id>/clasificacion/", v.ClasificacionView.as_view(), name="gradebook-clasificacion"),
+    path("asignaciones/<str:asignacion_id>/registrar/", v.RegistrarAsignacionView.as_view(), name="gradebook-registrar-asignacion"),
     path("asignaciones/<str:asignacion_id>/publicar/", v.PublicarAsignacionView.as_view(), name="gradebook-publicar-asignacion"),
     # ---- el profesor: revisar (FUN-120, FUN-121)
     path("revisiones/", v.BandejaView.as_view(), name="gradebook-revisiones"),

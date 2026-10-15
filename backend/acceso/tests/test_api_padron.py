@@ -24,6 +24,14 @@ class PadronPrototipoTests(TestCase):
         self.assertEqual(r.status_code, 201, r.content)
         return r.json()
 
+    def test_sin_sesion_la_administracion_del_aula_le_pone_nivel_a_un_grupo(self):
+        self.preparar()
+        g = self.grupo("Octavo B")
+        self.assertFalse(g["nivel_clave"])
+        r = self.api.patch(f"/api/acceso/padron/grupos/{g['id']}/", {"nivel_clave": "secundaria"}, format="json")
+        self.assertEqual((r.status_code, r.json()["nivel_clave"]), (200, "secundaria"), r.content)
+        self.assertEqual(self.api.patch("/api/acceso/padron/grupos/no-existe/", {"nivel_clave": "secundaria"}, format="json").status_code, 404)
+
     def test_nodo_vacio_no_es_error_y_dice_que_no_esta_instalado(self):
         r = self.api.get("/api/acceso/padron/")
         self.assertEqual(r.status_code, 200)
@@ -177,6 +185,21 @@ class PadronConSesionTests(BaseAcceso):
         self.assertEqual(self.docente.patch(f"/api/acceso/grupos/{suyo}/", {"nombre": "Décimo B"}, format="json").status_code, 200)
         self.assertEqual(self.docente.patch(f"/api/acceso/grupos/{self.otro_grupo['id']}/", {"nombre": "x"}, format="json").status_code, 403)
         self.assertEqual(self.admin.post("/api/acceso/padron/grupos/", {"nombre": "Undécimo"}, format="json").status_code, 201)
+
+    def test_el_docente_le_pone_nivel_a_su_grupo_y_no_a_uno_ajeno(self):
+        """Un grupo creado sin nivel puede recibirlo después (el sistema de calificación se elige por nivel). Sólo lo cambia quien administra ese grupo."""
+        r = self.docente.post("/api/acceso/padron/grupos/", {"nombre": "Octavo B"}, format="json")
+        suyo = r.json()["id"]
+        self.assertFalse(r.json()["nivel_clave"])
+        r = self.docente.patch(f"/api/acceso/padron/grupos/{suyo}/", {"nivel_clave": "secundaria"}, format="json")
+        self.assertEqual((r.status_code, r.json()["nivel_clave"]), (200, "secundaria"), r.content)
+        grupos = {g["id"]: g for g in self.docente.get("/api/acceso/padron/").json()["grupos"]}
+        self.assertEqual(grupos[suyo]["nivel_clave"], "secundaria")
+        self.assertEqual(self.docente.patch(f"/api/acceso/padron/grupos/{self.otro_grupo['id']}/", {"nivel_clave": "primaria"}, format="json").status_code, 403)
+
+    def test_el_nivel_del_grupo_tiene_que_ser_uno_de_los_cinco(self):
+        for malo in ({"nivel_clave": "doctorado"}, {"nivel_clave": ""}, {}):
+            self.assertEqual(self.docente.patch(f"/api/acceso/padron/grupos/{self.grupo['id']}/", malo, format="json").status_code, 400, malo)
 
     def test_el_padron_del_docente_muestra_solo_sus_grupos(self):
         estado = self.docente.get("/api/acceso/padron/").json()

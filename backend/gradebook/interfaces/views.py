@@ -223,6 +223,12 @@ class RetirarPublicacionView(VistaGradebook):
         return Response(publicacion_cu.RetirarPublicacion(servicios()).ejecutar(self._docente(request, datos), calificacion_id, datos))
 
 
+class RegistrarAsignacionView(VistaGradebook):
+    def post(self, request, asignacion_id: str):
+        datos = _cuerpo(request)
+        return Response(registro_cu.RegistrarAsignacion(servicios()).ejecutar(self._docente(request, datos), asignacion_id))
+
+
 class PublicarAsignacionView(VistaGradebook):
     def post(self, request, asignacion_id: str):
         datos = _cuerpo(request)

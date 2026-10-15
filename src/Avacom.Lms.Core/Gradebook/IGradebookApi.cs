@@ -45,6 +45,11 @@ public interface IGradebookApi
     Task<CambioDeCalificacion?> PublicarAsync(string actor, string calificacionId, int? versionEsperada = null, string? solicitudId = null, CancellationToken ct = default);
     Task<CambioDeCalificacion?> RetirarPublicacionAsync(string actor, string calificacionId, string motivo, int versionEsperada, string solicitudId, CancellationToken ct = default);
     Task<PublicacionDeAsignacion?> PublicarAsignacionAsync(string actor, string asignacionId, CancellationToken ct = default);
+    /// <summary>
+    /// Registra las calificaciones de todos los intentos ya calificados de una evaluación. Hace falta cuando el nivel pasó de modo simple (o de no tener nivel) a modo calificaciones con la evaluación
+    /// ya calificada: ese paso no registra nada solo. Idempotente; lo registrado queda sin publicar.
+    /// </summary>
+    Task<RegistroDeAsignacion?> RegistrarAsignacionAsync(string actor, string asignacionId, CancellationToken ct = default);
 
     // ---- configuración académica (FUN-124, FUN-125)
     Task<ConfiguracionAcademica?> ConfiguracionAsync(string actor, CancellationToken ct = default);
