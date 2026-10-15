@@ -2,15 +2,17 @@
   "admision": null,
   "asignacion": {
     "curso_rotulo": "Estados de la materia y sus cambios",
+    "descripcion": "",
     "duracion_seg": 900,
     "estado": "activa",
-    "id": "18beb971-9fa0-4567-b5e3-2a4bda89938e",
+    "id": "33a3f7d9-78e2-43d0-8320-17419781ea54",
     "intentos_permitidos": 1,
     "intentos_usados": 0,
     "limite_en": null,
     "permite_retroceso": true,
     "plazo": "blando",
     "preguntas": 12,
+    "publicar_en": null,
     "resultados": "tras_liberar",
     "titulo": "Examen de estados de la materia"
   },
@@ -27,7 +29,7 @@
   "dispositivo": {
     "alcanza": true,
     "capacidad": "supervisado",
-    "id": "f6ac0bc8-18d2-457f-bac8-fea33c7d2ec5",
+    "id": "0491dd54-9f27-414e-9ca4-fd5aeb4d9d99",
     "nivel_exigido": "supervisado"
   },
   "mi_intento": null,

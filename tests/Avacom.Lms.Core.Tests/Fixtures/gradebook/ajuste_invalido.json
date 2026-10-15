@@ -1,0 +1,6 @@
+{
+  "campo": "puntaje_nuevo",
+  "codigo": "puntaje_invalido",
+  "detail": "`puntaje_nuevo` debe estar entre 0 y 100.",
+  "valor": 150.0
+}

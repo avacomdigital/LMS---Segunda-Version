@@ -1,0 +1,18 @@
+{
+  "derivados": {
+    "agregados": 1,
+    "borrados": {
+      "agregados": 1,
+      "resultados": 2
+    },
+    "resultados": 2,
+    "servidor_en": 1790000000000
+  },
+  "reproduccion": {
+    "fallidos": [],
+    "leidos": 7,
+    "marca": 36,
+    "procesados": 7
+  },
+  "servidor_en": 1790000000000
+}

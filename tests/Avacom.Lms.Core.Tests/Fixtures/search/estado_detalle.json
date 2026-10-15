@@ -1,0 +1,39 @@
+{
+  "detail": {
+    "built_at": 1790000000000,
+    "catalog": {
+      "reason": "",
+      "status": "ok"
+    },
+    "documents": {
+      "assessment": 1,
+      "class": 1,
+      "study": 1
+    },
+    "last_error": "",
+    "last_error_at": null,
+    "pending": {},
+    "sources": {
+      "aula": {
+        "failures": 0,
+        "mark": 3,
+        "pending": 0
+      },
+      "estudio": {
+        "failures": 0,
+        "mark": 1,
+        "pending": 0
+      },
+      "evaluacion": {
+        "failures": 0,
+        "mark": 2,
+        "pending": 0
+      }
+    },
+    "synchronized_at": 1790000000000,
+    "total": 3
+  },
+  "index_notice": "",
+  "index_status": "consultable",
+  "queryable": true
+}

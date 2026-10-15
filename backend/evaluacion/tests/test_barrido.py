@@ -19,7 +19,7 @@ def barrer() -> dict:
 
 class BarridoTests(BaseEvaluacion):
     def test_un_nodo_sin_nada_que_hacer_no_hace_nada(self):
-        self.assertEqual(barrer(), {"asignaciones": 0, "pausados": 0, "entregados": 0, "recalificados": 0, "errores": 0})
+        self.assertEqual(barrer(), {"asignaciones": 0, "pausados": 0, "entregados": 0, "recalificados": 0, "publicadas": 0, "errores": 0})
 
     def test_activa_lo_programado_cuando_llega_su_hora_aunque_nadie_pregunte(self):
         a = self.crear_asignacion("supervisado", abre_en=self.t + 10 * MIN, limite_en=self.t + 60 * MIN)

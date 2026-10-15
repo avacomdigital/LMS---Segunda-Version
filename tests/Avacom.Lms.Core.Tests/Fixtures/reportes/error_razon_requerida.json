@@ -1,0 +1,26 @@
+{
+  "codigo": "razon_requerida",
+  "detail": "Elige para qué vas a guardar este reporte.",
+  "razones": [
+    {
+      "codigo": "entrega_a_familias",
+      "etiqueta": "Entrega a las familias"
+    },
+    {
+      "codigo": "entrega_a_coordinacion",
+      "etiqueta": "Entrega a coordinación o secretaría"
+    },
+    {
+      "codigo": "reunion_de_equipo",
+      "etiqueta": "Reunión del equipo docente"
+    },
+    {
+      "codigo": "respaldo_del_profesor",
+      "etiqueta": "Respaldo del propio profesor"
+    },
+    {
+      "codigo": "otra_gestion_escolar",
+      "etiqueta": "Otra gestión escolar"
+    }
+  ]
+}

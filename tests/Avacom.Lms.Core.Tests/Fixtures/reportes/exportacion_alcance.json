@@ -1,0 +1,79 @@
+{
+  "advertencia": "El archivo incluirá nombres de alumnos. Una vez fuera de este equipo, el colegio ya no controla quién lo abre.",
+  "alumnos": 7,
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790002430000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": true,
+    "integracion": {
+      "equipos": 7,
+      "estado": "incompleta",
+      "motivo_linea": "1 tableta aún no sincroniza",
+      "motivos": [
+        {
+          "codigo": "conexion_perdida",
+          "equipos": 1,
+          "texto": "1 tableta perdió la conexión y aún no envía lo que guardó"
+        }
+      ],
+      "sin_sincronizar": 1,
+      "texto": "1 tableta sin sincronizar"
+    },
+    "texto": "Datos al 21 sep · 09:53 · 1 tableta sin sincronizar"
+  },
+  "filas": 11,
+  "formato": "xlsx",
+  "formatos": [
+    "xlsx",
+    "csv"
+  ],
+  "incluye": [
+    "asistencia",
+    "participación",
+    "aciertos",
+    "evaluaciones",
+    "estudio"
+  ],
+  "nombre_sugerido": "reporte-grupo-8A-2026-09-21-0953.xlsx",
+  "nominal": true,
+  "politica": {
+    "exigir_razon": false,
+    "extraibles_permitidos": true,
+    "razones": [
+      {
+        "codigo": "entrega_a_familias",
+        "etiqueta": "Entrega a las familias"
+      },
+      {
+        "codigo": "entrega_a_coordinacion",
+        "etiqueta": "Entrega a coordinación o secretaría"
+      },
+      {
+        "codigo": "reunion_de_equipo",
+        "etiqueta": "Reunión del equipo docente"
+      },
+      {
+        "codigo": "respaldo_del_profesor",
+        "etiqueta": "Respaldo del propio profesor"
+      },
+      {
+        "codigo": "otra_gestion_escolar",
+        "etiqueta": "Otra gestión escolar"
+      }
+    ]
+  },
+  "privacidad": {
+    "alumnos": 7,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790002430000,
+  "texto_alcance": "Vas a guardar el reporte del grupo 8A (7 alumnos, asistencia, participación, aciertos, evaluaciones y estudio, datos al 21 sep · 09:53 · 1 tableta sin sincronizar)",
+  "tipo": "grupo",
+  "titulo": "Reporte del grupo",
+  "umbral_aplicado": false
+}

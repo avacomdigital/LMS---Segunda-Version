@@ -138,13 +138,23 @@ public sealed class EvaluacionApi(HttpClient http, Uri baseUri) : ClienteJson(ht
     public Task<AsignacionDeExamen?> AsignacionAsync(string actor, string asignacionId, CancellationToken ct = default) =>
         ObtenerAsync<AsignacionDeExamen>(Ruta(Asig(asignacionId), ("actor", actor)), ct);
 
+    public Task<ExamenesDisponibles?> ExamenesDisponiblesAsync(string actor, string fuente, CancellationToken ct = default) =>
+        ObtenerAsync<ExamenesDisponibles>(Ruta("examenes/disponibles/", ("fuente", fuente), ("actor", actor)), ct);
+
+    public Task<FichaDeExamen?> FichaAsync(string actor, string fuente, string cursoRef, string objetoRef, CancellationToken ct = default) =>
+        ObtenerAsync<FichaDeExamen>(Ruta("examenes/", ("fuente", fuente), ("curso_ref", cursoRef), ("objeto_ref", objetoRef), ("actor", actor)), ct);
+
+    public Task<AsignacionDeExamen?> ConfigurarPublicacionAsync(string actor, string asignacionId, string resultados, long? publicarEn = null, CancellationToken ct = default) =>
+        ParchearAsync<AsignacionDeExamen>(Base + Asig(asignacionId) + "publicacion/", Docente(actor, ("resultados", resultados), ("publicar_en", publicarEn)), ct);
+
     public Task<AsignacionDeExamen?> CrearAsync(string actor, string? actorRotulo, NuevoExamen nuevo, CancellationToken ct = default)
     {
         var cuerpo = Docente(actor,
             ("actor_rotulo", actorRotulo), ("fuente", nuevo.Fuente), ("curso_ref", nuevo.CursoRef), ("objeto_ref", nuevo.ObjetoRef), ("alcance", "grupo"),
             ("grupo_id", nuevo.GrupoId), ("sesion_id", nuevo.SesionId), ("nivel_examen", nuevo.NivelExamen), ("tiempo", nuevo.Tiempo),
             ("abre_en", nuevo.AbreEn), ("limite_en", nuevo.LimiteEn), ("plazo", nuevo.Plazo), ("gracia_min", nuevo.GraciaMin),
-            ("reactivacion", nuevo.Reactivacion), ("resultados", nuevo.Resultados), ("iniciar", nuevo.Iniciar));
+            ("reactivacion", nuevo.Reactivacion), ("resultados", nuevo.Resultados), ("publicar_en", nuevo.PublicarEn), ("preguntas", nuevo.Preguntas),
+            ("estrategia", nuevo.Estrategia), ("descripcion", nuevo.Descripcion), ("mezclar_opciones", nuevo.MezclarOpciones), ("iniciar", nuevo.Iniciar));
         // Sin tope de intentos (TST-030) se dice con un nulo EXPLÍCITO: la clave ausente significa «uno» (BR-072).
         cuerpo["intentos_permitidos"] = nuevo.IntentosPermitidos;
         return EnviarAsync<AsignacionDeExamen>(Base + "asignaciones/", cuerpo, ct);
@@ -220,6 +230,9 @@ public sealed class EvaluacionApi(HttpClient http, Uri baseUri) : ClienteJson(ht
 
     public Task<IntentoPublicado?> PublicarAsync(string actor, string intentoId, CancellationToken ct = default) =>
         EnviarAsync<IntentoPublicado>(Base + Intento(intentoId) + "publicar/", Docente(actor), ct);
+
+    public Task<ResultadoLiberado?> LiberarResultadoAsync(string actor, string intentoId, CancellationToken ct = default) =>
+        EnviarAsync<ResultadoLiberado>(Base + Intento(intentoId) + "liberar-resultado/", Docente(actor), ct);
 
     public Task<bool> DecidirEnvioAsync(string actor, string intentoId, string decision, string? motivo = null, CancellationToken ct = default) =>
         Hecho(Base + Intento(intentoId) + "decidir-envio/", Docente(actor, ("decision", decision), ("motivo", motivo)), ct);

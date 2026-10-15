@@ -1,0 +1,11 @@
+{
+  "afecta_oficial": false,
+  "asignacion_id": "529fa4a2-837f-4ba8-a03c-0f974c2f7c59",
+  "cambiado": true,
+  "objetivos": [
+    "obj-1"
+  ],
+  "politica_intentos": "ultimo",
+  "servidor_en": 1790000000000,
+  "tipo_evaluacion": "formativa"
+}

@@ -7,6 +7,10 @@ El motor de MOD-010: las operaciones que comparten varios casos de uso y que no 
   entregar / _calificar                    FUN-114, FUN-112, FUN-113: entregar un intento y calificarlo con UNA llamada por lote a la biblioteca
   incidente                                FUN-117: un incidente se registra, se sella y se publica; NUNCA cambia el estado del intento (BR-077)
   plan_de_bloqueo                          D-12: lo que la tableta debe aplicar, decidido por el nodo
+  asegurar_publicacion / liberar_resultados  RF-004: la publicación que la POLÍTICA provoca sola (`programada` con el reloj del nodo, `al_finalizar_grupo`
+                                           cuando el último alumno queda resuelto) y la única función que escribe `liberados_en`/`liberados_por`
+  resultado_disponible                     RF-004: la comprobación, en el nodo, de si ESTE alumno puede ver ESTA nota (política de publicación Y compuertas
+                                           de otros módulos, `compuertas.py`)
 
 INV-018: ninguna función de este archivo lleva un intento a `anulado`.
 """
@@ -18,7 +22,8 @@ from ..dominio import catalogos as cat
 from ..dominio import intento as int_dom
 from ..dominio import respuestas as resp_dom
 from ..dominio.errores import DatosInvalidos
-from .base import Servicios, nuevo_id
+from . import compuertas
+from .base import Servicios, destinatarios_de, nuevo_id
 from .puertos import UnidadDeTrabajo
 
 SISTEMA = cat.SISTEMA
@@ -79,7 +84,7 @@ class Motor:
         nuevo = asig_dom.estado_por_tiempo(asignacion, ahora, self.s.config.archivado_ms)
         anterior = asignacion["estado"]
         if nuevo == anterior:
-            return asignacion
+            return self.asegurar_publicacion(uow, asignacion, ahora)
         campos: dict = {"estado": nuevo}
         if anterior == cat.PROGRAMADA:
             campos["publicada_en"] = asignacion.get("abre_en") or ahora
@@ -102,7 +107,46 @@ class Motor:
             uow.auditoria.registrar(SISTEMA, "evaluacion.asignacion.cerrada", "m10_asignacion", asignacion["id"],
                                     anterior={"estado": anterior}, nuevo={"estado": cat.CERRADA, "origen": "plazo"})
         self.avisar(uow, asignacion)
+        # Al cerrar puede quedar resuelto todo el grupo (`al_finalizar_grupo`): quien nunca empezó ya no detiene la publicación.
+        return self.asegurar_publicacion(uow, asignacion, ahora, grupo=(nuevo == cat.CERRADA))
+
+    # ------------------------------------------------------------------ publicación de resultados (RF-004)
+
+    def asegurar_publicacion(self, uow: UnidadDeTrabajo, asignacion: dict, ahora: int, *, grupo: bool = False) -> dict:
+        """Lo que la POLÍTICA de publicación ya provocó, con el reloj del nodo (D-15, BR-062): `programada` libera al alcanzar `publicar_en`;
+        `al_finalizar_grupo` libera cuando el último destinatario queda resuelto. La comprobación del grupo cuesta leer los intentos, así que sólo se
+        hace cuando algo pudo terminar de resolverlo (`grupo=True`: una calificación, una anulación, un cierre, el barrido o una lectura de
+        resultados). Idempotente: la primera liberación manda. Las políticas manuales (`tras_liberar`, `al_entregar`, `nunca`) no se tocan aquí."""
+        if asignacion.get("liberados_en") is not None or asignacion.get("resultados") not in cat.RESULTADOS_QUE_LIBERA_EL_NODO:
+            return asignacion
+        if asignacion["estado"] in (cat.BORRADOR, cat.PROGRAMADA):
+            return asignacion
+        if asig_dom.publicacion_vencida(asignacion, ahora):
+            # Como el cierre por plazo (`cerrada_en = limite_en`): la liberación programada queda fechada en la hora FIJADA, no en el tick del
+            # barrido que la notó (hasta 5 s después).
+            return self.liberar_resultados(uow, asignacion, ahora, por=SISTEMA, origen=cat.ORIGEN_LIBERACION_PROGRAMADA, en=int(asignacion["publicar_en"]))
+        if grupo and asignacion["resultados"] == cat.AL_FINALIZAR_GRUPO:
+            ultimos = int_dom.ultimo_por_alumno(uow.intentos.de_asignacion(asignacion["id"]))
+            if asig_dom.grupo_finalizado(destinatarios_de(uow, asignacion), ultimos, asignacion["estado"]):
+                return self.liberar_resultados(uow, asignacion, ahora, por=SISTEMA, origen=cat.ORIGEN_LIBERACION_GRUPO)
         return asignacion
+
+    def liberar_resultados(self, uow: UnidadDeTrabajo, asignacion: dict, ahora: int, *, por: str, origen: str, en: int | None = None) -> dict:
+        """La ÚNICA función que escribe `liberados_en`/`liberados_por`: quién (una persona o `sistema`) y por qué (`manual`, `programada`, `grupo`) quedan
+        en la fila, en el evento y en la bitácora. `en` es el instante que se asienta (por omisión, ahora; la liberación programada usa su hora fijada).
+        Idempotente contra la fila fresca: dos caminos que coinciden (el barrido y una lectura) liberan una vez."""
+        fresca = uow.asignaciones.por_id(asignacion["id"]) or asignacion
+        if fresca.get("liberados_en") is not None:
+            return fresca
+        quien = (por or SISTEMA)[:64]
+        instante = int(en) if en is not None else ahora
+        fresca = uow.asignaciones.actualizar(asignacion["id"], liberados_en=instante, liberados_por=quien)
+        self.publicar(uow, "Asignacion", asignacion["id"], cat.EV_RESULTADOS_LIBERADOS, {
+            "asignacion_id": asignacion["id"], "liberados_en": instante, "origen": origen, "por": quien, "politica": fresca["resultados"]}, ahora)
+        uow.auditoria.registrar(quien, cat.A_RESULTADOS_LIBERADOS, "m10_asignacion", asignacion["id"], anterior={"liberados_en": None},
+                                nuevo={"liberados_en": instante, "origen": origen, "politica": fresca["resultados"], "aplicado_en": ahora})
+        self.avisar(uow, fresca)
+        return fresca
 
     def _entregar_abiertos(self, uow: UnidadDeTrabajo, asignacion: dict, ahora: int, cierre_en: int, origen: str) -> int:
         """Al cerrar la asignación: lo respondido se entrega tal cual (no se pierde nada) y los `no_iniciado` quedan como evidencia."""
@@ -253,6 +297,8 @@ class Motor:
                 **base, "porcentaje": intento.get("porcentaje"), "calificado_por": intento.get("calificado_por")}, ahora)
             uow.auditoria.registrar(SISTEMA, "evaluacion.intento.calificado", "m10_intento_formal", intento["id"],
                                     nuevo={"porcentaje": intento.get("porcentaje"), "calificado_por": intento.get("calificado_por")})
+            # Esta calificación pudo ser la última del grupo (`al_finalizar_grupo`).
+            self.asegurar_publicacion(uow, asignacion, ahora, grupo=True)
 
     def recalificar(self, uow: UnidadDeTrabajo, intento: dict, asignacion: dict, ahora: int) -> dict:
         """Reintenta la calificación pendiente (la biblioteca no estaba al entregar). Idempotente."""
@@ -266,15 +312,37 @@ class Motor:
     # ------------------------------------------------------------------------------------- lo que ve el alumno
 
     @staticmethod
-    def resultado_disponible(asignacion: dict, intento: dict) -> bool:
-        """DEC-032: el alumno NUNCA ve su nota antes de que el profesor la publique. Con reactivos por revisar no hay resultado parcial (Q-84)."""
+    def _politica_permite(asignacion: dict, intento: dict) -> bool:
+        """La política de publicación de MOD-010, sin compuertas de otros módulos."""
         if intento["estado"] != cat.CALIFICADO or intento.get("calificacion_pendiente"):
             return False
         if asignacion["resultados"] == cat.NUNCA:
             return False
+        if intento.get("liberado_en") is not None:
+            return True
         if asignacion["resultados"] == cat.AL_ENTREGAR:
             return True
         return asignacion.get("liberados_en") is not None
+
+    @staticmethod
+    def resultado_disponible(asignacion: dict, intento: dict) -> bool:
+        """DEC-032 / RF-004: el alumno NUNCA ve su nota antes de que esté publicada, y esto se comprueba en el nodo. Hace falta, a la vez, que SU intento
+        esté completamente calificado (`calificado`, sin calificación pendiente de la biblioteca ni reactivos por revisar: nunca un parcial, Q-84) y
+        que la publicación lo alcance: la de su intento (`liberado_en`, publicada por el profesor para él) o la de la asignación según la política
+        (`al_entregar` al instante; `tras_liberar`, `al_finalizar_grupo` y `programada` cuando `liberados_en` ya está puesto). Con `nunca`, nunca.
+        Y que ninguna COMPUERTA de otro módulo lo retenga (`compuertas`): el libro de calificaciones (MOD-011), en un nivel en modo calificaciones, exige
+        además que la calificación esté publicada."""
+        return Motor._politica_permite(asignacion, intento) and compuertas.retiene(asignacion, intento) is None
+
+    @staticmethod
+    def resultado_retenido_por(asignacion: dict, intento: dict) -> str | None:
+        """Si la política de MOD-010 ya lo mostraría pero lo RETIENE la compuerta de otro módulo, el nombre de esa compuerta (para decirle al alumno por qué espera); si no, `None`."""
+        return compuertas.retiene(asignacion, intento) if Motor._politica_permite(asignacion, intento) else None
+
+    @staticmethod
+    def resultado_publicado(asignacion: dict, intento: dict | None) -> bool:
+        """Para el profesor: ¿este alumno ya puede ver su nota? (lo mismo que `resultado_disponible`, tolerando que no haya intento)."""
+        return intento is not None and Motor.resultado_disponible(asignacion, intento)
 
     def estado_del_intento(self, intento: dict, asignacion: dict, capacidad: str, ahora: int, *, sesion_activa: bool = True) -> dict:
         """El cuerpo de `GET /estado/` y del latido: lo que la tableta necesita para saber qué pintar (PAN-121, PAN-122)."""

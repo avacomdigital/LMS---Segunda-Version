@@ -53,6 +53,9 @@ INSTALLED_APPS = [
     "evaluacion",
     "cola_medios",
     "audit",
+    "gradebook",
+    "search",
+    "reporting",
 ]
 
 MIDDLEWARE = [
@@ -190,6 +193,20 @@ AVACOM_AULA_PROGRAMADOR = os.environ.get("AVACOM_AULA_PROGRAMADOR", "1") == "1"
 # "0" desactiva la suspensión de las clases abiertas al arrancar el nodo (BR-051).
 AVACOM_AULA_DETECTAR_CAIDA = os.environ.get("AVACOM_AULA_DETECTAR_CAIDA", "1") == "1"
 
+# ------------------------------------------------------------- Search (MOD-021)
+# App `search` (`/api/search/`, tablas m21_*). El índice local (SQLite FTS5) de evaluaciones, estudios asignados y clases se mantiene con los eventos de sus módulos; el
+# catálogo de cursos se pregunta en vivo a la biblioteca (artículo 14). "0" desactiva el hilo que lo pone al día cada AVACOM_SEARCH_INTERVALO_S segundos.
+AVACOM_SEARCH_PROGRAMADOR = os.environ.get("AVACOM_SEARCH_PROGRAMADOR", "1") == "1"
+AVACOM_SEARCH_INTERVALO_S = float(os.environ.get("AVACOM_SEARCH_INTERVALO_S", "5"))
+
+# App `reporting` (`/api/reportes/`, tablas m13_*): reportes de clase, alumno, grupo y uso de equipos sobre lo que otros módulos ya calcularon, y su exportación a archivo.
+# El hilo del nodo (FUN-144) actualiza los agregados SÓLO cuando no hay una clase abierta; "0" lo desactiva. AVACOM_REPORTES_INTERVALO_S es cada cuánto mira (por omisión 60 s).
+# AVACOM_REPORTES_EXPORTACION_TTL_S: cuánto espera el nodo a que el equipo confirme dónde guardó un archivo antes de darla por no entregada (por omisión 900 s).
+AVACOM_REPORTES_PROGRAMADOR = os.environ.get("AVACOM_REPORTES_PROGRAMADOR", "1") == "1"
+AVACOM_REPORTES_INTERVALO_S = float(os.environ.get("AVACOM_REPORTES_INTERVALO_S", "60"))
+AVACOM_REPORTES_EXPORTACION_TTL_S = int(os.environ.get("AVACOM_REPORTES_EXPORTACION_TTL_S", "900"))
+AVACOM_REPORTES_SINCRONIZAR = os.environ.get("AVACOM_REPORTES_SINCRONIZAR", "1") == "1"
+
 # ------------------------------------------------------------- Audit (MOD-019)
 # App `audit` (`/api/auditoria/`, `/api/logs/`, tablas m19_*). Sistema de logs en archivos JSON Lines (§2 del prompt):
 # la carpeta se decide UNA vez al arrancar (AVACOM_LMS_DIR_LOGS → instalado: %ProgramData%\AVACOM\OPS Master\Logs →
@@ -244,6 +261,9 @@ AVACOM_EVAL_MAX_RESPUESTAS = int(os.environ.get("AVACOM_EVAL_MAX_RESPUESTAS", "2
 AVACOM_EVAL_DESFASE_RELOJ_MS = int(os.environ.get("AVACOM_EVAL_DESFASE_RELOJ_MS", "5000"))
 # Combinaciones que prueba el armado `random_balanced` antes de quedarse con la mejor.
 AVACOM_EVAL_ARMADO_INTENTOS = int(os.environ.get("AVACOM_EVAL_ARMADO_INTENTOS", "200"))
+# RF-004: política institucional de publicación de resultados para una asignación nueva cuando el profesor no elige otra:
+# `tras_liberar` (manual, el valor seguro) · `al_entregar` (inmediata) · `al_finalizar_grupo` · `nunca`. (`programada` exige fecha: no sirve de defecto.)
+AVACOM_EVAL_RESULTADOS_POR_DEFECTO = os.environ.get("AVACOM_EVAL_RESULTADOS_POR_DEFECTO", "tras_liberar")
 
 # ---------------------------------------------------------------- Cola de medios
 # App `cola_medios` (`/api/medios/cola/`, tablas cm_*). Reparte los bytes de video, audio, imagen, PDF y html que vienen de AVACOM Contenido a las tabletas:

@@ -38,7 +38,12 @@ public partial class ExamenPanelPage
         cuentas.Add(ExamenUi.Total(entregaron, "entregaron", ExamenUi.TintaExito));
         cuentas.Add(ExamenUi.Total(sinEmpezar, "sin empezar", Ds.TintaSuave));
         cuentas.Add(ExamenUi.Total(t.ConIncidentes, "con avisos", Ds.TintaMedia));
+        if (t.SinSenal > 0) cuentas.Add(ExamenUi.Total(t.SinSenal, "sin señal", ExamenUi.TintaAmbar));
         if (t.PendientesDecision > 0) cuentas.Add(ExamenUi.Total(t.PendientesDecision, "envíos por decidir", ExamenUi.TintaVioleta));
+        // RF-012: lo que sigue después de entregar: reactivos que esperan al profesor, resultados listos para publicar y ya publicados.
+        if (t.ReactivosPorRevisar > 0) cuentas.Add(ExamenUi.Total(t.ReactivosPorRevisar, "por revisar", ExamenUi.TintaVioleta));
+        if (t.ListosParaPublicar > 0) cuentas.Add(ExamenUi.Total(t.ListosParaPublicar, "listos para publicar", ExamenUi.TintaInfo));
+        if (t.Publicados > 0) cuentas.Add(ExamenUi.Total(t.Publicados, "publicados", ExamenUi.TintaExito));
 
         var cuerpo = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 30 };
         cuerpo.Add(izquierda, 0, 0);
@@ -55,7 +60,7 @@ public partial class ExamenPanelPage
         else if (a.LimiteEn is { } limite) pastillas.Add(ExamenUi.PildoraEnFila($"Fecha límite: {ExamenTexto.Hora(limite)}", Tono.Neutro, 13));
         if (a.LimiteEn is not null) pastillas.Add(ExamenUi.PildoraEnFila(ExamenTexto.PlazoLegible(a.Plazo), Tono.Neutro, 13));
         pastillas.Add(ExamenUi.PildoraEnFila(a.Reactivacion == "automatica" ? "Reactivación automática" : "Reactivas tú", Tono.Neutro, 13));
-        pastillas.Add(ExamenUi.PildoraEnFila(a.LiberadosEn is { } lib ? $"Resultados liberados a las {ExamenTexto.Hora(lib)}" : ExamenTexto.ResultadosLegible(a.Resultados),
+        pastillas.Add(ExamenUi.PildoraEnFila(ExamenTexto.Publicacion(a.Resultados, a.PublicarEn, a.LiberadosEn, a.LiberadosPor),
             a.LiberadosEn is null ? Tono.Neutro : Tono.Exito, 13));
 
         var tarjeta = new VerticalStackLayout { Spacing = 8 };
@@ -104,20 +109,54 @@ public partial class ExamenPanelPage
             if (Niveles.Rango(a.NivelExamen) > 0) fila.Add(ExamenUi.Accion("Bajar el nivel", Ds.Rango.Secondary, BajarNivelAsync, null, "examen-bajar-nivel").Vista);
             fila.Add(ExamenUi.Accion("Cerrar el examen", Ds.Rango.Secondary, CerrarExamenAsync, null, "examen-cerrar").Vista);
         }
-        // Los resultados se liberan sólo cuando nadie sigue presentando; mientras tanto el botón se ve apagado y dice por qué.
-        if (a.Resultados == "tras_liberar" && a.LiberadosEn is null)
+        // RF-004: los resultados se publican a todo el grupo sólo cuando nadie sigue presentando; mientras tanto el botón se ve apagado y dice por qué. Con
+        // «al entregar» cada alumno ya ve el suyo; con «nunca» no hay nada que publicar. Lo programado o «al terminar el grupo» se puede adelantar.
+        var politica = PoliticasDeResultados.Normalizar(a.Resultados);
+        var publicable = politica is not (PoliticasDeResultados.Nunca or PoliticasDeResultados.AlEntregar) && a.LiberadosEn is null;
+        if (publicable)
         {
-            var liberar = ExamenUi.Accion("Liberar resultados", Ds.Rango.Secondary, LiberarResultadosAsync, null, "examen-liberar");
+            var liberar = ExamenUi.Accion(politica == PoliticasDeResultados.TrasLiberar ? "Publicar resultados" : "Publicar ahora", Ds.Rango.Secondary, LiberarResultadosAsync, null, "examen-liberar");
             Ds.Habilitar(liberar.Boton, presentando == 0 && entregaron > 0);
             fila.Add(liberar.Vista);
         }
+        if (a.LiberadosEn is null && a.Estado != "archivada")
+            fila.Add(ExamenUi.Accion("Cambiar publicación", Ds.Rango.Quiet, CambiarPublicacionAsync, null, "examen-cambiar-publicacion").Vista);
         fila.Add(ExamenUi.Accion("Ver resultados", Ds.Rango.Secondary, VerResultadosAsync, null, "examen-ver-resultados").Vista);
 
         var pila = new VerticalStackLayout { Spacing = 2 };
         pila.Add(fila);
-        if (a.Resultados == "tras_liberar" && a.LiberadosEn is null && presentando > 0)
-            pila.Add(Ds.Secundario("Los resultados se pueden liberar cuando nadie siga presentando.", 14));
+        if (publicable && presentando > 0)
+            pila.Add(Ds.Secundario("Los resultados se publican a todo el grupo cuando nadie siga presentando. A un alumno que ya terminó puedes publicárselo desde «Ver resultados».", 14));
         return pila;
+    }
+
+    // ------------------------------------------------------------------------------------ cambiar la publicación (RF-004)
+
+    /// <summary>Cambia la política de publicación mientras nada se haya publicado: frases que se tocan; «En una fecha» pide además cuándo.</summary>
+    private async Task CambiarPublicacionAsync()
+    {
+        if (_panel is not { } p) return;
+        var a = p.Asignacion;
+        var actual = PoliticasDeResultados.Normalizar(a.Resultados);
+        var opciones = PoliticasDeResultados.Todas.Where(x => x != actual)
+            .Select(x => new OpcionDeHoja(x, ExamenTexto.PoliticaCorta(x) + (x == PoliticasDeResultados.AlFinalizarGrupo ? " (y nada por revisar)" : string.Empty))).ToList();
+        var elegida = await _hoja.PedirAsync("¿Cuándo ven los alumnos su resultado?",
+            $"Hoy: {ExamenTexto.ResultadosLegible(a.Resultados).ToLowerInvariant()}. Tú ves las notas antes en cualquier caso; lo ya publicado no se vuelve a esconder.", opciones);
+        if (elegida is null) return;
+        long? publicarEn = null;
+        if (elegida == PoliticasDeResultados.Programada)
+        {
+            var ahora = RelojNodo.AhoraMs;
+            (string Clave, string Rotulo, int Minutos)[] horas = [("60", "En 1 hora", 60), ("180", "En 3 horas", 180), ("1440", "Mañana a esta hora", 24 * 60), ("10080", "En una semana", 7 * 24 * 60)];
+            var clave = await _hoja.PedirAsync("¿Cuándo se publican?", "Se publican solos a esa hora, con el reloj del aula.", horas.Select(h => new OpcionDeHoja(h.Clave, h.Rotulo)).ToList());
+            if (clave is null) return;
+            publicarEn = ahora + horas.First(h => h.Clave == clave).Minutos * 60_000L;
+        }
+        var api = Sesion.Evaluacion;
+        var r = await api.ConfigurarPublicacionAsync(Actor, a.Id, elegida, publicarEn);
+        if (r is null) Avisar("No se pudo cambiar la publicación", ExamenTexto.Error(api.UltimoError, api.UltimoMotivo), Tono.Ambar);
+        else Avisar("Publicación cambiada", ExamenTexto.Publicacion(r.Resultados, r.PublicarEn, r.LiberadosEn, r.LiberadosPor) + ".", Tono.Exito);
+        await RefrescarAsync(forzar: true);
     }
 
     private Task VerResultadosAsync() => Shell.Current.GoToAsync($"examen-resultados?asignacion={Uri.EscapeDataString(AsignacionId)}");
@@ -281,15 +320,15 @@ public partial class ExamenPanelPage
     private async Task LiberarResultadosAsync()
     {
         if (_panel is not { } p) return;
-        var elegido = await _hoja.PedirAsync("¿Liberar los resultados?",
-            "Cada alumno podrá ver su resultado en su tableta. Lo que quede por revisar se libera cuando lo publiques.",
-            [new OpcionDeHoja("liberar", "Liberar los resultados", Principal: true)]);
+        var elegido = await _hoja.PedirAsync("¿Publicar los resultados a todo el grupo?",
+            "Cada alumno calificado podrá ver su resultado en su tableta. Lo que quede por revisar se ve cuando publiques su calificación. Queda registrado con tu nombre.",
+            [new OpcionDeHoja("liberar", "Publicar los resultados", Principal: true)]);
         if (elegido is null) return;
         var api = Sesion.Evaluacion;
         var r = await api.LiberarResultadosAsync(Actor, p.Asignacion.Id);
         // intentos_abiertos: todavía hay alguien presentando. El nodo lo rechaza y se dice con calma, sin culpar a nadie.
-        if (r is null) Avisar("Todavía no se pueden liberar", ExamenTexto.Error(api.UltimoError, api.UltimoMotivo), Tono.Ambar);
-        else Avisar("Resultados liberados", "Los alumnos ya pueden ver su resultado.", Tono.Exito);
+        if (r is null) Avisar("Todavía no se pueden publicar", ExamenTexto.Error(api.UltimoError, api.UltimoMotivo), Tono.Ambar);
+        else Avisar("Resultados publicados", "Los alumnos calificados ya pueden ver su resultado.", Tono.Exito);
         await RefrescarAsync(forzar: true);
     }
 }

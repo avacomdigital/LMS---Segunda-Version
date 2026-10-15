@@ -1,19 +1,21 @@
 {
   "entregado_en": 1790000125000,
   "intento": {
-    "asignacion_id": "18beb971-9fa0-4567-b5e3-2a4bda89938e",
+    "asignacion_id": "33a3f7d9-78e2-43d0-8320-17419781ea54",
     "estado": "en_revision_docente",
     "fuera_de_plazo": false,
-    "id": "d7ad1e9a-f341-452c-95d1-608d63877ada",
+    "id": "b29e234f-8570-4ad5-bc39-a120f761e0f1",
     "numero": 1,
     "respondidas": 12,
     "total": 12
   },
   "origen_entrega": "alumno",
+  "publicar_en": null,
   "que_sigue": {
     "codigo": "en_revision",
     "texto": "Tu examen quedó entregado. Algunas respuestas las revisa tu profesor."
   },
   "resultado_disponible": false,
+  "resultados": "tras_liberar",
   "servidor_en": 1790000125000
 }

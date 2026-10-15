@@ -1,0 +1,103 @@
+{
+  "catalog": {
+    "reason": "",
+    "status": "ok"
+  },
+  "countries": [
+    {
+      "code": "CO",
+      "name": "Colombia"
+    }
+  ],
+  "current_period": "2026",
+  "grades": [
+    {
+      "code": "4",
+      "name": "Cuarto"
+    }
+  ],
+  "groups": [
+    {
+      "code": "8A",
+      "id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+      "level": "",
+      "name": "Octavo A",
+      "period": "2026"
+    }
+  ],
+  "levels": [
+    {
+      "code": "primary",
+      "name": "Primaria"
+    }
+  ],
+  "periods": [
+    "2026"
+  ],
+  "subjects": [
+    {
+      "code": "math",
+      "name": "Matemáticas"
+    }
+  ],
+  "topics": [],
+  "tree": [
+    {
+      "children": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "children": [],
+                  "code": "math",
+                  "count": 1,
+                  "kind": "subject",
+                  "name": "Matemáticas"
+                }
+              ],
+              "code": "4",
+              "count": 1,
+              "kind": "grade",
+              "name": "Cuarto"
+            }
+          ],
+          "code": "primary",
+          "count": 1,
+          "kind": "level",
+          "name": "Primaria"
+        }
+      ],
+      "code": "CO",
+      "count": 1,
+      "kind": "country",
+      "name": "Colombia"
+    }
+  ],
+  "types": [
+    {
+      "label": "Curso",
+      "value": "course"
+    },
+    {
+      "label": "Lección",
+      "value": "lesson"
+    },
+    {
+      "label": "Recurso",
+      "value": "resource"
+    },
+    {
+      "label": "Evaluación",
+      "value": "assessment"
+    },
+    {
+      "label": "Estudio asignado",
+      "value": "study"
+    },
+    {
+      "label": "Clase",
+      "value": "class"
+    }
+  ]
+}

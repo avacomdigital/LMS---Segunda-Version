@@ -1,0 +1,104 @@
+{
+  "filters_applied": {
+    "country": "",
+    "grade": "",
+    "group": "",
+    "level": "",
+    "period": "",
+    "subject": "",
+    "topic": "",
+    "type": []
+  },
+  "has_more": true,
+  "index_notice": "",
+  "index_status": "consultable",
+  "match_mode": "all",
+  "normalized": "estados",
+  "notice": "",
+  "page": 2,
+  "page_size": 2,
+  "query": "estados",
+  "results": [
+    {
+      "context": {
+        "course_label": "Estados de la materia y sus cambios",
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "group_name": "Octavo A",
+        "lesson_label": "Los tres estados de la materia",
+        "period": "2026",
+        "tree_path": []
+      },
+      "description": "Sólido, líquido y gas explicados con el modelo de partículas.",
+      "entity_id": "61909875-e4a6-48d4-9e41-0f276ea4ec37",
+      "entity_type": "study",
+      "highlights": [],
+      "id": "61909875-e4a6-48d4-9e41-0f276ea4ec37",
+      "match": "titulo",
+      "navigation_target": {
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "entity_id": "61909875-e4a6-48d4-9e41-0f276ea4ec37",
+        "entity_type": "study",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "lesson_ref": "l1-three-states",
+        "object_ref": "",
+        "source": "ejemplo"
+      },
+      "score": 0.85,
+      "snippet": "Sólido, líquido y gas explicados con el modelo de partículas.",
+      "source": "local",
+      "status": "activa",
+      "subtype": "",
+      "title": "Estados de la materia en casa"
+    },
+    {
+      "context": {
+        "course_label": "",
+        "course_ref": "avacom.co.primary.4.math.fractions",
+        "group_id": "",
+        "group_name": "",
+        "lesson_label": "",
+        "period": "",
+        "tree_path": []
+      },
+      "description": "Ejemplos cotidianos de estados",
+      "entity_id": "l1",
+      "entity_type": "lesson",
+      "highlights": [],
+      "id": "l1",
+      "match": "titulo",
+      "navigation_target": {
+        "course_ref": "avacom.co.primary.4.math.fractions",
+        "entity_id": "l1",
+        "entity_type": "lesson",
+        "group_id": "",
+        "lesson_ref": "l1",
+        "object_ref": "",
+        "source": "biblioteca"
+      },
+      "score": 0.82,
+      "snippet": "Ejemplos cotidianos de estados",
+      "source": "catalog",
+      "status": "",
+      "subtype": "",
+      "title": "Los estados de la materia en la cocina"
+    }
+  ],
+  "sources": {
+    "catalog": {
+      "hint": "",
+      "reason": "",
+      "status": "ok"
+    },
+    "local": {
+      "status": "ok",
+      "types": [
+        "assessment",
+        "study",
+        "class"
+      ]
+    }
+  },
+  "total": 5,
+  "total_exact": true
+}

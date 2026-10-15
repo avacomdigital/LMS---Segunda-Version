@@ -34,4 +34,23 @@
     <Compile Include="..\..\src\Avacom.Lms.Ops\Acceso\ReglasDeAcceso.cs" Link="Ops\Acceso\ReglasDeAcceso.cs" />
   </ItemGroup>
 
+  <!-- MOD-011 · Calificaciones: la lógica pura de las pantallas (sin MAUI; las piezas con interfaz viven en Calificaciones\Ui y no entran aquí) y las respuestas REALES del backend que ya capturó Core, vinculadas y no copiadas. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Calificaciones\*.cs" LinkBase="Ops\Calificaciones" />
+    <None Include="..\Avacom.Lms.Core.Tests\Fixtures\gradebook\*.json" Link="Fixtures\gradebook\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- MOD-021 · Buscar: quién puede abrirla y adónde lleva cada resultado (sin MAUI; las piezas con interfaz viven en BusquedaUi.cs y no entran aquí). -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Busqueda\ReglasDeBusqueda.cs" Link="Ops\Busqueda\ReglasDeBusqueda.cs" />
+  </ItemGroup>
+
+  <!-- MOD-013 · Reportes: cómo se guarda un reporte exportado en una memoria USB, un disco externo o cualquier carpeta (destinos, unidades, vigilante, preferencias y escritura segura).
+       Es lógica pura, sin MAUI: las piezas con interfaz viven en Reportes\Ui, que usa MAUI y NO entra aquí (el patrón no baja a subcarpetas y además se excluye por claridad). -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Reportes\*.cs" Exclude="..\..\src\Avacom.Lms.Ops\Reportes\Ui\**" LinkBase="Ops\Reportes" />
+    <!-- Las respuestas REALES de /api/reportes/ que ya capturó Core (vinculadas, no copiadas): recientes, clases, alumnos… -->
+    <None Include="..\Avacom.Lms.Core.Tests\Fixtures\reportes\*.json" Link="Fixtures\reportes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

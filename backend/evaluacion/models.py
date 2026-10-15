@@ -72,8 +72,11 @@ class Asignacion(models.Model):
     gracia_ms = models.IntegerField(default=cat.GRACIA_MS_POR_DEFECTO)            # DEC-019
     reactivacion = models.CharField(max_length=12, choices=_lista(cat.REACTIVACIONES), default=cat.REACTIVA_PROFESOR)
     recursos = models.JSONField(default=list)                                     # [{media_ref, rotulo}] habilitados en `supervisado`
-    resultados = models.CharField(max_length=16, choices=_lista(cat.RESULTADOS), default=cat.TRAS_LIBERAR)
+    descripcion = models.TextField(blank=True, default="")                        # instrucciones generales del profesor (RF-003)
+    resultados = models.CharField(max_length=20, choices=_lista(cat.RESULTADOS), default=cat.TRAS_LIBERAR)   # política de publicación (RF-004)
+    publicar_en = models.BigIntegerField(null=True, blank=True)                   # `programada`: el nodo libera al alcanzar este instante (su reloj)
     liberados_en = models.BigIntegerField(null=True, blank=True)                  # DEC-032: el alumno ve su nota desde aquí
+    liberados_por = models.CharField(max_length=64, blank=True, default="")      # quién liberó: una persona o `sistema` (por la política)
     aprobacion_pct = models.FloatField(null=True, blank=True)
     permite_retroceso = models.BooleanField(default=True)
     mezclar_opciones = models.BooleanField(default=True)
@@ -107,6 +110,9 @@ class Asignacion(models.Model):
                                    name="ck_m10_asignacion_vigencia"),
             models.CheckConstraint(condition=Q(gracia_ms__gte=0), name="ck_m10_asignacion_gracia"),
             models.CheckConstraint(condition=Q(intentos_permitidos__isnull=True) | Q(intentos_permitidos__gte=1), name="ck_m10_asignacion_intentos"),
+            # `programada` exige la fecha; una liberación lleva siempre quién la hizo (una persona o `sistema`).
+            models.CheckConstraint(condition=~Q(resultados=cat.RESULTADOS_PROGRAMADOS) | Q(publicar_en__isnull=False), name="ck_m10_asignacion_publicar_en"),
+            models.CheckConstraint(condition=Q(liberados_en__isnull=True) | ~Q(liberados_por=""), name="ck_m10_asignacion_liberados_por"),
             # `fijo` ⇔ hay un límite de tiempo fijado por el profesor.
             models.CheckConstraint(
                 condition=(Q(tiempo_modo=cat.TIEMPO_FIJO) & Q(tiempo_limite_seg__gte=1))
@@ -190,6 +196,8 @@ class Intento(models.Model):
     calificacion_pendiente = models.BooleanField(default=False)                   # la biblioteca no estaba al entregar
     calificado_por = models.CharField(max_length=64, blank=True, default="")      # INV-019: `sistema` o la persona que publicó
     calificado_en = models.BigIntegerField(null=True, blank=True)
+    liberado_en = models.BigIntegerField(null=True, blank=True)                   # RF-004: el profesor publicó ESTE resultado (por alumno)
+    liberado_por = models.CharField(max_length=64, blank=True, default="")
     fuera_de_plazo = models.BooleanField(default=False)
     origen_entrega = models.CharField(max_length=12, blank=True, default="")
     envio_tardio = models.CharField(max_length=20, blank=True, default="")
@@ -223,6 +231,8 @@ class Intento(models.Model):
             models.CheckConstraint(condition=~Q(estado=cat.CALIFICADO) | (Q(porcentaje__isnull=False) & ~Q(calificado_por="")),
                                    name="ck_m10_intf_calificado_con_evaluador"),
             models.CheckConstraint(condition=Q(envio_tardio__in=cat.ESTADOS_TARDIO), name="ck_m10_intf_envio_tardio"),
+            # Publicar el resultado de un alumno lleva siempre la firma de quien lo hizo.
+            models.CheckConstraint(condition=Q(liberado_en__isnull=True) | ~Q(liberado_por=""), name="ck_m10_intf_liberado_por"),
         ]
         indexes = [models.Index(fields=["asignacion", "estado"], name="ix_m10_intf_asignacion"),
                    models.Index(fields=["alumno_id", "estado"], name="ix_m10_intf_alumno"),

@@ -303,14 +303,42 @@ public sealed record QueSigue(
     [property: JsonPropertyName("codigo")] string Codigo,
     [property: JsonPropertyName("texto")] string Texto);
 
-/// <summary>PAN-123: la confirmación de la entrega. NUNCA dice «calificado» mientras quede un reactivo por revisar.</summary>
+/// <summary>PAN-123: la confirmación de la entrega. NUNCA dice «calificado» mientras quede un reactivo por revisar. <c>Resultados</c> es la política de
+/// publicación (RF-004) y <c>PublicarEn</c> la fecha si es programada: la tableta dice CUÁNDO verá su resultado, nunca cuál es.</summary>
 public sealed record EntregaDeIntento(
     [property: JsonPropertyName("intento")] ResumenDeIntento Intento,
     [property: JsonPropertyName("entregado_en")] long? EntregadoEn,
     [property: JsonPropertyName("origen_entrega")] string? OrigenEntrega,
     [property: JsonPropertyName("que_sigue")] QueSigue QueSigue,
     [property: JsonPropertyName("resultado_disponible")] bool ResultadoDisponible = false,
-    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0);
+    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0,
+    [property: JsonPropertyName("resultados")] string? Resultados = null,
+    [property: JsonPropertyName("publicar_en")] long? PublicarEn = null);
+
+/// <summary>
+/// Las políticas de publicación de resultados (RF-004): calificar y publicar son dos cosas distintas, y la comprobación vive en el nodo. La tableta sólo
+/// recibe el nombre de la política y <c>resultado_disponible</c>; con ellos dice en una frase cuándo verá el alumno su nota.
+/// </summary>
+public static class PoliticasDeResultados
+{
+    public const string Nunca = "nunca";
+    /// <summary>«Inmediata»: en cuanto el intento está entregado Y completamente calificado.</summary>
+    public const string AlEntregar = "al_entregar";
+    /// <summary>«Manual»: el profesor los libera (el valor predeterminado seguro).</summary>
+    public const string TrasLiberar = "tras_liberar";
+    public const string AlFinalizarGrupo = "al_finalizar_grupo";
+    public const string Programada = "programada";
+
+    public static readonly IReadOnlyList<string> Todas = [TrasLiberar, AlEntregar, AlFinalizarGrupo, Programada, Nunca];
+
+    public static string Normalizar(string? politica) => politica switch
+    {
+        "inmediata" => AlEntregar,
+        "manual" => TrasLiberar,
+        AlEntregar or AlFinalizarGrupo or Programada or Nunca => politica,
+        _ => TrasLiberar,
+    };
+}
 
 public sealed record DetalleDeResultado(
     [property: JsonPropertyName("pregunta_ref")] string PreguntaRef,
@@ -338,7 +366,11 @@ public sealed record MiIntento(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("numero")] int Numero,
     [property: JsonPropertyName("estado")] string Estado,
-    [property: JsonPropertyName("resultado_disponible")] bool ResultadoDisponible = false);
+    [property: JsonPropertyName("resultado_disponible")] bool ResultadoDisponible = false,
+    [property: JsonPropertyName("calificacion_pendiente")] bool CalificacionPendiente = false,
+    [property: JsonPropertyName("requiere_revision")] bool RequiereRevision = false,
+    // La política de publicación ya lo mostraría, pero lo retiene otro módulo: <c>libro_de_calificaciones</c> = la calificación aún no está publicada.
+    [property: JsonPropertyName("retenido_por")] string? RetenidoPor = null);
 
 /// <summary>Una evaluación que le alcanza al alumno. <c>PuedeComenzar = false</c> trae su <c>Motivo</c> (<c>espera_admision</c> · <c>rechazada</c> · <c>no_abierta</c> · …).</summary>
 public sealed record EvaluacionDelAlumno(
@@ -354,7 +386,11 @@ public sealed record EvaluacionDelAlumno(
     [property: JsonPropertyName("preguntas")] int Preguntas,
     [property: JsonPropertyName("puede_comenzar")] bool PuedeComenzar,
     [property: JsonPropertyName("motivo")] string? Motivo,
-    [property: JsonPropertyName("mi_intento")] MiIntento? MiIntento);
+    [property: JsonPropertyName("mi_intento")] MiIntento? MiIntento,
+    [property: JsonPropertyName("resultados")] string? Resultados = null,
+    [property: JsonPropertyName("publicar_en")] long? PublicarEn = null,
+    [property: JsonPropertyName("duracion_seg")] int? DuracionSeg = null,
+    [property: JsonPropertyName("descripcion")] string? Descripcion = null);
 
 public sealed record MisEvaluaciones(
     [property: JsonPropertyName("pendientes")] IReadOnlyList<EvaluacionDelAlumno> Pendientes,
@@ -387,7 +423,9 @@ public sealed record DatosDeLaAntesala(
     [property: JsonPropertyName("plazo")] string? Plazo,
     [property: JsonPropertyName("limite_en")] long? LimiteEn,
     [property: JsonPropertyName("resultados")] string? Resultados,
-    [property: JsonPropertyName("permite_retroceso")] bool PermiteRetroceso = true);
+    [property: JsonPropertyName("permite_retroceso")] bool PermiteRetroceso = true,
+    [property: JsonPropertyName("publicar_en")] long? PublicarEn = null,
+    [property: JsonPropertyName("descripcion")] string? Descripcion = null);
 
 public sealed record DispositivoDeAntesala(
     [property: JsonPropertyName("id")] string? Id,
@@ -429,10 +467,93 @@ public sealed record AsignacionDeExamen(
     [property: JsonPropertyName("grupo_rotulo")] string? GrupoRotulo,
     [property: JsonPropertyName("preguntas_por_alumno")] int PreguntasPorAlumno,
     [property: JsonPropertyName("armado_previo")] ArmadoPrevio? ArmadoPrevio = null,
-    [property: JsonPropertyName("totales")] TotalesDelPanel? Totales = null)
+    [property: JsonPropertyName("totales")] TotalesDelPanel? Totales = null,
+    [property: JsonPropertyName("publicar_en")] long? PublicarEn = null,
+    [property: JsonPropertyName("liberados_por")] string? LiberadosPor = null,
+    [property: JsonPropertyName("descripcion")] string? Descripcion = null,
+    [property: JsonPropertyName("total_banco")] int TotalBanco = 0,
+    [property: JsonPropertyName("estrategia")] string? Estrategia = null)
 {
     public bool Abierta => Estado is "activa" or "activa_fuera_de_plazo";
+
+    /// <summary>RF-004: los resultados de la asignación ya están publicados (por el profesor o por su política, con el reloj del nodo).</summary>
+    public bool ResultadosPublicados => LiberadosEn is not null;
 }
+
+/// <summary>
+/// RF-003: la ficha de un examen de la biblioteca ANTES de asignarlo —cuántas preguntas tiene el banco, cómo las reparte, qué sugiere— para que el
+/// profesor elija el número de preguntas y la política de publicación. Sin preguntas ni claves.
+/// </summary>
+public sealed record FichaDeExamen(
+    [property: JsonPropertyName("fuente")] string? Fuente,
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("curso_version")] string? CursoVersion,
+    [property: JsonPropertyName("curso_rotulo")] string? CursoRotulo,
+    [property: JsonPropertyName("objeto_ref")] string ObjetoRef,
+    [property: JsonPropertyName("titulo")] string? Titulo,
+    [property: JsonPropertyName("total_banco")] int TotalBanco,
+    [property: JsonPropertyName("temas")] IReadOnlyList<string>? Temas,
+    [property: JsonPropertyName("tipos")] Dictionary<string, int>? Tipos,
+    [property: JsonPropertyName("estrategia")] string? Estrategia,
+    [property: JsonPropertyName("preguntas_sugeridas")] int PreguntasSugeridas,
+    [property: JsonPropertyName("cubrir_todos_los_temas")] bool CubrirTodosLosTemas = false,
+    [property: JsonPropertyName("mezclar_opciones")] bool MezclarOpciones = true,
+    [property: JsonPropertyName("tiempo")] TiempoDeFicha? Tiempo = null,
+    [property: JsonPropertyName("aprobacion_pct")] double? AprobacionPct = null,
+    [property: JsonPropertyName("resultados_sugeridos")] string? ResultadosSugeridos = null,
+    [property: JsonPropertyName("resultados_por_defecto")] string? ResultadosPorDefecto = null,
+    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0);
+
+/// <summary>Un examen de un curso instalado (<c>GET /examenes/disponibles/</c>). <c>Aplicaciones</c> cuenta las veces que se aplicó y <c>Abiertas</c> las que siguen vivas.</summary>
+public sealed record ExamenDisponible(
+    [property: JsonPropertyName("objeto_ref")] string ObjetoRef,
+    [property: JsonPropertyName("titulo")] string Titulo,
+    [property: JsonPropertyName("leccion_ref")] string? LeccionRef,
+    [property: JsonPropertyName("leccion_titulo")] string? LeccionTitulo,
+    [property: JsonPropertyName("preguntas")] int? Preguntas,
+    [property: JsonPropertyName("aplicaciones")] int Aplicaciones = 0,
+    [property: JsonPropertyName("abiertas")] int Abiertas = 0);
+
+public sealed record CursoConExamenes(
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("titulo")] string? Titulo,
+    [property: JsonPropertyName("version")] string? Version,
+    [property: JsonPropertyName("examenes")] IReadOnlyList<ExamenDisponible> Examenes);
+
+public sealed record CursoOmitido(
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("motivo")] string? Motivo);
+
+/// <summary>
+/// Los exámenes que tienen los cursos instalados, para aplicar uno desde el MENÚ PRINCIPAL de OPS sin estar dentro de una clase. Con la biblioteca cerrada
+/// <c>Disponible</c> es falso y <c>Motivo</c> dice por qué; un curso que no pudo leerse queda en <c>Omitidos</c> sin tumbar a los demás.
+/// </summary>
+public sealed record ExamenesDisponibles(
+    [property: JsonPropertyName("fuente")] string? Fuente,
+    [property: JsonPropertyName("disponible")] bool Disponible,
+    [property: JsonPropertyName("motivo")] string? Motivo,
+    [property: JsonPropertyName("sugerencia")] string? Sugerencia,
+    [property: JsonPropertyName("cursos")] IReadOnlyList<CursoConExamenes> Cursos,
+    [property: JsonPropertyName("omitidos")] IReadOnlyList<CursoOmitido>? Omitidos = null,
+    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0)
+{
+    public int Total => Cursos.Sum(c => c.Examenes.Count);
+}
+
+public sealed record TiempoDeFicha(
+    [property: JsonPropertyName("politica")] string? Politica,
+    [property: JsonPropertyName("fijo_seg")] int? FijoSeg,
+    [property: JsonPropertyName("extra_pct")] double? ExtraPct,
+    [property: JsonPropertyName("estimado_banco_seg")] int EstimadoBancoSeg = 0);
+
+/// <summary>RF-004: el resultado de UN alumno publicado por el profesor (<c>POST /intentos/{id}/liberar-resultado/</c>).</summary>
+public sealed record ResultadoLiberado(
+    [property: JsonPropertyName("intento_id")] string IntentoId,
+    [property: JsonPropertyName("estado")] string Estado,
+    [property: JsonPropertyName("liberado_en")] long? LiberadoEn,
+    [property: JsonPropertyName("liberado_por")] string? LiberadoPor,
+    [property: JsonPropertyName("resultado_publicado")] bool ResultadoPublicado = false,
+    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0);
 
 public sealed record ArmadoPrevio(
     [property: JsonPropertyName("estrategia")] string? Estrategia,
@@ -461,7 +582,13 @@ public sealed record TiempoDeExamen(
 public sealed record NuevoExamen(
     string Fuente, string CursoRef, string ObjetoRef, string NivelExamen, string GrupoId, string? SesionId = null,
     TiempoDeExamen? Tiempo = null, int? IntentosPermitidos = 1, long? AbreEn = null, long? LimiteEn = null, string Plazo = "blando", int? GraciaMin = null,
-    string Reactivacion = "profesor", string Resultados = "tras_liberar", bool Iniciar = true);
+    string Reactivacion = "profesor", string Resultados = "tras_liberar", bool Iniciar = true,
+    // RF-002/RF-003: cuántas preguntas recibe cada alumno (nulo: las que diga el examen; el nodo rechaza más de las que tiene el banco) y cómo se eligen
+    // (`fixed`: el banco entero en su orden · `random_balanced`; nulo: lo que diga el examen).
+    int? Preguntas = null, string? Estrategia = null,
+    // RF-004: la fecha de publicación cuando `Resultados` es `programada` (milisegundos del reloj del nodo).
+    long? PublicarEn = null,
+    string? Descripcion = null, bool? MezclarOpciones = null);
 
 public sealed record TotalesDelPanel(
     [property: JsonPropertyName("destinatarios")] int Destinatarios,
@@ -476,7 +603,15 @@ public sealed record TotalesDelPanel(
     [property: JsonPropertyName("anulados")] int Anulados,
     [property: JsonPropertyName("con_incidentes")] int ConIncidentes,
     [property: JsonPropertyName("pendientes_decision")] int PendientesDecision,
-    [property: JsonPropertyName("no_iniciados")] int NoIniciados = 0);
+    [property: JsonPropertyName("no_iniciados")] int NoIniciados = 0,
+    // RF-012: `SinSenal` presentan sin señal reciente (más de dos latidos, aún sin pausar: problemas de conexión); `CalificacionPendiente` entregaron y
+    // esperan a la biblioteca; `ReactivosPorRevisar` son reactivos (no alumnos) que sólo el profesor puntúa; `ListosParaPublicar` están calificados y
+    // el alumno todavía no ve su nota; `Publicados` ya la ven.
+    [property: JsonPropertyName("sin_senal")] int SinSenal = 0,
+    [property: JsonPropertyName("calificacion_pendiente")] int CalificacionPendiente = 0,
+    [property: JsonPropertyName("reactivos_por_revisar")] int ReactivosPorRevisar = 0,
+    [property: JsonPropertyName("listos_para_publicar")] int ListosParaPublicar = 0,
+    [property: JsonPropertyName("publicados")] int Publicados = 0);
 
 public sealed record TabletaDeFila(
     [property: JsonPropertyName("id")] string Id,
@@ -527,9 +662,16 @@ public sealed record FilaDelPanel(
     [property: JsonPropertyName("origen_entrega")] string? OrigenEntrega,
     [property: JsonPropertyName("requiere_revision")] bool RequiereRevision,
     [property: JsonPropertyName("porcentaje")] double? Porcentaje,
-    [property: JsonPropertyName("anulado_por")] string? AnuladoPor)
+    [property: JsonPropertyName("anulado_por")] string? AnuladoPor,
+    [property: JsonPropertyName("resultado_publicado")] bool ResultadoPublicado = false,
+    [property: JsonPropertyName("liberado_en")] long? LiberadoEn = null,
+    [property: JsonPropertyName("reactivos_por_revisar")] int ReactivosPorRevisar = 0,
+    [property: JsonPropertyName("calificacion_pendiente")] bool CalificacionPendiente = false)
 {
     public bool EsperaAlProfesor => RequiereReactivacion || Admision is { Estado: "en_espera" } || EnvioTardio == "pendiente_decision";
+
+    /// <summary>RF-004: calificado del todo y todavía oculto para el alumno: se puede publicar.</summary>
+    public bool ListoParaPublicar => Estado == EstadosIntento.Calificado && !CalificacionPendiente && !ResultadoPublicado;
 }
 
 public sealed record PanelDeExamen(
@@ -634,7 +776,15 @@ public sealed record FilaDeResultados(
     [property: JsonPropertyName("aprobado")] bool? Aprobado,
     [property: JsonPropertyName("fuera_de_plazo")] bool FueraDePlazo,
     [property: JsonPropertyName("requiere_revision")] bool RequiereRevision,
-    [property: JsonPropertyName("incidentes")] int Incidentes);
+    [property: JsonPropertyName("incidentes")] int Incidentes,
+    [property: JsonPropertyName("resultado_publicado")] bool ResultadoPublicado = false,
+    [property: JsonPropertyName("liberado_en")] long? LiberadoEn = null,
+    [property: JsonPropertyName("liberado_por")] string? LiberadoPor = null,
+    [property: JsonPropertyName("calificacion_pendiente")] bool CalificacionPendiente = false)
+{
+    /// <summary>RF-004: calificado del todo y todavía oculto para el alumno: el profesor puede publicarlo a él solo.</summary>
+    public bool ListoParaPublicar => Definitivo && !ResultadoPublicado && Estado == EstadosIntento.Calificado;
+}
 
 public sealed record ResultadosDeExamen(
     [property: JsonPropertyName("asignacion_id")] string AsignacionId,
@@ -643,7 +793,11 @@ public sealed record ResultadosDeExamen(
     [property: JsonPropertyName("liberados_en")] long? LiberadosEn,
     [property: JsonPropertyName("promedio_porcentaje")] double? PromedioPorcentaje,
     [property: JsonPropertyName("datos_suficientes")] bool DatosSuficientes,
-    [property: JsonPropertyName("filas")] IReadOnlyList<FilaDeResultados> Filas);
+    [property: JsonPropertyName("filas")] IReadOnlyList<FilaDeResultados> Filas,
+    [property: JsonPropertyName("resultados")] string? Resultados = null,
+    [property: JsonPropertyName("publicar_en")] long? PublicarEn = null,
+    [property: JsonPropertyName("liberados_por")] string? LiberadosPor = null,
+    [property: JsonPropertyName("estado")] string? Estado = null);
 
 public sealed record PreguntaDeRevision(
     [property: JsonPropertyName("pregunta")] PreguntaAula Pregunta,
@@ -667,4 +821,6 @@ public sealed record IntentoPublicado(
     [property: JsonPropertyName("intento_id")] string IntentoId,
     [property: JsonPropertyName("estado")] string Estado,
     [property: JsonPropertyName("porcentaje")] double? Porcentaje,
-    [property: JsonPropertyName("calificado_por")] string? CalificadoPor);
+    [property: JsonPropertyName("calificado_por")] string? CalificadoPor,
+    // RF-004: publicar la CALIFICACIÓN (revisión docente) no es publicar el RESULTADO al alumno; esto dice si ya lo ve.
+    [property: JsonPropertyName("resultado_publicado")] bool ResultadoPublicado = false);

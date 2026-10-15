@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.BuscarPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False"
+    SizeChanged="OnPageSizeChanged">
+    <!-- Buscar (MOD-021), la entrada «Buscar» del MENÚ PRINCIPAL. Es un buscador, no una tarjeta de formulario: la barra (campo de texto + Tipo y Grupo a la vista y, bajo «Más
+         filtros», Ciclo, País, Nivel, Grado y Materia) es de una sola fila ancha y no cabe en el tercio central de la ventana, así que la pantalla usa el mismo diseño ancho que
+         Evaluaciones (hasta 1280 px, cabecera fija y cuerpo que se desplaza). Arriba: título y acciones. Cuerpo: la barra, las sugerencias (para buscar tocando) y los resultados.
+         Los resultados abren la pantalla del módulo dueño del recurso; aquí no se ve ni se edita nada. El texto es lo normal, pero nada lo exige: el equipo principal puede no
+         tener teclado, así que las búsquedas recientes y las materias se tocan. -->
+    <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
+        <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
+            <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                <Label Text="BUSCAR" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Buscar" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Encuentra cursos, lecciones, recursos, evaluaciones, estudios asignados y clases. Sólo ves lo que tu rol puede leer." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+            <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+        </Grid>
+        <VerticalStackLayout x:Name="AvisoHost" Grid.Row="1" HorizontalOptions="Center" WidthRequest="1280" Spacing="8" />
+        <ScrollView x:Name="Desplazable" Grid.Row="2">
+            <VerticalStackLayout x:Name="Cuerpo" HorizontalOptions="Center" WidthRequest="1280" Spacing="14" Padding="0,0,0,40">
+                <!-- La barra vive fuera de los hosts que se repintan: lo escrito y lo elegido no se pierde al leer de nuevo. -->
+                <ui:SearchFilterBar x:Name="Buscador" Placeholder="Buscar cursos, lecciones, evaluaciones o clases" />
+                <VerticalStackLayout x:Name="SugerenciasHost" Spacing="10" />
+                <Label x:Name="ResumenLabel" FontFamily="InterMedium" FontSize="15" TextColor="#3F3F46" IsVisible="False" />
+                <VerticalStackLayout x:Name="ResultadosHost" Spacing="10" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

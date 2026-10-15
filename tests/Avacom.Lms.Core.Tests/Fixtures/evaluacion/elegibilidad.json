@@ -2,9 +2,9 @@
   "filas": [
     {
       "alcanza": false,
-      "alumno_id": "08337623-9bb9-46d4-afc8-a069cc15170b",
+      "alumno_id": "1cf252f6-48a2-4559-822f-282dadf7550f",
       "capacidad": "supervisado",
-      "dispositivo_id": "f6ac0bc8-18d2-457f-bac8-fea33c7d2ec5",
+      "dispositivo_id": "0491dd54-9f27-414e-9ca4-fd5aeb4d9d99",
       "dispositivo_nombre": "Tableta de Juan",
       "nivel_exigido": "controlado",
       "rotulo": "Juan P."

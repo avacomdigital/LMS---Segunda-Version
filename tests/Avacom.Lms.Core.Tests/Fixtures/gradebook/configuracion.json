@@ -1,0 +1,96 @@
+{
+  "escalas": [
+    {
+      "activa": true,
+      "codigo": "co-1-5",
+      "creada_en": 1790000000000,
+      "creada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
+      "id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+      "jurisdiccion": "Antioquia",
+      "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+      "pais": "CO",
+      "plantilla_origen": "co-1-5",
+      "tipo": "numerica",
+      "ultima_version": {
+        "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
+        "id": "e0521e03-c62f-449b-936f-f2630c3accdb",
+        "numero": 1
+      }
+    }
+  ],
+  "modos": [
+    "simple",
+    "calificaciones"
+  ],
+  "niveles": [
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "preescolar",
+      "por_defecto": true,
+      "version": 0
+    },
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "primaria",
+      "por_defecto": true,
+      "version": 0
+    },
+    {
+      "actualizada_en": 1790000000000,
+      "actualizada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
+      "escala": {
+        "codigo": "co-1-5",
+        "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+        "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+        "numero": 1,
+        "tipo": "numerica",
+        "version_id": "e0521e03-c62f-449b-936f-f2630c3accdb"
+      },
+      "modo": "calificaciones",
+      "nivel_clave": "secundaria",
+      "por_defecto": false,
+      "version": 1
+    },
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "bachillerato",
+      "por_defecto": true,
+      "version": 0
+    },
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "preuniversitario",
+      "por_defecto": true,
+      "version": 0
+    }
+  ],
+  "politica": {
+    "institucion": "IE San José",
+    "jurisdiccion": "Antioquia",
+    "pais": "CO",
+    "politica_intentos": "ultimo",
+    "politica_provisional": false,
+    "ponderaciones": {},
+    "ponderaciones_aplicadas": false,
+    "version": 1
+  },
+  "politicas_de_intentos": [
+    "ultimo",
+    "mejor",
+    "primero",
+    "promedio"
+  ],
+  "servidor_en": 1790000000000
+}

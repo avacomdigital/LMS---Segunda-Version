@@ -18,6 +18,16 @@ public partial class SearchFilterBar : ContentView
     /// <summary>Se pulsó «Limpiar filtros»; los picklists ya están en «todos» y el texto vacío.</summary>
     public event EventHandler? LimpiarTapped;
 
+    /// <summary>Se pulsó Enter (la tecla «Buscar» del teclado en pantalla) en el campo de texto.</summary>
+    public event EventHandler? Completed;
+
+    /// <summary>El AutomationId del campo de texto (para que UI Automation lo encuentre sin adivinar).</summary>
+    public string CampoAutomationId
+    {
+        get => Entrada.AutomationId ?? string.Empty;
+        set => Entrada.AutomationId = value;
+    }
+
     public string Text
     {
         get => Entrada.Text ?? string.Empty;
@@ -52,6 +62,8 @@ public partial class SearchFilterBar : ContentView
     }
 
     private void OnTextoCambiado(object? sender, TextChangedEventArgs e) => TextChanged?.Invoke(this, e);
+
+    private void OnCompletado(object? sender, EventArgs e) => Completed?.Invoke(this, EventArgs.Empty);
 
     private void OnMasFiltros(object? sender, EventArgs e) => MasFiltrosVisible = !MasFiltrosVisible;
 

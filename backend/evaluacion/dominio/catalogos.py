@@ -33,10 +33,23 @@ MODOS_TIEMPO = (TIEMPO_BIBLIOTECA, TIEMPO_FIJO, SIN_LIMITE)
 REACTIVA_PROFESOR, REACTIVA_AUTOMATICA = "profesor", "automatica"
 REACTIVACIONES = (REACTIVA_PROFESOR, REACTIVA_AUTOMATICA)
 
-# Cuándo ve el alumno su resultado (`showResults` del examen: never · after_submit · after_teacher_release).
-NUNCA, AL_ENTREGAR, TRAS_LIBERAR = "nunca", "al_entregar", "tras_liberar"
-RESULTADOS = (NUNCA, AL_ENTREGAR, TRAS_LIBERAR)
+# Cuándo ve el alumno su resultado (política de publicación, RF-004). Calificar y publicar son dos cosas distintas: el nodo calcula la nota al
+# entregar y el alumno la ve sólo cuando la política lo permite, siempre comprobado en el nodo (`Motor.resultado_disponible`).
+#   nunca               el alumno no ve su nota desde la tableta
+#   al_entregar         «inmediata»: en cuanto su intento está entregado Y completamente calificado (nada por revisar)
+#   tras_liberar        «manual»: ocultos hasta que el profesor los libera (valor predeterminado seguro, D-26)
+#   al_finalizar_grupo  el nodo los libera solo cuando todos los destinatarios terminaron (o la asignación cerró y nada queda por resolver)
+#   programada          el nodo los libera solo cuando SU reloj alcanza `publicar_en`
+# La liberación (manual o del nodo) queda en `liberados_en`/`liberados_por`; además el profesor puede liberar un intento concreto (`liberado_en`).
+NUNCA, AL_ENTREGAR, TRAS_LIBERAR, AL_FINALIZAR_GRUPO, RESULTADOS_PROGRAMADOS = (
+    "nunca", "al_entregar", "tras_liberar", "al_finalizar_grupo", "programada")
+RESULTADOS = (NUNCA, AL_ENTREGAR, TRAS_LIBERAR, AL_FINALIZAR_GRUPO, RESULTADOS_PROGRAMADOS)
+RESULTADOS_QUE_LIBERA_EL_NODO = (AL_FINALIZAR_GRUPO, RESULTADOS_PROGRAMADOS)
+# Los nombres del documento de requisitos se aceptan como sinónimos en la entrada (nunca se guardan).
+SINONIMOS_RESULTADOS = {"inmediata": AL_ENTREGAR, "manual": TRAS_LIBERAR, "al_terminar_grupo": AL_FINALIZAR_GRUPO, "grupo": AL_FINALIZAR_GRUPO}
 RESULTADOS_DE_LA_BIBLIOTECA = {"never": NUNCA, "after_submit": AL_ENTREGAR, "after_teacher_release": TRAS_LIBERAR}
+# Quién liberó los resultados: una persona (manual o por alumno) o el nodo (`sistema`) por su política.
+ORIGEN_LIBERACION_MANUAL, ORIGEN_LIBERACION_PROGRAMADA, ORIGEN_LIBERACION_GRUPO = "manual", "programada", "grupo"
 
 # Los seis estados de la asignación (sección H del Maestro).
 BORRADOR, PROGRAMADA, ACTIVA, ACTIVA_FUERA_DE_PLAZO, CERRADA, ARCHIVADA = (
@@ -184,6 +197,11 @@ MENSAJE_EN_ESPERA = "Tu tableta no alcanza el nivel de control de este examen. T
 MENSAJE_RECHAZADA = "Tu profesor no admitió esta tableta para el examen. Pídele que te indique cómo continuar."
 QUE_SIGUE = {
     "resultado_al_liberar": "Tu examen quedó entregado. Tu profesor publicará los resultados.",
+    "resultado_programado": "Tu examen quedó entregado. Verás tu resultado en la fecha que fijó tu profesor.",
+    "resultado_al_terminar_grupo": "Tu examen quedó entregado. Verás tu resultado cuando todo el grupo haya terminado.",
+    "resultado_disponible": "Tu examen quedó entregado. Ya puedes ver tu resultado.",
+    "resultado_pronto": "Tu examen quedó entregado. Verás tu resultado en cuanto termine de calificarse.",
+    "resultado_en_libro": "Tu examen quedó entregado. Verás tu calificación cuando tu profesor la publique.",
     "en_revision": "Tu examen quedó entregado. Algunas respuestas las revisa tu profesor.",
     "sin_resultado": "Tu examen quedó entregado.",
 }
@@ -221,11 +239,15 @@ EV_ADMISION_SOLICITADA = "evaluacion.admision_solicitada.v1"
 EV_ENVIO_TARDIO_PENDIENTE = "evaluacion.envio_tardio_pendiente.v1"
 EV_ENVIO_TARDIO_DECIDIDO = "evaluacion.envio_tardio_decidido.v1"
 EV_ASIGNACION_CERRADA = "evaluacion.asignacion_cerrada.v1"
-EV_RESULTADOS_LIBERADOS = "evaluacion.resultados_liberados.v1"
+EV_RESULTADOS_LIBERADOS = "evaluacion.resultados_liberados.v1"              # de la asignación: `{origen: manual|programada|grupo, por}`
+# Publicación (RF-004). Contratos nuevos, versionados y compatibles con los consumidores de `evaluacion.resultados_liberados.v1` (misma carga base).
+EV_RESULTADO_INTENTO_LIBERADO = "evaluacion.resultado_intento_liberado.v1"  # el profesor publicó el resultado de UN alumno
+EV_RESULTADOS_CONFIGURADOS = "evaluacion.resultados_configurados.v1"        # cambió la política de publicación (o la fecha programada)
 EVENTOS_PROPIOS = (EV_INTENTO_PAUSADO, EV_INTENTO_REACTIVADO, EV_INTENTO_RESTAURADO, EV_INTENTO_ANULADO, EV_INTENTO_CALIFICADO,
                    EV_REVISION_PUBLICADA, EV_ADMISION_SOLICITADA, EV_ENVIO_TARDIO_PENDIENTE, EV_ENVIO_TARDIO_DECIDIDO,
-                   EV_ASIGNACION_CERRADA, EV_RESULTADOS_LIBERADOS)
+                   EV_ASIGNACION_CERRADA, EV_RESULTADOS_LIBERADOS, EV_RESULTADO_INTENTO_LIBERADO, EV_RESULTADOS_CONFIGURADOS)
 EVENTOS = EVENTOS_DEL_MAESTRO + EVENTOS_PROPIOS
+# `calificacion.registrada.v1` es de MOD-011 (Gradebook), que no existe todavía: la nota interna de MOD-010 sale como `evaluacion.intento_calificado.v1`.
 
 # ------------------------------------------------------------------------------- auditoría (MOD-019)
 # Acciones del catálogo cerrado de `audit.dominio.catalogos`. Las tres primeras ya estaban reservadas para este módulo.
@@ -233,6 +255,8 @@ EVENTOS = EVENTOS_DEL_MAESTRO + EVENTOS_PROPIOS
 A_INTENTO_ABIERTO, A_INTENTO_ENTREGADO, A_INTENTO_ANULADO = "evaluacion.iniciada", "evaluacion.enviada", "evaluacion.anulada"
 A_PUNTAJE_MODIFICADO = "calificacion.modificada"
 A_NIVEL_EXCEPCION = "aula.nivel.excepcion"
+A_RESULTADOS_LIBERADOS, A_RESULTADO_INTENTO_LIBERADO, A_RESULTADOS_CONFIGURADOS = (
+    "evaluacion.resultados.liberados", "evaluacion.resultado.liberado", "evaluacion.resultados.configurados")
 
 # -------------------------------------------------------------------------------------------- permisos
 # Sección J de MOD-010 (los 11 del Maestro) más cinco del proyecto. Los siembra MOD-001 (`acceso.dominio.plantillas`, migración 0009).

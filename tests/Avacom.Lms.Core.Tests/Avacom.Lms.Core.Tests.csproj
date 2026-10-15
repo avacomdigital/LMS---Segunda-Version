@@ -21,6 +21,8 @@
   <ItemGroup>
     <!-- Respuestas reales de /api/evaluacion/ capturadas por backend/evaluacion/tests/test_capturar_contrato.py -->
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- El cuerpo real de un reporte exportado en CSV (MOD-013): sus bytes y su huella son parte del contrato -->
+    <None Include="Fixtures\**\*.csv" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

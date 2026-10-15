@@ -75,12 +75,40 @@ internal static class ExamenTexto
 
     public static string PlazoLegible(string? plazo) => plazo == "endurecido" ? "Plazo endurecido: cierra al vencer" : "Plazo blando: se sigue recibiendo";
 
-    public static string ResultadosLegible(string? resultados) => resultados switch
+    /// <summary>La política de publicación (RF-004) en una frase, como la ve el profesor.</summary>
+    public static string ResultadosLegible(string? resultados) => PoliticasDeResultados.Normalizar(resultados) switch
     {
-        "al_entregar" => "Los alumnos ven su resultado al entregar",
-        "nunca" => "Los alumnos no ven su resultado",
-        _ => "Tú liberas los resultados",
+        PoliticasDeResultados.AlEntregar => "Los alumnos ven su resultado al entregar",
+        PoliticasDeResultados.Nunca => "Los alumnos no ven su resultado",
+        PoliticasDeResultados.AlFinalizarGrupo => "Se publican solos cuando todo el grupo termine",
+        PoliticasDeResultados.Programada => "Se publican solos en la fecha que fijaste",
+        _ => "Tú publicas los resultados",
     };
+
+    /// <summary>El nombre corto de cada política, para las fichas que se tocan.</summary>
+    public static string PoliticaCorta(string? resultados) => PoliticasDeResultados.Normalizar(resultados) switch
+    {
+        PoliticasDeResultados.AlEntregar => "Al entregar",
+        PoliticasDeResultados.Nunca => "Nunca",
+        PoliticasDeResultados.AlFinalizarGrupo => "Cuando termine el grupo",
+        PoliticasDeResultados.Programada => "En una fecha",
+        _ => "Los publico yo",
+    };
+
+    /// <summary>Lo que la cabecera del panel dice de la publicación: qué política rige y, si ya ocurrió, cuándo y quién.</summary>
+    public static string Publicacion(string? resultados, long? publicarEn, long? liberadosEn, string? liberadosPor)
+    {
+        if (liberadosEn is { } lib)
+        {
+            var quien = liberadosPor == "sistema"
+                ? PoliticasDeResultados.Normalizar(resultados) == PoliticasDeResultados.Programada ? "a la hora fijada" : "al terminar el grupo"
+                : $"por {Persona(liberadosPor)}";
+            return $"Resultados publicados a las {Hora(lib)} {quien}";
+        }
+        return PoliticasDeResultados.Normalizar(resultados) == PoliticasDeResultados.Programada && publicarEn is { } cuando
+            ? $"Se publican solos a las {Hora(cuando)}"
+            : ResultadosLegible(resultados);
+    }
 
     public static string Plural(int n, string singular, string plural) => n == 1 ? $"1 {singular}" : $"{n} {plural}";
 

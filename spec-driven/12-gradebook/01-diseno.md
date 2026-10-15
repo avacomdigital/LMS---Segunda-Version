@@ -1,0 +1,146 @@
+# 12 · Gradebook (MOD-011) · Diseño, decisiones y alcance
+
+| Campo | Valor |
+|---|---|
+| Estado | **MVP implementado** (2026-10-14). Backend `backend/gradebook/` (app Django, tablas `m11_*`), cliente `src/Avacom.Lms.Core/Gradebook/`, pantallas de OPS y «Mis resultados» en Student. V1 documentado y desacoplado (§9). |
+| Módulo | **MOD-011 · Gradebook** (FUN-119…129; eventos `calificacion.*.v1`; permisos `grades.*`). |
+| Contrato | [02-api.md](02-api.md) — rutas, cuerpos, errores, eventos y permisos. |
+| Se apoya en | MOD-010 ([../06-evaluation-delivery/](../06-evaluation-delivery/backend.md)): dueño de intentos, respuestas y rúbricas. MOD-001 (grupos, niveles, roles), MOD-019 (auditoría), la biblioteca (`grading-guide`). |
+
+> **Principio fundamental:** conservar la integridad académica. Ninguna calificación se pierde, se duplica, se publica antes de tiempo ni se cambia sin rastro. Y el libro evalúa **aprendizaje demostrado**, no cantidad de respuestas correctas: es una herramienta de seguimiento y retroalimentación que no sustituye el criterio del profesor.
+
+---
+
+## 1 · Arquitectura
+
+Hexagonal, igual que `acceso/`, `classroom_engine/`, `evaluacion/` y `audit/`:
+
+```
+backend/gradebook/
+├── models.py                       m11_* (§3)
+├── dominio/                        reglas puras; NO importan Django ni DRF
+│   ├── catalogos.py                modos, estados, tipos, eventos, acciones de auditoría, permisos
+│   ├── errores.py                  ErrorGradebook y sus hijos (cada uno lleva su código HTTP)
+│   ├── puntaje.py                  la escala interna 0–100 con Decimal; redondeo determinista
+│   ├── escala.py                   el motor de escalas: validar, convertir, presentar, huella
+│   ├── plantillas_escalas.py       15 plantillas orientativas (7 países + 6 genéricas)
+│   ├── resultado.py                estado simple, intento que cuenta, agregados
+│   └── rubrica.py                  aplicar una rúbrica
+├── aplicacion/                     casos de uso; NO importan Django ni DRF
+│   ├── puertos.py                  Evaluacion (MOD-010) · GuiaDeCalificacion · Identidad · Reloj · Auditoria · Outbox · Autorizacion · repositorios
+│   ├── registro.py                 FUN-119: registrar la calificación de un intento
+│   ├── revision.py                 FUN-120, FUN-121: bandeja, detalle, puntuar a mano o por rúbrica, confirmar
+│   ├── ajuste.py                   FUN-122, FUN-123: ajustar, reabrir, valorar el desempeño, retroalimentar
+│   ├── publicacion.py              publicar, retirar, publicar una asignación (extensión técnica propuesta)
+│   ├── escalas.py                  FUN-124: plantillas, adoptar, versionar, vista previa
+│   ├── modo.py                     FUN-125: modo por nivel, política institucional, clasificación de evaluaciones
+│   ├── derivados.py                FUN-126, 127, 129: estado simple, agregados, reconstrucción
+│   ├── consumidor.py               consume los eventos de MOD-010 con marca de lectura
+│   └── consultas.py                libro, historial, resumen del periodo, lo que ve el alumno
+├── infraestructura/                adaptadores: ORM, MOD-010 por su interfaz pública, MOD-001, biblioteca, hilo del nodo
+└── interfaces/                     vistas DRF y rutas (`/api/gradebook/`)
+```
+
+**Quién es dueño de qué** (escritor único, BR-003). MOD-011 posee la calificación, su historial, las revisiones que aplicó, las escalas con sus versiones, el modo por nivel, la política institucional, la clasificación de las evaluaciones y lo derivado. **No** posee —y no copia— intentos, respuestas, rúbricas, preguntas (MOD-010 y la biblioteca), grupos y periodos (MOD-001/002), ni archivos de dibujo o proyecto (MOD-014): el libro guarda *referencias*. La puntuación de un reactivo la asienta MOD-010 (con sus reglas y su permiso `assessment.review`) cuando el libro se lo pide por su interfaz pública `evaluacion/servicios.py`; una prueba comprueba que el libro nunca importa los modelos de `m10_*`.
+
+## 2 · Reglas que mandan
+
+1. **Escala interna 0–100, `Decimal`, dos decimales.** Lo que escribe una persona se valida estricto (rango, decimales, tipo); lo que calcula MOD-010 (cuatro decimales) se normaliza con `mitad_arriba`. La escala de presentación nunca cambia el valor guardado. El `float` sólo aparece al leer el porcentaje de MOD-010 y al escribir el JSON.
+2. **Modo simple por defecto.** Sin una fila de configuración, un nivel está en modo simple: el alumno ve un estado (no iniciado · en progreso · completado), símbolos y —si el profesor liberó el resultado— aciertos como estrellas. **Ni notas, ni letras, ni números.** Completar una actividad no crea un registro calificable; la puntuación técnica de MOD-010 no se convierte en nota. Preescolar y secundaria conviven en el mismo nodo (TST-080).
+3. **Una actividad pendiente no es un cero.** Sin calificación registrada, el resultado es `pendiente`, `provisional` o `sin_registro` con `puntaje_efectivo: null`. Una calificación sólo se registra cuando el intento está `calificado` del todo (sin revisión pendiente, sin calificación pendiente de la biblioteca, con porcentaje). Un promedio sin nada registrado es nulo, no cero.
+4. **El original no se sobrescribe.** `puntaje_original` no cambia jamás; `puntaje_efectivo` es el vigente; cada cambio es una fila de `m11_calificacion_version` (valor anterior, nuevo, motivo, quién, cuándo según el reloj del **nodo**), un asiento de auditoría y un evento, todo en la misma transacción.
+5. **Entregar, calificar y publicar son tres cosas.** El alumno no ve una nota hasta que el profesor la publica; antes sólo ve el estado de su entrega, sin cifras (ni parciales). Se comprueba en el nodo, no sólo en la pantalla.
+6. **Separar cuatro cosas** que no son la misma (`presentacion`): el resultado interno · la calificación presentada · el nivel de desempeño · el criterio de aprobación. Aprobar o **promover es una decisión institucional y humana** que el libro no toma: sólo expone el criterio que la escala define. La presentación oficial no es sólo una cuenta: el profesor puede **valorar** el nivel de desempeño (queda con motivo; el resultado interno no cambia).
+7. **No hay equivalencias nacionales implícitas.** Una conversión sólo existe dentro de una escala que la institución **adoptó**, validó y versionó (§5).
+8. **Ningún evento cierra lo que una persona abrió.** Un evento (viejo o nuevo) de MOD-010 nunca cierra una reapertura ni pisa un ajuste: la reapertura la cierra el profesor al confirmar su revisión.
+
+## 3 · Modelo de datos (`m11_*`, 13 tablas)
+
+| Tabla | Qué es | Notas |
+|---|---|---|
+| `m11_calificacion` | La calificación de **un intento** (única por `intento_id`) | `puntaje_original`, `puntaje_efectivo`, `puntaje_fuente` (lo que MOD-010 dijo al registrar: si cambia, hay *desfase*), `regla_puntuacion`, `origen`, `evaluador_id`, `estado` (`revisada`→`definitiva`; `reabierta`; `anulada`), `version` (concurrencia optimista), `escala_version` + `presentacion` (instantánea al publicar), `desempeno_docente`, `retroalimentacion`, `adaptacion`. Restricciones: 0–100 en las tres columnas, evaluador y regla no vacíos (INV-019), *publicada ⇔ definitiva*. |
+| `m11_calificacion_version` | Historial **de sólo inserción** | `tipo` (registro, recalculo, ajuste, valoracion, reapertura, publicacion, retiro_publicacion, anulacion, retroalimentacion), anterior/nuevo, motivo (obligatorio en ajuste, valoración, reapertura y retiro), `solicitud_id` único por calificación (idempotencia). |
+| `m11_revision` | La **traza** de cada puntuación del profesor (manual o por rúbrica) | El puntaje lo guarda MOD-010; aquí quedan el desglose por criterio, el comentario, quién y cuándo, y la clave de idempotencia. Sólo inserción. |
+| `m11_escala` · `m11_escala_version` · `m11_escala_tramo` | Las escalas que la institución adoptó | Las versiones y sus tramos son **inmutables**; `huella` SHA-256 de la definición canónica. |
+| `m11_config_nivel` | Modo por nivel educativo | Sin fila = `simple`. `calificaciones` exige una versión de escala (restricción). `modo_desde`: desde cuándo rige el **modo** (no se mueve al cambiar sólo la escala; D-19). |
+| `m11_politica` | Política institucional (una fila) | país, jurisdicción, `politica_intentos`, `ponderaciones` (preparadas para V1, **no se aplican**). |
+| `m11_clasificacion` | Diagnóstica · formativa · sumativa y si afecta lo oficial | MOD-010 no lo sabe y no se le añade. |
+| `m11_resultado` · `m11_agregado_periodo` | **Derivados** (FUN-126/127/129) | Se pueden borrar y reconstruir. El promedio es simple, informativo, **no oficial**. |
+| `m11_marca_consumidor` | Hasta qué secuencia de `m10_evento_salida` se leyó | Avanza en la misma transacción que lo aplicado. `secuencia_fallida` y `fallos_seguidos`: el evento que no se pudo aplicar retiene la marca unos ciclos antes de dejarse atrás con su asiento (D-18). |
+| `m11_evento_salida` | Outbox de `calificacion.*.v1` | Misma forma que el de cada módulo del nodo. |
+
+Lo que se copia de otros módulos y por qué (la nota está en `models.py`): `grupo_id`, `nivel_clave`, `periodo`, `curso_ref` y `numero_intento` quedan en la calificación porque describen **el contexto en que se calificó** (un alumno cambia de grupo; una nota ya expedida debe seguir significando lo que significó) y evitan cruzar cuatro módulos para pintar el libro de un grupo. Todo lo demás se lee en el momento.
+
+## 4 · Flujos
+
+**MOD-010 → MOD-011.** Cada vez que algo cambia en un intento, MOD-010 deja un evento en su outbox. El consumidor del libro (`ConsumirEventos`) lee `m10_evento_salida` por su interfaz pública desde su marca, en orden de secuencia, y por cada evento **vuelve a leer el intento** (la fuente de verdad) en vez de fiarse de la carga: así procesar dos veces el mismo evento no duplica nada. Corre como hilo del nodo cada 5 s, y cada consulta del libro se pone al día antes de responder (la corrección no depende del hilo). Un evento que no se puede aplicar se aísla (savepoint) y **retiene la marca** hasta cinco ciclos seguidos (los que van detrás ya quedaron aplicados y reaplicarlos es idempotente); si sigue fallando se deja atrás **con un asiento `calificacion.evento_omitido` en la bitácora** y la calificación se puede registrar a mano (D-18). Cuando no hay nada nuevo que leer, el consumidor ni abre transacción (D-22).
+
+**Revisión docente.** La bandeja lista los intentos `en_revision_docente` y las calificaciones reabiertas. El profesor puntúa cada reactivo abierto a mano (FUN-120) o aplicando la rúbrica de la biblioteca criterio por criterio (FUN-121); el libro la pide al `grading-guide` en el momento y no la guarda. Con todo puntuado, **confirmar** cierra la revisión en MOD-010 y registra la calificación. El libro no calcula respuestas ni vuelve a puntuar lo que MOD-010 ya puntuó. Dibujo y proyecto llegan como respuestas abiertas con referencias a MOD-014 (`drawingRef`, `audioRef`); el libro las reconoce y muestra la referencia, no el archivo.
+
+**Ajuste, reapertura, publicación.** Ver [02-api.md](02-api.md) §3 y §4. Todo cambio exige `version_esperada` (409 `conflicto_de_version` si otra persona se adelantó) y acepta `solicitud_id` (reenviar no duplica). Un ajuste sobre una calificación publicada es válido, queda marcado **posterior a la publicación** y se vuelve a presentar con la **misma** versión de escala con que se publicó.
+
+**Modo y escala.** El administrador adopta una plantilla (o crea una escala propia), la pone en un nivel y alterna el modo. `validar` comprueba las precondiciones sin cambiar nada. No se alterna el modo con evaluaciones abiertas, programadas o con intentos vivos en ese nivel; y cambiar de modo **no convierte nada solo**: lo calificado antes no se registra sin que el profesor lo decida, ni siquiera al reproducir eventos (los anteriores al cambio de modo se ignoran).
+
+**Derivados.** `RecalcularResultado` se ejecuta dentro de cada cambio; `ReconstruirDerivados` (`POST /derivados/reconstruir/` o `manage.py gradebook_reconstruir [--reproducir]`) los borra y vuelve a calcular de sus fuentes en una sola transacción; con `--reproducir` además reinicia la marca y reaplica todos los eventos de MOD-010 (idempotente). Es lo que se hace tras restaurar un respaldo.
+
+## 5 · Escalas internacionales configurables
+
+El motor (`dominio/escala.py`) convierte la escala interna con dos mecanismos que cubren todo lo pedido: **`interpolada`** (una polilínea de puntos interno→valor: lineal 0–5/0–10/0–20/0–100, y también la de Chile con su exigencia del 60 % = 4,0) y **`tramos`** (intervalos `[desde, hasta)` sobre 0–100 para letras, conceptos y niveles de competencia). Los tramos deben cubrir 0–100 completo **sin huecos ni solapamientos** (el validador devuelve *todos* los problemas). Cada escala fija decimales (0–4), regla de redondeo (`mitad_arriba`, `mitad_par`, `abajo`, `arriba`) y criterio de aprobación. La aprobación se juzga sobre el **valor presentado y redondeado**; por eso las plantillas de Colombia, Ecuador y España **truncan** (`abajo`): que el redondeo nunca lleve un 4,96 por encima del corte de 5,0. Chile redondea al décimo, como en sus establecimientos.
+
+**Plantillas** (`dominio/plantillas_escalas.py`): España `es-0-10` · EE. UU. `us-letras`, `us-porcentaje` · México `mx-0-10` · Colombia `co-1-5` · Chile `cl-1-7` · Perú `pe-0-20`, `pe-literal` · Ecuador `ec-0-10` · genéricas `gen-0-5`, `gen-0-10`, `gen-0-20`, `gen-0-100`, `gen-letras`, `gen-conceptual`. Añadir un país es añadir una entrada: la lógica central no cambia.
+
+> **Lo que las plantillas son y lo que no son.** Son puntos de partida **orientativos**. Las cifras recogen prácticas habituales que el autor conocía y **no se contrastaron con la normativa vigente de cada país**: hay que verificarlas antes de adoptarlas (cada una lleva su `referencia` y su `advertencia`). No son equivalencias oficiales ni universales: varían por nivel, jurisdicción y —en varios países— por institución. Un país o un nivel sin plantilla no recibe una conversión inventada: se configura una escala propia. Educación inicial/preescolar no se califica con notas: usa el modo simple.
+
+**Versionado.** Una escala es una identidad estable; lo que define cómo se convierte vive en **versiones inmutables** (no hay ruta para editarlas). Al publicar una calificación se estampa la presentación con la versión de entonces: publicar otra versión de la escala no altera lo ya publicado. Un nivel apunta a una versión concreta, no a «la última».
+
+## 6 · Seguridad
+
+Permisos del Documento Maestro (`grades.modify`, `grades.reopen`, `grades.rubric.apply`, `grades.mode.set`, `grades.export`), más **`grades.publish`** (extensión técnica propuesta) y el `results.read` que ya existía para leer. El profesor opera **sus** grupos (alcance `ASSIGNED_GROUPS`: `fuera_de_alcance` en otro grupo; un grupo inexistente se ve igual que uno ajeno); la administración configura pero **no califica directamente**; reportes sólo lee; el **técnico** no tiene ninguno y no lee datos académicos (TST-069); el alumno sólo lee lo suyo. Un 403 deja `acceso.denegado` y, si fue un intento de modificar, además `calificacion.modificacion_denegada` con quién, qué permiso pedía y sobre qué ruta (fuera de la transacción revertida). Toda operación del libro es sensible en la bitácora (resultados de menores): su detalle se enmascara sin escalada (BR-131).
+
+## 7 · Offline-first
+
+El nodo del aula es la autoridad académica: **sin internet pero con acceso al nodo** todo funciona normalmente. Para el cliente: el nodo es idempotente (`solicitud_id`) y con control de versión, así que **reintentar es siempre seguro**; la pantalla nunca muestra como confirmado un cambio que no recibió su 2xx, conserva la `solicitud_id` para reintentar y, ante un conflicto, vuelve a leer sin perder lo que el profesor escribió. No hay servicio en la nube, Redis ni ninguna dependencia nueva.
+
+## 8 · Decisiones técnicas (las que el Documento Maestro no resuelve)
+
+| # | Decisión | Por qué |
+|---|---|---|
+| D-1 | **Outbox por módulo** (`m11_evento_salida`), no una cola nueva. MOD-015 no existe todavía en el repo: cada módulo del nodo (m01, m07, m08, m09, m10, m19) escribe su propio outbox con la misma forma. | «No implementar una segunda cola»: no se creó ningún mecanismo de entrega; cuando exista `m15_evento`, unificar es mover filas. El consumo de MOD-010 es **lectura** con marca propia (marcar «publicado» es oficio de MOD-015). |
+| D-2 | **Sólo se registran calificaciones en modo calificaciones.** En modo simple no hay registro calificable; el cambio de modo no convierte nada; los eventos anteriores al cambio no registran ni al reproducirse. `POST /intentos/{id}/registrar/` lo hace a petición del profesor. | §4.2: «no crear registros calificables formales por completar una actividad» y «sin convertir automáticamente». |
+| D-3 | **Una calificación por intento**; `pendiente` y `provisional` **no se guardan**, se deducen del intento. | Una actividad pendiente no es un cero; lo parcial no es una calificación. |
+| D-4 | **Política de intentos configurable**, con `ultimo` como comportamiento **provisional documentado**. | MOD-010 no declara cuál intento cuenta (último, mejor, promedio) y el prompt prohíbe asumirlo. Si MOD-010 declara `politica_intentos` en los ajustes de la asignación, esa manda. |
+| D-5 | **La revisión pasa por MOD-010** (`puntuar`/`publicar_revision`) y el libro guarda la traza (`m11_revision`). El docente necesita `grades.*` **y** `assessment.review`. | Las respuestas y su puntuación son de MOD-010; el libro «no se apropia de su almacenamiento». |
+| D-6 | **La publicación del libro** (nota presentada) **no depende** de la liberación de resultados de MOD-010 (RF-004: detalle por pregunta): publicar una nota no obliga a liberar el detalle. **Al revés sí** (D-24): en un nivel en modo calificaciones, MOD-010 no muestra el resultado de un intento hasta que el libro lo publica. En modo simple, los aciertos dependen de la liberación de MOD-010. | No hay escritura entre módulos; cada uno controla lo suyo y el libro sólo puede CERRAR lo de MOD-010 por la compuerta de resultado. Es extensión técnica propuesta (permiso, rutas y eventos propios). |
+| D-7 | **Rollback total ante cualquier error**, a diferencia de MOD-010 (que confirma los errores de negocio). | El libro no tiene transiciones que el reloj provoque; así no queda una revisión a medias en MOD-010 sin calificación en el libro. |
+| D-8 | **Concurrencia por versión en la base** (`UPDATE … WHERE version = ?`) y **idempotencia por `solicitud_id`** único. | Dos profesores editando a la vez no se pisan; reintentar no duplica. |
+| D-9 | **Plantillas orientativas no verificadas**, adopción = decisión institucional, versiones inmutables. | Ver §5. |
+| D-10 | **La aprobación se juzga sobre el valor presentado**; el libro no promueve ni aprueba, sólo expone el criterio. | Separar resultado, presentación, desempeño y decisión. |
+| D-11 | **El alumno no ve el resultado interno 0–100**, sólo lo presentado. | Equidad y adecuación a la edad. |
+| D-12 | **Boletines oficiales, impresión y agregación curricular quedan fuera** (V1). El prompt los excluye del alcance de MOD-011 en su §15 y los pide en su lista pedagógica: se resolvió por el §15. Lo que sí hay: el historial JSON del estudiante, los agregados informativos y las referencias a objetivos/competencias (`m11_clasificacion.objetivos`). | Contradicción en el encargo; ver §9. |
+| D-13 | **Dibujo y proyecto:** el contrato de la biblioteca sólo publica `open` (con `text`, `drawingRef`, `audioRef`). El libro reconoce `abierta`, `dibujo` y `proyecto` (por tipo de pregunta, para cuando llegue) y trata las evidencias como **referencias a MOD-014**, que aún no existe. | No se inventa un tipo que la biblioteca no publica. |
+| D-14 | **Sin sesión (Q-34)**, igual que el resto del backend: el profesor se declara con `actor` y el alumno con `alumno_id` (debe existir y estar activo). Con `AVACOM_LMS_EXIGIR_SESION=1` no existe esa rama. | Coherencia con MOD-007/008/009/010. |
+| D-15 | **El nodo principal no tiene teclado:** la interfaz de OPS no exige escribir; motivos y comentarios son frases tocables. | Restricción del host del aula. |
+| D-16 | **Las rutas provisionales de MOD-010 (`puntuar`, `publicar`, D-17 de su diseño) siguen existiendo** y no se tocaron. Si un **profesor** cierra la revisión por ellas, MOD-010 emite `intento_calificado` y el libro registra la calificación igual (con esa persona como evaluadora). **La administración ya no puede** (D-24: perdió `assessment.review`). Lo que MOD-010 ya no puede hacer sin que el libro lo note es cambiar una puntuación **después** de registrada: se señala como `desfase_con_evaluacion` y no se pisa. | No se reestructura un módulo ajeno; el libro es el camino de la nota publicada, y MOD-010 conserva el suyo hasta que su equipo lo retire. |
+| D-17 | **El alcance sobre una evaluación a alumnos sueltos** (sin grupo) no se salta: cada calificación se opera con el grupo **de su alumno** (el de quien la asignó si el alumno está en varios, y si no el primero por identificador: siempre el mismo); quien la asignó la opera también; sobre toda la asignación (leer, clasificar, bandeja, publicar) basta enseñar a **alguno** de sus alumnos, y entonces sólo se ven y se publican **los de sus grupos** (`omitidas` con `fuera_de_alcance` para los demás). Una calificación sin grupo sólo la opera quien tiene el permiso sobre toda la organización. | La revisión independiente encontró que un grupo vacío saltaba la comprobación (`if grupo_id:`): un profesor ajeno publicaba y leía notas de alumnos que no son suyos. |
+| D-18 | **Un evento de MOD-010 que no se puede aplicar nunca se pierde en silencio:** retiene la marca (`m11_marca_consumidor.secuencia_fallida`, `fallos_seguidos`); cada ciclo es un reintento, y tras `MAX_FALLOS_DE_EVENTO` (5) se deja atrás con el asiento `calificacion.evento_omitido` (qué evento, intento, error) y la calificación se registra con `POST /intentos/{id}/registrar/`. | Antes la marca pasaba de largo y la calificación no se registraba ni se reintentaba, sin más rastro que un renglón de log. |
+| D-19 | **El guardia de D-2 compara con `modo_desde`**, no con `actualizada_en`: cambiar sólo la escala de un nivel que ya calificaba no deja sin registrar lo que MOD-010 calificó y el libro aún no había leído. `modo_desde` cambia sólo al alternar el modo. | `actualizada_en` también se mueve al cambiar la escala; la regla de D-2 habla del cambio de **modo**. |
+| D-20 | **Lo que ve el alumno es lo que cuenta en el libro:** entre las calificaciones que cuentan se elige con la **misma política**; si la elegida no está publicada se le dice que el profesor aún no publica (no se le enseña otra más vieja); con `promedio`, la media se muestra sólo si **todas** están publicadas, presentada con la versión de escala del intento publicado más reciente. | Antes mostraba la última publicada aunque no fuera la que contaba. |
+| D-21 | **Reabrir y confirmar sin tocar nada no borra un ajuste:** si recalificar no cambió lo que dice MOD-010, el ajuste sigue; si lo cambió, el ajuste ya no tiene base, el efectivo pasa al nuevo valor y se dice (`ajuste_descartado`, `ajuste_anterior`) y queda en el historial. `ajustada` significa «el efectivo difiere de lo que dijo MOD-010», no «difiere del original». | La confirmación revertía el ajuste sin aviso. |
+| D-22 | **Las consultas no abren transacción** (`uow(lectura=True)`) y el consumidor sólo toma el bloqueo de escritura cuando hay eventos que aplicar (lotes de 100). El nodo corre SQLite con `transaction_mode: IMMEDIATE`: un `atomic` toma el bloqueo de **toda** la base, y una consulta que llama a la biblioteca (3 s por reactivo) lo habría tenido esperando a las tabletas. | Hallazgo M8 de la revisión. |
+| D-23 | **Una `solicitud_id` es la clave de UN reintento:** usarla para otra clase de cambio (o para otro valor, u otra pregunta) da 409 `solicitud_repetida` en lugar de «ya hecho». Repetir lo mismo (misma política, clasificación o definición de escala) no repite eventos, asientos ni versiones. Confirmar una revisión no necesita clave: el reintento recibe 409 `revision_no_pendiente` con el `calificacion_id`. | Antes un id reutilizado devolvía 200 sin hacer nada. |
+| D-24 | **Los dos hallazgos que cruzaban a MOD-010 se cerraron (decisión del usuario, 2026-10-14).** (a) **Compuerta de resultado.** MOD-010 define el puerto (`evaluacion/aplicacion/compuertas.py`, `servicios.registrar_compuerta_de_resultado`) y `Motor.resultado_disponible` pasa a ser *política de publicación **y** ninguna compuerta retiene*; el libro registra la suya al arrancar (`GradebookConfig.ready` → `infraestructura/compuerta.py`): en un nivel en **modo calificaciones** el alumno ve el resultado de un intento (porcentaje, puntaje, aciertos por pregunta) sólo si **su calificación está publicada**; si el libro aún no la registró, o la compuerta falla, queda retenido. Una compuerta sólo **cierra**: nunca abre lo que la política de MOD-010 mantiene cerrado, así que hacen falta las dos a la vez. Mientras la retiene el libro, la entrega dice «Verás tu calificación cuando tu profesor la publique» (`que_sigue: resultado_en_libro`), el 403 de `/resultado/` trae `retenido_por: "libro_de_calificaciones"` y `mias` lo repite en `mi_intento.retenido_por` (la lista de Student dice «tu profesor publicará tu calificación»). **Modo simple (S0):** la compuerta no veta nada y la política de MOD-010 sigue mandando: vetar ahí quitaría los resultados de MOD-010 a toda instalación que no haya activado el modo calificaciones (todo nivel sin configurar es simple); para no mostrar cifras a los más pequeños, el profesor usa la política `nunca` de la evaluación. (b) **La administración ya no puntúa:** `assessment.review` se quitó al rol ADMIN (plantilla + `acceso/0016`); puntuar es calificar y el Maestro le niega calificar directamente. El profesor lo conserva sobre sus grupos. | El libro es dueño de la nota publicada; MOD-010 sigue sin importar el libro (una prueba lo vigila). Consecuencia a tener presente: con la publicación, el detalle por pregunta de MOD-010 muestra la puntuación **técnica** del examen, no un ajuste posterior del profesor. |
+
+## 9 · Pendiente (V1) y límites
+
+- **FUN-128 Exportar el libro** y los eventos `calificacion.libro_exportado.v1` (el permiso `grades.export` ya se siembra). TST-072 (bloquear exportaciones no autorizadas) llega con ella.
+- **Ponderaciones** por tipo de actividad, periodo y grupo; **cierre y congelamiento de periodos**; **actas históricas**; ajustes sobre periodos congelados con autorización (`calificacion.correccion_posterior_cierre` ya está en el catálogo de auditoría).
+- **Boletines oficiales imprimibles** y **agregación curricular** por objetivos/competencias (hoy sólo se guardan las referencias).
+- **Triggers de sólo inserción en la base** para el historial (hoy es de sólo inserción **por código**: el repositorio no tiene operación que lo cambie, una prueba lo vigila, y la base impide un ajuste sin motivo y dos versiones con el mismo número). La bitácora de MOD-019 sí tiene triggers.
+- Un profesor con alcance `LEVEL` se trata como `ASSIGNED_GROUPS` (conservador).
+- Lo asignado a alumnos sueltos aparece en la **bandeja de revisión**, en el historial del alumno y en `GET /asignaciones/{id}/`, pero **no como columna del libro de un grupo** (el libro se arma por las asignaciones del grupo).
+- Las plantillas `us-porcentaje`, `mx-0-10`, `pe-0-20` y las genéricas redondean `mitad_arriba` y juzgan la aprobación sobre el valor redondeado (a diferencia de Colombia, Ecuador y España, que truncan; D-10): es una decisión de diseño sobre plantillas **orientativas** que la institución revisa antes de adoptar.
+- Consultas con más viajes a la base de lo ideal: `GET /asignaciones/{id}/`, `/estudiantes/{id}/` y `/mias/` hacen unas 3–6 consultas por calificación o evaluación (el libro de un grupo no depende del número de alumnos). No se midió con un grupo de 35 alumnos y decenas de evaluaciones.
+- Un `403` sobre un id inexistente da `404` primero (no deja `calificacion.modificacion_denegada`), y toda consulta pone el libro al día **antes** de autorizar (un técnico o un alumno que recibe 403 ya disparó el consumidor): no expone datos, pero conviene reordenarlo.
+- `eventos_desde` (MOD-010) supone ids que se confirman en orden, como en SQLite con un solo escritor; con otro motor de base habría que revisarlo.
+- El cliente de OPS no persiste las solicitudes pendientes entre reinicios de la app: el reintento seguro (misma `solicitud_id`) existe mientras la pantalla está abierta.
+- Qué **no se pudo comprobar** está en [03-pruebas.md](03-pruebas.md).

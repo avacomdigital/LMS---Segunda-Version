@@ -1,0 +1,14 @@
+{
+  "asignacion_id": "529fa4a2-837f-4ba8-a03c-0f974c2f7c59",
+  "omitidas": [],
+  "publicadas": [
+    {
+      "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+      "calificacion_id": "bf569d30-c6a2-4b17-8999-3937d07c136d",
+      "version": 2
+    }
+  ],
+  "servidor_en": 1790000000000,
+  "total_publicadas": 1,
+  "ya_publicadas": 0
+}

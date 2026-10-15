@@ -49,6 +49,16 @@ def vivo(estado: str) -> bool:
     return estado in cat.VIVOS
 
 
+def ultimo_por_alumno(intentos: list[dict]) -> dict[str, dict]:
+    """El intento más reciente (el de mayor número) de cada alumno: el que cuenta para el panel, los resultados y la publicación."""
+    ultimos: dict[str, dict] = {}
+    for it in intentos:
+        previo = ultimos.get(it["alumno_id"])
+        if previo is None or it["numero"] > previo["numero"]:
+            ultimos[it["alumno_id"]] = it
+    return ultimos
+
+
 def entregado(estado: str) -> bool:
     return estado in cat.ENTREGADOS
 

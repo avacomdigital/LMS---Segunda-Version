@@ -4,8 +4,11 @@ from . import views as v
 
 urlpatterns = [
     # ---- el profesor: asignaciones
+    path("examenes/", v.ExamenesView.as_view(), name="evaluacion-examen-ficha"),
+    path("examenes/disponibles/", v.ExamenesDisponiblesView.as_view(), name="evaluacion-examenes-disponibles"),
     path("asignaciones/", v.AsignacionesView.as_view(), name="evaluacion-asignaciones"),
     path("asignaciones/<str:asignacion_id>/", v.AsignacionView.as_view(), name="evaluacion-asignacion"),
+    path("asignaciones/<str:asignacion_id>/publicacion/", v.PublicacionView.as_view(), name="evaluacion-publicacion"),
     path("asignaciones/<str:asignacion_id>/iniciar/", v.IniciarView.as_view(), name="evaluacion-iniciar"),
     path("asignaciones/<str:asignacion_id>/cerrar/", v.CerrarAsignacionView.as_view(), name="evaluacion-cerrar"),
     path("asignaciones/<str:asignacion_id>/prorrogar/", v.ProrrogarView.as_view(), name="evaluacion-prorrogar"),
@@ -28,6 +31,7 @@ urlpatterns = [
     path("intentos/<str:intento_id>/reactivar/", v.ReactivarView.as_view(), name="evaluacion-reactivar"),
     path("intentos/<str:intento_id>/cerrar/", v.CerrarIntentoView.as_view(), name="evaluacion-cerrar-intento"),
     path("intentos/<str:intento_id>/anular/", v.AnularView.as_view(), name="evaluacion-anular"),
+    path("intentos/<str:intento_id>/liberar-resultado/", v.LiberarResultadoView.as_view(), name="evaluacion-liberar-resultado"),
     path("intentos/<str:intento_id>/publicar/", v.PublicarView.as_view(), name="evaluacion-publicar"),
     path("intentos/<str:intento_id>/recalificar/", v.RecalificarView.as_view(), name="evaluacion-recalificar"),
     path("intentos/<str:intento_id>/decidir-envio/", v.DecidirEnvioView.as_view(), name="evaluacion-decidir-envio"),

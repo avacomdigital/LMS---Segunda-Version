@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.RevisionBandejaPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False"
+    SizeChanged="OnPageSizeChanged">
+    <!-- Bandeja de revisión docente (MOD-011 · FUN-120): lo que espera la revisión del profesor. Cada renglón es un intento entregado con respuestas por puntuar o una
+         calificación reabierta para recalificar; tocarlo abre su revisión. Arriba, el filtro por grupo (fichas que se tocan). Si el nodo no responde, un banner lo dice y se
+         conserva lo último que se veía. Nada exige teclado. -->
+    <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
+        <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
+            <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                <Label Text="REVISIÓN DOCENTE" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Revisiones pendientes" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Cargando…" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+            <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+        </Grid>
+        <VerticalStackLayout x:Name="AvisoHost" Grid.Row="1" HorizontalOptions="Center" WidthRequest="1280" Spacing="8">
+            <VerticalStackLayout x:Name="ConexionHost" Spacing="8" />
+            <VerticalStackLayout x:Name="ResultadoHost" Spacing="8" />
+        </VerticalStackLayout>
+        <ScrollView x:Name="Desplazable" Grid.Row="2">
+            <VerticalStackLayout x:Name="ContenidoHost" HorizontalOptions="Center" WidthRequest="1280" Spacing="14" Padding="0,0,0,40" />
+        </ScrollView>
+    </Grid>
+</ContentPage>

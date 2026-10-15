@@ -1,0 +1,7 @@
+{
+  "codigo": "escala_invalida",
+  "detail": "La definición de la escala no es válida.",
+  "problemas": [
+    "Hueco entre «F» y «A»: faltan los valores de 60 a 65."
+  ]
+}

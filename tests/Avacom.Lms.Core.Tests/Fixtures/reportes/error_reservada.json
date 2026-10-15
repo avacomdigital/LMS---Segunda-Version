@@ -1,0 +1,6 @@
+{
+  "capacidad": "cobertura",
+  "codigo": "capacidad_reservada",
+  "detail": "La cobertura curricular real contra la planeada llega en una versión posterior: necesita el currículo congelado del ciclo.",
+  "permiso": "reports.curriculum.view"
+}

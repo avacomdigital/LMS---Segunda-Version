@@ -1,0 +1,5 @@
+{
+  "codigo": "conflicto_de_version",
+  "detail": "Otra persona cambió esta configuración mientras la editabas: vuelve a leerla.",
+  "version_actual": 2
+}

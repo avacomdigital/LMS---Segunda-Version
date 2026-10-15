@@ -787,6 +787,19 @@ publicados de Reed-Solomon («HELLO WORLD» 1-M y 1-Q), las 16 cadenas de format
 escrito aparte (184 códigos en las 8 máscaras); **no** se escaneó con la cámara de una tableta real, y por eso la
 dirección también sale en letra grande.
 
+**Código QR del Wi-Fi (2026-10-13).** Encima del QR del APK, el panel muestra el código para que la tableta se una a la
+misma red que el equipo que sirve (`WIFI:T:WPA;S:<red>;P:<clave>;;`, el formato que leen la cámara y Google Lens de
+Android 10 o superior; `WPA3` sale como `SAE`, una red abierta como `nopass`, y la barra invertida, `;`, `,`, `:` y las comillas se escapan con una barra). Servir-APK lo
+obtiene con `netsh wlan show interfaces` y `netsh wlan show profile … key=clear` (la clave guardada exige el permiso de
+administrador que `Servir-APK.bat` ya pide; funciona con Windows en español o en inglés y con nombres de red con
+acentos). Como el panel también se abre desde la red, **la tarjeta solo se arma para quien mira desde el propio equipo**:
+la página de la tableta y el panel visto desde otra dirección no la traen. La clave no va a la consola, al CSV ni a ningún
+archivo; el botón «Mostrar» la enseña y, si el equipo va por cable, Windows no la entrega o la red es empresarial, un
+formulario («Usar otra red o escribir la clave», `POST /wifi`, solo desde el equipo) deja escribir la red y la clave, que
+viven en memoria hasta detener el servidor. Verificado con el Python embebido en el puerto 8091: red y clave reales
+detectadas, escapes de la carga útil, formulario manual y su reinicio, la clave ausente del registro y de la página de la
+tableta. **No** se leyó el código con una tableta real ni se probó la vista desde otro equipo de la red.
+
 ## Pendiente
 
 - **Student** tiene su propio instalador de Windows (`student-windows/`, ver su

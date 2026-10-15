@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.RevisionDocentePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False"
+    SizeChanged="OnPageSizeChanged">
+    <!-- Revisión docente de un intento (MOD-011 · FUN-120, FUN-121). Sólo se muestran los reactivos que requieren la revisión del profesor (respuesta abierta, dibujo, entrega);
+         el resto se resume. Cada reactivo se puntúa con los criterios de su rúbrica (total en vivo; deben ir todos) o en pasos de 0 a 100 %, con un comentario hecho de frases que se
+         tocan. Cada guardado lleva su solicitud: si falla por red se reintenta sin duplicar. «Confirmar revisión» sólo se habilita con todo puntuado; antes, lo que sigue pendiente
+         está marcado y no hay calificación definitiva. Las tarjetas de los reactivos viven en TarjetasHost y no se repintan (llevan cajas de texto que WinUI no deja mover). -->
+    <Grid x:Name="Raiz">
+        <Grid RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
+            <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
+                <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                    <Label Text="REVISIÓN DOCENTE" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                    <Label x:Name="TituloLabel" Text="Cargando…" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
+                    <Label x:Name="SubtituloLabel" Text="" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                    <FlexLayout x:Name="PastillasHost" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" Margin="0,4,0,0" />
+                </VerticalStackLayout>
+                <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+            </Grid>
+            <VerticalStackLayout x:Name="AvisoHost" Grid.Row="1" HorizontalOptions="Center" WidthRequest="1280" Spacing="8">
+                <VerticalStackLayout x:Name="ConexionHost" Spacing="8" />
+                <VerticalStackLayout x:Name="ResultadoHost" Spacing="8" />
+            </VerticalStackLayout>
+            <ScrollView x:Name="Desplazable" Grid.Row="2">
+                <VerticalStackLayout x:Name="Cuerpo" HorizontalOptions="Center" WidthRequest="1280" Spacing="14" Padding="0,0,0,40">
+                    <VerticalStackLayout x:Name="ResumenHost" Spacing="14" />
+                    <VerticalStackLayout x:Name="TarjetasHost" Spacing="14" />
+                    <VerticalStackLayout x:Name="OtrasHost" Spacing="14" />
+                </VerticalStackLayout>
+            </ScrollView>
+        </Grid>
+    </Grid>
+</ContentPage>

@@ -76,8 +76,14 @@ public interface IExamenDocenteApi
     ErrorAula? UltimoError { get; }
 
     // ---- asignaciones
+    /// <summary>Los exámenes de los cursos instalados, para aplicar uno desde el menú principal sin entrar a una clase (con <c>mode=class</c> los exámenes reales no aparecen en la secuencia).</summary>
+    Task<ExamenesDisponibles?> ExamenesDisponiblesAsync(string actor, string fuente, CancellationToken ct = default);
+    /// <summary>RF-003: la ficha del examen ANTES de asignarlo (banco, temas, tiempo, sugerencias). Sin preguntas ni claves.</summary>
+    Task<FichaDeExamen?> FichaAsync(string actor, string fuente, string cursoRef, string objetoRef, CancellationToken ct = default);
     Task<ListaDeAsignaciones?> AsignacionesAsync(string actor, string? estado = null, string? grupoId = null, string? sesionId = null, CancellationToken ct = default);
     Task<AsignacionDeExamen?> AsignacionAsync(string actor, string asignacionId, CancellationToken ct = default);
+    /// <summary>RF-004: cambia la política de publicación (y la fecha con <c>programada</c>) mientras nada se haya publicado.</summary>
+    Task<AsignacionDeExamen?> ConfigurarPublicacionAsync(string actor, string asignacionId, string resultados, long? publicarEn = null, CancellationToken ct = default);
     /// <summary>FUN-108 + FUN-105 + FUN-106. <c>nivel_examen</c> es obligatorio: el sistema nunca preselecciona «Controlado» por el profesor.</summary>
     Task<AsignacionDeExamen?> CrearAsync(string actor, string? actorRotulo, NuevoExamen nuevo, CancellationToken ct = default);
     Task<AsignacionDeExamen?> IniciarAsync(string actor, string asignacionId, CancellationToken ct = default);
@@ -113,6 +119,8 @@ public interface IExamenDocenteApi
     Task<bool> AnularAsync(string actor, string intentoId, string motivo, CancellationToken ct = default);
     Task<PuntajeAsentado?> PuntuarAsync(string actor, string intentoId, string preguntaRef, double puntaje, string? comentario = null, string? motivo = null, CancellationToken ct = default);
     Task<IntentoPublicado?> PublicarAsync(string actor, string intentoId, CancellationToken ct = default);
+    /// <summary>RF-004: publica el RESULTADO de un alumno (sin esperar al grupo ni a la fecha). Exige un intento calificado del todo.</summary>
+    Task<ResultadoLiberado?> LiberarResultadoAsync(string actor, string intentoId, CancellationToken ct = default);
     Task<bool> DecidirEnvioAsync(string actor, string intentoId, string decision, string? motivo = null, CancellationToken ct = default);
     Task<bool> RecalificarAsync(string actor, string intentoId, CancellationToken ct = default);
 }

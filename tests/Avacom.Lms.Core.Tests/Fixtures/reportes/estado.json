@@ -1,0 +1,50 @@
+{
+  "actualizada_en": null,
+  "antiguedad_ms": 0,
+  "clase_en_curso": true,
+  "clases": 2,
+  "corte_en": 1790002430000,
+  "estado": "al_dia",
+  "fuentes": [
+    {
+      "fallos_seguidos": 0,
+      "fuente": "aula",
+      "marca": 60,
+      "pendientes": false,
+      "ultima": 60
+    },
+    {
+      "fallos_seguidos": 0,
+      "fuente": "evaluacion",
+      "marca": 2,
+      "pendientes": false,
+      "ultima": 2
+    },
+    {
+      "fallos_seguidos": 0,
+      "fuente": "calificacion",
+      "marca": 0,
+      "pendientes": false,
+      "ultima": 0
+    },
+    {
+      "fallos_seguidos": 0,
+      "fuente": "estudio",
+      "marca": 1,
+      "pendientes": false,
+      "ultima": 1
+    }
+  ],
+  "grupos": {
+    "desactualizados": 0,
+    "total": 2
+  },
+  "puede_reconstruir": false,
+  "reconstruccion": {
+    "en_curso": false,
+    "error": null,
+    "por": null,
+    "ultima_en": null
+  },
+  "servidor_en": 1790002430000
+}

@@ -1,5 +1,6 @@
 using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
+using Avacom.Lms.Core.Gradebook;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Student.ModoEstudio.Services;
@@ -30,6 +31,8 @@ public static class Sesion
     private static Uri? _baseDispositivos;
     private static EvaluacionApi? _evaluacion;
     private static Uri? _baseEvaluacion;
+    private static GradebookApi? _gradebook;
+    private static Uri? _baseGradebook;
     private static ColaExamen? _colaExamen;
     private static AlmacenDePin? _pinDeSalida;
     private static readonly object Candado = new();
@@ -184,6 +187,27 @@ public static class Sesion
                     _baseEvaluacion = actual;
                 }
                 return _evaluacion;
+            }
+        }
+    }
+
+    /// <summary>
+    /// El cliente de <c>/api/gradebook/mias/</c> (MOD-011) para la tableta: sus resultados. Nunca una nota sin publicar y, en modo simple, nunca un número: es el nodo
+    /// quien lo decide, esta pantalla sólo muestra lo que responde.
+    /// </summary>
+    public static IGradebookAlumnoApi Gradebook
+    {
+        get
+        {
+            var actual = BaseUri;
+            lock (Candado)
+            {
+                if (_gradebook is null || _baseGradebook != actual)
+                {
+                    _gradebook = new GradebookApi(Http, actual);
+                    _baseGradebook = actual;
+                }
+                return _gradebook;
             }
         }
     }

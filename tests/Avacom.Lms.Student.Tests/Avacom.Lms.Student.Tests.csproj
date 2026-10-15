@@ -34,6 +34,7 @@
 
   <!-- El código de Student que se prueba, tal cual está en la app. -->
   <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Student\Examen\EstadoDeEvaluacion.cs" Link="Student\Examen\EstadoDeEvaluacion.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\StudyModeService.cs" Link="Student\Services\StudyModeService.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\StudyLessonSession.cs" Link="Student\Services\StudyLessonSession.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\StudyPracticeSession.cs" Link="Student\Services\StudyPracticeSession.cs" />

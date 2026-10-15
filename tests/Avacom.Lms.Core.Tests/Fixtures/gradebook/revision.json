@@ -1,0 +1,339 @@
+{
+  "filas": [
+    {
+      "comentario": "",
+      "enunciado": "¿Qué estado tiene forma y volumen propios?",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q1",
+      "puntaje_actual": 1.0,
+      "puntaje_maximo": 1.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "selectedOptionIds": [
+          "a"
+        ]
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "multiple_choice"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Un gas ocupa todo el espacio del recipiente que lo contiene.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q2",
+      "puntaje_actual": 1.0,
+      "puntaje_maximo": 1.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "value": true
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "true_false"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Completa.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q3",
+      "puntaje_actual": 1.0,
+      "puntaje_maximo": 1.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "blanks": {
+          "b1": "líquido"
+        }
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "fill_blanks"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Ordena de menor a mayor movimiento de las partículas.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q4",
+      "puntaje_actual": 2.0,
+      "puntaje_maximo": 2.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "order": [
+          "x-solid",
+          "x-liquid",
+          "x-gas"
+        ]
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "ordering"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Explica por qué un globo inflado se encoge un poco si lo metes en la nevera.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": true,
+      "pregunta_ref": "l3-q5",
+      "puntaje_actual": null,
+      "puntaje_maximo": 3.0,
+      "requiere_revision": true,
+      "respondida": true,
+      "respuesta": {
+        "text": "Porque al enfriarse las partículas se mueven más despacio y el gas ocupa menos espacio."
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": {
+        "criterios": [
+          {
+            "criterio": "Relaciona el frío con menos energía o menos movimiento de las partículas.",
+            "id": "r1",
+            "puntos_max": 2.0
+          },
+          {
+            "criterio": "Concluye que el gas ocupa menos espacio.",
+            "id": "r2",
+            "puntos_max": 1.0
+          }
+        ],
+        "formato": "text",
+        "puntos": 3,
+        "respuesta_modelo": "Al enfriarse, las partículas del gas dentro del globo pierden energía, se mueven más despacio y se separan menos, así que el gas ocupa menos espacio."
+      },
+      "tipo": "open"
+    },
+    {
+      "comentario": "",
+      "enunciado": "¿Cuáles son ejemplos de líquidos? Elige todas las correctas.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q6",
+      "puntaje_actual": 2.0,
+      "puntaje_maximo": 2.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "selectedOptionIds": [
+          "a",
+          "b"
+        ]
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "multiple_choice"
+    },
+    {
+      "comentario": "",
+      "enunciado": "¿Cómo se llama el paso de líquido a gas?",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q7",
+      "puntaje_actual": 1.0,
+      "puntaje_maximo": 1.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "selectedOptionIds": [
+          "a"
+        ]
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "multiple_choice"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Mientras el hielo se derrite, su temperatura sube sin parar.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q8",
+      "puntaje_actual": 1.0,
+      "puntaje_maximo": 1.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "value": false
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "true_false"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Relaciona cada situación con su cambio de estado.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q9",
+      "puntaje_actual": 3.0,
+      "puntaje_maximo": 3.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "pairs": [
+          {
+            "leftId": "m-ice",
+            "rightId": "r-melting"
+          },
+          {
+            "leftId": "m-puddle",
+            "rightId": "r-evaporation"
+          },
+          {
+            "leftId": "m-freezer",
+            "rightId": "r-solidification"
+          }
+        ]
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "matching"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Completa con un número.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q10",
+      "puntaje_actual": 1.0,
+      "puntaje_maximo": 1.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "blanks": {
+          "b1": "100"
+        }
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "fill_blanks"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Ordena lo que pasa al calentar un cubo de hielo durante mucho tiempo.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": false,
+      "pregunta_ref": "l3-q11",
+      "puntaje_actual": 2.0,
+      "puntaje_maximo": 2.0,
+      "requiere_revision": false,
+      "respondida": true,
+      "respuesta": {
+        "order": [
+          "y-solid",
+          "y-liquid",
+          "y-gas"
+        ]
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": null,
+      "tipo": "ordering"
+    },
+    {
+      "comentario": "",
+      "enunciado": "Explica por qué en Bogotá el agua hierve a menos temperatura que en Cartagena.",
+      "evidencias": [],
+      "forma": "abierta",
+      "pendiente": true,
+      "pregunta_ref": "l3-q12",
+      "puntaje_actual": null,
+      "puntaje_maximo": 3.0,
+      "requiere_revision": true,
+      "respondida": true,
+      "respuesta": {
+        "text": "Porque al enfriarse las partículas se mueven más despacio y el gas ocupa menos espacio."
+      },
+      "revisada": false,
+      "revisada_en": null,
+      "revisada_por": "",
+      "revisiones": [],
+      "rubrica": {
+        "criterios": [
+          {
+            "criterio": "Menciona la diferencia de altura entre las dos ciudades.",
+            "id": "r1",
+            "puntos_max": 1.0
+          },
+          {
+            "criterio": "Relaciona la altura con menor presión del aire y menor punto de ebullición.",
+            "id": "r2",
+            "puntos_max": 2.0
+          }
+        ],
+        "formato": "text",
+        "puntos": 3,
+        "respuesta_modelo": "Bogotá está a mayor altura, donde la presión del aire es menor. Con menos presión, el agua necesita menos temperatura para hervir."
+      },
+      "tipo": "open"
+    }
+  ],
+  "intento": {
+    "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+    "alumno_rotulo": "Juan P.",
+    "asignacion_id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
+    "calificacion_id": null,
+    "calificacion_version": null,
+    "estado": "en_revision_docente",
+    "grupo_id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
+    "id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+    "pendientes": [
+      "l3-q5",
+      "l3-q12"
+    ],
+    "porcentaje_provisional": 100.0,
+    "reabierta": false,
+    "titulo": "Examen de estados de la materia"
+  },
+  "puede_confirmar": false,
+  "servidor_en": 1790000000000
+}

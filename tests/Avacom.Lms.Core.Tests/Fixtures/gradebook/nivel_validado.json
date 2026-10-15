@@ -1,0 +1,21 @@
+{
+  "a": "calificaciones",
+  "actual": {
+    "actualizada_en": null,
+    "actualizada_por": "",
+    "escala": null,
+    "modo": "simple",
+    "nivel_clave": "secundaria",
+    "por_defecto": true,
+    "version": 0
+  },
+  "advertencias": [
+    "Las evaluaciones ya calificadas antes de este cambio no se convierten en calificaciones solas: se registran cuando el profesor lo decide."
+  ],
+  "bloqueos": [],
+  "de": "simple",
+  "en_curso": 0,
+  "grupos": 1,
+  "permitido": true,
+  "servidor_en": 1790000000000
+}

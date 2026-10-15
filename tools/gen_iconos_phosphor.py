@@ -9,6 +9,7 @@ a un lienzo de 256 × 256 (el de Phosphor), se convierten a comandos absolutos M
 
 Uso (desde la raíz del repositorio):
     python tools/gen_iconos_phosphor.py                 # escribe los iconos del modo de estudio
+    python tools/gen_iconos_phosphor.py --conjunto reportes   # escribe los de Reportes (OPS)
     python tools/gen_iconos_phosphor.py --geometria graduation-cap regular   # imprime el `Data` de un Path (IconGeometry de un hexágono)
 """
 from __future__ import annotations
@@ -27,6 +28,7 @@ FUENTES = {
     "thin": RAIZ / "phospor-icons" / "Fonts" / "thin" / "Phosphor-Thin.svg",
 }
 SALIDA_ESTUDIO = RAIZ / "src" / "Avacom.Lms.Student" / "Resources" / "Images"
+SALIDA_OPS = RAIZ / "src" / "Avacom.Lms.Ops" / "Resources" / "Images"
 
 ESCALA = 0.25      # 1024 uem → 256
 ASCENSO = 960      # el eje Y de la fuente sube desde la línea base; el de SVG baja desde arriba
@@ -232,9 +234,32 @@ ICONOS_ESTUDIO: dict[str, tuple[list, int]] = {
 }
 
 
-def escribir(carpeta: Path) -> None:
+# MOD-013 · Reportes (OPS): las tres tarjetas del inicio, la lista de destinos donde se guarda un reporte (memoria USB, disco, red, atajos), los dos formatos y los avisos de la hoja de exportar.
+ICONOS_REPORTES: dict[str, tuple[list, int]] = {
+    "reportes_clase": (una("chalkboard-teacher", "regular", TINTA), 56),
+    "reportes_alumno": (una("user", "regular", TINTA), 56),
+    "reportes_grupo": (una("users-three", "regular", TINTA), 56),
+    "reportes_uso": (una("devices", "regular", TINTA), 56),
+    "reportes_usb": (una("usb", "regular", TINTA), 30),
+    "reportes_disco": (una("hard-drive", "regular", TINTA), 30),
+    "reportes_red": (una("network", "regular", TINTA), 30),
+    "reportes_carpeta": (una("folder-simple", "regular", TINTA), 30),
+    "reportes_documentos": (una("file-text", "regular", TINTA), 30),
+    "reportes_escritorio": (una("desktop", "regular", TINTA), 30),
+    "reportes_descargas": (una("download-simple", "regular", TINTA), 30),
+    "reportes_xlsx": (una("file-xls", "regular", VERDE), 40),
+    "reportes_csv": (una("file-csv", "regular", AZUL), 40),
+    "reportes_aviso": (una("warning", "fill", "#B58A00"), 32),
+    "reportes_ok": (una("check-circle", "fill", "#019D60"), 48),
+    "reportes_ok_chico": (una("check-circle", "fill", "#019D60"), 22),
+}
+
+CONJUNTOS = {"estudio": (ICONOS_ESTUDIO, SALIDA_ESTUDIO), "reportes": (ICONOS_REPORTES, SALIDA_OPS)}
+
+
+def escribir(carpeta: Path, iconos: dict) -> None:
     carpeta.mkdir(parents=True, exist_ok=True)
-    for nombre, (capas, lado) in ICONOS_ESTUDIO.items():
+    for nombre, (capas, lado) in iconos.items():
         (carpeta / f"{nombre}.svg").write_text(svg_de(capas, lado), encoding="utf-8")
         print(f"  {nombre}.svg")
 
@@ -242,13 +267,16 @@ def escribir(carpeta: Path) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--geometria", nargs=2, metavar=("ICONO", "PESO"), help="imprime el Data de un Path (lienzo 256)")
-    ap.add_argument("--salida", type=Path, default=SALIDA_ESTUDIO, help="carpeta de destino de los SVG")
+    ap.add_argument("--conjunto", choices=sorted(CONJUNTOS), default="estudio", help="qué iconos escribir: los del modo de estudio (Student) o los de Reportes (OPS)")
+    ap.add_argument("--salida", type=Path, default=None, help="carpeta de destino de los SVG (por omisión, la del conjunto)")
     args = ap.parse_args()
     if args.geometria:
         print(a_lienzo_256(glifo(*args.geometria)))
         return
-    print(f"Escribiendo iconos en {args.salida}")
-    escribir(args.salida)
+    iconos, salida_por_omision = CONJUNTOS[args.conjunto]
+    salida = args.salida or salida_por_omision
+    print(f"Escribiendo los iconos de «{args.conjunto}» en {salida}")
+    escribir(salida, iconos)
 
 
 if __name__ == "__main__":

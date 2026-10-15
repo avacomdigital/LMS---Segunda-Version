@@ -1,0 +1,22 @@
+{
+  "escalas": [
+    {
+      "activa": true,
+      "codigo": "co-1-5",
+      "creada_en": 1790000000000,
+      "creada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
+      "id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+      "jurisdiccion": "Antioquia",
+      "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+      "pais": "CO",
+      "plantilla_origen": "co-1-5",
+      "tipo": "numerica",
+      "ultima_version": {
+        "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
+        "id": "e0521e03-c62f-449b-936f-f2630c3accdb",
+        "numero": 1
+      }
+    }
+  ],
+  "servidor_en": 1790000000000
+}

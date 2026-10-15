@@ -1,0 +1,39 @@
+{
+  "filters_applied": {
+    "country": "",
+    "grade": "",
+    "group": "",
+    "level": "",
+    "period": "",
+    "subject": "",
+    "topic": "",
+    "type": []
+  },
+  "has_more": false,
+  "index_notice": "",
+  "index_status": "consultable",
+  "match_mode": "all",
+  "normalized": "trigonometria",
+  "notice": "",
+  "page": 1,
+  "page_size": 20,
+  "query": "trigonometria",
+  "results": [],
+  "sources": {
+    "catalog": {
+      "hint": "",
+      "reason": "",
+      "status": "ok"
+    },
+    "local": {
+      "status": "ok",
+      "types": [
+        "assessment",
+        "study",
+        "class"
+      ]
+    }
+  },
+  "total": 0,
+  "total_exact": true
+}

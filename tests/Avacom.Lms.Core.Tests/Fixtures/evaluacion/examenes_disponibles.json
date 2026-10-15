@@ -1,0 +1,26 @@
+{
+  "cursos": [
+    {
+      "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+      "examenes": [
+        {
+          "abiertas": 1,
+          "aplicaciones": 2,
+          "leccion_ref": "l3-assessment",
+          "leccion_titulo": "Evaluación: estados y cambios de la materia",
+          "objeto_ref": "l3-exam",
+          "preguntas": 12,
+          "titulo": "Examen de estados de la materia"
+        }
+      ],
+      "titulo": "Estados de la materia y sus cambios",
+      "version": "1.0.0"
+    }
+  ],
+  "disponible": true,
+  "fuente": "ejemplo",
+  "motivo": "",
+  "omitidos": [],
+  "servidor_en": 1790000125000,
+  "sugerencia": null
+}

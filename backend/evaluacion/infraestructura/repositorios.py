@@ -15,8 +15,8 @@ CAMPOS_ASIGNACION = (
     "id", "tipo", "sesion_id", "grupo_id", "grupo_rotulo", "alcance", "destinatarios", "profesor_id", "profesor_rotulo", "fuente_curso", "curso_ref",
     "curso_version", "curso_rotulo", "leccion_ref", "objeto_ref", "objeto_rotulo", "titulo", "estrategia", "preguntas_por_alumno", "total_banco",
     "ajustes", "nivel_declarado", "nivel_examen", "tiempo_modo", "tiempo_limite_seg", "intentos_permitidos", "abre_en", "limite_en", "plazo", "gracia_ms",
-    "reactivacion", "recursos", "resultados", "liberados_en", "aprobacion_pct", "permite_retroceso", "mezclar_opciones", "estado", "creada_en",
-    "publicada_en", "cerrada_en", "archivada_en", "creado_por",
+    "reactivacion", "recursos", "descripcion", "resultados", "publicar_en", "liberados_en", "liberados_por", "aprobacion_pct", "permite_retroceso",
+    "mezclar_opciones", "estado", "creada_en", "publicada_en", "cerrada_en", "archivada_en", "creado_por",
 )
 CAMPOS_ADMISION = (
     "id", "asignacion_id", "alumno_id", "alumno_rotulo", "dispositivo_id", "dispositivo_rotulo", "nivel_exigido", "nivel_alcanzado", "estado",
@@ -26,8 +26,8 @@ CAMPOS_INTENTO = (
     "id", "asignacion_id", "alumno_id", "alumno_rotulo", "numero", "estado", "nivel_efectivo", "bloqueo", "dispositivo_id", "sesion_ref", "sesiones", "semilla",
     "curso_version", "armado", "armado_meta", "tiempo_limite_seg", "consumido_ms", "reloj_desde", "pausas", "ultimo_latido_en", "pregunta_actual",
     "respuestas", "secuencia_maxima", "puntaje", "puntaje_maximo", "porcentaje", "sin_calificar", "requiere_revision", "calificacion_pendiente",
-    "calificado_por", "calificado_en", "fuera_de_plazo", "origen_entrega", "envio_tardio", "respuestas_pendientes", "decision_envio", "anulado_por",
-    "motivo_anulacion", "anulado_en", "iniciado_en", "entregado_en", "creado_en",
+    "calificado_por", "calificado_en", "liberado_en", "liberado_por", "fuera_de_plazo", "origen_entrega", "envio_tardio", "respuestas_pendientes",
+    "decision_envio", "anulado_por", "motivo_anulacion", "anulado_en", "iniciado_en", "entregado_en", "creado_en",
 )
 CAMPOS_INCIDENTE = ("id", "intento_id", "tipo", "severidad", "origen", "ocurrido_en", "reportado_en_tableta", "dispositivo_id", "detalle", "resolucion",
                     "ref_cliente")

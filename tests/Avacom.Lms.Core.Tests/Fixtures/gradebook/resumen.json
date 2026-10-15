@@ -1,0 +1,33 @@
+{
+  "aviso": "Promedio simple informativo de lo ya registrado. No es una calificación oficial: la ponderación institucional y el cierre del periodo son de V1.",
+  "cursos": [
+    {
+      "alumnos": [
+        {
+          "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+          "calificaciones": 0,
+          "pendientes": 0,
+          "periodo": "2026",
+          "promedio_simple": null,
+          "provisionales": 0,
+          "publicadas": 1,
+          "rotulo": "Juan P."
+        }
+      ],
+      "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "datos_suficientes": false,
+      "promedio_del_grupo": null
+    }
+  ],
+  "grupo": {
+    "codigo": "8A",
+    "id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
+    "nivel_clave": "secundaria",
+    "nombre": "Octavo A",
+    "periodo": "2026"
+  },
+  "oficial": false,
+  "ponderado": false,
+  "servidor_en": 1790000000000
+}

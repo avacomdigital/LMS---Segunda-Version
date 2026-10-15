@@ -17,12 +17,14 @@ VERSION_CATALOGO = "2026.10.06"
 
 M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION = "acceso", "aula", "dispositivos", "estudio", "evaluacion"
 M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS = "auditoria", "instalacion", "expediente", "pruebas"
-MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS)
+M_BUSQUEDA = "busqueda"
+M_REPORTES = "reportes"
+MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES)
 
 ETIQUETAS_MODULO = {
     M_ACCESO: "Acceso e identidad", M_AULA: "Aula (clase en vivo)", M_DISPOSITIVOS: "Dispositivos", M_ESTUDIO: "Modo estudio",
     M_EVALUACION: "Evaluaciones", M_AUDITORIA: "Auditoría", M_INSTALACION: "Instalación", M_EXPEDIENTE: "Expediente",
-    M_PRUEBAS: "Pruebas",
+    M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes",
 }
 
 
@@ -156,9 +158,45 @@ _LISTA: tuple[Accion, ...] = (
     _a("evaluacion.envio.aceptado", M_EVALUACION, "Envío tardío aceptado", evento_origen="evaluacion.envio_tardio_decidido.v1"),
     _a("evaluacion.envio.descartado", M_EVALUACION, "Envío tardío descartado", evento_origen="evaluacion.envio_tardio_decidido.v1"),
     _a("evaluacion.resultados.liberados", M_EVALUACION, "Resultados liberados al alumno", evento_origen="evaluacion.resultados_liberados.v1"),
+    _a("evaluacion.resultado.liberado", M_EVALUACION, "Resultado de un alumno publicado", sensible=True, evento_origen="evaluacion.resultado_intento_liberado.v1"),
+    _a("evaluacion.resultados.configurados", M_EVALUACION, "Política de publicación de resultados configurada", evento_origen="evaluacion.resultados_configurados.v1"),
     _a("calificacion.modificada", M_EVALUACION, "Calificación modificada", exige_motivo=True, sensible=True),
     _a("calificacion.reabierta", M_EVALUACION, "Calificación reabierta", exige_motivo=True, sensible=True),
     _a("calificacion.correccion_posterior_cierre", M_EVALUACION, "Corrección posterior al cierre", exige_motivo=True, sensible=True),
+    # ---- gradebook (MOD-011): lo que el libro hace con las calificaciones. Las dos de arriba (`modificada`, `reabierta`) ya estaban reservadas.
+    _a("calificacion.registrada", M_EVALUACION, "Calificación registrada", sensible=True, evento_origen="calificacion.registrada.v1"),
+    _a("calificacion.manual_aplicada", M_EVALUACION, "Reactivo calificado a mano", sensible=True, evento_origen="calificacion.manual_aplicada.v1"),
+    _a("calificacion.rubrica_aplicada", M_EVALUACION, "Rúbrica aplicada a una entrega", sensible=True, evento_origen="calificacion.rubrica_aplicada.v1"),
+    _a("calificacion.publicada", M_EVALUACION, "Calificación publicada al alumno", sensible=True, evento_origen="calificacion.publicada.v1"),
+    _a("calificacion.publicacion_retirada", M_EVALUACION, "Publicación de una calificación retirada", exige_motivo=True, sensible=True,
+       evento_origen="calificacion.publicacion_retirada.v1"),
+    _a("calificacion.valoracion_docente", M_EVALUACION, "Nivel de desempeño valorado por el profesor", exige_motivo=True, sensible=True,
+       evento_origen="calificacion.valoracion_docente.v1"),
+    _a("calificacion.retroalimentada", M_EVALUACION, "Retroalimentación de una calificación", sensible=True, evento_origen="calificacion.retroalimentada.v1"),
+    _a("calificacion.anulada", M_EVALUACION, "Calificación anulada (intento anulado)", sensible=True, evento_origen="calificacion.anulada.v1"),
+    _a("calificacion.modo_cambiado", M_EVALUACION, "Modo de calificación de un nivel cambiado", evento_origen="calificacion.modo_cambiado.v1"),
+    _a("calificacion.escala_adoptada", M_EVALUACION, "Escala de calificación adoptada o versionada", evento_origen="calificacion.escala_adoptada.v1"),
+    _a("calificacion.politica_configurada", M_EVALUACION, "Política de evaluación configurada", evento_origen="calificacion.politica_configurada.v1"),
+    _a("calificacion.clasificacion_definida", M_EVALUACION, "Evaluación clasificada (diagnóstica, formativa o sumativa)", evento_origen="calificacion.clasificacion_definida.v1"),
+    _a("calificacion.modificacion_denegada", M_EVALUACION, "Intento de modificar calificaciones sin autorización", sensible=True),
+    _a("calificacion.derivadas_reconstruidas", M_EVALUACION, "Resultados y agregados reconstruidos", evento_origen="calificacion.derivadas_reconstruidas.v1"),
+    _a("calificacion.evento_omitido", M_EVALUACION, "Evento de la evaluación que el libro no pudo aplicar y dejó atrás", sensible=True),
+    # ---- búsqueda (MOD-021): sólo lo que merece asiento (mantener el índice y un intento de abrir lo que no se puede leer). Buscar no se asienta: no cambia nada.
+    _a("busqueda.indice_reconstruido", M_BUSQUEDA, "Índice de búsqueda reconstruido", evento_origen="busqueda.indice_reconstruido.v1"),
+    _a("busqueda.apertura_denegada", M_BUSQUEDA, "Intento de abrir un resultado sin poder leerlo", sensible=True),
+    _a("busqueda.sinonimos_configurados", M_BUSQUEDA, "Sinónimos de la búsqueda configurados"),
+    _a("busqueda.evento_omitido", M_BUSQUEDA, "Evento que el índice no pudo aplicar y dejó atrás", sensible=True),
+    # ---- reportes (MOD-013): lo que merece asiento. Ver un reporte NO nominal no se asienta; generar uno nominal, exportarlo (en dos tiempos: autorizar y confirmar), un intento de
+    # leer lo que no se puede, reconstruir y cambiar la configuración, sí. Nunca llevan la ruta del archivo, el nombre de una persona ni el contenido del reporte.
+    _a("reporte.generado", M_REPORTES, "Reporte nominal generado", sensible=True),
+    _a("reporte.exportacion_autorizada", M_REPORTES, "Exportación de un reporte autorizada y generada (aún sin confirmar)", sensible=True),
+    _a("reporte.exportado", M_REPORTES, "Reporte exportado y guardado", sensible=True, evento_origen="reporte.exportado.v1"),
+    _a("reporte.exportacion_fallida", M_REPORTES, "Exportación de un reporte que no se pudo guardar", sensible=True),
+    _a("reporte.exportacion_caducada", M_REPORTES, "Exportación sin confirmar que caducó y no cuenta como entregada", sensible=True),
+    _a("reporte.acceso_denegado", M_REPORTES, "Intento de leer o exportar reportes sin poder hacerlo", sensible=True),
+    _a("reporte.agregados_reconstruidos", M_REPORTES, "Agregados de reportes reconstruidos desde la cola", evento_origen="reporte.agregados_reconstruidos.v1"),
+    _a("reporte.configuracion_cambiada", M_REPORTES, "Umbral de privacidad o política de exportación de reportes cambiados"),
+    _a("reporte.evento_omitido", M_REPORTES, "Evento que los reportes no pudieron aplicar y dejaron atrás", sensible=True),
     # ---- expediente (lo que hoy escribe `expediente/servicios.py`) ----
     _a("inscripcion.creada", M_EXPEDIENTE, "Inscripción creada"),
     _a("inscripcion.retirada", M_EXPEDIENTE, "Inscripción retirada"),
@@ -221,7 +259,7 @@ def modulo_de(clave: str) -> str:
     prefijo = clave.split(".", 1)[0]
     return {"identidad": M_ACCESO, "identity": M_ACCESO, "acceso": M_ACCESO, "aula": M_AULA, "dispositivos": M_DISPOSITIVOS,
             "estudio": M_ESTUDIO, "evaluacion": M_EVALUACION, "calificacion": M_EVALUACION, "auditoria": M_AUDITORIA,
-            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS}.get(prefijo, M_EXPEDIENTE)
+            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES}.get(prefijo, M_EXPEDIENTE)
 
 
 def como_lista() -> list[dict]:

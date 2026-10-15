@@ -1,0 +1,44 @@
+{
+  "grupos": [
+    {
+      "alumnos": 7,
+      "codigo": "8A",
+      "desactualizado": false,
+      "en_atencion": 0,
+      "id": "2dfe055b-7bfc-42fe-9825-904b38666076",
+      "nivel_clave": "",
+      "nombre": "Octavo A",
+      "periodo": "2026"
+    }
+  ],
+  "nodos": {
+    "arbol": [
+      {
+        "children": [],
+        "code": "CO",
+        "count": 1,
+        "kind": "country",
+        "name": "Colombia"
+      }
+    ],
+    "disponible": true,
+    "motivo": ""
+  },
+  "objetivos": {
+    "disponible": false,
+    "texto": "Aún no disponible: el dominio por objetivo llega con el módulo de objetivos."
+  },
+  "periodos": [
+    "2026"
+  ],
+  "puede": {
+    "alumno": true,
+    "clase": true,
+    "configurar": false,
+    "exportar": true,
+    "grupo": true,
+    "reconstruir": false,
+    "uso": false
+  },
+  "servidor_en": 1790002430000
+}

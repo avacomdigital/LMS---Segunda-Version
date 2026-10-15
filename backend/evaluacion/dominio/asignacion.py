@@ -126,10 +126,79 @@ def validar_reactivacion(valor, nivel: str) -> str:
 
 
 def validar_resultados(valor, por_defecto: str = cat.TRAS_LIBERAR) -> str:
+    """La política de publicación (RF-004). Acepta los sinónimos del documento de requisitos (`inmediata`, `manual`…) y los traduce."""
     texto = str(valor or por_defecto).strip().lower()
+    texto = cat.SINONIMOS_RESULTADOS.get(texto, texto)
     if texto not in cat.RESULTADOS:
         raise DatosInvalidos(f"resultados debe ser uno de: {', '.join(cat.RESULTADOS)}.", resultados=texto)
     return texto
+
+
+def validar_publicacion(valor, publicar_en, ahora: int, por_defecto: str = cat.TRAS_LIBERAR) -> tuple[str, int | None]:
+    """(política, instante programado). `programada` exige `publicar_en` en el futuro: una fecha pasada publicaría al instante sin que el profesor
+    lo haya querido. Con cualquier otra política la fecha no se guarda."""
+    politica = validar_resultados(valor, por_defecto)
+    if politica != cat.RESULTADOS_PROGRAMADOS:
+        return politica, None
+    instante = _instante(publicar_en, "publicar_en")
+    if instante is None:
+        raise DatosInvalidos("Con publicación programada hay que fijar `publicar_en`: cuándo verán los alumnos su resultado.")
+    if instante <= ahora:
+        raise DatosInvalidos("`publicar_en` debe estar en el futuro: con una fecha pasada los resultados se publicarían ahora mismo.", publicar_en=instante)
+    return politica, instante
+
+
+def validar_preguntas(valor, total_banco: int) -> int | None:
+    """RF-002: cuántas preguntas recibe cada alumno, elegido por el profesor. Nulo o vacío = lo que diga el examen de la biblioteca. Más que el banco no
+    se admite: se comprueba ANTES de iniciar la evaluación que el banco alcance (RF-002.7), nunca se recorta en silencio."""
+    if valor is None or valor == "":
+        return None
+    n = _entero(valor, "preguntas")
+    if n < 1:
+        raise DatosInvalidos("`preguntas` debe ser al menos 1.", preguntas=n)
+    if n > total_banco:
+        raise DatosInvalidos(f"El banco de este examen tiene {total_banco} pregunta(s): no alcanza para dar {n} a cada alumno.",
+                             preguntas=n, total_banco=total_banco, codigo_detalle="banco_insuficiente")
+    return n
+
+
+def validar_estrategia(valor) -> str | None:
+    from . import armado
+    if valor is None or valor == "":
+        return None
+    texto = str(valor).strip().lower()
+    if texto not in armado.ESTRATEGIAS:
+        raise DatosInvalidos(f"estrategia debe ser una de: {', '.join(armado.ESTRATEGIAS)}.", estrategia=texto)
+    return texto
+
+
+# ----------------------------------------------------------------------- publicación de resultados (RF-004)
+
+ESTADOS_FINALES_DEL_INTENTO = (cat.CALIFICADO, cat.ANULADO)
+
+
+def grupo_finalizado(destinatarios: list[dict], ultimos: dict[str, dict], estado_asignacion: str) -> bool:
+    """`al_finalizar_grupo`: ¿ya terminó todo el grupo? Un destinatario terminó cuando su último intento está calificado (sin calificación pendiente ni
+    reactivos por revisar) o anulado. Si la asignación ya cerró, quien nunca empezó no la detiene (nadie más puede abrir un intento); mientras esté
+    abierta, sí: todavía puede presentar. Sin destinatarios no hay grupo que termine."""
+    if not destinatarios:
+        return False
+    cerrada = estado_asignacion in cat.CON_CIERRE
+    for d in destinatarios:
+        it = ultimos.get(d["id"])
+        if it is None:
+            if cerrada:
+                continue
+            return False
+        if it["estado"] not in ESTADOS_FINALES_DEL_INTENTO or it.get("calificacion_pendiente"):
+            return False
+    return True
+
+
+def publicacion_vencida(asignacion: dict, ahora: int) -> bool:
+    """`programada`: ¿el reloj del nodo ya alcanzó la fecha fijada? (BR-062: nunca el reloj de una tableta)."""
+    return (asignacion.get("resultados") == cat.RESULTADOS_PROGRAMADOS and asignacion.get("liberados_en") is None
+            and asignacion.get("publicar_en") is not None and int(asignacion["publicar_en"]) <= ahora)
 
 
 def validar_recursos(recursos) -> list[dict]:

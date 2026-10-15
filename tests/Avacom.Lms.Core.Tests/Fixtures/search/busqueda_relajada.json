@@ -1,0 +1,146 @@
+{
+  "filters_applied": {
+    "country": "",
+    "grade": "",
+    "group": "",
+    "level": "",
+    "period": "",
+    "subject": "",
+    "topic": "",
+    "type": []
+  },
+  "has_more": false,
+  "index_notice": "",
+  "index_status": "consultable",
+  "match_mode": "any",
+  "normalized": "estados trigonometria",
+  "notice": "",
+  "page": 1,
+  "page_size": 20,
+  "query": "estados trigonometria",
+  "results": [
+    {
+      "context": {
+        "course_label": "Estados de la materia y sus cambios",
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "group_name": "Octavo A",
+        "lesson_label": "Examen de estados de la materia",
+        "period": "2026",
+        "tree_path": []
+      },
+      "description": "Examen de los estados de la materia",
+      "entity_id": "48b55c30-2c93-4fce-bb0c-c8ed70d74a5e",
+      "entity_type": "assessment",
+      "highlights": [
+        [
+          14,
+          21
+        ]
+      ],
+      "id": "48b55c30-2c93-4fce-bb0c-c8ed70d74a5e",
+      "match": "titulo",
+      "navigation_target": {
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "entity_id": "48b55c30-2c93-4fce-bb0c-c8ed70d74a5e",
+        "entity_type": "assessment",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "lesson_ref": "l3-assessment",
+        "object_ref": "l3-exam",
+        "source": "ejemplo"
+      },
+      "score": 0.6,
+      "snippet": "Examen de los estados de la materia",
+      "source": "local",
+      "status": "activa",
+      "subtype": "examen",
+      "title": "Estados de la materia"
+    },
+    {
+      "context": {
+        "course_label": "Estados de la materia y sus cambios",
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "group_name": "Octavo A",
+        "lesson_label": "Los tres estados de la materia",
+        "period": "2026",
+        "tree_path": []
+      },
+      "description": "Sólido, líquido y gas explicados con el modelo de partículas.",
+      "entity_id": "61909875-e4a6-48d4-9e41-0f276ea4ec37",
+      "entity_type": "study",
+      "highlights": [],
+      "id": "61909875-e4a6-48d4-9e41-0f276ea4ec37",
+      "match": "titulo",
+      "navigation_target": {
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "entity_id": "61909875-e4a6-48d4-9e41-0f276ea4ec37",
+        "entity_type": "study",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "lesson_ref": "l1-three-states",
+        "object_ref": "",
+        "source": "ejemplo"
+      },
+      "score": 0.6,
+      "snippet": "Sólido, líquido y gas explicados con el modelo de partículas.",
+      "source": "local",
+      "status": "activa",
+      "subtype": "",
+      "title": "Estados de la materia en casa"
+    },
+    {
+      "context": {
+        "course_label": "Estados de la materia y sus cambios",
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "group_name": "Octavo A",
+        "lesson_label": "Los tres estados de la materia",
+        "period": "2026",
+        "tree_path": []
+      },
+      "description": "Estados de la materia y sus cambios · Grupo Octavo A · abierta",
+      "entity_id": "d9790c4e-5ad1-4bff-9e48-c235a115da53",
+      "entity_type": "class",
+      "highlights": [
+        [
+          0,
+          7
+        ]
+      ],
+      "id": "d9790c4e-5ad1-4bff-9e48-c235a115da53",
+      "match": "titulo",
+      "navigation_target": {
+        "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "entity_id": "d9790c4e-5ad1-4bff-9e48-c235a115da53",
+        "entity_type": "class",
+        "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+        "lesson_ref": "l1-three-states",
+        "object_ref": "",
+        "source": "ejemplo"
+      },
+      "score": 0.6,
+      "snippet": "Estados de la materia y sus cambios · Grupo Octavo A · abierta",
+      "source": "local",
+      "status": "abierta",
+      "subtype": "",
+      "title": "Los tres estados de la materia"
+    }
+  ],
+  "sources": {
+    "catalog": {
+      "hint": "",
+      "reason": "",
+      "status": "ok"
+    },
+    "local": {
+      "status": "ok",
+      "types": [
+        "assessment",
+        "study",
+        "class"
+      ]
+    }
+  },
+  "total": 3,
+  "total_exact": true
+}

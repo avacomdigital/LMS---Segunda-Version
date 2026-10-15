@@ -1,5 +1,8 @@
 using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
+using Avacom.Lms.Core.Gradebook;
+using Avacom.Lms.Core.Reporting;
+using Avacom.Lms.Core.Search;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 
@@ -22,6 +25,12 @@ public static class Sesion
     private static IAuditoriaApi? _auditoria;
     private static EvaluacionApi? _evaluacion;
     private static Uri? _baseEvaluacion;
+    private static GradebookApi? _gradebook;
+    private static Uri? _baseGradebook;
+    private static SearchApi? _search;
+    private static Uri? _baseSearch;
+    private static ReportesApi? _reportes;
+    private static Uri? _baseReportes;
     private static ILogsApi? _logs;
     private static EntregadorDeLogs? _entregador;
     private static Uri? _baseAuditoria;
@@ -145,6 +154,60 @@ public static class Sesion
                 _baseEvaluacion = actual;
             }
             return _evaluacion;
+        }
+    }
+
+    /// <summary>
+    /// El cliente de <c>/api/gradebook/</c> (MOD-011 · Gradebook), una instancia por dirección: el libro de calificaciones, la revisión docente, los ajustes con motivo, la
+    /// publicación y la configuración académica. Es el mismo objeto que implementa <see cref="IGradebookApi"/> (lo que usa OPS) y <see cref="IGradebookAlumnoApi"/> (Student).
+    /// </summary>
+    public static GradebookApi Gradebook
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_gradebook is null || _baseGradebook != actual)
+            {
+                _gradebook = new GradebookApi(Http, actual);
+                _baseGradebook = actual;
+            }
+            return _gradebook;
+        }
+    }
+
+    /// <summary>
+    /// El cliente de <c>/api/search/</c> (MOD-021 · Search), una instancia por dirección: buscar entre lo que el nodo tiene y lo que esta persona puede leer, con sus filtros, y
+    /// volver a comprobar el permiso al abrir un resultado. Lo usa la pantalla «Buscar» del menú principal.
+    /// </summary>
+    public static SearchApi Search
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_search is null || _baseSearch != actual)
+            {
+                _search = new SearchApi(Http, actual);
+                _baseSearch = actual;
+            }
+            return _search;
+        }
+    }
+
+    /// <summary>
+    /// El cliente de <c>/api/reportes/</c> (MOD-013 · Reporting), una instancia por dirección: el reporte de una clase, de un grupo y de un alumno, el uso de equipos, los filtros, el
+    /// estado de los agregados y la exportación a archivo en dos tiempos. Es sólo de lectura (BR-085): lo único que escribe es el registro de lo exportado.
+    /// </summary>
+    public static ReportesApi Reportes
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_reportes is null || _baseReportes != actual)
+            {
+                _reportes = new ReportesApi(Http, actual);
+                _baseReportes = actual;
+            }
+            return _reportes;
         }
     }
 

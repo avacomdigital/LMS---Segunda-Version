@@ -1,0 +1,8 @@
+{
+  "codigo": "conflicto_de_version",
+  "detail": "Otra persona cambió esta calificación mientras la editabas: vuelve a leerla antes de cambiarla.",
+  "estado": "revisada",
+  "puntaje_efectivo": 85.0,
+  "version_actual": 2,
+  "version_esperada": 1
+}

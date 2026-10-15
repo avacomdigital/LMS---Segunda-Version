@@ -1,0 +1,6 @@
+{
+  "codigo": "datos_invalidos",
+  "criterio_id": "r2",
+  "detail": "El criterio «r2» vale de 0 a 1 puntos.",
+  "maximo": 1.0
+}

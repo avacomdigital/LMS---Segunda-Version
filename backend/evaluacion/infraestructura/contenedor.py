@@ -28,6 +28,7 @@ def configuracion() -> ConfigEvaluacion:
         desfase_reloj_ms=int(getattr(settings, "AVACOM_EVAL_DESFASE_RELOJ_MS", 5_000)),
         armado_intentos=int(getattr(settings, "AVACOM_EVAL_ARMADO_INTENTOS", 200)),
         archivado_ms=int(getattr(settings, "AVACOM_EVAL_ARCHIVADO_H", 24)) * 3_600_000,
+        resultados_por_defecto=str(getattr(settings, "AVACOM_EVAL_RESULTADOS_POR_DEFECTO", "tras_liberar") or "tras_liberar"),
     )
 
 

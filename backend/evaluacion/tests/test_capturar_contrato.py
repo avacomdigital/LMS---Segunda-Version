@@ -15,7 +15,7 @@ import json
 import os
 import unittest
 
-from .base import BASE, MIN, BaseEvaluacion, respuesta_correcta
+from .base import BASE, CURSO, EXAMEN, MIN, BaseEvaluacion, respuesta_correcta
 
 CARPETA = os.environ.get("AVACOM_CAPTURAR_CONTRATO", "")
 
@@ -93,6 +93,12 @@ class CapturarContratoTests(BaseEvaluacion):
                 self.guardar("puntaje", self.accion(f"/intentos/{i}/respuestas/{ref}/puntuar/", {"puntaje": 1.0, "comentario": "Completa"}))
             self.guardar("publicado", self.accion(f"/intentos/{i}/publicar/"))
             self.guardar("resultados", self.ver(f"/asignaciones/{a['id']}/resultados/"))
-            self.accion(f"/asignaciones/{a['id']}/liberar-resultados/")
+            # RF-004: la publicación por alumno y, después, la de todo el grupo (con nombre y origen)
+            self.guardar("resultado_liberado", self.accion(f"/intentos/{i}/liberar-resultado/"))
+            self.guardar("asignacion_publicada", self.accion(f"/asignaciones/{a['id']}/liberar-resultados/"))
             self.guardar("resultado", self.get(f"/intentos/{i}/resultado/", **self.alumno()))
             self.guardar("lista_asignaciones", self.ver("/asignaciones/"))
+            # RF-003: la ficha del examen antes de asignarlo
+            self.guardar("ficha_examen", self.ver("/examenes/", fuente="ejemplo", curso_ref=CURSO, objeto_ref=EXAMEN))
+            # el menú principal de OPS: los exámenes de los cursos instalados, sin entrar a una clase
+            self.guardar("examenes_disponibles", self.ver("/examenes/disponibles/", fuente="ejemplo"))

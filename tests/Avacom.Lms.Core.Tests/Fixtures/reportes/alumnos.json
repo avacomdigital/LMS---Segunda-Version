@@ -1,0 +1,57 @@
+{
+  "alumnos": [
+    {
+      "id": "86ba7626-ed7c-42f0-aa0a-d3a7acfecee7",
+      "inicial": "A",
+      "necesita_atencion": false,
+      "rotulo": "Alumno 01"
+    },
+    {
+      "id": "b75de8f8-e422-4eb9-ba99-81d0a2562304",
+      "inicial": "A",
+      "necesita_atencion": false,
+      "rotulo": "Alumno 02"
+    },
+    {
+      "id": "5520435a-cd34-4be1-8fec-fae4ef9431f5",
+      "inicial": "A",
+      "necesita_atencion": false,
+      "rotulo": "Alumno 03"
+    },
+    {
+      "id": "b0ec626c-7bd5-401c-b8e2-4a9e36720bc6",
+      "inicial": "A",
+      "necesita_atencion": false,
+      "rotulo": "Alumno 04"
+    },
+    {
+      "id": "21ba5549-076f-46a8-9c95-6dffdafbbff9",
+      "inicial": "A",
+      "necesita_atencion": false,
+      "rotulo": "Alumno 05"
+    },
+    {
+      "id": "5d34c528-2e83-4c77-a51b-50b927522df3",
+      "inicial": "A",
+      "necesita_atencion": false,
+      "rotulo": "Alumno 06"
+    },
+    {
+      "id": "eae2a376-31b0-4ea2-9611-45e73b9ce2a1",
+      "inicial": "J",
+      "necesita_atencion": false,
+      "rotulo": "Juan P."
+    }
+  ],
+  "grupo_id": "2dfe055b-7bfc-42fe-9825-904b38666076",
+  "iniciales": [
+    {
+      "cantidad": 6,
+      "inicial": "A"
+    },
+    {
+      "cantidad": 1,
+      "inicial": "J"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+  "items": [
+    {
+      "asignacion_id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
+      "calificacion": {
+        "aprobacion": {
+          "cumple_criterio": true
+        },
+        "desempeno": {
+          "clave": "alto",
+          "nivel": "Alto",
+          "origen": "docente",
+          "tramo": 3
+        },
+        "escala": {
+          "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+          "tipo": "numerica"
+        },
+        "numero_intento": 1,
+        "presentada": {
+          "clave": "4.4",
+          "etiqueta": "4.4",
+          "valor": 4.4
+        },
+        "publicada_en": 1790000000000,
+        "retroalimentacion": {
+          "dificultades": "Se confunde al ordenar procesos.",
+          "fortalezas": "Razona bien los cambios de estado.",
+          "oportunidades": "Practicar con diagramas."
+        }
+      },
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "estado": "publicado",
+      "estado_simple": "completado",
+      "modo": "calificaciones",
+      "simbolo": "lleno",
+      "titulo": "Examen de estados de la materia"
+    }
+  ],
+  "servidor_en": 1790000000000
+}

@@ -115,6 +115,30 @@ class AsignacionView(VistaEvaluacion):
         return Response(asignaciones_cu.VerAsignacion(servicios()).ejecutar(self._docente(request), asignacion_id))
 
 
+class ExamenesView(VistaEvaluacion):
+    """RF-003: la ficha de un examen de la biblioteca ANTES de asignarlo (`?fuente=&curso_ref=&objeto_ref=`): banco, temas, tiempo, sugerencias. Sin preguntas ni claves."""
+
+    def get(self, request):
+        c = self._consulta(request)
+        return Response(asignaciones_cu.FichaDelExamen(servicios()).ejecutar(self._docente(request), c.get("fuente", ""), c.get("curso_ref", ""),
+                                                                                c.get("objeto_ref", "")))
+
+
+class ExamenesDisponiblesView(VistaEvaluacion):
+    """Los exámenes de los cursos instalados (`?fuente=`), para aplicar uno desde el menú principal de OPS sin entrar a una clase."""
+
+    def get(self, request):
+        return Response(asignaciones_cu.ExamenesDisponibles(servicios()).ejecutar(self._docente(request), self._consulta(request).get("fuente", "")))
+
+
+class PublicacionView(VistaEvaluacion):
+    """RF-004: la política de publicación de resultados de una asignación (`PATCH {resultados, publicar_en?}`)."""
+
+    def patch(self, request, asignacion_id: str):
+        datos = self._cuerpo(request, s.PublicacionEntrada)
+        return Response(asignaciones_cu.ConfigurarPublicacion(servicios()).ejecutar(self._docente(request, datos), asignacion_id, datos))
+
+
 class IniciarView(VistaEvaluacion):
     def post(self, request, asignacion_id: str):
         datos = self._cuerpo(request, s.CierreEntrada)
@@ -251,6 +275,14 @@ class PublicarView(VistaEvaluacion):
     def post(self, request, intento_id: str):
         datos = self._cuerpo(request, s.CierreEntrada)
         return Response(calificacion_cu.PublicarIntento(servicios()).ejecutar(self._docente(request, datos), intento_id))
+
+
+class LiberarResultadoView(VistaEvaluacion):
+    """RF-004: publica el resultado de UN alumno (sin esperar al grupo ni a la fecha programada)."""
+
+    def post(self, request, intento_id: str):
+        datos = self._cuerpo(request, s.CierreEntrada)
+        return Response(calificacion_cu.LiberarResultadoDelIntento(servicios()).ejecutar(self._docente(request, datos), intento_id))
 
 
 class RecalificarView(VistaEvaluacion):

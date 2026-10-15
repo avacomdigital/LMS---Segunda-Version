@@ -1,5 +1,8 @@
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Acceso;
+using Avacom.Lms.Ops.Busqueda;
+using Avacom.Lms.Ops.Calificaciones;
+using Avacom.Lms.Ops.Reportes;
 using Avacom.Lms.Ui.Controls;
 
 namespace Avacom.Lms.Ops.Pages;
@@ -16,6 +19,12 @@ public partial class DashboardPage : ContentPage
         PintarPersona();
         // MOD-019: el menú de la bitácora sólo para Administrador y Técnico (sin sesión obligatoria, el prototipo lo deja ver; el nodo decide).
         HistorialTile.IsVisible = Sesion.Usuario is null || Sesion.Usuario.Rol is "ADMIN" or "TECHNICIAN";
+        // MOD-011: «Calificaciones» sólo para quien puede leer datos académicos (profesorado, administración y reportes; el rol técnico no). Sin sesión, se deja ver y el nodo decide.
+        CalificacionesTile.IsVisible = CalificacionesUi.PuedeLeer;
+        // MOD-013: «Reportes» con la misma regla que «Calificaciones» (profesorado, administración y reportes; ni el soporte técnico ni el alumno). Sin sesión, se deja ver y el nodo decide.
+        ReportesTile.IsVisible = AccesoAReportes.Leer(Sesion.Usuario is not null, Sesion.Usuario?.Rol);
+        // MOD-021: «Buscar» para quien puede buscar (profesorado, administración y reportes; ni el soporte técnico ni el alumno). Sin sesión, se deja ver y el nodo decide qué devuelve.
+        BuscarTile.IsVisible = BusquedaUi.PuedeBuscar;
         // 019-01: este equipo se presenta ante el nodo como MASTER y entrega sus logs cada minuto, de mejor esfuerzo.
         _ = Sesion.RegistrarEquipoAsync();
         Sesion.EntregadorDeLogs.Iniciar();
@@ -106,7 +115,7 @@ public partial class DashboardPage : ContentPage
                 await Shell.Current.GoToAsync("clase-hoy");
                 break;
             case "Reportes":
-                await Shell.Current.GoToAsync("activity-monitor");
+                await Shell.Current.GoToAsync(RutasDeReportes.Inicio);
                 break;
             case "Dispositivos":
                 await Shell.Current.GoToAsync("dispositivos");
@@ -116,6 +125,15 @@ public partial class DashboardPage : ContentPage
                 break;
             case "Modo de estudio":
                 await Shell.Current.GoToAsync("estudio");
+                break;
+            case "Evaluaciones":
+                await Shell.Current.GoToAsync("evaluaciones");
+                break;
+            case "Calificaciones":
+                await Shell.Current.GoToAsync("calificaciones");
+                break;
+            case "Buscar":
+                await Shell.Current.GoToAsync("buscar");
                 break;
             case "Historial":
                 await Shell.Current.GoToAsync("logs-bitacora");

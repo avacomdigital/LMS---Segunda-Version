@@ -68,15 +68,20 @@ Con sesión de usuario el pase del nodo ya dice quién es y la app no manda `alu
 
 Una tarjeta por evaluación con su título, curso, número de preguntas, fecha límite, el **nivel en palabras** («Examen supervisado»), el estado («Abierto», «Abierto · fuera de plazo», «Aún no abre») y **una frase** de lo que puede hacer:
 
-| Situación | Botón | Frase |
-|---|---|---|
-| Puede comenzar | **Comenzar** | «Lee las condiciones antes de empezar» |
-| Intento vivo (en curso o suspendido) | **Continuar** | «Tienes un examen en curso» / «Tu examen está en pausa: avisa a tu profesor» |
-| Su tableta espera a que el profesor decida | Ver | «Esperando que tu profesor decida sobre esta tableta» |
-| Rechazada la tableta | — | «Tu profesor no admitió esta tableta: pídele que te indique cómo continuar» |
-| Entregado | — | «Entregado · tu profesor publicará los resultados» |
-| Resultado liberado | **Ver resultado** | «Ya puedes ver tu resultado» |
-| Programada / cerrada / sin intentos | — | «Abre hoy 10:30» / «Este examen ya cerró» / «Ya presentaste este examen» |
+Los estados visuales (RF-006) los decide `Examen/EstadoDeEvaluacion.cs` (sin interfaz, probado en `Student.Tests/EstadoDeEvaluacionTests`) con lo que dice el nodo más lo que la tableta aún tiene en su cola cifrada para ese intento:
+
+| Estado visual | Situación | Botón | Frase |
+|---|---|---|---|
+| Programada | Todavía no abre | — | «Abre hoy 10:30» |
+| Disponible | Puede comenzar · su tableta espera a que el profesor decida | **Comenzar** · Ver | «Lee las condiciones antes de empezar» · «Esperando que tu profesor decida sobre esta tableta» |
+| En curso | Intento vivo (en curso o suspendido) | **Continuar** | «Tienes un examen en curso» / «Tu examen está en pausa: avisa a tu profesor» |
+| Entrega pendiente de sincronización | Entregado, pero la cola local aún guarda algo de ese intento | — | «Entregado · algo quedó guardado en esta tableta y se enviará solo cuando haya conexión» |
+| Pendiente de calificación | Entregado y la biblioteca aún no califica · en revisión docente | — | «Entregado · pendiente de calificación» · «Entregado · algunas respuestas las revisa tu profesor» |
+| Calificada, no publicada | Calificado del todo y la política aún no lo publica | — | «Calificado · tu profesor publicará los resultados» / «… verás tu resultado cuando todo el grupo haya terminado» / «… verás tu resultado mañana 08:00» (RF-004; nunca la nota) |
+| Resultado publicado | El nodo dice `resultado_disponible` | **Ver resultado** | «Ya puedes ver tu resultado» |
+| Cerrada | Anulado, rechazada la tableta, cerrado sin presentar, sin intentos | — | «Este intento no cuenta: habla con tu profesor» / «Tu profesor no admitió esta tableta…» / «Este examen ya cerró» / «Ya presentaste este examen» |
+
+La antesala añade la línea «Resultado: …» con la misma frase y la descripción del profesor si la hay.
 
 Se sondea cada 5 s mientras la pantalla está a la vista y **no se repinta si nada cambió** (repintar parpadea y deja a la accesibilidad sin el botón entre una lectura y otra).
 
@@ -109,7 +114,7 @@ Cuando el nodo suspende el intento (más de `AVACOM_EVAL_LATIDO_VENCIDO_MS` sin 
 
 ### 3.7 · Entrega (PAN-123) y resultado
 
-* «Tu examen quedó entregado» y **qué sigue** con el texto del nodo (sin repetir la primera frase, que ya es el título): «Tu profesor publicará los resultados.» / «Algunas respuestas las revisa tu profesor.» **Nunca «calificado»** mientras quede algo por revisar (Guion, paso 13).
+* «Tu examen quedó entregado» y **qué sigue** con el texto del nodo según la política de publicación (sin repetir la primera frase, que ya es el título): «Tu profesor publicará los resultados.» / «Verás tu resultado en la fecha que fijó tu profesor.» / «Verás tu resultado cuando todo el grupo haya terminado.» / «Algunas respuestas las revisa tu profesor.» **Nunca «calificado»** mientras quede algo por revisar (Guion, paso 13) y nunca la nota.
 * Si el examen se entregó solo, se dice con una frase: «Se acabó el tiempo y tu examen se entregó solo…», «Venció el plazo…», «Tu profesor cerró el examen…».
 * Sin red al entregar: «Tu entrega quedó guardada en este dispositivo y se enviará en cuanto haya conexión. No cierres el examen.» (el bloqueo sigue; sale sola con el siguiente latido).
 * **Resultado** sólo si el profesor lo liberó (DEC-032): porcentaje, «Aprobado» (verde) o «Todavía no llegas al 60 % que pide el examen» (**ámbar, nunca rojo**), puntos y **pregunta por pregunta** con ✓/✗, la retroalimentación y el comentario del profesor. Antes de liberarse no hay botón: el nodo responde 403 y la pantalla dice «Tu profesor aún no publica los resultados».
@@ -203,10 +208,11 @@ Pantallas del profesor en `src/Avacom.Lms.Ops/Pages/Examen*.cs`, con el vocabula
 
 | Ruta | Pantalla | Qué hace |
 |---|---|---|
-| `examen-aplicar` (`curso`, `objeto`, `fuente`, `sesion`, `grupo`, `titulo`, `curso_titulo`) | **Aplicar un examen** | Nivel de control **obligatorio y sin valor inicial** (el botón queda apagado hasta elegirlo), intentos, tiempo, plazo, qué ve el alumno y cuándo, quién reactiva. Al elegir `controlado` baja sola hasta MSG-036 con las tabletas que no alcanzan. Aplicar crea la asignación y **reemplaza** la pantalla por el panel (Atrás vuelve adonde estaba, no a Aplicar). La tarjeta está en el tercio central |
-| `examen-panel?asignacion=` | **Panel** | Ordenado por el nodo (quién necesita al profesor primero). Por alumno: estado, respondidas, pregunta actual, reloj, tableta y capacidad, incidentes con su severidad. Reactivar / cerrar su examen; **«Reactivar a todos (N)»** lee el conteo y dice «Vas a reactivar a N alumnos» con una sola confirmación; admitir o rechazar tabletas; bajar el nivel (dos hojas); endurecer; cerrar y liberar; aceptar o descartar un envío tardío. Sondeo de 3 s y canal de tiempo real |
-| `examen-expediente?intento=` | **Expediente** | Sólo lectura mientras el alumno presenta. Línea de tiempo con hh:mm:ss, avisos (neutro/ámbar), informe de bloqueo, revisión (puntaje en pasos de 0/25/50/75/100 %; cambiar uno ya puesto pide motivo), publicar y **anular**: sólo en un intento ya entregado, botón discreto, con motivo de lista → «Anulado por *nombre* · motivo» |
-| `examen-resultados?asignacion=` | **Resultados** | Con menos de 3 entregas no se calcula un promedio |
+| `evaluaciones` (hexágono **Evaluaciones** del menú principal) | **Evaluaciones** | El punto de entrada del profesor SIN entrar a una clase (con la biblioteca real el examen no aparece en la secuencia de la clase: el aula pide el curso con `mode=class` y el examen es de modo `exam`). Diseño ancho como «Clase de hoy» (la barra de búsqueda es de una sola fila y no cabe en el tercio central). **Aplicar un examen**: lista los exámenes de los cursos instalados (`GET /examenes/disponibles/`) agrupados por curso con su clasificación; el **buscador es el de «Clase de hoy»** (`SearchFilterBar`): texto libre sin tildes y con todas las palabras (examen, lección, curso, clasificación), País y Nivel a la vista y, bajo «Más filtros», Grado y Materia; el examen hereda la clasificación de su curso, que sale del catálogo del aula y se cruza por `curso_ref` (`Core/Evaluacion/FiltroDeExamenes.cs`). Un curso fuera del catálogo sólo se oculta si se elige un selector. «N de M exámenes coinciden», «Sin resultados» con «Limpiar filtros». «Aplicar» abre `examen-aplicar` con el curso y el examen elegidos. **Exámenes que ya aplicaste**: con sus cuentas y «Abrir panel». Con la biblioteca cerrada lo dice con su sugerencia |
+| `examen-aplicar` (`curso`, `objeto`, `fuente`, `sesion`, `grupo`, `titulo`, `curso_titulo`) | **Aplicar un examen** | Nivel de control **obligatorio y sin valor inicial** (el botón queda apagado hasta elegirlo); **¿cuántas preguntas por alumno?** (RF-002/003: lee la ficha del banco con `FichaAsync` y ofrece «Las del examen (6 de 18, al azar)» o 5/10/15/20… recortadas al tamaño del banco; explica que la selección es al azar por alumno, sin repetir y congelada); intentos, tiempo, plazo; **¿cuándo ven su resultado?** (RF-004: «Los publico yo» —defecto seguro—, «Al entregar», «Cuando termine el grupo», «En una fecha» con fichas de hora, «Nunca»; si el examen sugiere otra cosa se dice y la decisión es del profesor); quién reactiva. Al elegir `controlado` baja sola hasta MSG-036 con las tabletas que no alcanzan. Aplicar crea la asignación y **reemplaza** la pantalla por el panel. La tarjeta está en el tercio central. Sin teclado: la descripción del examen no se escribe desde OPS |
+| `examen-panel?asignacion=` | **Panel** | Ordenado por el nodo (quién necesita al profesor primero). Por alumno: estado, respondidas, pregunta actual, reloj, tableta y capacidad, incidentes con su severidad. Cuentas RF-012: presentando, esperan reactivación/admisión, entregaron, sin empezar, con avisos, **sin señal**, envíos por decidir, **por revisar**, **listos para publicar**, **publicados**. Reactivar / cerrar su examen; **«Reactivar a todos (N)»**; admitir o rechazar tabletas; bajar el nivel; endurecer; cerrar; **«Publicar resultados» / «Publicar ahora»** (a todo el grupo, cuando nadie presenta; oculto con «al entregar» y «nunca»); **«Cambiar publicación»** (hoja con las políticas y, con «En una fecha», la hora; sólo mientras nada esté publicado); aceptar o descartar un envío tardío. La pastilla de publicación dice la política, «Se publican solos a las 10:30» o «Resultados publicados a las 10:41 por *nombre* / a la hora fijada / al terminar el grupo». Sondeo de 3 s y canal de tiempo real |
+| `examen-expediente?intento=` | **Expediente** | Sólo lectura mientras el alumno presenta. Línea de tiempo con hh:mm:ss, avisos (neutro/ámbar), informe de bloqueo, revisión (puntaje en pasos de 0/25/50/75/100 %; cambiar uno ya puesto pide motivo), publicar la calificación (no el resultado) y **anular**: sólo en un intento ya entregado, botón discreto, con motivo de lista → «Anulado por *nombre* · motivo» |
+| `examen-resultados?asignacion=` | **Resultados** | El profesor ve todas las notas **antes** de publicarlas. Con menos de 3 entregas no se calcula un promedio. Columna «Publicación» por alumno: «Lo ve desde las 10:41», botón **Publicar** (RF-004, publicación individual: calificado del todo y aún oculto), «Por revisar», «Espera a la biblioteca» o «No se publica» (política «nunca»). El resumen dice qué ven ya los alumnos y por qué |
 
 En la **clase** (`ClaseSesionPage`) el examen es tocable: «Aplicar examen» o «Ver panel del examen»; `ClaseCursoPage` ya no lo atenúa y una lección que sólo trae examen se puede elegir. En **Dispositivos** cada tableta muestra su capacidad («controlado», «supervisado», «abierto» o «no declarada»; sin declarar cuenta como abierto).
 
@@ -217,7 +223,7 @@ En la **clase** (`ClaseSesionPage`) el examen es tocable: «Aplicar examen» o �
 3. **`SesionDeClase` no trae `grupo_id`** y OPS inicia clases sin grupo: Aplicar toma el del profesor y, si tiene varios, muestra fichas para elegir.
 4. **`Examen/ExamenExtra.cs`** añade lo que los registros del Core todavía no traen (`objeto_ref`, `curso_ref`, `grupo_id`, `creada_en` de la asignación; `bloqueo`, `dispositivo_id`, `calificacion_pendiente` del expediente). Es una lectura extra por pantalla; cuando Core lo incorpore se borra el archivo.
 5. **`anulado_por` es un id**: se resuelve a nombre para el profesor de este equipo y para los `docente-*`; cualquier otro sale como «otra persona del profesorado o de la administración». Conviene que el nodo mande `anulado_por_rotulo`.
-6. **El menú principal no tiene entrada «Evaluaciones»**: el menú hexagonal no tiene un hueco natural y el panel se alcanza desde la clase.
+6. **El menú principal tiene el hexágono «Evaluaciones»** (2026-10-13, en la celda libre a la izquierda de «Calendario»): lleva a `evaluaciones`, desde donde se aplica un examen de cualquier curso instalado y se abre el panel de los ya aplicados. Antes sólo se alcanzaba desde la secuencia de la clase, donde los exámenes de la biblioteca real no aparecen.
 
 ---
 

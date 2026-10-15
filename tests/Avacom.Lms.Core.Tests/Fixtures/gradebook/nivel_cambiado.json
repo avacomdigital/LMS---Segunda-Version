@@ -1,0 +1,23 @@
+{
+  "advertencias": [
+    "Las evaluaciones ya calificadas antes de este cambio no se convierten en calificaciones solas: se registran cuando el profesor lo decide."
+  ],
+  "cambiado": true,
+  "nivel": {
+    "actualizada_en": 1790000000000,
+    "actualizada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
+    "escala": {
+      "codigo": "co-1-5",
+      "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+      "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+      "numero": 1,
+      "tipo": "numerica",
+      "version_id": "e0521e03-c62f-449b-936f-f2630c3accdb"
+    },
+    "modo": "calificaciones",
+    "nivel_clave": "secundaria",
+    "por_defecto": false,
+    "version": 1
+  },
+  "servidor_en": 1790000000000
+}

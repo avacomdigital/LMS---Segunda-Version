@@ -1,0 +1,43 @@
+﻿Reporte del grupo
+
+Reporte;Reporte del grupo
+Grupo;Octavo A
+Periodo;2026
+Generado por;Prof. Gómez
+Generado el;21 sep 2026 · 09:53
+Datos al corte;21 sep 2026 · 09:53 (hora del nodo). Esto es lo que había en el nodo a esa hora.
+Estado de integración;1 tableta sin sincronizar (1 tableta perdió la conexión y aún no envía lo que guardó)
+Umbral de privacidad aplicado;No
+Versión del nodo;2.7.0
+
+Resumen
+Alumnos;7
+Clases cerradas;3
+Evaluaciones;1
+Tareas de estudio;1
+Alumnos que necesitan atención;7
+Promedio de participación (%);71,43
+Promedio de aciertos (%);68,89
+Modo de calificación;Simple (sin notas)
+Nota;Dominio por objetivo: aún no disponible.
+Nota;Este archivo incluye nombres de alumnos. Una vez fuera del equipo del colegio, quien lo guarda es responsable de quién lo abre.
+
+Alumnos
+Alumno;Clases a las que asistió;Clases cerradas;Participación (%);Aciertos (%);Evaluaciones presentadas;Evaluaciones;Evaluaciones sin presentar;Tareas de estudio completadas;Tareas de estudio;Necesita atención;Motivo
+Alumno 01;1;3;100;100;0;1;0;0;1;Sí;Estuvo en 1 de 3 clases
+Alumno 02;1;3;100;44,44;0;1;0;0;1;Sí;Estuvo en 1 de 3 clases
+Alumno 03;1;3;0;;0;1;0;0;1;Sí;Estuvo en 1 de 3 clases
+Alumno 04;1;3;100;100;0;1;0;0;1;Sí;Estuvo en 1 de 3 clases
+Alumno 05;1;3;0;;0;1;0;0;1;Sí;Estuvo en 1 de 3 clases
+Alumno 06;1;3;100;100;0;1;0;0;1;Sí;Estuvo en 1 de 3 clases
+Juan P.;1;3;100;0;0;1;0;0;1;Sí;Estuvo en 1 de 3 clases
+
+Clases
+Clase;Curso;Lección;Participantes;Participación promedio (%);Aciertos promedio (%);Datos incompletos
+21 sep 2026 · 09:53;Estados de la materia y sus cambios;Los tres estados de la materia;0;;;No
+21 sep 2026 · 09:53;Estados de la materia y sus cambios;Los tres estados de la materia;2;50;100;Sí
+21 sep 2026 · 09:13;Estados de la materia y sus cambios;Los tres estados de la materia;5;80;61,11;No
+
+Evaluaciones
+Evaluación;Estado;Presentaron;Sin presentar;Por revisar;Con calificación publicada
+Examen de los estados;activa;0;0;0;0

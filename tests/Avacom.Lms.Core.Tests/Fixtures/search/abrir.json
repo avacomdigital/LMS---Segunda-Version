@@ -1,0 +1,13 @@
+{
+  "allowed": true,
+  "navigation_target": {
+    "course_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+    "entity_id": "48b55c30-2c93-4fce-bb0c-c8ed70d74a5e",
+    "entity_type": "assessment",
+    "group_id": "d0f746c2-d9c6-4243-bfce-a0b430154d97",
+    "lesson_ref": "l3-assessment",
+    "object_ref": "l3-exam",
+    "source": "ejemplo"
+  },
+  "verified": true
+}

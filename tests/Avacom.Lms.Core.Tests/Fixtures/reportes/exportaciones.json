@@ -1,0 +1,44 @@
+{
+  "exportaciones": [
+    {
+      "autorizada_en": 1790002430000,
+      "bytes": 2025,
+      "confirmada_en": 1790002430000,
+      "corte_en": 1790002430000,
+      "destino_autorizado": "extraible",
+      "destino_tipo": "carpeta_local",
+      "estado": "entregada",
+      "expira_en": 1790003330000,
+      "filas": 11,
+      "formato": "csv",
+      "huella": "6eb9e308ece83b1c0be6bc57e1079f8b3661b10abe2597d77d47b8d7930e4a0d",
+      "id": "68567725-b997-4350-a164-1ba04c6c7036",
+      "intentos": [
+        {
+          "destino_tipo": "extraible",
+          "en": 1790002430000,
+          "motivo": "medio_retirado",
+          "resultado": "fallido"
+        },
+        {
+          "destino_tipo": "carpeta_local",
+          "en": 1790002430000,
+          "motivo": "verificacion_fallida",
+          "resultado": "fallido"
+        },
+        {
+          "destino_tipo": "carpeta_local",
+          "en": 1790002430000,
+          "motivo": "",
+          "resultado": "guardado"
+        }
+      ],
+      "nombre_archivo": "reporte-grupo-8A-2026-09-21-0953.csv",
+      "nominal": true,
+      "razon_codigo": null,
+      "tipo": "grupo",
+      "umbral_aplicado": false
+    }
+  ],
+  "servidor_en": 1790002430000
+}

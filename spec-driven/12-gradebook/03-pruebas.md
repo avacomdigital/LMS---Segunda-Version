@@ -1,0 +1,95 @@
+# 12 · Gradebook (MOD-011) · Pruebas
+
+Qué se probó, con qué resultado y —con la misma franqueza— qué **no** se pudo comprobar. Corridas del **2026-10-14**.
+
+## 1 · Resultado
+
+| Qué | Cuántas | Resultado |
+|---|---|---|
+| Backend `gradebook` (`manage.py test gradebook`) | 202 (1 omitida: la captura de contrato, que sólo corre con `AVACOM_CAPTURAR_CONTRATO`); 28 son las de la revisión independiente (`test_revision_independiente.py`) y 16 las de la compuerta de resultado y el permiso de la administración (`test_compuerta_de_resultados.py`) | ✅ |
+| Backend, MOD-010 + libro + acceso (`gradebook evaluacion acceso`), última pasada con todo puesto | 815 (2 omitidas), incluidas las 7 de `evaluacion/tests/test_compuertas.py` | ✅ |
+| Backend, **todo** (`gradebook evaluacion audit acceso classroom_engine modo_estudio device_manager cola_medios expediente biblioteca search`) | 1689 (6 omitidas) | ✅ |
+| Core C# (`Avacom.Lms.Core.Tests`) | 810 (70 del Gradebook; el resto, de otras sesiones) | ✅ |
+| Student C# (`Avacom.Lms.Student.Tests`) | 102 (2 nuevas: la frase cuando el libro retiene el resultado) | ✅ |
+| OPS C# (`Avacom.Lms.Ops.Tests`) | 120 (13 del Gradebook: lógica pura, con respuestas reales del backend) | ✅ |
+| Compilación | OPS y Student (destino Windows) sin errores ni advertencias | ✅ |
+| Lo visto en pantalla | OPS (cinco pantallas) y Student («Mis resultados») contra un nodo real: ver §4 | ver §4 |
+
+Las pruebas del libro usan los intentos **reales** de MOD-010 por HTTP (con sus reglas, su reloj y el calificador de referencia de la biblioteca): nada del libro se simula. Los archivos están en `backend/gradebook/tests/`. **La revisión independiente** (un revisor sin el contexto de quien escribió el código, sólo lectura, con sus propias reproducciones) encontró 4 defectos altos, 9 medios y 11 bajos; los corregidos tienen su prueba y los que no se corrigieron están razonados en [01-diseno.md](01-diseno.md) (D-17 a D-24 y §9).
+
+## 2 · Casos del Documento Maestro
+
+| Caso | Dónde | Qué demuestra |
+|---|---|---|
+| **TST-038** revisión docente de los tipos que la exigen | `test_revision.py` (`PuntuacionTests`, `BandejaYDetalleTests`) | Respuesta abierta a mano **con comentario** (FUN-120) y otra por **rúbrica** criterio por criterio (FUN-121); el dibujo se reconoce y su evidencia es una referencia a MOD-014; no se confirma con reactivos sin puntuar; la rúbrica se valida contra la de la biblioteca (criterio inexistente, repetido, fuera de rango, decimales, faltantes). **Límite:** el contrato de la biblioteca sólo publica `open` (con `text`, `drawingRef`, `audioRef`): el tipo **proyecto** se reconoce (por `project`/`assignment`) pero no hay una pregunta de proyecto con la que probarlo de punta a punta. |
+| **TST-039** ajustar de 70 a 85 con motivo y conservar lo anterior | `test_ajuste.py::test_tst_039…` | Con ese examen la nota original sale de 71,43: se ajusta primero a 70 y luego **70 → 85**. El original (71,43) no cambia; el historial guarda anterior, nuevo, **motivo**, quién y el instante del nodo; un asiento `calificacion.modificada` con valor anterior y nuevo; el evento `calificacion.ajustada.v1`. Sin motivo (vacío, espacios, «ok», nulo) se rechaza y nada cambia. |
+| **TST-069** el técnico no modifica | `test_seguridad.py::RolTecnicoTests` | Las 11 operaciones de cambio dan 403 con la sesión del técnico, la calificación no cambia, **cada intento deja** `calificacion.modificacion_denegada` (quién, permiso pedido, ruta, rol `TECHNICIAN`) además del `acceso.denegado` genérico; el técnico tampoco lee datos académicos (libro, calificación, historial, resumen, bandeja, `mias`). La parte de **interfaz** (que la pantalla no ofrezca lo que el nodo va a negar) está en `GradebookTextoTests.TST069…` y en las pantallas de OPS (§4). |
+| **TST-072** exportación no autorizada | — | **V1**: la ruta de exportación aún no existe (el permiso `grades.export` ya se siembra). |
+| **TST-075** preescolar en modo simple, símbolos y sin números | `test_alumno.py::test_tst_075…`, `ContratoGradebookTests.MiasSimple_TST075…` | Lo que recibe el alumno de preescolar (JSON recorrido recursivamente) **no contiene un solo número**; sólo estado, símbolo y, con el resultado liberado por MOD-010, aciertos como `acierto`/`fallo`; no existe un registro calificable aunque MOD-010 calificó el examen. |
+| **TST-080** preescolar y secundaria en el mismo nodo sin cruces | `test_alumno.py::test_tst_080…` | 8A (modo calificaciones, escala 0–100) y P1 (simple) conviven; cambiar la escala de preescolar no toca a secundaria; lo publicado en secundaria sigue igual. |
+
+## 3 · Lo demás que se comprobó
+
+**Académicos.** Puntuación válida entre 0 y 100; rechazo de negativas, > 100, más de dos decimales, texto, booleanos, `NaN` e infinitos (`test_dominio.py`, `test_ajuste.py`); precisión de dos decimales (71,4286 → 71,43 con `mitad_arriba`, y las cuatro reglas de redondeo); conversión con las 15 plantillas (todas válidas, ninguna deja un resultado sin equivalencia), con los casos de Colombia, Chile (60 % = 4,0), Ecuador, España, EE. UU. y Perú; la conversión **no cambia el valor interno guardado**; un intento con revisiones pendientes no es definitivo y su cifra parcial es *provisional*, nunca un cero ni una calificación; varios intentos con las cuatro políticas (`ultimo`, `mejor`, `primero`, `promedio`).
+
+**Escalas.** Hueco, solapamiento, tramos que no empiezan en 0 o no terminan en 100, límites con tres decimales, claves repetidas, valores decrecientes y fuera de rango, tipo/conversión/decimales/redondeo inválidos: `400 escala_invalida` con **todos** los problemas juntos. Las versiones son inmutables (no hay ruta para editarlas), una escala numérica no cambia de tipo, publicar otra versión **no altera lo ya publicado** (`test_una_escala_nueva_no_altera_lo_ya_publicado`), y una plantilla aplicada a un nivel para el que no se sugiere se avisa.
+
+**Concurrencia e idempotencia.** Dos profesores del mismo grupo editando a la vez: el segundo recibe 409 `conflicto_de_version` con la versión y el valor actuales y lo del primero se conserva; el compare-and-swap es una sola sentencia (dos escritores con la misma versión: gana uno); reenviar la misma `solicitud_id` (ajuste, revisión, publicación) devuelve `reintento: true` **sin duplicar** historial, evento ni asiento.
+
+**Eventos y derivados.** El consumidor es idempotente (reproducir todos los eventos desde cero no duplica calificaciones ni versiones ni eventos de registro), respeta el orden y la marca, avanza la marca **en la misma transacción** que lo aplicado (un fallo al guardar la marca revierte también la calificación), aísla el evento que no se puede aplicar (los demás siguen y la cola no se atasca) y se salta los eventos de intentos o asignaciones que no existen. FUN-126 emite el estado simple sólo cuando cambia; FUN-127 recalcula agregados tras cada cambio y **no cuenta lo provisional ni lo pendiente**; FUN-129 reconstruye lo derivado y queda **idéntico** (comparado fila por fila), sin tocar una sola nota; un evento nunca cierra una reapertura ni pisa un ajuste.
+
+**Arquitectura** (`test_arquitectura.py`): dominio y aplicación no importan Django ni otros módulos; las vistas no tocan el ORM; el libro **no importa los modelos de MOD-010**; el esquema son 13 tablas `m11_*` sin intentos, respuestas ni claves; el historial, las revisiones y las escalas son de sólo inserción por código; los once eventos del Maestro y las acciones de auditoría están en sus catálogos cerrados; los permisos están repartidos como dice el Maestro (el profesor califica, la administración configura pero **no califica**, el técnico, reportes y el alumno no tienen ninguno); las restricciones de la base (0–100, evaluador y regla, publicada ⇔ definitiva, escala obligatoria en modo calificaciones, tramos, versiones únicas) se hacen cumplir con inserciones directas que **deben** fallar; y no hay migraciones pendientes.
+
+**Contrato con los clientes.** `test_capturar_contrato.py` recorre el flujo completo contra el backend de verdad y guarda 42 respuestas reales en `tests/Avacom.Lms.Core.Tests/Fixtures/gradebook/`; `ContratoGradebookTests` (C#) las lee con los DTO del cliente. `GradebookApiTests` fija método, URL y cuerpo de cada ruta (los nulos no viajan, el decimal viaja exacto, el pase va en cada petición, el conflicto de versión deja su código y su versión actual, sin conexión se dice así) y `GradebookTextoTests` la validación de lo escrito y los textos.
+
+**Nodo en vivo.** `backend/tools/sembrar_gradebook.py` levantó un nodo aislado (puerto 8010, base temporal, el host de Contenido v2 con exámenes) y recorrió por HTTP el flujo real —instalación, grupos de secundaria y preescolar, adopción de la escala, exámenes presentados con respuestas reales, revisión pendiente, publicación—: el libro dio lo esperado (Ana publicada, Luis revisado con un **cero real** distinto del pendiente de Eva, Juan provisional con su bandeja, preescolar en símbolos).
+
+## 4 · Interfaz (OPS y Student)
+
+### Student · «Mis resultados» (visto en una ejecución real)
+
+Se compiló Student (`net10.0-windows10.0.19041.0`) y se ejecutó contra el nodo aislado sembrado (8010) con una **copia «shadow»** que sólo añade ganchos de prueba por variables de entorno (servidor, alumno, primera pantalla); los ganchos **no están en el repositorio** y las Preferences del usuario no se tocaron. Se capturó la pantalla de cuatro alumnos:
+
+| Alumno | Situación en el nodo | Lo que muestra la pantalla |
+|---|---|---|
+| Ana (secundaria, modo calificaciones) | calificación definitiva, publicada, 71,43 con la escala 0–5 de Colombia | **3,8** · «Básico» · «Alcanzaste lo esperado.» |
+| Pablo (preescolar, modo simple) | examen presentado | ● «Completado» · «Terminaste. Tu profesor te mostrará cómo te fue.» — **sin un solo número** |
+| Luis | calificada y revisada, **sin publicar** | «Calificada: tu profesor aún no publica el resultado» (no enseña la nota) |
+| Juan | con respuestas abiertas por revisar | «Tu profesor la está revisando» (no es un cero) |
+
+Se vieron las capturas de Ana y de Pablo (tarjeta centrada, texto legible, símbolo ●); los casos de Luis y Juan se comprobaron por el texto de la pantalla. Se actualiza cada 8 s; sin conexión, el mensaje del cliente lo dice. **No se probó** el APK de Android (sólo compila el destino Windows) ni una tableta real.
+
+### OPS · calificaciones, revisión docente y configuración (vistas en ejecución real)
+
+OPS se compiló (`net10.0-windows10.0.19041.0`, a una carpeta aparte) y se ejecutó con **perfil de pruebas** (`AVACOM_OPS_PERFIL`, `AVACOM_OPS_SERVIDOR`, `AVACOM_OPS_RUTA`) contra un **nodo aislado** (puerto 8010, base temporal, el host de pruebas de la API de Contenido v2 con exámenes), sembrado con `backend/tools/sembrar_gradebook.py`. Se manejó por UI Automation y se capturó con `PrintWindow`: no se tocó la OPS ni las Preferences del usuario. Lo que se hizo y se comprobó **en pantalla y en el backend**:
+
+| Pantalla | Qué se hizo | Qué se comprobó |
+|---|---|---|
+| **Libro de calificaciones** (`calificaciones`) | Preescolar (modo simple) y Secundaria (modo calificaciones, escala Colombia); «Publicar lo revisado» | Preescolar sin ni una cifra (○ ◐ ●); Secundaria: Ana *Definitivo* 3,8 («interno 71,43 de 100 · publicada»), Eva *Pendiente* «—» (no un cero), Juan *Provisional* «—», Luis *Revisado* con su cero real; promedio simple rotulado «Informativo, no oficial»; al publicar, el aviso dice cuántas y cuáles («Se publicaron 2 calificaciones · 1 ya estaba publicada»); una nota de 1,0 se veía «1» (error visto aquí; ya corregido y probado en C#, pero **no** vuelto a ver en la ventana con un valor así) |
+| **Bandeja** (`calificaciones-revision`) | Abrirla desde el libro | Juan con «Faltan 2 respuestas» y su cifra provisional dicha como «aún no es la calificación» |
+| **Revisión docente** (`revision-docente`) | Puntuar las dos respuestas abiertas **por rúbrica** (criterio por criterio, con la rúbrica de la biblioteca) y confirmar | «Guardar» deshabilitado hasta puntuar todos los criterios; el total en vivo; «Puntaje guardado»; «Todo puntuado» habilita «Confirmar revisión»; en el backend Juan quedó *revisado* 92,86 |
+| **Detalle y ajuste** (`calificacion-detalle`) | Ajustar a Luis de 0 a 70 con el teclado propio y un motivo tocable; retroalimentar con frases (más la caja de texto opcional); valorar el nivel de desempeño | «Ajuste registrado: de 0 a 70, versión 2»; el historial dice «0 → 70 · Motivo… · quién · cuándo»; el original no cambió; la retroalimentación y la valoración («Alto · valorado por el profesor») llegaron al backend |
+| **Configuración académica** (`calificaciones-config`) | Ver niveles, escalas y la política; **elegir «el mejor intento» y aplicarla** | Los cinco niveles (los no configurados, en modo simple); tras aplicar, el aviso «Política actualizada», desaparece «Provisional» y el backend dice `mejor` |
+
+Lo que esas corridas encontraron y se corrigió: el `4 en el grupo` de la cabecera de la tabla salía recortado; las notas de escala con decimales fijos perdían el cero final (en OPS **y** en Student: `GradebookTexto.Valor`); y la política de intentos —requisito del encargo— sólo se podía **ver** en OPS (se añadió `ConfigurarPoliticaAsync` a Core y las cuatro fichas con «Aplicar» a la pantalla).
+
+**Visto pero sin pulir** (no se cambió): la cabecera de cada columna de evaluación es más alta de lo necesario (deja un vacío), y al confirmar una revisión abierta directamente por ruta (sin pasar por la bandeja) la app vuelve al tablero porque no hay pantalla anterior.
+
+**No visto en pantalla:** «Reabrir para recalificar», «Retirar publicación», adoptar una plantilla y cambiar el modo de un nivel con «Validar/Aplicar» (la lógica está probada en backend y en C#, y sus botones existen, pero no se recorrieron en ventana); el panel de **dibujo/proyecto** (el contrato de la biblioteca no trae esos tipos); un teléfono o tableta con otra resolución (todo se vio a 1920×1000, la del equipo); ni **un solo** recorrido con sesión real: el nodo de prueba corre sin sesión obligatoria (Q-34), que es lo que existe hoy, así que los permisos por rol en la **pantalla** (por ejemplo, que el técnico no vea el libro) se probaron en la lógica pura (`PermisosDeCalificaciones`) y en backend, no en ventana.
+
+## 5 · Lo que NO se pudo comprobar
+
+- **Contra AVACOM Contenido real.** Todo se probó contra el host de pruebas de la API v2 y el manifiesto de ejemplo. El `grading-guide` real, la latencia de la biblioteca y qué pasa con una versión de curso archivada no se vieron en vivo.
+- **Un tipo de pregunta «proyecto»** y la integración con **MOD-014** (no existe).
+- **Concurrencia entre procesos.** El compare-and-swap se probó con escrituras consecutivas y con el repositorio; no con dos procesos de verdad contra la misma base SQLite.
+- **Carga.** Un libro de un grupo de 35 alumnos con decenas de evaluaciones y miles de eventos acumulados no se midió.
+- **Instaladores 2.7.0 (2026-10-15).** Reconstruidos con el libro y la compuerta: OPS en `installer/latest` (104,6 MB, SHA-256 `FA22F3D7…9F91`), Student Windows (64,8 MB, `7312647C…2163`) y el APK (versionCode 20700, `57F21D92…D305`). Se construyeron sobre una copia del árbol de trabajo **sin** el trabajo a medias de MOD-013 (no empaquetable aún) y con el de Search y Modo Evaluación tal como estaba. Lo que se comprobó: pruebas del backend en verde antes de empaquetar; el ensayo del paquete de punta a punta (instalación nueva, primer arranque, y **actualización sobre una base de la 2.6.1 con datos**); y, con el Python y el backend **empaquetados**, que sobre una base de la 2.6.1 (ADMIN con `assessment.review`, sin tablas `m11_`) se aplican `acceso 0014/0015/0016` y `gradebook 0001/0002`, ADMIN pierde `assessment.review` y el profesor lo conserva, existen las 13 tablas `m11_` con sus columnas nuevas y la compuerta de resultado se registra al arrancar. **No** se instaló en una máquina limpia ni se probó el APK en una tableta; la política de datos del instalador sigue en `reemplazables` (ver el informe: con el libro ya hay calificaciones que proteger).
+- **Android.** Student sólo se compiló para Windows: el APK con «Mis resultados» no se construyó ni se vio en una tableta o emulador.
+- **Con sesión real en la ventana.** Las pantallas de OPS se vieron en modo prototipo (sin sesión, Q-34). Lo que cambia por rol está en la lógica pura y en el backend (TST-069), no se recorrió con el técnico, reportes o administración dentro de la ventana.
+- **En modo simple, MOD-010 puede mostrar el porcentaje** si el profesor liberó el resultado (decisión S0 de D-24: vetar ahí quitaría los resultados de MOD-010 a toda instalación sin el modo calificaciones). Para no mostrar cifras a preescolar se usa la política `nunca` de la evaluación; no hay ninguna comprobación que lo exija. La compuerta (modo calificaciones) y el permiso de la administración sí están cerrados y probados (`test_compuerta_de_resultados.py`, `evaluacion/tests/test_compuertas.py`).
+- **La compuerta** se comprobó por las pruebas, por HTTP contra un nodo real (Ana publicada: 200; Luis revisado sin publicar: 403 `retenido_por: libro_de_calificaciones`; Juan en revisión: 403; Pablo de preescolar, modo simple: 200 por la política de MOD-010; Luis tras publicar: 200) y en la ventana de Student (siguiente punto). Un control negativo (sin la compuerta registrada) confirmó que el hueco existía: 200 con `porcentaje: 71.4286` antes de publicar; con ella, 403.
+- **Costo de la compuerta.** Cada consulta de «¿ya puede ver su resultado?» que la política de MOD-010 abre cuesta unas 3 consultas más a la base (grupo, nivel y calificación). El panel del profesor de MOD-010 lo pregunta unas tres veces por intento: con 4 intentos calificados y `al_entregar`, 52 consultas contra 16 (+9 por intento). Con un grupo de 35 serían ~300 más por refresco del panel; no se midió el tiempo en disco. Si pesara, la salida es una versión por lotes de la compuerta (o que el panel pregunte una sola vez por intento: archivo de otra sesión).
+- **Lo que dice Student cuando el libro retiene el resultado** (visto en la ventana, con un alumno cuya calificación está revisada y sin publicar y la evaluación en `al_entregar`): en «Mis evaluaciones», «Calificado · tu profesor publicará tu calificación» y ningún botón de ver resultado; con la calificación publicada, «Ya puedes ver tu resultado». Para ello `mias` trae `mi_intento.retenido_por` (Core: `MiIntento.RetenidoPor`; Student: `EstadoDeEvaluacion`). Antes de añadirlo la lista decía «en cuanto termine de calificarse», que era falso.
+- **Con la biblioteca cerrada o lenta** mientras el profesor revisa: se probó que sin rúbrica la puntuación manual sigue (`rubrica_no_disponible`), pero no el tiempo real de la biblioteca dentro de una pantalla de OPS.
+- **TST-072 y FUN-128** (V1).
+- **Las plantillas de escala** no se contrastaron con la normativa de cada país (ver el diseño, §5).

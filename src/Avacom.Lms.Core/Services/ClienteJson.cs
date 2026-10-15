@@ -201,6 +201,45 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         }
     }
 
+    /// <summary>
+    /// POST con cuerpo JSON cuya respuesta es un ARCHIVO: devuelve la respuesta ABIERTA (sólo cabeceras leídas) para que quien llama baje el cuerpo directo a disco sin cargarlo
+    /// entero en memoria (MOD-013 · exportar un reporte) y la libere. Con un estado que no es 2xx registra el error (que sigue siendo JSON), libera la respuesta y devuelve null.
+    /// </summary>
+    protected async Task<HttpResponseMessage?> EnviarParaRespuestaAsync(string ruta, object cuerpo, CancellationToken ct)
+    {
+        HttpResponseMessage? respuesta = null;
+        try
+        {
+            var contenido = new StringContent(JsonSerializer.Serialize(cuerpo, Json), Encoding.UTF8, "application/json");
+            using var peticion = Peticion(HttpMethod.Post, ruta, contenido);
+            respuesta = await http.SendAsync(peticion, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!respuesta.IsSuccessStatusCode)
+            {
+                await RegistrarErrorAsync(respuesta, ct);
+                respuesta.Dispose();
+                return null;
+            }
+            Limpiar();
+            return respuesta;
+        }
+        catch (Exception ex) when (EsDeRed(ex))
+        {
+            respuesta?.Dispose();
+            SinRed(ruta, ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Anota un motivo propio del cliente (algo que falló después de que el nodo respondiera bien: el archivo llegó dañado, no se pudo guardar el temporal…). Su estado es -1: ni un
+    /// HTTP del nodo ni «sin conexión» (0), para que ninguna pantalla lo confunda con que el aula esté apagada.
+    /// </summary>
+    protected void AnotarMotivo(string codigo, string motivo, string? sugerencia = null)
+    {
+        UltimoMotivo = motivo;
+        UltimoError = new ErrorAula(-1, codigo, motivo, sugerencia, null);
+    }
+
     /// <summary>DELETE sin cuerpo de respuesta (cerrar la sesión de usuario). Verdadero si el backend contestó 2xx.</summary>
     protected async Task<bool> EliminarAsync(string ruta, CancellationToken ct)
     {

@@ -22,6 +22,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("examen-antesala", typeof(Examen.ExamenAntesalaPage));
         Routing.RegisterRoute("examen", typeof(Examen.ExamenPage));
         Routing.RegisterRoute("examen-entrega", typeof(Examen.ExamenEntregaPage));
+        // MOD-011 · Gradebook: «Mis resultados» (estado y símbolos en modo simple; la nota sólo cuando el profesor la publicó)
+        Routing.RegisterRoute("resultados", typeof(Examen.ResultadosPage));
     }
 
     /// <summary>RF-23: con sesión de visitante, cada pantalla que se ve lleva la banda amarilla; al cerrar la visita se quita.</summary>

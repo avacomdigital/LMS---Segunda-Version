@@ -5,7 +5,8 @@ Calificación y revisión docente (CAP-060, CAP-062, FUN-112, FUN-113; BR-068, B
   PuntuarRespuesta    el profesor puntúa un reactivo que sólo él puede puntuar (abierto, dibujo, proyecto)
   PublicarIntento     `en_revision_docente → calificado` cuando no queda nada pendiente
   Recalificar         reintenta la calificación pendiente (la biblioteca no estaba al entregar); idempotente (INV-005)
-  ResultadoDelAlumno  lo que el alumno ve de su nota, SÓLO cuando el profesor liberó los resultados (DEC-032)
+  LiberarResultadoDelIntento  RF-004: el profesor publica el resultado de UN alumno (sin esperar al grupo ni a la fecha)
+  ResultadoDelAlumno  lo que el alumno ve de su nota, SÓLO cuando está publicada según la política (DEC-032, RF-004), comprobado en el nodo
 
 MOD-010 produce la puntuación en la escala interna de 0 a 100; la nota PUBLICADA es de MOD-011, que aún no existe: `puntuar` y `publicar` son lo
 mínimo para cerrar el ciclo y quedan marcados como provisionales (D-17, Q-84).
@@ -148,8 +149,42 @@ class PublicarIntento(_Revisor):
             uow.auditoria.registrar(quien, "evaluacion.revision.publicada", "m10_intento_formal", intento["id"], anterior={"estado": cat.EN_REVISION},
                                     nuevo={"estado": cat.CALIFICADO, "porcentaje": intento["porcentaje"]})
             self.motor.avisar(uow, asignacion, "evaluacion_panel", intento_id=intento["id"])
+            # Calificar NO es publicar (RF-004): el alumno sigue sin ver su nota salvo que la política ya lo permita. Esta puede ser la última del grupo.
+            asignacion = self.motor.asegurar_publicacion(uow, asignacion, ahora, grupo=True)
             return {"intento_id": intento["id"], "estado": intento["estado"], "porcentaje": intento["porcentaje"], "calificado_por": quien,
-                    "calificado_en": ahora}
+                    "calificado_en": ahora, "resultado_publicado": self.motor.resultado_disponible(asignacion, intento)}
+
+
+class LiberarResultadoDelIntento(_Revisor):
+    """RF-004 (publicación individual): el profesor publica el resultado de UN alumno sin esperar al grupo ni a la fecha. Exige un intento `calificado`
+    (con la calificación completa: con reactivos por revisar o la biblioteca pendiente no hay nada publicable) y una política distinta de `nunca`.
+    Idempotente: la primera publicación manda. Queda quién y cuándo, el evento `evaluacion.resultado_intento_liberado.v1` y el asiento."""
+
+    def ejecutar(self, actor: Actor, intento_id: str) -> dict:
+        ahora = self.s.reloj.ahora_ms()
+        with self.s.uow() as uow:
+            intento, asignacion = self._cargar(uow, intento_id, ahora)
+            self.s.autorizacion.exigir(actor, cat.P_RESULTS_VIEW, asignacion)
+            if asignacion["resultados"] == cat.NUNCA:
+                raise TransicionInvalida("La evaluación no muestra resultados a los alumnos (política «nunca»): cambia la política antes de publicar uno.",
+                                         estado=intento["estado"], resultados=asignacion["resultados"])
+            if intento["estado"] == cat.EN_REVISION:
+                pendientes = resp_dom.pendientes_de_revision(intento["respuestas"])
+                raise ReactivosPendientes(f"Quedan {len(pendientes)} reactivo(s) sin puntuar: puntúalos y publica la calificación antes.", pendientes=pendientes)
+            if intento["estado"] != cat.CALIFICADO or intento.get("calificacion_pendiente"):
+                raise TransicionInvalida(f"El intento está «{intento['estado']}»: sólo se publica el resultado de uno calificado.", estado=intento["estado"],
+                                         destino=cat.CALIFICADO)
+            quien = (actor.id or "docente")[:64]
+            if intento.get("liberado_en") is None:
+                intento = uow.intentos.actualizar(intento["id"], liberado_en=ahora, liberado_por=quien)
+                self.motor.publicar(uow, "Intento", intento["id"], cat.EV_RESULTADO_INTENTO_LIBERADO, {
+                    "intento_id": intento["id"], "asignacion_id": asignacion["id"], "alumno_id": intento["alumno_id"], "liberado_en": ahora, "por": quien,
+                    "origen": cat.ORIGEN_LIBERACION_MANUAL}, ahora)
+                uow.auditoria.registrar(quien, cat.A_RESULTADO_INTENTO_LIBERADO, "m10_intento_formal", intento["id"], anterior={"liberado_en": None},
+                                        nuevo={"liberado_en": ahora, "alumno_id": intento["alumno_id"]})
+                self.motor.avisar(uow, asignacion, "evaluacion", intento_id=intento["id"])
+            return {"intento_id": intento["id"], "estado": intento["estado"], "liberado_en": intento["liberado_en"], "liberado_por": intento["liberado_por"],
+                    "resultado_publicado": self.motor.resultado_disponible(asignacion, intento), "servidor_en": ahora}
 
 
 class Recalificar(_Revisor):
@@ -173,8 +208,10 @@ class ResultadoDelAlumno(_Alumno):
         with self.s.uow() as uow:
             ctx = self.contexto(uow, actor, datos, ahora)
             intento, asignacion = self.cargar(uow, ctx, intento_id, ahora)
+            asignacion = self.motor.asegurar_publicacion(uow, asignacion, ahora, grupo=True)     # lo que la política ya provocó, con el reloj del nodo
             if not self.motor.resultado_disponible(asignacion, intento):
-                raise ResultadosNoLiberados(estado=intento["estado"], resultados=asignacion["resultados"])
+                raise ResultadosNoLiberados(estado=intento["estado"], resultados=asignacion["resultados"], publicar_en=asignacion.get("publicar_en"),
+                                            retenido_por=self.motor.resultado_retenido_por(asignacion, intento))      # no nulo: lo retiene otro módulo (el libro de calificaciones)
             aprobacion = asignacion.get("aprobacion_pct")
             detalle = []
             for ref in intento["armado"]:

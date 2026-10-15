@@ -1,7 +1,8 @@
 {
   "calificado_en": 1790000125000,
-  "calificado_por": "c4d1ed9c-90a0-4202-8e28-7d9c4c7014f4",
+  "calificado_por": "f13bfcf5-ff1f-438d-9466-8cb78343c5ba",
   "estado": "calificado",
-  "intento_id": "d7ad1e9a-f341-452c-95d1-608d63877ada",
-  "porcentaje": 80.9524
+  "intento_id": "b29e234f-8570-4ad5-bc39-a120f761e0f1",
+  "porcentaje": 80.9524,
+  "resultado_publicado": false
 }

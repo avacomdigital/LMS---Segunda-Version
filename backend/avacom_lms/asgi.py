@@ -20,6 +20,9 @@ from cola_medios.infraestructura import programador as programador_medios  # noq
 from classroom_engine.infraestructura import programador  # noqa: E402
 from classroom_engine.interfaces.websockets import websocket_urlpatterns  # noqa: E402
 from evaluacion.infraestructura import programador as programador_evaluacion  # noqa: E402
+from gradebook.infraestructura import programador as programador_gradebook  # noqa: E402
+from reporting.infraestructura import programador as programador_reporting  # noqa: E402
+from search.infraestructura import programador as programador_search  # noqa: E402
 
 from avacom_lms.velocidad import con_velocidad  # noqa: E402
 
@@ -32,6 +35,12 @@ application = ProtocolTypeRouter({
 programador.iniciar()
 # MOD-010: pausa a quien dejó de dar señal, entrega por tiempo o plazo y restaura los exámenes abiertos tras un reinicio del nodo.
 programador_evaluacion.iniciar()
+# MOD-011: pone al día el libro de calificaciones con los eventos de la evaluación (idempotente; cada consulta del libro también se pone al día).
+programador_gradebook.iniciar()
+# MOD-021: pone al día el índice de búsqueda con los eventos de la evaluación, el estudio y el aula (y lo construye la primera vez). Cada consulta también se pone al día.
+programador_search.iniciar()
+# MOD-013: actualiza los agregados de los reportes FUERA del horario de clase (con una clase abierta espera) y da por no entregadas las exportaciones sin confirmar.
+programador_reporting.iniciar()
 # MOD-019: verifica la cadena de la bitácora cada hora (fuera de clase no hay diferencia: verifica por bloques) y rota por tamaño.
 verificador.iniciar()
 # Cola de medios: hilos que traen los recursos de AVACOM Contenido a la caché del nodo y la mantienen (al arrancar retoman lo que quedó a medias).

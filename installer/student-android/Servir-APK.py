@@ -18,6 +18,10 @@ Solo biblioteca estandar de Python: no instala nada y no necesita internet. Atie
     /download/<archivo>.apk el APK (con Range, para que Chrome pueda reanudar si se corta el Wi-Fi)
     /download/SHA256.txt    la huella del APK, para verificarlo
     /estado.json            lo que cuenta el panel (se actualiza solo)
+    /wifi (POST)            la red y la clave que escribe el tecnico si no se detectan; solo desde ESTE equipo
+
+El panel, visto desde ESTE equipo, trae ademas un QR para que la tableta se una al Wi-Fi (WIFI:T:WPA;S:red;P:clave;;) con la
+clave guardada de la red actual (netsh, requiere administrador). Visto desde otro equipo no lo trae. La clave no se imprime ni se guarda.
 
 No toca el backend ni sirve nada mas que el APK de esta carpeta. Pensado para una red cerrada del aula (HTTP, sin
 sesion): detenlo (boton Detener o Ctrl+C) cuando acabes de instalar las tabletas. Mientras corre, con permiso de
@@ -42,6 +46,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import zipfile
 
 CARPETA = pathlib.Path(__file__).resolve().parent
@@ -247,9 +252,10 @@ def qr_modulos(texto: str, nivel: str = "M", mascara_fija=None):
     return mods
 
 
-def qr_svg(texto: str) -> str:
-    """El QR como <svg> en linea (cuatro modulos de margen: la zona de silencio que pide la norma). Vacio si no cabe."""
-    mods = qr_modulos(texto)
+def qr_svg(texto: str, etiqueta: str = None) -> str:
+    """El QR como <svg> en linea (cuatro modulos de margen: la zona de silencio que pide la norma). Vacio si no cabe.
+    Intenta el nivel M y, si no cabe, el L. `etiqueta` es el texto accesible (por defecto el propio texto: no lo uses con secretos)."""
+    mods = qr_modulos(texto) or qr_modulos(texto, "L")
     if mods is None:
         return ""
     n, borde = len(mods), 4
@@ -266,8 +272,8 @@ def qr_svg(texto: str) -> str:
                 x += 1
     lado = n + 2 * borde
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" shape-rendering="crispEdges" role="img" '
-            'aria-label="Codigo QR de %s"><rect width="100%%" height="100%%" fill="#fff"/><path d="%s" fill="#000"/></svg>'
-            % (lado, lado, html.escape(texto, quote=True), " ".join(trazos)))
+            'aria-label="%s"><rect width="100%%" height="100%%" fill="#fff"/><path d="%s" fill="#000"/></svg>'
+            % (lado, lado, html.escape(etiqueta or "Codigo QR de " + texto, quote=True), " ".join(trazos)))
 
 
 # ======================================================================================================================
@@ -340,6 +346,98 @@ class Firewall:
                 self.abierto = False
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Wi-Fi: el QR para que la tableta se una a la misma red que este equipo (formato de ZXing/Android: WIFI:T:WPA;S:red;P:clave;;)
+# ----------------------------------------------------------------------------------------------------------------------
+
+SEGURIDADES = {"WPA": "WPA/WPA2 (con clave)", "SAE": "WPA3 (con clave)", "WEP": "WEP (con clave)", "nopass": "Abierta (sin clave)"}
+
+
+def payload_wifi(ssid: str, clave: str, seguridad: str = "WPA") -> str:
+    """La cadena que leen la camara y Google Lens de Android. \\ ; , : y comillas se escapan; un valor que parece hexadecimal va entre comillas."""
+    def campo(valor: str) -> str:
+        escapado = re.sub(r'([\\;,:"])', r"\\\1", valor)
+        return '"%s"' % escapado if re.fullmatch(r"[0-9A-Fa-f]+", valor) else escapado
+    if seguridad == "nopass":
+        return "WIFI:T:nopass;S:%s;;" % campo(ssid)
+    return "WIFI:T:%s;S:%s;P:%s;;" % (seguridad, campo(ssid), campo(clave))
+
+
+def _netsh_wlan(*argumentos) -> str:
+    """Salida de `netsh wlan ...` en UTF-8 (para que un nombre de red con acentos no se estropee). Vacia si no hay Wi-Fi o falla."""
+    if os.name != "nt":
+        return ""
+    try:
+        r = subprocess.run('chcp 65001 >nul & netsh wlan ' + " ".join(argumentos), shell=True, capture_output=True, timeout=10,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        return r.stdout.decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
+def _wifi_conectado(texto: str):
+    """(ssid, perfil) de la primera interfaz Wi-Fi conectada, o None. Sirve con Windows en español o en inglés."""
+    for bloque in re.split(r"(?mi)^\s*(?:Nombre|Name)\s*:", texto)[1:]:
+        estado = re.search(r"(?mi)^\s*(?:Estado|State)\s*:\s*(.+?)\s*$", bloque)
+        ssid = re.search(r"(?m)^\s*SSID\s*:\s*(.+?)\s*$", bloque)
+        if ssid and estado and re.match(r"(?i)(connected|conectad[oa])", estado.group(1)):
+            perfil = re.search(r"(?mi)^\s*(?:Perfil|Profile)\s*:\s*(.+?)\s*$", bloque)
+            return ssid.group(1), (perfil.group(1) if perfil else ssid.group(1))
+    return None
+
+
+def _seguridad_del_perfil(texto: str) -> str:
+    autent = re.search(r"(?mi)^\s*(?:Autenticaci.n|Authentication)\s*:\s*(.+?)\s*$", texto)
+    a = (autent.group(1) if autent else "").lower()
+    if "enterprise" in a or "empresa" in a:
+        return "enterprise"
+    if "wpa3" in a or "sae" in a:
+        return "SAE"
+    if "wpa" in a:
+        return "WPA"
+    if "wep" in a or "compartida" in a or "shared" in a:
+        return "WEP"
+    if a in ("abierta", "open"):
+        return "nopass"
+    return "WPA"
+
+
+_CACHE_WIFI = {"hora": 0.0, "valor": None}
+
+
+def wifi_del_equipo() -> dict:
+    """La red Wi-Fi a la que este equipo esta conectado: {ssid, clave, seguridad, aviso}. `aviso` explica por que falta algo.
+    Leer la clave guardada exige ser administrador (Servir-APK.bat ya lo pide). 15 s de memoria. La clave no se escribe en la consola."""
+    ahora = time.time()
+    if _CACHE_WIFI["valor"] is not None and ahora - _CACHE_WIFI["hora"] < 15:
+        return _CACHE_WIFI["valor"]
+    r = {"ssid": "", "clave": "", "seguridad": "WPA", "aviso": ""}
+    conectado = _wifi_conectado(_netsh_wlan("show", "interfaces"))
+    if os.name != "nt":
+        r["aviso"] = "La deteccion automatica del Wi-Fi solo existe en Windows."
+    elif not conectado:
+        r["aviso"] = "Este equipo no esta conectado por Wi-Fi (puede ir por cable). Escribe la red a la que se conectan las tabletas."
+    else:
+        r["ssid"], perfil = conectado
+        if re.search(r'["%^&|<>]', perfil):
+            r["aviso"] = "El nombre de la red tiene caracteres que Windows no deja consultar desde aqui. Escribe la clave."
+        else:
+            texto = _netsh_wlan("show", "profile", 'name="%s"' % perfil, "key=clear")
+            r["seguridad"] = _seguridad_del_perfil(texto)
+            clave = re.search(r"(?mi)^\s*(?:Contenido de la clave|Key Content)\s*:\s*(.*?)\s*$", texto)
+            if r["seguridad"] == "enterprise":
+                r["aviso"] = "La red es empresarial (usuario y contrasena propios): no se puede dar con un QR. Usa otra red para las tabletas."
+            elif r["seguridad"] == "nopass":
+                pass
+            elif clave and clave.group(1):
+                r["clave"] = clave.group(1)
+            else:
+                r["aviso"] = ("Windows no entrego la clave de la red%s. Escribela abajo." %
+                              ("" if es_administrador() else " (abre Servir-APK.bat con permiso de administrador)"))
+    _CACHE_WIFI["hora"], _CACHE_WIFI["valor"] = ahora, r
+    return r
+
+
 def vigilar_cierre_de_consola(limpiar):
     """Que cerrar la ventana (o apagar Windows) tambien cierre el puerto: Python no ejecuta `finally` en ese caso."""
     if os.name != "nt":
@@ -397,6 +495,8 @@ def elegir_apk(nombre):
 
 class Servidor:
     """El APK elegido (con su huella, su firma y su version) y la cuenta de las tabletas que ya lo descargaron."""
+
+    wifi_manual = None     # (ssid, clave, seguridad) escritos por el tecnico en el panel; solo en memoria, nunca se guardan
 
     def __init__(self, apk: pathlib.Path, meta: int, aula):
         self.apk = apk
@@ -549,10 +649,15 @@ PAGINA_PANEL = string.Template("""<!doctype html><html lang="es"><head><meta cha
 .cuenta{font-size:3rem;font-weight:800;line-height:1.1}.barra{height:1rem;background:var(--linea);border-radius:.5rem;overflow:hidden;margin:.6rem 0}
 .barra i{display:block;height:100%;background:var(--ok);width:0;transition:width .4s}table{width:100%;border-collapse:collapse;font-size:.92rem}td{padding:.25rem .3rem;border-bottom:1px solid var(--linea)}
 .url{font-size:1.25rem;font-weight:700;word-break:break-all}.otros .qr{max-width:11rem;display:inline-block;margin:.3rem .5rem .3rem 0}
+.wifi{display:grid;grid-template-columns:12rem 1fr;gap:1.2rem;align-items:start}@media (max-width:760px){.wifi{grid-template-columns:1fr}}
+.wifi form{display:grid;gap:.5rem;max-width:26rem;margin:.6rem 0 0}.wifi input,.wifi select{font:inherit;padding:.5rem;border:1px solid var(--linea);border-radius:.5rem;background:var(--fondo);color:var(--tinta)}
+.wifi button{font:inherit;padding:.5rem .9rem;border-radius:.5rem;border:1px solid var(--linea);background:var(--tarjeta);color:var(--tinta);cursor:pointer}
+.wifi .red{font-size:1.25rem;font-weight:700;word-break:break-all}summary{cursor:pointer;color:var(--suave)}
 </style></head><body><main style="max-width:62rem">
 <h1>Instalar AVACOM Student en las tabletas</h1>
 <p class="k">$apk · versión $version · $mb MB · puerto $puerto</p>
 $avisos
+$wifi
 <div class="cuadro">
  <div><div class="qr">$qr</div><p class="k" style="margin:.5rem 0 0">En cada tableta: abre la cámara, apunta al código y toca el aviso. Después sigue los pasos de la página.</p></div>
  <div>
@@ -573,6 +678,9 @@ function pinta(e){document.getElementById('n').textContent=e.completas;
  if(f.length)document.getElementById('t').innerHTML=f.join('')}
 function lee(){fetch('/estado.json',{cache:'no-store'}).then(function(r){return r.json()}).then(pinta).catch(function(){})}
 lee();setInterval(lee,2000);
+var ver=document.getElementById('ver');
+if(ver)ver.onclick=function(){var c=document.getElementById('clave'),abierta=c.getAttribute('data-abierta')!=='1';
+ c.textContent=abierta?c.getAttribute('data-v'):'••••••••';c.setAttribute('data-abierta',abierta?'1':'0');ver.textContent=abierta?'Ocultar':'Mostrar'};
 document.getElementById('parar').onclick=function(){if(confirm('¿Detener el servidor? Las tabletas que ya descargaron el APK no se afectan.')){
  fetch('/detener',{method:'POST'}).then(function(){document.body.innerHTML='<main><h1>Servidor detenido</h1><p>Ya puedes cerrar esta ventana.</p></main>'})}};
 </script></main></body></html>""")
@@ -627,9 +735,12 @@ def manejador(srv: Servidor, puerto: int, parar):
             self.do_GET()
 
         def do_POST(self):
-            if self.path.split("?", 1)[0] == "/detener" and self._local():
+            ruta = self.path.split("?", 1)[0]
+            if ruta == "/detener" and self._local():
                 self._enviar(200, "ok", "text/plain; charset=utf-8")
                 threading.Thread(target=parar, daemon=True).start()
+            elif ruta == "/wifi" and self._local():
+                self._guardar_wifi()
             else:
                 self._enviar(404, "No encontrado.", "text/plain; charset=utf-8")
 
@@ -672,6 +783,65 @@ def manejador(srv: Servidor, puerto: int, parar):
                 avisos=self._avisos_html(), url_apk=html.escape(srv.nombre_url), aula=aula_html, sha=srv.sha256, firma=firma,
                 enlace=html.escape(enlace))
 
+        def _guardar_wifi(self):
+            """La red que escribe el tecnico en el panel (solo desde este equipo). Se queda en memoria; nada se escribe en disco ni en la consola."""
+            try:
+                largo = min(int(self.headers.get("Content-Length") or 0), 2048)
+                campos = urllib.parse.parse_qs(self.rfile.read(largo).decode("utf-8", errors="replace"), keep_blank_values=True)
+            except (ValueError, OSError):
+                campos = {}
+            ssid = (campos.get("ssid") or [""])[0].strip()
+            clave = (campos.get("clave") or [""])[0]
+            seguridad = (campos.get("seguridad") or ["WPA"])[0]
+            if "borrar" in campos or not ssid or seguridad not in SEGURIDADES:
+                srv.wifi_manual = None
+            else:
+                srv.wifi_manual = (ssid[:32], clave[:63], seguridad)
+            self.send_response(303)
+            self.send_header("Location", "/panel/")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def _wifi_html(self) -> str:
+            """La tarjeta del Wi-Fi. SOLO se arma para quien mira desde este equipo: el panel tambien se puede abrir desde la red y la clave no sale de aqui."""
+            if not self._local():
+                return ""
+            manual = srv.wifi_manual
+            detectada = wifi_del_equipo()
+            if manual:
+                ssid, clave, seguridad = manual
+                origen, aviso = "escrita a mano", ""
+            else:
+                ssid, clave, seguridad = detectada["ssid"], detectada["clave"], detectada["seguridad"]
+                origen, aviso = "la de este equipo", detectada["aviso"]
+            hay_qr = bool(ssid) and seguridad in SEGURIDADES and (seguridad == "nopass" or bool(clave))
+            qr = qr_svg(payload_wifi(ssid, clave, seguridad), "Codigo QR para unirse al Wi-Fi") if hay_qr else ""
+            if hay_qr and not qr:
+                aviso = "El nombre y la clave son demasiado largos para un código QR."
+            if qr:
+                clave_html = ("<p class='k' style='margin:.2rem 0'>Clave: <code id='clave' data-v='%s' data-abierta='0'>••••••••</code> "
+                              "<button type='button' id='ver'>Mostrar</button></p>" % html.escape(clave, quote=True)) if seguridad != "nopass" else ""
+                cuerpo = ("<div class='wifi'><div><div class='qr'>%s</div></div><div><div class='k'>Red Wi-Fi (%s)</div><div class='red'>%s</div>%s"
+                          "<p class='k' style='margin:.4rem 0'>%s. En cada tableta: abre la cámara, apunta al código y toca <b>Conectar</b>. "
+                          "Funciona en Android 10 o superior; en una más vieja, se elige la red a mano.</p>"
+                          % (qr, origen, html.escape(ssid), clave_html, SEGURIDADES[seguridad]))
+            else:
+                cuerpo = ("<div class='wifi' style='grid-template-columns:1fr'><div><p class='aviso'>%s</p></div></div>" % html.escape(
+                    aviso or "No se pudo armar el código del Wi-Fi."))
+            quitar = ("<form method='post' action='/wifi' style='margin:.4rem 0 0'><input type='hidden' name='borrar' value='1'>"
+                      "<button type='submit'>Volver a usar la red de este equipo</button></form>") if manual else ""
+            formulario = ("<details%s><summary>%s</summary><form method='post' action='/wifi' autocomplete='off'>"
+                          "<input name='ssid' placeholder='Nombre de la red' maxlength='32' required value='%s'>"
+                          "<input name='clave' type='password' placeholder='Clave' maxlength='63' autocomplete='new-password'>"
+                          "<select name='seguridad'>%s</select><button type='submit'>Armar el código</button></form>%s</details>"
+                          % ("" if qr else " open", "Usar otra red o escribir la clave", html.escape(ssid if not qr else "", quote=True),
+                             "".join("<option value='%s'%s>%s</option>" % (k, " selected" if k == seguridad else "", v)
+                                     for k, v in SEGURIDADES.items()), quitar))
+            nota = ("<p class='k' style='margin:.6rem 0 0'>Este código lleva la clave de la red: se arma solo aquí, para quien mira desde este equipo "
+                    "(la página que ven las tabletas no lo trae). Muéstralo solo a quien deba conectarse y cierra el panel al terminar.</p>")
+            return ("<div class='tarjeta'><h2 style='margin-top:0'>Primero · Unir la tableta a esta red Wi-Fi</h2>"
+                    + cuerpo + formulario + ("</div></div>" if qr else "") + nota + "</div>")
+
         def _pagina_panel(self) -> str:
             ips = ips_de_la_red() or ["localhost"]
             direcciones = ["http://%s:%d/download/" % (ip, puerto) for ip in ips]
@@ -692,7 +862,7 @@ def manejador(srv: Servidor, puerto: int, parar):
                              "http://192.168.0.55:8000) se escribe en cada tableta al abrir Student LMS.</div></div>")
             return PAGINA_PANEL.substitute(
                 estilo=ESTILO, apk=html.escape(srv.apk.name), version=html.escape(srv.version or "?"), mb="%.1f" % (srv.tamano / 1048576),
-                puerto=puerto, avisos=self._avisos_html(), qr=qr, meta=(srv.meta or "∞"), meta_js=srv.meta or 0,
+                puerto=puerto, avisos=self._avisos_html(), wifi=self._wifi_html(), qr=qr, meta=(srv.meta or "∞"), meta_js=srv.meta or 0,
                 url=html.escape(principal), otras=otras, otros=otros, aula=aula_html)
 
         # ------------------------------------------------------------------------------------------ el APK

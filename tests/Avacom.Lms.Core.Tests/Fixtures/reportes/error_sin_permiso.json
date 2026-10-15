@@ -1,0 +1,5 @@
+{
+  "codigo": "sin_permiso",
+  "detail": "Tu rol no tiene concedido reports.group.view.",
+  "permiso": "reports.group.view"
+}

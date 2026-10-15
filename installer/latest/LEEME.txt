@@ -1,13 +1,16 @@
-﻿AVACOM OPS Master 2.5.0 (revision 5cbd37eb)
+﻿AVACOM OPS Master 2.7.0 (revision 802526bc)
 
 Esta carpeta es lo que se sube como release de GitHub:
 
-  AVACOM-OPS-Master-Setup-2.5.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
+  AVACOM-OPS-Master-Setup-2.7.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
   SHA256.txt                            la huella del instalador y del codigo que lleva
   AVACOM-Verificar-Instalador.bat       revisa el equipo, el instalador y lo ya instalado, y busca
                                         el error exacto cuando algo falla. NO modifica nada.
   AVACOM-Probar-Comunicacion.bat        el diagnostico a fondo de la comunicacion con AVACOM
                                         Contenido (por que el aula no ve cursos). NO modifica nada.
+  AVACOM-Medir-Red.bat                  mide la red del aula: latencia, bajada y subida entre una laptop
+                                        (por Wi-Fi) y el nodo, pasando por el router. Para saber si la red
+                                        aguanta 35 tabletas. NO modifica nada.
   LEEME.txt                             este archivo
 
 PARA INSTALAR: toca el instalador. Todo se maneja con toques: no hay que escribir nada.
@@ -21,6 +24,10 @@ Visor de eventos de Windows). Deja un informe y un .zip con las evidencias en el
 
 Esta version incluye: Modo Estudio, Evaluacion y entrega, Auditoria y registros del nodo, y el
 acceso con PIN maestro (alta propia de profesores y alumnos, visitante, traspaso entre OPS y Student).
+Novedades de la 2.5.1: el nodo aguanta 35 tabletas descargando a la vez sin errores (antes respondia 500 por
+"database is locked") y el aviso de cambio de lamina llega en menos de un segundo; la sesion de fabrica dura
+8 horas; AVACOM Student distingue cada tableta aunque todas tengan el mismo nombre de fabrica y recuerda la
+direccion del aula; y AVACOM-Medir-Red.bat mide la red.
 Novedades de la 2.4.0: los videos, audios e imagenes del aula llegan con un pase de medios dentro de
 la direccion (con la sesion obligatoria ya no fallan con 401) y el contrato 2 de AVACOM Contenido
 (laminas html, pausas y portada de video, arrastrar y soltar). Las tabletas con Student 2.3.x siguen

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.EvaluacionesPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False"
+    SizeChanged="OnPageSizeChanged">
+    <!-- Evaluaciones (MOD-010), la entrada del MENÚ PRINCIPAL. Es un catálogo con buscador, como «Clase de hoy», y no una tarjeta de formulario: la barra de búsqueda
+         (campo de texto + País y Nivel + «Más filtros» con Grado y Materia) es de una sola fila ancha y no cabe en el tercio central de la ventana, así que la pantalla
+         usa el mismo diseño ancho que Resultados (hasta 1280 px, cabecera fija y cuerpo que se desplaza). Arriba: título y acciones. Cuerpo: los exámenes que se pueden
+         aplicar (con el buscador) y, debajo, los que ya se aplicaron. Nada exige teclado: los selectores son la vía táctil y el texto es opcional. -->
+    <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
+        <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
+            <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                <Label Text="EVALUACIONES" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Evaluaciones" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Elige un examen de tus cursos y aplícalo, o abre el panel de uno que ya aplicaste." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+            <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+        </Grid>
+        <VerticalStackLayout x:Name="AvisoHost" Grid.Row="1" HorizontalOptions="Center" WidthRequest="1280" Spacing="8" />
+        <ScrollView x:Name="Desplazable" Grid.Row="2">
+            <VerticalStackLayout x:Name="Cuerpo" HorizontalOptions="Center" WidthRequest="1280" Spacing="14" Padding="0,0,0,40">
+                <Label Text="Aplicar un examen" FontFamily="InterMedium" FontSize="22" TextColor="#18181B" />
+                <Label x:Name="ExplicacionLabel" Text="Busca por nombre, curso o tema, o filtra por país, nivel, grado y materia, igual que en «Clase de hoy». Toca «Aplicar» y elige a quién, con qué nivel de control y cuándo ven su resultado." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <!-- El buscador y sus selectores son los mismos de «Clase de hoy» (SearchFilterBar + FilterPicker). Vive fuera de los hosts que se repintan, para que lo escrito y lo elegido no se pierda al leer de nuevo. -->
+                <ui:SearchFilterBar x:Name="Buscador" Placeholder="Buscar exámenes, cursos o temas" />
+                <Label x:Name="ResumenLabel" FontFamily="InterMedium" FontSize="15" TextColor="#3F3F46" IsVisible="False" />
+                <VerticalStackLayout x:Name="DisponiblesHost" Spacing="14" />
+                <Label x:Name="AplicadosTitulo" Margin="0,14,0,0" Text="Exámenes que ya aplicaste" FontFamily="InterMedium" FontSize="22" TextColor="#18181B" />
+                <Label Text="Toca uno para ver quién va presentando y qué falta por revisar." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <VerticalStackLayout x:Name="AplicadosHost" Spacing="8" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

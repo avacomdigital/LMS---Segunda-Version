@@ -1,0 +1,28 @@
+{
+  "comentario": "Cumple todos los criterios.",
+  "criterios": [
+    {
+      "criterio": "Menciona la diferencia de altura entre las dos ciudades.",
+      "criterio_id": "r1",
+      "puntos": 1.0,
+      "puntos_max": 1.0
+    },
+    {
+      "criterio": "Relaciona la altura con menor presión del aire y menor punto de ebullición.",
+      "criterio_id": "r2",
+      "puntos": 2.0,
+      "puntos_max": 2.0
+    }
+  ],
+  "intento_id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+  "listo_para_confirmar": true,
+  "numero": 1,
+  "pendientes": [],
+  "porcentaje_provisional": 95.24,
+  "pregunta_ref": "l3-q12",
+  "puntaje": 3.0,
+  "puntaje_maximo": 3.0,
+  "reintento": false,
+  "servidor_en": 1790000000000,
+  "tipo": "rubrica"
+}

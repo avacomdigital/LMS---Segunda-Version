@@ -1,0 +1,45 @@
+{
+  "recientes": [
+    {
+      "parametros": {
+        "alumno_id": "86ba7626-ed7c-42f0-aa0a-d3a7acfecee7"
+      },
+      "tipo": "alumno",
+      "titulo": "Alumno 01",
+      "ultima_exportacion_en": null,
+      "ultima_vez_en": 1790002430000,
+      "veces": 1
+    },
+    {
+      "parametros": {
+        "grupo_id": "2dfe055b-7bfc-42fe-9825-904b38666076"
+      },
+      "tipo": "grupo",
+      "titulo": "Grupo 8A",
+      "ultima_exportacion_en": null,
+      "ultima_vez_en": 1790002430000,
+      "veces": 1
+    },
+    {
+      "parametros": {
+        "sesion_id": "e57f0249-4890-4d7d-a538-f7e20b9f1c8c"
+      },
+      "tipo": "clase",
+      "titulo": "Clase de 8A · 21 sep · 09:53",
+      "ultima_exportacion_en": null,
+      "ultima_vez_en": 1790002430000,
+      "veces": 1
+    },
+    {
+      "parametros": {
+        "sesion_id": "b457ece7-b59e-40d0-a4a1-a76b196eef5c"
+      },
+      "tipo": "clase",
+      "titulo": "Clase de 8A · 21 sep · 09:13",
+      "ultima_exportacion_en": null,
+      "ultima_vez_en": 1790002430000,
+      "veces": 1
+    }
+  ],
+  "servidor_en": 1790002430000
+}

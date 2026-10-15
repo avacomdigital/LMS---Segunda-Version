@@ -31,7 +31,12 @@ public partial class ExamenAplicarPage : ContentPage
         [("biblioteca", "La del examen"), ("sin_limite", "Sin límite"), ("30", "30 min"), ("45", "45 min"), ("60", "60 min"), ("90", "90 min")];
     private static readonly (int? Minutos, string Rotulo)[] OpcionesDeFecha = [(null, "Sin fecha"), (30, "En 30 min"), (60, "En 1 h"), (120, "En 2 h")];
     private static readonly (int? Intentos, string Rotulo)[] OpcionesDeIntentos = [(1, "1"), (2, "2"), (3, "3"), (null, "Sin límite")];
-    private static readonly (string Clave, string Rotulo)[] OpcionesDeResultados = [("tras_liberar", "Los libero yo"), ("al_entregar", "Al entregar"), ("nunca", "Nunca")];
+    // RF-004: las cinco políticas de publicación. «Los publico yo» (manual) es el valor predeterminado seguro; «En una fecha» pide además cuándo.
+    private static readonly string[] OpcionesDeResultados =
+        [PoliticasDeResultados.TrasLiberar, PoliticasDeResultados.AlEntregar, PoliticasDeResultados.AlFinalizarGrupo, PoliticasDeResultados.Programada, PoliticasDeResultados.Nunca];
+    private static readonly (int Minutos, string Rotulo)[] OpcionesDePublicacion = [(60, "En 1 h"), (180, "En 3 h"), (24 * 60, "Mañana a esta hora"), (7 * 24 * 60, "En una semana")];
+    // RF-002/RF-003: cuántas preguntas por alumno. Las fichas se recortan al tamaño del banco que la biblioteca informa en la ficha del examen.
+    private static readonly int[] OpcionesDePreguntas = [5, 10, 15, 20, 25, 30, 40, 50];
 
     public string Curso { get; set; } = string.Empty;
     public string Objeto { get; set; } = string.Empty;
@@ -47,10 +52,13 @@ public partial class ExamenAplicarPage : ContentPage
     private int? _limiteMin;                       // nulo: sin fecha límite
     private string _plazo = "blando";
     private int? _intentos = 1;                    // nulo: sin límite
-    private string _resultados = "tras_liberar";
+    private string _resultados = PoliticasDeResultados.TrasLiberar;
+    private int _publicarEnMin = 60;               // con «En una fecha»: minutos desde que se aplica (reloj del nodo)
+    private int? _preguntas;                       // nulo: las que diga el examen
     private string _reactivacion = "profesor";
 
     // Lo que se conoce del aula.
+    private FichaDeExamen? _ficha;                 // RF-003: el banco de preguntas, leído de la biblioteca antes de asignar
     private GruposDocente? _grupos;
     private GrupoDocente? _grupo;
     private string? _gruposError;
@@ -95,13 +103,19 @@ public partial class ExamenAplicarPage : ContentPage
         var tGrupos = estudio.GruposAsync(Actor);
         var tTabletas = Sesion.Dispositivos.ListarAsync();
         var tClase = string.IsNullOrWhiteSpace(SesionClase) ? Task.FromResult<SesionDeClase?>(null) : Sesion.Aula.SesionAsync(SesionClase);
-        try { await Task.WhenAll(tGrupos, tTabletas, tClase); }
+        // RF-003: «carga banco de preguntas»: la ficha dice cuántas preguntas hay y qué sugiere el examen, antes de asignar. Si no llega, se aplica igual con lo que diga el examen.
+        var tFicha = Sesion.Evaluacion.FichaAsync(Actor, string.IsNullOrWhiteSpace(Fuente) ? Sesion.FuenteAula : Fuente, Curso, Objeto);
+        try { await Task.WhenAll(tGrupos, tTabletas, tClase, tFicha); }
         catch (Exception ex) { RegistroDeFallos.Escribir("ops", "ExamenAplicarPage.LeerAula", ex); }
 
         _grupos = tGrupos.IsCompletedSuccessfully ? tGrupos.Result : null;
         _gruposError = _grupos is null ? ExamenTexto.Error(estudio.UltimoError, estudio.UltimoMotivo) : null;
         _inventario = tTabletas.IsCompletedSuccessfully ? tTabletas.Result : null;
         _clase = tClase.IsCompletedSuccessfully ? tClase.Result : null;
+        _ficha = tFicha.IsCompletedSuccessfully ? tFicha.Result : null;
+        if (_ficha is { ServidorEn: > 0 }) RelojNodo.Aprender(_ficha.ServidorEn);
+        if (_ficha?.ResultadosPorDefecto is { Length: > 0 } institucional && _resultados == PoliticasDeResultados.TrasLiberar)
+            _resultados = PoliticasDeResultados.Normalizar(institucional) == PoliticasDeResultados.Programada ? _resultados : PoliticasDeResultados.Normalizar(institucional);
         // El reloj del nodo, para que «En 30 min» sea 30 minutos del aula y no de este equipo.
         if (_clase is { ServidorEn: > 0 }) RelojNodo.Aprender(_clase.ServidorEn);
 
@@ -130,6 +144,7 @@ public partial class ExamenAplicarPage : ContentPage
         {
             PintarGrupo();
             PintarNivel();
+            PintarPreguntas();
             PintarTiempo();
             PintarFecha();
             PintarIntentos();
@@ -332,21 +347,70 @@ public partial class ExamenAplicarPage : ContentPage
         CuerpoHost.Add(Seccion("Intentos", null, fichas));
     }
 
-    // ---- resultados
+    // ---- preguntas (RF-002, RF-003)
+    private void PintarPreguntas()
+    {
+        var fichas = EstudioUi.Envolver();
+        if (_ficha is null)
+        {
+            CuerpoHost.Add(Seccion("¿Cuántas preguntas por alumno?", "No se pudo leer el banco de preguntas de la biblioteca ahora: se aplicará con las que diga el examen.", fichas));
+            return;
+        }
+        var total = _ficha.TotalBanco;
+        var delExamen = _ficha.Estrategia == "random_balanced" && _ficha.PreguntasSugeridas < total
+            ? $"Las del examen ({_ficha.PreguntasSugeridas} de {total}, al azar)"
+            : $"Todas ({total})";
+        fichas.Add(Ficha(delExamen, _preguntas is null, () => { _preguntas = null; Pintar(); return Task.CompletedTask; }, "examen-preguntas-examen"));
+        foreach (var n in OpcionesDePreguntas.Where(n => n < total))
+        {
+            var cantidad = n;
+            fichas.Add(Ficha(cantidad.ToString(System.Globalization.CultureInfo.InvariantCulture), _preguntas == cantidad,
+                () => { _preguntas = cantidad; Pintar(); return Task.CompletedTask; }, $"examen-preguntas-{cantidad}"));
+        }
+        var temas = _ficha.Temas is { Count: > 1 } t ? $" en {ExamenTexto.Plural(t.Count, "tema", "temas")}" : string.Empty;
+        var explicacion = _preguntas is { } elegidas
+            ? $"Cada alumno recibe {elegidas} de las {total} preguntas del banco{temas}, elegidas al azar para él y sin repetir. La selección se hace una sola vez y queda congelada para su intento."
+            : $"El banco tiene {ExamenTexto.Plural(total, "pregunta", "preguntas")}{temas}. {(delExamen.StartsWith("Todas", StringComparison.Ordinal) ? "Cada alumno las recibe todas." : "Cada alumno recibe una selección al azar, distinta y sin repetir.")}";
+        CuerpoHost.Add(Seccion("¿Cuántas preguntas por alumno?", explicacion, fichas));
+    }
+
+    // ---- resultados (RF-004: calificar y publicar son dos cosas distintas; aquí el profesor decide cuándo verán los alumnos su nota)
     private void PintarResultados()
     {
         var fichas = EstudioUi.Envolver();
-        foreach (var (clave, rotulo) in OpcionesDeResultados)
+        foreach (var politica in OpcionesDeResultados)
         {
-            var c = clave;
-            fichas.Add(Ficha(rotulo, _resultados == c, () => { _resultados = c; Pintar(); return Task.CompletedTask; }, $"examen-resultados-{c}"));
+            var c = politica;
+            fichas.Add(Ficha(ExamenTexto.PoliticaCorta(c), _resultados == c, () => { _resultados = c; Pintar(); return Task.CompletedTask; }, $"examen-resultados-{c}"));
         }
-        CuerpoHost.Add(Seccion("Resultados", _resultados switch
+        var contenido = new List<View> { fichas };
+        if (_resultados == PoliticasDeResultados.Programada)
         {
-            "al_entregar" => "Cada alumno ve su resultado apenas entrega.",
-            "nunca" => "Los alumnos no verán su resultado desde la tableta.",
-            _ => "Los alumnos verán su resultado cuando tú lo liberes.",
-        }, fichas));
+            contenido.Add(Ds.Secundario("¿Cuándo?", 15));
+            var cuando = EstudioUi.Envolver();
+            foreach (var (minutos, rotulo) in OpcionesDePublicacion)
+            {
+                var m = minutos;
+                cuando.Add(Ficha(rotulo, _publicarEnMin == m, () => { _publicarEnMin = m; Pintar(); return Task.CompletedTask; }, $"examen-publicar-{m}"));
+            }
+            contenido.Add(cuando);
+            contenido.Add(new Label
+            {
+                Text = $"Se publican solos hacia las {ExamenTexto.Hora(RelojNodo.AhoraMs + _publicarEnMin * 60_000L)}, con el reloj del aula.",
+                FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.Tinta,
+            });
+        }
+        var sugerido = _ficha?.ResultadosSugeridos is { Length: > 0 } s && PoliticasDeResultados.Normalizar(s) != _resultados
+            ? $" El examen sugiere «{ExamenTexto.PoliticaCorta(s).ToLowerInvariant()}»; la decisión es tuya."
+            : string.Empty;
+        CuerpoHost.Add(Seccion("¿Cuándo ven su resultado?", _resultados switch
+        {
+            PoliticasDeResultados.AlEntregar => "Cada alumno ve su resultado apenas entrega y queda calificado del todo (lo que revises tú se ve cuando lo publiques)." + sugerido,
+            PoliticasDeResultados.Nunca => "Los alumnos no verán su resultado desde la tableta." + sugerido,
+            PoliticasDeResultados.AlFinalizarGrupo => "Se publican solos cuando todos hayan terminado y nada quede por revisar. Puedes adelantarlos tú o publicar a un alumno." + sugerido,
+            PoliticasDeResultados.Programada => "Se publican solos a la hora fijada. Antes nadie ve su nota; puedes adelantarlos tú." + sugerido,
+            _ => "Los alumnos verán su resultado cuando tú los publiques, a todos o uno por uno. Tú ves las notas antes." + sugerido,
+        }, contenido.ToArray()));
     }
 
     // ---- reactivación
@@ -405,12 +469,14 @@ public partial class ExamenAplicarPage : ContentPage
         {
             // La fecha límite se calcula ahora, con el reloj del nodo, no al tocar la ficha: «En 30 min» son 30 minutos desde que se aplica.
             long? limite = _limiteMin is { } min ? RelojNodo.AhoraMs + min * 60_000L : null;
+            long? publicarEn = _resultados == PoliticasDeResultados.Programada ? RelojNodo.AhoraMs + _publicarEnMin * 60_000L : null;
             var nuevo = new NuevoExamen(
                 Fuente: string.IsNullOrWhiteSpace(Fuente) ? Sesion.FuenteAula : Fuente,
                 CursoRef: Curso, ObjetoRef: Objeto, NivelExamen: _nivel, GrupoId: _grupo.Id,
                 SesionId: string.IsNullOrWhiteSpace(SesionClase) ? null : SesionClase,
                 Tiempo: TiempoElegido(), IntentosPermitidos: _intentos, LimiteEn: limite,
-                Plazo: limite is null ? "blando" : _plazo, Reactivacion: _reactivacion, Resultados: _resultados, Iniciar: true);
+                Plazo: limite is null ? "blando" : _plazo, Reactivacion: _reactivacion, Resultados: _resultados, Iniciar: true,
+                Preguntas: _preguntas, PublicarEn: publicarEn);
             var api = Sesion.Evaluacion;
             var creada = await api.CrearAsync(Actor, Sesion.ProfesorRotulo, nuevo);
             if (creada is null)

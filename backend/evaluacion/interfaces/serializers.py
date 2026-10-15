@@ -39,8 +39,21 @@ class AsignacionEntrada(_Docente):
     gracia_ms = serializers.IntegerField(required=False, allow_null=True)
     reactivacion = serializers.CharField(max_length=12, required=False, allow_blank=True)
     recursos = serializers.JSONField(required=False, allow_null=True)
-    resultados = serializers.CharField(max_length=16, required=False, allow_blank=True)
+    descripcion = serializers.CharField(max_length=2000, required=False, allow_blank=True)
+    # RF-002 / RF-003: cuántas preguntas por alumno y cómo se eligen (sin ellos manda lo que trae el examen de la biblioteca)
+    preguntas = serializers.IntegerField(required=False, allow_null=True)
+    estrategia = serializers.CharField(max_length=16, required=False, allow_blank=True)
+    cubrir_temas = serializers.BooleanField(required=False, allow_null=True)
+    mezclar_opciones = serializers.BooleanField(required=False, allow_null=True)
+    # RF-004: política de publicación (`nunca` · `al_entregar`/`inmediata` · `tras_liberar`/`manual` · `al_finalizar_grupo` · `programada` + `publicar_en`)
+    resultados = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    publicar_en = serializers.IntegerField(required=False, allow_null=True)
     iniciar = serializers.BooleanField(required=False)
+
+
+class PublicacionEntrada(_Docente):
+    resultados = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    publicar_en = serializers.IntegerField(required=False, allow_null=True)
 
 
 class CierreEntrada(_Docente):

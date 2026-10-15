@@ -1,0 +1,61 @@
+{
+  "alumnos": [],
+  "atencion": [],
+  "avisos": [],
+  "clases": [],
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790002430000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": false,
+    "integracion": {
+      "equipos": 0,
+      "estado": "completa",
+      "motivo_linea": "",
+      "motivos": [],
+      "sin_sincronizar": 0,
+      "texto": "Sin tabletas en este reporte"
+    },
+    "texto": "Datos al 21 sep · 09:53"
+  },
+  "escala": null,
+  "evaluaciones": [],
+  "generado_en": 1790002430000,
+  "generado_por": {
+    "id": "2dbabd2f-8690-481d-aa13-4ada41c06f72",
+    "rotulo": "Prof. Ruiz"
+  },
+  "grupo": {
+    "codigo": "9B",
+    "id": "ff81125a-a488-47cc-b811-a33023aa85b2",
+    "nivel_clave": "",
+    "nombre": "Noveno B",
+    "periodo": "2026"
+  },
+  "modo": "simple",
+  "nominal": false,
+  "objetivos": {
+    "disponible": false,
+    "texto": "Aún no disponible: el dominio por objetivo llega con el módulo de objetivos."
+  },
+  "privacidad": {
+    "alumnos": 2,
+    "aplicada": true,
+    "aviso": "Este reporte abarca 2 alumnos, menos de 5: el colegio activó la privacidad y por eso sólo se muestran los totales, sin comparar a las personas entre sí.",
+    "minimo": 5,
+    "umbral_activo": true
+  },
+  "servidor_en": 1790002430000,
+  "tipo": "grupo",
+  "titulo": "Reporte del grupo",
+  "totales": {
+    "alumnos": 2,
+    "clases": 0,
+    "en_atencion": 0,
+    "estudios": 0,
+    "evaluaciones": 0,
+    "promedio_aciertos": null,
+    "promedio_participacion": null
+  }
+}

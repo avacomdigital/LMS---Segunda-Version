@@ -1,0 +1,97 @@
+{
+  "avisos": [],
+  "clase": {
+    "actividades": 1,
+    "curso_rotulo": "Estados de la materia y sus cambios",
+    "duracion_ms": 0,
+    "equipos": 2,
+    "finalizada_en": 1790002430000,
+    "grupo": {
+      "codigo": "8A",
+      "id": "2dfe055b-7bfc-42fe-9825-904b38666076",
+      "nivel_clave": "",
+      "nombre": "Octavo A",
+      "periodo": "2026"
+    },
+    "iniciada_en": 1790002430000,
+    "leccion_rotulo": "Los tres estados de la materia",
+    "participantes": 2,
+    "sesion_id": "e57f0249-4890-4d7d-a538-f7e20b9f1c8c"
+  },
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790002430000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": true,
+    "integracion": {
+      "equipos": 2,
+      "estado": "incompleta",
+      "motivo_linea": "1 tableta aún no sincroniza",
+      "motivos": [
+        {
+          "codigo": "conexion_perdida",
+          "equipos": 1,
+          "texto": "1 tableta perdió la conexión y aún no envía lo que guardó"
+        }
+      ],
+      "sin_sincronizar": 1,
+      "texto": "1 tableta sin sincronizar"
+    },
+    "texto": "Datos al 21 sep · 09:53 · 1 tableta sin sincronizar"
+  },
+  "filas": [
+    {
+      "aciertos": 0,
+      "actividades_entregadas": 0,
+      "actividades_recibidas": 1,
+      "alumno": "Alumno 05",
+      "alumno_id": "21ba5549-076f-46a8-9c95-6dffdafbbff9",
+      "calificadas": 0,
+      "entregas_por_cola": 0,
+      "estado": "reconectando",
+      "porcentaje_aciertos": null,
+      "porcentaje_participacion": 0,
+      "presente_ms": 0
+    },
+    {
+      "aciertos": 5,
+      "actividades_entregadas": 1,
+      "actividades_recibidas": 1,
+      "alumno": "Alumno 06",
+      "alumno_id": "5d34c528-2e83-4c77-a51b-50b927522df3",
+      "calificadas": 5,
+      "entregas_por_cola": 0,
+      "estado": "conectado",
+      "porcentaje_aciertos": 100,
+      "porcentaje_participacion": 100,
+      "presente_ms": 0
+    }
+  ],
+  "generado_en": 1790002430000,
+  "generado_por": {
+    "id": "3013ed4e-9fdf-41ea-a2ab-0e0a3d9c6e58",
+    "rotulo": "Prof. Gómez"
+  },
+  "nominal": true,
+  "objetivos": {
+    "disponible": false,
+    "texto": "Aún no disponible: el dominio por objetivo llega con el módulo de objetivos."
+  },
+  "privacidad": {
+    "alumnos": 2,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790002430000,
+  "tipo": "clase",
+  "titulo": "Reporte de la clase",
+  "totales": {
+    "actividades": 1,
+    "participantes": 2,
+    "promedio_aciertos": 100,
+    "promedio_participacion": 50
+  }
+}

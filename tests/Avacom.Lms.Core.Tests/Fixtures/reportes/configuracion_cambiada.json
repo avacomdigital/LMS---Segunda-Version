@@ -1,0 +1,44 @@
+{
+  "cambiado": true,
+  "configuracion": {
+    "actualizada_en": 1790002430000,
+    "actualizada_por": "e95de053-0e9e-4982-8928-94f66fcb071f",
+    "destinos": [
+      "extraible",
+      "carpeta_local",
+      "red"
+    ],
+    "exigir_razon": false,
+    "extraibles_permitidos": true,
+    "formatos": [
+      "xlsx",
+      "csv"
+    ],
+    "minimo_de_alumnos": 5,
+    "razones": [
+      {
+        "codigo": "entrega_a_familias",
+        "etiqueta": "Entrega a las familias"
+      },
+      {
+        "codigo": "entrega_a_coordinacion",
+        "etiqueta": "Entrega a coordinación o secretaría"
+      },
+      {
+        "codigo": "reunion_de_equipo",
+        "etiqueta": "Reunión del equipo docente"
+      },
+      {
+        "codigo": "respaldo_del_profesor",
+        "etiqueta": "Respaldo del propio profesor"
+      },
+      {
+        "codigo": "otra_gestion_escolar",
+        "etiqueta": "Otra gestión escolar"
+      }
+    ],
+    "umbral_privacidad": true,
+    "version": 1
+  },
+  "servidor_en": 1790002430000
+}

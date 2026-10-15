@@ -1,0 +1,85 @@
+{
+  "activa": true,
+  "codigo": "co-1-5",
+  "creada_en": 1790000000000,
+  "creada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
+  "id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+  "jurisdiccion": "Antioquia",
+  "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+  "pais": "CO",
+  "plantilla_origen": "co-1-5",
+  "servidor_en": 1790000000000,
+  "tipo": "numerica",
+  "versiones": [
+    {
+      "creada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
+      "definicion": {
+        "aprobacion_minima": "3",
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "1"
+          ],
+          [
+            "100",
+            "5"
+          ]
+        ],
+        "redondeo": "abajo",
+        "tipo": "numerica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "Bajo",
+            "hasta": "50",
+            "nivel_desempeno": "Bajo",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "descripcion": "",
+            "desde": "50",
+            "etiqueta": "Básico",
+            "hasta": "75",
+            "nivel_desempeno": "Básico",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "descripcion": "",
+            "desde": "75",
+            "etiqueta": "Alto",
+            "hasta": "90",
+            "nivel_desempeno": "Alto",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "Superior",
+            "hasta": "100",
+            "nivel_desempeno": "Superior",
+            "orden": 4
+          }
+        ],
+        "valor_max": "5",
+        "valor_min": "1"
+      },
+      "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+      "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
+      "id": "e0521e03-c62f-449b-936f-f2630c3accdb",
+      "nota": "Adoptada de la plantilla orientativa «co-1-5». Escala nacional de desempeño Superior, Alto, Básico y Bajo; la escala numérica y sus equivalencias las define cada institución en su sistema institucional de evaluación (Decreto 1290 de 2009). Se trunca (no se redondea hacia arriba) para que el redondeo",
+      "numero": 1,
+      "vigente_desde": 1790000000000
+    }
+  ]
+}

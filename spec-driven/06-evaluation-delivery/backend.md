@@ -144,7 +144,12 @@ Todas las respuestas son JSON. Todos los tiempos son **milisegundos del reloj de
 | `POST …/endurecer/` `{limite_en?}` | FUN-107: `plazo = endurecido` | exige un plazo blando vigente | `transicion_invalida` |
 | `POST …/nivel/` `{nivel_examen}` | FUN-105: fija el nivel **antes** de que haya intentos vivos | sin intentos vivos | `intentos_abiertos` (409) |
 | `POST …/degradar/` `{nivel_examen, motivo}` | FUN-118: **baja** el nivel vigente de una evaluación en curso (nunca sube); recalcula la elegibilidad y deja un incidente `degradacion` en cada intento vivo | `activa`, `activa_fuera_de_plazo` | `datos_invalidos` (no baja) |
-| `POST …/liberar-resultados/` | `liberados_en = ahora` (DEC-032); los alumnos ven su nota si `resultados ≠ nunca` | `cerrada` o con todo entregado | `intentos_abiertos` |
+| `POST …/liberar-resultados/` | publicación manual a todo el grupo: `liberados_en = ahora`, `liberados_por = quien` (DEC-032, D-26); los alumnos calificados ven su nota si `resultados ≠ nunca` | `cerrada` o con todo entregado | `intentos_abiertos` |
+| `PATCH …/publicacion/` `{resultados, publicar_en?}` | RF-004: cambia la política de publicación (y la fecha con `programada`) mientras nada se haya publicado; evento `resultados_configurados` y asiento con valor anterior y nuevo | `liberados_en` nulo | `transicion_invalida` (ya publicados), `datos_invalidos` (fecha) |
+| `GET /api/evaluacion/examenes/disponibles/?fuente=` | Los exámenes (objetos `exam`) de TODOS los cursos instalados en la fuente, pedidos con `mode=exam` por `fuentes_examen` (adaptador propio de `evaluacion`: no se toca `biblioteca/`): `{fuente, disponible, motivo, sugerencia, cursos[{curso_ref, titulo, version, examenes[{objeto_ref, titulo, leccion_ref, leccion_titulo, preguntas, aplicaciones, abiertas}]}], omitidos[{curso_ref, motivo}]}`. Sólo referencias y rótulos. Un curso que falla queda en `omitidos` sin tumbar a los demás; con la biblioteca cerrada `disponible = false` | — | `sin_permiso` (un alumno) |
+| `GET /api/evaluacion/examenes/?fuente=&curso_ref=&objeto_ref=` | RF-003: la **ficha** del examen antes de asignarlo: `{total_banco, temas[], tipos{}, estrategia, preguntas_sugeridas, cubrir_todos_los_temas, mezclar_opciones, tiempo, aprobacion_pct, resultados_sugeridos, resultados_por_defecto}`. Sin preguntas ni claves | — | `no_encontrado`, `fuente_no_disponible` |
+
+Campos nuevos de `POST /asignaciones/` (2026-10-13): `preguntas` (cuántas por alumno; **400 `banco_insuficiente`** si el banco no alcanza), `estrategia` (`fixed` · `random_balanced`), `cubrir_temas`, `mezclar_opciones`, `descripcion`, `resultados` (`nunca` · `al_entregar`/`inmediata` · `tras_liberar`/`manual` · `al_finalizar_grupo` · `programada`) y `publicar_en` (obligatorio y futuro con `programada`). Sin `resultados` rige la política institucional (`AVACOM_EVAL_RESULTADOS_POR_DEFECTO`, manual por defecto): la sugerencia de la biblioteca ya no decide (D-26). La respuesta trae además `publicar_en`, `liberados_por`, `descripcion`, `total_banco`, `estrategia`.
 
 ### 4.2 · Profesor: vigilar y decidir
 
@@ -195,7 +200,8 @@ El panel **no es de vigilancia**: no suena, no marca en rojo y no ofrece «anula
 | `POST /intentos/{id}/cerrar/` | «Cierre forzado» (`pausado_desconexion`/`restaurando` → `entregado`, `origen_entrega = profesor`). |
 | `POST /intentos/{id}/anular/` `{motivo}` | Sólo desde `entregado`, `en_revision_docente` o `calificado`. **Motivo obligatorio**, persona obligatoria: `anulado_por`, `anulado_en`. |
 | `POST /intentos/{id}/respuestas/{pregunta_ref}/puntuar/` `{puntaje, comentario?}` | Puntúa un reactivo pendiente (0 ≤ puntaje ≤ máximo). Cambiar un puntaje ya puesto deja el asiento `calificacion.modificada` con valor anterior y nuevo. |
-| `POST /intentos/{id}/publicar/` | `en_revision_docente → calificado` cuando no queda nada pendiente. |
+| `POST /intentos/{id}/publicar/` | `en_revision_docente → calificado` cuando no queda nada pendiente. Calificar **no** es publicar: responde `resultado_publicado` según la política. |
+| `POST /intentos/{id}/liberar-resultado/` | RF-004 (D-28): publica el resultado de UN alumno sin esperar al grupo ni a la fecha. Exige `calificado` sin calificación pendiente (409 `reactivos_pendientes` / `transicion_invalida`) y `resultados ≠ nunca`. Idempotente. `{liberado_en, liberado_por, resultado_publicado}`. |
 | `POST /intentos/{id}/decidir-envio/` `{decision: aceptar\|descartar, motivo?}` | BR-074: suma o conserva lo que llegó fuera de la gracia. |
 | `POST /intentos/{id}/recalificar/` | Reintenta la calificación pendiente (`calificacion_pendiente`). Idempotente. |
 
@@ -301,9 +307,9 @@ Al abrir se: (1) valida identidad y alcance; (2) abre la «Dim Sesión Alumno» 
  "respuestas": [{"pregunta_ref": "l3-q4", "secuencia": 4, "respuesta": {"order": ["…"]}, "capturada_en": 1790000600000}]}
 ```
 
-`confirmar: true` es obligatorio si quedan reactivos sin responder (la tableta ya le mostró «Te faltan 2»). `respuestas` permite el último vaciado de la cola en la misma llamada. Responde `{intento, entregado_en, origen_entrega, que_sigue}` donde `que_sigue` es `{codigo, texto}`: `resultado_al_liberar` («Tu profesor publicará los resultados.») · `en_revision` («Algunas respuestas las revisa tu profesor.») · `sin_resultado`. **Nunca** dice «calificado» mientras quede un reactivo por revisar (Guion, paso 13). Idempotente: entregar dos veces devuelve lo mismo.
+`confirmar: true` es obligatorio si quedan reactivos sin responder (la tableta ya le mostró «Te faltan 2»). `respuestas` permite el último vaciado de la cola en la misma llamada. Responde `{intento, entregado_en, origen_entrega, que_sigue, resultados, publicar_en, resultado_disponible}` donde `que_sigue` es `{codigo, texto}` según la política (RF-004): `resultado_al_liberar` («Tu profesor publicará los resultados.») · `resultado_programado` · `resultado_al_terminar_grupo` · `resultado_pronto` (inmediata, pero la biblioteca aún no calificó) · `resultado_disponible` · `en_revision` («Algunas respuestas las revisa tu profesor.») · `sin_resultado`. **Nunca** dice «calificado» mientras quede un reactivo por revisar (Guion, paso 13) y nunca lleva la nota. Idempotente: entregar dos veces devuelve lo mismo.
 
-**`GET /api/evaluacion/intentos/{id}/resultado/`** — sólo cuando el profesor liberó los resultados (`resultados ≠ nunca` y `liberados_en` o `resultados = al_entregar` sin pendientes). `{porcentaje, puntaje, puntaje_maximo, aprobado, detalle[]}`; **403 `resultados_no_liberados`** antes (DEC-032).
+**`GET /api/evaluacion/intentos/{id}/resultado/`** — sólo cuando el resultado está publicado para ESTE alumno, comprobado en el nodo (`Motor.resultado_disponible`, D-26): el intento `calificado` sin calificación pendiente **y** (`liberado_en` del intento, o `resultados = al_entregar`, o `liberados_en` de la asignación puesto por el profesor o por el nodo con `al_finalizar_grupo`/`programada`); con `nunca`, nunca. `{porcentaje, puntaje, puntaje_maximo, aprobado, detalle[]}`; **403 `resultados_no_liberados`** antes (DEC-032), con `publicar_en` si está programado. Antes de comprobar, la lectura aplica lo que la política ya provocó con el reloj del nodo (D-27), así el barrido no es imprescindible. `GET /mias/` trae `resultados`, `publicar_en`, `duracion_seg`, `descripcion` y, en `mi_intento`, `calificacion_pendiente` y `requiere_revision`, para que la tableta diga CUÁNDO sin revelar nada.
 
 ### 4.5 · FUN-103 y FUN-104
 
@@ -465,12 +471,13 @@ Congelar: `consumido_ms += ultimo_latido_en − reloj_desde`; `reloj_desde = nul
 | `AVACOM_EVAL_MAX_RESPUESTAS` | 200 | Tope de respuestas por envío |
 | `AVACOM_EVAL_DESFASE_RELOJ_MS` | 5000 | Desfase del reloj de la tableta a partir del cual se registra `reloj_desfasado` |
 | `AVACOM_EVAL_ARMADO_INTENTOS` | 200 | Combinaciones que prueba `random_balanced` |
+| `AVACOM_EVAL_RESULTADOS_POR_DEFECTO` | `tras_liberar` | RF-004: la política institucional de publicación que toma una asignación nueva si el profesor no elige otra (`tras_liberar` · `al_entregar` · `al_finalizar_grupo` · `nunca`) |
 
 ---
 
 ## 9 · Pruebas
 
-Se ejecutan con `.venv\Scripts\python manage.py test evaluacion` (302 pruebas, ~70 s) y la suite completa con `manage.py test` (961 pruebas, ~8 min). No necesitan la biblioteca real: la mayoría usa la fuente «ejemplo» con el calificador de referencia (`tools.host_contenido_v2_pruebas.calificar`); el contrato HTTP (`test_contrato_v2`) levanta el **host de pruebas de la API v2** con token y `link.json` y recorre `pool`, `questions` y `evaluate/batch` de verdad. Un reloj controlable (`self.avanzar(...)`) mueve el tiempo del nodo sin dormir.
+Se ejecutan con `.venv\Scripts\python manage.py test evaluacion` (360 pruebas, ~3 min) y la suite completa con `manage.py test` (1341 pruebas, ~14 min). Las de la publicación de resultados (RF-004) están en `test_publicacion.py` y las de la selección aleatoria con un banco de cien preguntas (RF-002) en `test_seleccion.py`. No necesitan la biblioteca real: la mayoría usa la fuente «ejemplo» con el calificador de referencia (`tools.host_contenido_v2_pruebas.calificar`); el contrato HTTP (`test_contrato_v2`) levanta el **host de pruebas de la API v2** con token y `link.json` y recorre `pool`, `questions` y `evaluate/batch` de verdad. Un reloj controlable (`self.avanzar(...)`) mueve el tiempo del nodo sin dormir.
 
 | Escenario del Maestro | ¿Se cubre en el backend? | Prueba (`evaluacion/tests/`) |
 |---|---|---|
@@ -518,3 +525,5 @@ Cada respuesta que recibe un alumno se recorre con `contiene_clave` en `test_api
 **No construido en el backend, a propósito.** Crear evaluaciones y reactivos (FUN-103/104, de la biblioteca); la nota publicada y los ajustes (MOD-011); archivos de dibujo y proyecto (MOD-014); SCORM (V1); arrastrar y soltar y matemática con equivalencias (la biblioteca no los publica, Q-79); unificar `m07_intento` y `m08_practica` bajo `m10_*` (Q-75).
 
 **No se puede comprobar aquí.** El comportamiento de las tabletas reales (Lock Task, Assigned Access, Shell Launcher), la latencia con 50 tabletas físicas y el apagado forzado: ver [frontend.md](frontend.md) §10 y [kiosk.md](kiosk.md) §7.
+
+**Modo Evaluación completo (2026-10-13).** Sobre lo anterior se cerraron las brechas del documento de requisitos del Modo Evaluación: las cinco políticas de publicación con el reloj del nodo, la publicación por alumno, quién y cuándo publicó (D-26…D-28); el número de preguntas por alumno elegido por el profesor con comprobación del banco antes de iniciar, `mezclar_opciones` honrado y la ficha del examen (D-29); los contadores del panel para la supervisión (`sin_senal`, `calificacion_pendiente`, `reactivos_por_revisar`, `listos_para_publicar`, `publicados`) y `resultado_publicado` por fila; migración `0002`; 58 pruebas nuevas (`test_publicacion`, `test_seleccion`): banco de 100 y examen de 20 sin repetir, dos alumnos con selecciones independientes, recuperación tras reiniciar la app y el nodo sin duplicar, versión congelada, las cuatro políticas con el reloj del nodo (barrido y lectura perezosa), publicación individual, cambio de política, y que ninguna ruta del alumno filtra una nota no publicada ni ajena.

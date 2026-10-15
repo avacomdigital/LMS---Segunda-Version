@@ -43,8 +43,15 @@ EN EL EQUIPO QUE SIRVE EL APK (la OPS o un portátil)
 ----------------------------------------------------
 1. Toca  Servir-APK.bat.  Windows pide permiso de administrador: toca Sí. Sirve para abrir el puerto 8080 en el firewall
    SOLO para la red local y SOLO mientras el servidor esté encendido.
-2. Se abre el panel en el navegador: un código QR grande, la dirección en letra grande y el contador «0 de 55».
-   Déjalo abierto y a la vista de quien reparte las tabletas.
+2. Se abre el panel en el navegador: arriba, el código QR del Wi-Fi (la red a la que está conectado este equipo, con su clave
+   incluida; el botón «Mostrar» enseña la clave); abajo, un código QR grande para el APK, la dirección en letra grande y el
+   contador «0 de 55». Déjalo abierto y a la vista de quien reparte las tabletas.
+   · El código del Wi-Fi lo arma solo el equipo que sirve (hay que haber aceptado el permiso de administrador para que Windows
+     entregue la clave guardada) y solo se ve en ese equipo: la página que abren las tabletas y el panel visto desde otro equipo
+     NO lo traen. La clave no se escribe en la consola ni en ningún archivo.
+   · Si el equipo va por cable, o Windows no da la clave, el panel lo dice y deja escribir la red y la clave («Usar otra red o
+     escribir la clave»). Lo escrito vive solo en memoria hasta detener el servidor. Una red empresarial (usuario y contraseña
+     propios) no cabe en un QR: usa una red con clave simple para las tabletas.
 3. El contador sube cuando una tableta TERMINA de descargar el APK completo (no cuenta si se corta, y si se reanuda sigue
    contando una sola vez). Cuando llega a 55 de 55 ya se descargó en todas. Descargar no es instalar: falta cada toque en «Instalar».
 4. Al terminar: toca «Detener el servidor» en el panel (o cierra la ventana negra). El puerto se cierra solo.
@@ -56,7 +63,8 @@ Para otro puerto u otra cantidad:  Servir-APK.bat 8081 30   (puerto 8081, 30 tab
 EN CADA TABLETA (unos 2 minutos)
 --------------------------------
 0. Nombre único (ver arriba), si todavía no lo tiene.
-1. Conectada al Wi-Fi del aula. Abre la cámara (o Google Lens), apunta al código QR del panel y toca el aviso.
+1. Conectada al Wi-Fi del aula (si no lo está: cámara o Google Lens sobre el código «Unir la tableta a esta red Wi-Fi» del panel
+   y toca «Conectar»; Android 10 o superior). Luego abre la cámara (o Google Lens), apunta al código QR del APK y toca el aviso.
    Si no lo lee: abre Chrome y escribe la dirección que muestra el panel (algo como  http://192.168.0.25:8080/download/).
 2. Toca «Descargar e instalar». Si Chrome avisa que el archivo puede dañar el dispositivo o que la descarga no es segura,
    toca «Descargar de todos modos» (o «Mantener»): es normal, el aula no usa HTTPS.
@@ -79,7 +87,8 @@ SI ALGO NO FUNCIONA
 · La tableta no abre la página:  ¿mismo Wi-Fi?  ¿«aislamiento de clientes» apagado?  ¿Aceptaste el permiso de administrador
   al tocar Servir-APK.bat?  Prueba la dirección del panel desde otro equipo de la red antes de culpar a la tableta. Si el
   equipo tiene varias redes (Wi-Fi y cable, VPN), el panel muestra una dirección y un QR por cada una: usa la de la red del aula.
-· El QR no se lee:  usa la dirección en letra grande del panel.
+· El QR no se lee:  usa la dirección en letra grande del panel. Si es el del Wi-Fi, elige la red a mano en la tableta
+  (el panel muestra el nombre y la clave con «Mostrar»).
 · La OPS muestra una sola tableta aunque hay muchas, o al fallar un PIN se bloquean todas:  tienen el mismo nombre de dispositivo.
   Cámbiaselo (ver arriba). La tableta se registra de nuevo con el nombre nuevo; la lista de la OPS conserva la entrada vieja.
 · «App no instalada» o «Conflicto con un paquete existente»:  la tableta ya tiene una Student LMS firmada con otra llave.

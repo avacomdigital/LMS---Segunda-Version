@@ -12,6 +12,7 @@ namespace Avacom.Lms.Ops.Pages;
 /// La página no calcula nada de negocio: lo que dice «completó», «vencida» o «fuera de plazo» lo decide el nodo (D-9). La lección se
 /// lee de AVACOM Biblioteca a través del aula (<see cref="Sesion.Aula"/>): aquí sólo se guarda una referencia (regla de oro del LMS).
 /// </summary>
+[QueryProperty(nameof(AsignacionId), "asignacion")]
 public partial class EstudioPage : ContentPage
 {
     private enum Vista { Lista, Detalle, Nueva }
@@ -28,6 +29,9 @@ public partial class EstudioPage : ContentPage
     private static IEstudioApi Api => Sesion.Estudio;
     private static string Actor => Sesion.ProfesorId;
 
+    /// <summary>MOD-021 · Search: con una asignación, la pantalla abre directo su detalle («quién completó») en vez de la lista. Se consume una vez.</summary>
+    public string AsignacionId { get; set; } = string.Empty;
+
     public EstudioPage() => InitializeComponent();
 
     protected override async void OnAppearing()
@@ -38,7 +42,10 @@ public partial class EstudioPage : ContentPage
             if (!_iniciada)
             {
                 _iniciada = true;
-                await MostrarListaAsync();
+                var abrir = AsignacionId;
+                AsignacionId = string.Empty;
+                if (!string.IsNullOrWhiteSpace(abrir)) await MostrarDetalleAsync(abrir, null);
+                else await MostrarListaAsync();
             }
             _temporizador ??= Dispatcher.CreateTimer();
             _temporizador.Interval = TimeSpan.FromSeconds(8);

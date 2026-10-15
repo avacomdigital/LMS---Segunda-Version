@@ -1,0 +1,16 @@
+{
+  "alumno_id": "ac9e22fa-28d8-4439-a298-b11dd7d2b6b7",
+  "items": [
+    {
+      "aciertos": null,
+      "asignacion_id": "79559179-f683-4239-b6f2-506542dea2c9",
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "estado_simple": "no_iniciado",
+      "modo": "simple",
+      "retroalimentacion": null,
+      "simbolo": "vacio",
+      "titulo": "Examen de estados de la materia"
+    }
+  ],
+  "servidor_en": 1790000000000
+}

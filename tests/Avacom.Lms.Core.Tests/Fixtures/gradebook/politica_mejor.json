@@ -1,0 +1,23 @@
+{
+  "cambiado": true,
+  "politica": {
+    "institucion": "IE San José",
+    "jurisdiccion": "Antioquia",
+    "pais": "CO",
+    "politica_intentos": "mejor",
+    "politica_provisional": false,
+    "ponderaciones": {},
+    "ponderaciones_aplicadas": false,
+    "version": 2
+  },
+  "recalculado": {
+    "agregados": 0,
+    "borrados": {
+      "agregados": 0,
+      "resultados": 0
+    },
+    "resultados": 0,
+    "servidor_en": 1790000000000
+  },
+  "servidor_en": 1790000000000
+}

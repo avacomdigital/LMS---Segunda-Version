@@ -1,0 +1,6 @@
+{
+  "codigo": "fuera_de_alcance",
+  "detail": "Ese permiso no llega a este grupo: sólo ves los reportes de los grupos de los que eres docente.",
+  "grupo_id": "2dfe055b-7bfc-42fe-9825-904b38666076",
+  "permiso": "reports.group.view"
+}

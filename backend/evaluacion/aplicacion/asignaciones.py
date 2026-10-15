@@ -10,7 +10,9 @@ La asignación vista desde el profesor (FUN-105, 106, 107, 108, 118; CAP-063):
   EndurecerPlazo        FUN-107: al vencer, la asignación cierra
   DefinirNivel          FUN-105: el nivel mínimo, mientras no haya intentos abiertos
   DegradarNivel         FUN-118: BAJA el nivel de una evaluación en curso
-  LiberarResultados     DEC-032: desde aquí el alumno ve su nota
+  LiberarResultados     DEC-032 / RF-004: publicación manual (por grupo); desde aquí el alumno ve su nota
+  ConfigurarPublicacion RF-004: cambia la política de publicación (y la fecha programada) mientras nada se haya publicado
+  FichaDelExamen        RF-003: lo que el profesor necesita del banco ANTES de asignar (cuántas preguntas, temas, tiempo), sin preguntas ni claves
   ListarAsignaciones · VerAsignacion
 
 El examen (sus preguntas, sus claves) NO se crea aquí: FUN-103 y FUN-104 son de la biblioteca (D-2, artículo 14). Aquí sólo se ASIGNA.
@@ -100,7 +102,17 @@ class CrearAsignacion(_Docente):
         ficha = self.s.contenido.examen(str(datos.get("fuente") or ""), curso_ref, objeto_ref)     # puede lanzar NoEncontrado / FuenteNoDisponible
         ajustes = ficha["ajustes"]
         pool = ficha["pool"]
-        resultados = asig_dom.validar_resultados(datos.get("resultados"), ajustes.get("mostrar_resultados") or cat.TRAS_LIBERAR)
+        # RF-004 / D-26: la política de publicación la elige el profesor; sin elección rige la institucional (`AVACOM_EVAL_RESULTADOS_POR_DEFECTO`, manual por
+        # defecto). Lo que la biblioteca sugiere (`showResults`) queda en `ajustes.mostrar_resultados` como dato, nunca decide por el profesor.
+        resultados, publicar_en = asig_dom.validar_publicacion(datos.get("resultados"), datos.get("publicar_en"), ahora, self.s.config.resultados_por_defecto)
+        # RF-002 / RF-003: el profesor puede fijar cuántas preguntas recibe cada alumno (y la estrategia); el banco debe alcanzar, nunca se recorta.
+        preguntas = asig_dom.validar_preguntas(datos.get("preguntas"), len(pool))
+        estrategia_pedida = asig_dom.validar_estrategia(datos.get("estrategia"))
+        if "cubrir_temas" in datos and datos["cubrir_temas"] is not None:
+            ajustes = {**ajustes, "cubrir_todos_los_temas": bool(datos["cubrir_temas"])}
+        if "mezclar_opciones" in datos and datos["mezclar_opciones"] is not None:
+            ajustes = {**ajustes, "barajar_opciones": bool(datos["mezclar_opciones"])}
+        descripcion = str(datos.get("descripcion") or "").strip()[:2000]
 
         with self.s.uow() as uow:
             exigir_nodo_instalado(uow)
@@ -128,8 +140,7 @@ class CrearAsignacion(_Docente):
                 estado = cat.PROGRAMADA if (abre_en is not None and abre_en > ahora) else cat.ACTIVA
                 publicada_en = ahora
             nuevo_id_asignacion = nuevo_id()
-            estrategia = ajustes.get("estrategia") or armado_dom.FIXED
-            por_alumno = self._por_alumno(ajustes, pool)
+            estrategia, por_alumno, ajustes = self._seleccion(ajustes, pool, preguntas, estrategia_pedida)
             previo = self._armado_previo({"id": nuevo_id_asignacion, "estrategia": estrategia, "preguntas_por_alumno": por_alumno,
                                           "tiempo_modo": tiempo_modo, "tiempo_limite_seg": tiempo_limite, "total_banco": len(pool)}, ajustes, pool)
             ajustes = {**ajustes, "limite_seg_estimado": previo["limite_seg_estimado"]}
@@ -141,7 +152,8 @@ class CrearAsignacion(_Docente):
                 "objeto_rotulo": ficha.get("objeto_rotulo") or "", "titulo": (str(datos.get("titulo") or "").strip() or ficha["titulo"])[:250],
                 "estrategia": estrategia, "preguntas_por_alumno": por_alumno, "total_banco": len(pool), "ajustes": ajustes, "nivel_declarado": nivel, "nivel_examen": nivel, "tiempo_modo": tiempo_modo,
                 "tiempo_limite_seg": tiempo_limite, "intentos_permitidos": intentos, "abre_en": abre_en, "limite_en": limite_en, "plazo": plazo,
-                "gracia_ms": gracia_ms, "reactivacion": reactivacion, "recursos": recursos, "resultados": resultados, "liberados_en": None,
+                "gracia_ms": gracia_ms, "reactivacion": reactivacion, "recursos": recursos, "descripcion": descripcion, "resultados": resultados,
+                "publicar_en": publicar_en, "liberados_en": None, "liberados_por": "",
                 "aprobacion_pct": ajustes.get("aprobacion_pct"), "permite_retroceso": bool(ajustes.get("navegacion_atras", True)),
                 "mezclar_opciones": bool(ajustes.get("barajar_opciones", True)), "estado": estado, "creada_en": ahora,
                 "publicada_en": publicada_en, "cerrada_en": None, "archivada_en": None, "creado_por": self._actor_id(actor)[:64]})
@@ -154,11 +166,31 @@ class CrearAsignacion(_Docente):
             if publicada_en is not None:
                 self.motor.publicar(uow, "Asignacion", fila["id"], cat.EV_ASIGNADA, {
                     **base, "nivel_examen": nivel, "limite_en": limite_en, "intentos_permitidos": intentos, "ponderacion": None}, ahora)
+            if resultados == cat.RESULTADOS_PROGRAMADOS:
+                self.motor.publicar(uow, "Asignacion", fila["id"], cat.EV_RESULTADOS_CONFIGURADOS, {
+                    **base, "resultados": resultados, "publicar_en": publicar_en, "por": self._actor_id(actor)}, ahora)
             uow.auditoria.registrar(self._actor_id(actor), "evaluacion.asignada", "m10_asignacion", fila["id"],
                                     nuevo={"estado": estado, "nivel_examen": nivel, "plazo": plazo, "objeto_ref": objeto_ref,
-                                           "curso_version": fila["curso_version"], "alcance": alcance})
+                                           "curso_version": fila["curso_version"], "alcance": alcance, "resultados": resultados,
+                                           "publicar_en": publicar_en, "preguntas_por_alumno": por_alumno})
             self.motor.avisar(uow, fila)
             return {**vista_asignacion(fila), "armado_previo": previo}
+
+    @staticmethod
+    def _seleccion(ajustes: dict, pool: list[dict], preguntas: int | None, estrategia_pedida: str | None) -> tuple[str, int, dict]:
+        """(estrategia, preguntas por alumno, ajustes) con lo que el profesor decidió por encima de lo que trae el examen (RF-002, RF-003).
+        Pedir MENOS preguntas que el banco es pedir una selección aleatoria por alumno; pedir `fixed` es dar el banco entero en su orden."""
+        estrategia = estrategia_pedida or ajustes.get("estrategia") or armado_dom.FIXED
+        if preguntas is not None:
+            if estrategia_pedida is None and preguntas < len(pool):
+                estrategia = armado_dom.RANDOM_BALANCED
+            if estrategia == armado_dom.FIXED and preguntas < len(pool):
+                estrategia = armado_dom.RANDOM_BALANCED      # `fixed` con menos preguntas que el banco no existe: hay que elegir cuáles, y eso es al azar
+            ajustes = {**ajustes, "estrategia": estrategia, "cantidad_preguntas": preguntas}
+        elif estrategia_pedida is not None:
+            ajustes = {**ajustes, "estrategia": estrategia}
+        por_alumno = CrearAsignacion._por_alumno(ajustes, pool) if estrategia == armado_dom.RANDOM_BALANCED else len(pool)
+        return estrategia, por_alumno, ajustes
 
     def _exigir_titular(self, uow: UnidadDeTrabajo, actor: Actor, grupo_id: str) -> None:
         """Con sesión, el profesor asigna sólo a sus grupos; la administración (nivel 3) a cualquiera. Sin sesión (Q-34) no se comprueba."""
@@ -404,7 +436,8 @@ class DegradarNivel(_Docente):
 
 
 class LiberarResultados(_Docente):
-    """DEC-032: desde aquí el alumno ve su nota (si la asignación no es `nunca`). Idempotente: la primera liberación manda."""
+    """DEC-032 / RF-004 (publicación manual, también por grupo): desde aquí el alumno ve su nota (si la asignación no es `nunca`). Idempotente: la primera
+    liberación manda y queda con nombre (`liberados_por`) y origen `manual`."""
 
     def ejecutar(self, actor: Actor, asignacion_id: str) -> dict:
         ahora = self.s.reloj.ahora_ms()
@@ -414,13 +447,87 @@ class LiberarResultados(_Docente):
             abiertos = uow.intentos.de_asignacion(asignacion_id, ABIERTOS)
             if abiertos:
                 raise IntentosAbiertos("Aún hay alumnos presentando el examen: libera los resultados cuando todos hayan entregado.", abiertos=len(abiertos))
-            if asignacion.get("liberados_en") is None:
-                asignacion = uow.asignaciones.actualizar(asignacion_id, liberados_en=ahora)
-                self.motor.publicar(uow, "Asignacion", asignacion_id, cat.EV_RESULTADOS_LIBERADOS, {
-                    "asignacion_id": asignacion_id, "liberados_en": ahora}, ahora)
-                self._anotar(uow, asignacion, "evaluacion.resultados.liberados", {"liberados_en": None}, {"liberados_en": ahora}, actor)
-                self.motor.avisar(uow, asignacion)
+            asignacion = self.motor.liberar_resultados(uow, asignacion, ahora, por=self._actor_id(actor), origen=cat.ORIGEN_LIBERACION_MANUAL)
             return vista_asignacion(asignacion)
+
+
+class ConfigurarPublicacion(_Docente):
+    """RF-004: cambia la política de publicación (y la fecha, con `programada`) de una evaluación que todavía no publicó sus resultados. Lo ya publicado no
+    se retira: una nota que el alumno vio no se vuelve a esconder (la trazabilidad exige que lo visto siga siendo verdad); 409 `transicion_invalida`."""
+
+    def ejecutar(self, actor: Actor, asignacion_id: str, datos: dict) -> dict:
+        ahora = self.s.reloj.ahora_ms()
+        with self.s.uow() as uow:
+            asignacion = self._asignacion(uow, asignacion_id, ahora)
+            self._autorizar(actor, cat.P_RESULTS_VIEW, asignacion)
+            if asignacion["estado"] == cat.ARCHIVADA:
+                raise TransicionInvalida("La evaluación está archivada.", estado=asignacion["estado"])
+            if asignacion.get("liberados_en") is not None:
+                raise TransicionInvalida("Los resultados ya se publicaron: lo que los alumnos ya vieron no se vuelve a esconder.", estado=asignacion["estado"],
+                                         liberados_en=asignacion["liberados_en"], liberados_por=asignacion.get("liberados_por", ""))
+            resultados, publicar_en = asig_dom.validar_publicacion(datos.get("resultados") or asignacion["resultados"], datos.get("publicar_en"), ahora)
+            anterior = {"resultados": asignacion["resultados"], "publicar_en": asignacion.get("publicar_en")}
+            nuevo = {"resultados": resultados, "publicar_en": publicar_en}
+            if nuevo == anterior:
+                return vista_asignacion(asignacion)
+            asignacion = uow.asignaciones.actualizar(asignacion_id, **nuevo)
+            self.motor.publicar(uow, "Asignacion", asignacion_id, cat.EV_RESULTADOS_CONFIGURADOS, {
+                "asignacion_id": asignacion_id, **nuevo, "anterior": anterior, "por": self._actor_id(actor)}, ahora)
+            self._anotar(uow, asignacion, cat.A_RESULTADOS_CONFIGURADOS, anterior, nuevo, actor)
+            self.motor.avisar(uow, asignacion)
+            # Con `al_finalizar_grupo` el grupo pudo haber terminado ya: se publica en este mismo acto.
+            asignacion = self.motor.asegurar_publicacion(uow, asignacion, ahora, grupo=True)
+            return vista_asignacion(asignacion)
+
+
+class ExamenesDisponibles(_Docente):
+    """El punto de entrada del profesor desde el menú principal: qué exámenes tienen sus cursos instalados, sin estar dentro de una clase. Cada uno
+    trae además cuántas veces se ha aplicado y si hay una aplicación abierta, para que «Aplicar» no se ofrezca a ciegas. Sólo lectura."""
+
+    def ejecutar(self, actor: Actor, fuente: str) -> dict:
+        self._autorizar(actor, cat.P_READ)
+        catalogo = self.s.contenido.examenes_disponibles(str(fuente or ""))
+        with self.s.uow() as uow:
+            aplicadas: dict[tuple[str, str], list[dict]] = {}
+            for a in uow.asignaciones.listar():
+                aplicadas.setdefault((a["curso_ref"], a["objeto_ref"]), []).append(a)
+        for curso in catalogo["cursos"]:
+            for examen in curso["examenes"]:
+                previas = aplicadas.get((curso["curso_ref"], examen["objeto_ref"]), [])
+                examen["aplicaciones"] = len(previas)
+                examen["abiertas"] = sum(1 for a in previas if a["estado"] in (*cat.ABIERTAS, cat.PROGRAMADA, cat.BORRADOR))
+        catalogo["servidor_en"] = self.s.reloj.ahora_ms()
+        return catalogo
+
+
+class FichaDelExamen(_Docente):
+    """RF-003 («Selecciona curso → Carga banco de preguntas»): lo que el profesor necesita saber de un examen ANTES de asignarlo —cuántas preguntas tiene el
+    banco, cuántas y cómo las reparte la biblioteca, el tiempo estimado, qué sugiere sobre los resultados— para elegir el número de preguntas y la
+    política. Sólo lectura de la biblioteca; no guarda nada (artículo 14) y no trae ni una pregunta ni una clave."""
+
+    def ejecutar(self, actor: Actor, fuente: str, curso_ref: str, objeto_ref: str) -> dict:
+        self._autorizar(actor, cat.P_READ)
+        curso_ref, objeto_ref = str(curso_ref or "").strip(), str(objeto_ref or "").strip()
+        if not curso_ref or not objeto_ref:
+            raise DatosInvalidos("Faltan `curso_ref` y `objeto_ref`: de qué examen se pide la ficha.")
+        ficha = self.s.contenido.examen(str(fuente or ""), curso_ref, objeto_ref)
+        ajustes, pool = ficha["ajustes"], ficha["pool"]
+        temas = sorted({p["tema_ref"] for p in pool if p.get("tema_ref")})
+        tipos: dict[str, int] = {}
+        for p in pool:
+            tipos[p["tipo"] or "?"] = tipos.get(p["tipo"] or "?", 0) + 1
+        estrategia = ajustes.get("estrategia") or armado_dom.FIXED
+        sugeridas = CrearAsignacion._por_alumno(ajustes, pool) if estrategia == armado_dom.RANDOM_BALANCED else len(pool)
+        tiempo = ajustes.get("tiempo") or {}
+        estimado = sum(int(p.get("estimado_seg") or 0) for p in pool)
+        return {"fuente": ficha["fuente"], "curso_ref": ficha.get("curso_ref") or curso_ref, "curso_version": ficha["curso_version"],
+                "curso_rotulo": ficha.get("curso_rotulo") or "", "objeto_ref": objeto_ref, "titulo": ficha["titulo"], "leccion_ref": ficha.get("leccion_ref") or "",
+                "total_banco": len(pool), "temas": temas, "tipos": tipos, "estrategia": estrategia, "preguntas_sugeridas": sugeridas,
+                "cubrir_todos_los_temas": bool(ajustes.get("cubrir_todos_los_temas")), "mezclar_opciones": bool(ajustes.get("barajar_opciones", True)),
+                "tiempo": {"politica": tiempo.get("politica"), "fijo_seg": tiempo.get("fijo_seg"), "extra_pct": tiempo.get("extra_pct"),
+                           "estimado_banco_seg": estimado},
+                "aprobacion_pct": ajustes.get("aprobacion_pct"), "resultados_sugeridos": ajustes.get("mostrar_resultados") or "",
+                "resultados_por_defecto": self.s.config.resultados_por_defecto, "servidor_en": self.s.reloj.ahora_ms()}
 
 
 # ======================================================================================= consultas

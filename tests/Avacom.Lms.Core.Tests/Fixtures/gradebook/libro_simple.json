@@ -1,0 +1,70 @@
+{
+  "alumnos": [
+    {
+      "agregados": [
+        {
+          "calificaciones": 0,
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "oficial": false,
+          "pendientes": 0,
+          "periodo": "2026",
+          "ponderado": false,
+          "promedio_simple": null,
+          "provisionales": 0,
+          "publicadas": 0
+        }
+      ],
+      "alumno_id": "ac9e22fa-28d8-4439-a298-b11dd7d2b6b7",
+      "celdas": {
+        "79559179-f683-4239-b6f2-506542dea2c9": {
+          "ajustada": false,
+          "calificacion_id": null,
+          "estado": "sin_registro",
+          "estado_simple": "completado",
+          "intentos": {
+            "registrados": 0,
+            "total": 1
+          },
+          "politica_intentos": "ultimo",
+          "presentacion": null,
+          "publicada": false,
+          "puntaje_efectivo": null,
+          "puntaje_original": null,
+          "version": null
+        }
+      },
+      "rotulo": "Ana"
+    }
+  ],
+  "asignaciones": [
+    {
+      "afecta_oficial": true,
+      "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "estado": "activa",
+      "id": "79559179-f683-4239-b6f2-506542dea2c9",
+      "por_revisar": 0,
+      "resultados": "tras_liberar",
+      "tipo_evaluacion": "sumativa",
+      "titulo": "Examen de estados de la materia"
+    }
+  ],
+  "escala": null,
+  "grupo": {
+    "codigo": "P1",
+    "id": "16dfac47-09a4-449b-a2b5-082cb0d5f8d0",
+    "nivel_clave": "preescolar",
+    "nombre": "Párvulos",
+    "periodo": "2026"
+  },
+  "modo": "simple",
+  "politica_intentos": "ultimo",
+  "servidor_en": 1790000000000,
+  "totales": {
+    "alumnos": 1,
+    "asignaciones": 1,
+    "pendientes": 0,
+    "por_revisar": 0,
+    "sin_publicar": 0
+  }
+}

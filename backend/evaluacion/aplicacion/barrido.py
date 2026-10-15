@@ -30,7 +30,7 @@ class _Nodo(_CasoDeUso):
 class BarrerNodo(_Nodo):
     def ejecutar(self) -> dict:
         ahora = self.s.reloj.ahora_ms()
-        resumen = {"asignaciones": 0, "pausados": 0, "entregados": 0, "recalificados": 0, "errores": 0}
+        resumen = {"asignaciones": 0, "pausados": 0, "entregados": 0, "recalificados": 0, "publicadas": 0, "errores": 0}
         for asignacion_id in self._asignaciones_abiertas():
             try:
                 with self.s.uow() as uow:
@@ -39,6 +39,8 @@ class BarrerNodo(_Nodo):
                         continue
                     nueva = self.motor.asegurar_asignacion(uow, fila, ahora)
                     resumen["asignaciones"] += 1 if nueva["estado"] != fila["estado"] else 0
+                    if nueva.get("liberados_en") is not None and fila.get("liberados_en") is None:
+                        resumen["publicadas"] += 1                           # `programada`: el reloj del nodo alcanzó la fecha
             except Exception:   # noqa: BLE001 — una asignación rara no frena al resto del aula
                 log.exception("El barrido no pudo poner al día la asignación %s", asignacion_id)
                 resumen["errores"] += 1
@@ -71,11 +73,29 @@ class BarrerNodo(_Nodo):
             except Exception:   # noqa: BLE001
                 log.exception("El barrido no pudo recalificar el intento %s", intento_id)
                 resumen["errores"] += 1
+        # RF-004: la publicación que la política provoca sola (`programada` al alcanzar su hora con el reloj del nodo; `al_finalizar_grupo` cuando el último
+        # alumno queda resuelto) se persiste aunque nadie pregunte. También sobre asignaciones cerradas: el grupo puede terminar de resolverse después.
+        for asignacion_id in self._con_publicacion_pendiente():
+            try:
+                with self.s.uow() as uow:
+                    fila = uow.asignaciones.por_id(asignacion_id)
+                    if fila is None or fila.get("liberados_en") is not None:
+                        continue
+                    despues = self.motor.asegurar_publicacion(uow, fila, ahora, grupo=True)
+                    resumen["publicadas"] += 1 if despues.get("liberados_en") is not None else 0
+            except Exception:   # noqa: BLE001
+                log.exception("El barrido no pudo publicar los resultados de la asignación %s", asignacion_id)
+                resumen["errores"] += 1
         return resumen
 
     def _asignaciones_abiertas(self) -> list[str]:
         with self.s.uow() as uow:
             return [a["id"] for a in uow.asignaciones.listar(estados=(cat.PROGRAMADA, cat.ACTIVA, cat.ACTIVA_FUERA_DE_PLAZO))]
+
+    def _con_publicacion_pendiente(self) -> list[str]:
+        with self.s.uow() as uow:
+            return [a["id"] for a in uow.asignaciones.listar(estados=(cat.ACTIVA, cat.ACTIVA_FUERA_DE_PLAZO, cat.CERRADA))
+                    if a.get("liberados_en") is None and a.get("resultados") in cat.RESULTADOS_QUE_LIBERA_EL_NODO]
 
     def _corriendo(self) -> list[tuple[str, str]]:
         with self.s.uow() as uow:

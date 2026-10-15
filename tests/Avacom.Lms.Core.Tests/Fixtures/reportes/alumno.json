@@ -1,0 +1,126 @@
+{
+  "alumno": {
+    "id": "86ba7626-ed7c-42f0-aa0a-d3a7acfecee7",
+    "rotulo": "Alumno 01"
+  },
+  "avisos": [],
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790002430000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": true,
+    "integracion": {
+      "equipos": 2,
+      "estado": "incompleta",
+      "motivo_linea": "1 tableta aún no sincroniza",
+      "motivos": [
+        {
+          "codigo": "conexion_perdida",
+          "equipos": 1,
+          "texto": "1 tableta perdió la conexión y aún no envía lo que guardó"
+        }
+      ],
+      "sin_sincronizar": 1,
+      "texto": "1 tableta sin sincronizar"
+    },
+    "texto": "Datos al 21 sep · 09:53 · 1 tableta sin sincronizar"
+  },
+  "generado_en": 1790002430000,
+  "generado_por": {
+    "id": "3013ed4e-9fdf-41ea-a2ab-0e0a3d9c6e58",
+    "rotulo": "Prof. Gómez"
+  },
+  "grupos": [
+    {
+      "clases": [
+        {
+          "asistio": false,
+          "entregadas": 0,
+          "finalizada_en": 1790002430000,
+          "porcentaje_aciertos": null,
+          "recibidas": 0,
+          "sesion_id": "e57f0249-4890-4d7d-a538-f7e20b9f1c8c"
+        },
+        {
+          "asistio": true,
+          "entregadas": 1,
+          "finalizada_en": 1790000030000,
+          "porcentaje_aciertos": 100,
+          "recibidas": 1,
+          "sesion_id": "b457ece7-b59e-40d0-a4a1-a76b196eef5c"
+        }
+      ],
+      "escala": null,
+      "estudios": [
+        {
+          "asignacion_id": "7398ce3e-635f-44bc-a99f-8166bedc8494",
+          "avance_pct": 0,
+          "completada": false,
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "estado": "pendiente",
+          "titulo": "Leer la lección",
+          "vencida": false
+        }
+      ],
+      "evaluaciones": [
+        {
+          "asignacion_id": "2c81d3be-bd4e-4b26-89b5-2dc3ac88e81c",
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "estado": "sin_registro",
+          "estado_asignacion": "activa",
+          "estado_intento": "sin_intento",
+          "estado_simple": "no_iniciado",
+          "presentacion": null,
+          "presento": false,
+          "publicada": false,
+          "simbolo": "vacio",
+          "sin_presentar": false,
+          "titulo": "Examen de los estados"
+        }
+      ],
+      "grupo": {
+        "codigo": "8A",
+        "id": "2dfe055b-7bfc-42fe-9825-904b38666076",
+        "nivel_clave": "",
+        "nombre": "Octavo A",
+        "periodo": "2026"
+      },
+      "modo": "simple",
+      "motivo_de_atencion": "",
+      "resumen": {
+        "actividades_entregadas": 1,
+        "actividades_recibidas": 1,
+        "atencion": [],
+        "avance_estudio": 0,
+        "clases_asistidas": 1,
+        "clases_total": 2,
+        "estudios_completados": 0,
+        "estudios_total": 1,
+        "estudios_vencidos": 0,
+        "evaluaciones_presentadas": 0,
+        "evaluaciones_sin_presentar": 0,
+        "evaluaciones_total": 1,
+        "porcentaje_aciertos": 100,
+        "porcentaje_asistencia": 50,
+        "porcentaje_participacion": 100,
+        "ultima_actividad_en": 1790000030000
+      }
+    }
+  ],
+  "nominal": true,
+  "objetivos": {
+    "disponible": false,
+    "texto": "Aún no disponible: el dominio por objetivo llega con el módulo de objetivos."
+  },
+  "privacidad": {
+    "alumnos": 1,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790002430000,
+  "tipo": "alumno",
+  "titulo": "Reporte del alumno"
+}

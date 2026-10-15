@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.CalificacionesPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#F1F1F1"
+    Shell.NavBarIsVisible="False"
+    SizeChanged="OnPageSizeChanged">
+    <!-- Calificaciones (MOD-011 · Gradebook): el libro de calificaciones de un grupo. Arriba: título y acciones. Debajo, el aviso de lo que pasó y, si el nodo no responde, el
+         banner «Sin conexión con el nodo» (lo último que se veía se conserva). Cuerpo: nivel → periodo → grupo (fichas que se tocan), un buscador OPCIONAL de estudiante con el
+         filtro de evaluación, el resumen del grupo y la cuadrícula alumnos × evaluaciones, con desplazamiento horizontal y la columna del alumno siempre a la vista. Nada exige
+         teclado: el buscador es un extra. El nodo es la fuente de todo número; la pantalla sólo lo enseña. -->
+    <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
+        <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
+            <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                <Label Text="CALIFICACIONES" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Libro de calificaciones" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Elige un grupo para ver lo que lleva cada estudiante en cada evaluación." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+            </VerticalStackLayout>
+            <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
+        </Grid>
+        <VerticalStackLayout x:Name="AvisoHost" Grid.Row="1" HorizontalOptions="Center" WidthRequest="1280" Spacing="8">
+            <VerticalStackLayout x:Name="ConexionHost" Spacing="8" />
+            <VerticalStackLayout x:Name="ResultadoHost" Spacing="8" />
+        </VerticalStackLayout>
+        <ScrollView x:Name="Desplazable" Grid.Row="2">
+            <VerticalStackLayout x:Name="Cuerpo" HorizontalOptions="Center" WidthRequest="1280" Spacing="14" Padding="0,0,0,40">
+                <VerticalStackLayout x:Name="SelectorHost" Spacing="10" />
+                <!-- El buscador (texto opcional) y el filtro de evaluación viven fuera de lo que se repinta: lo escrito y lo elegido sobreviven a cada lectura. -->
+                <ui:SearchFilterBar x:Name="Buscador" Placeholder="Buscar un estudiante (opcional)" IsVisible="False" />
+                <VerticalStackLayout x:Name="ContenidoHost" Spacing="14" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

@@ -1,0 +1,17 @@
+{
+  "comentario": "Explica el cambio de estado.",
+  "criterios": [],
+  "intento_id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+  "listo_para_confirmar": false,
+  "numero": 1,
+  "pendientes": [
+    "l3-q12"
+  ],
+  "porcentaje_provisional": 94.44,
+  "pregunta_ref": "l3-q5",
+  "puntaje": 2.0,
+  "puntaje_maximo": null,
+  "reintento": false,
+  "servidor_en": 1790000000000,
+  "tipo": "manual"
+}

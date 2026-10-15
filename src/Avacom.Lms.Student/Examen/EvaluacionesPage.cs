@@ -46,10 +46,16 @@ public sealed class EvaluacionesPage : ContentPage
         cambiar.Tapped += (_, _) => CambiarDePersona();
         _quien.GestureRecognizers.Add(cambiar);
 
-        var barra = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14, Padding = new Thickness(14, 12, 24, 4) };
+        // MOD-011: lo que el profesor dejó ver de cada evaluación (estado y símbolos en modo simple; la nota sólo cuando se publicó).
+        var resultados = Ds.Boton("Mis resultados", Ds.Rango.Secondary, async (_, _) => await Shell.Current.GoToAsync("resultados"), 52);
+        resultados.FontSize = 16;
+        resultados.AutomationId = "evals-resultados";
+
+        var barra = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14, Padding = new Thickness(14, 12, 24, 4) };
         barra.Add(volver, 0, 0);
         barra.Add(titulo, 1, 0);
-        barra.Add(_quien, 2, 0);
+        barra.Add(Ds.Capsula(resultados), 2, 0);
+        barra.Add(_quien, 3, 0);
 
         var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)] };
         raiz.Add(barra, 0, 0);
@@ -114,7 +120,8 @@ public sealed class EvaluacionesPage : ContentPage
                 return;
             }
             RelojNodo.Aprender(mis.ServidorEn);
-            var firma = string.Join("|", mis.Pendientes.Concat(mis.Recientes).Select(e => $"{e.Id}:{e.Estado}:{e.PuedeComenzar}:{e.Motivo}:{e.MiIntento?.Estado}:{e.MiIntento?.ResultadoDisponible}"));
+            var firma = string.Join("|", mis.Pendientes.Concat(mis.Recientes).Select(e =>
+                $"{e.Id}:{e.Estado}:{e.PuedeComenzar}:{e.Motivo}:{e.MiIntento?.Estado}:{e.MiIntento?.ResultadoDisponible}:{e.Resultados}:{e.PublicarEn}:{QuePuedeHacer(e).Estado}"));
             if (firma == _firma) return;                // lo mismo que ya se ve: no se repinta (parpadea y deja a la accesibilidad sin el botón)
             _firma = firma;
             Pintar(ConstruirLista(mis), firma);
@@ -165,40 +172,23 @@ public sealed class EvaluacionesPage : ContentPage
         return pila;
     }
 
-    private enum Accion { Comenzar, Continuar, VerResultado, Nada }
-
-    /// <summary>Qué puede hacer el alumno con esta evaluación y qué se le dice, siempre en una frase.</summary>
-    private static (Accion Accion, string Boton, string Frase) QuePuedeHacer(EvaluacionDelAlumno e)
+    /// <summary>Qué puede hacer el alumno con esta evaluación y qué se le dice (RF-006): lo decide <see cref="EstadoDeEvaluacion"/> con lo que dice el nodo y lo que
+    /// esta tableta aún tiene guardado en su cola cifrada para ese intento.</summary>
+    private static VistaDeEvaluacion QuePuedeHacer(EvaluacionDelAlumno e)
     {
-        var intento = e.MiIntento;
-        if (intento is not null)
+        var pendientes = 0;
+        if (e.MiIntento is { } intento)
         {
-            switch (intento.Estado)
-            {
-                case EstadosIntento.EnCurso or EstadosIntento.EnCursoFueraDePlazo or EstadosIntento.Pausado or EstadosIntento.Restaurando:
-                    return (Accion.Continuar, "Continuar", EstadosIntento.Suspendido(intento.Estado) ? "Tu examen está en pausa: avisa a tu profesor" : "Tienes un examen en curso");
-                case EstadosIntento.Entregado or EstadosIntento.EnRevision:
-                    return (Accion.Nada, string.Empty, "Entregado · tu profesor publicará los resultados");
-                case EstadosIntento.Calificado:
-                    return intento.ResultadoDisponible ? (Accion.VerResultado, "Ver resultado", "Ya puedes ver tu resultado") : (Accion.Nada, string.Empty, "Entregado · tu profesor publicará los resultados");
-                case EstadosIntento.Anulado:
-                    return (Accion.Nada, string.Empty, "Este intento no cuenta: habla con tu profesor");
-            }
+            try { pendientes = Sesion.ColaDeExamen.CantidadPendiente(intento.Id); }
+            catch (Exception ex) { RegistroDeFallos.Escribir("student", "EvaluacionesPage.Pendientes", ex); }
         }
-        if (e.PuedeComenzar) return (Accion.Comenzar, "Comenzar", "Lee las condiciones antes de empezar");
-        return e.Motivo switch
-        {
-            "espera_admision" => (Accion.Comenzar, "Ver", "Esperando que tu profesor decida sobre esta tableta"),
-            "rechazada" => (Accion.Nada, string.Empty, "Tu profesor no admitió esta tableta: pídele que te indique cómo continuar"),
-            "no_abierta" => (Accion.Nada, string.Empty, e.Estado == "programada" && e.AbreEn is { } abre ? $"Abre {ExamenAyudas.Hora(abre)}" : "Este examen ya cerró"),
-            "ya_entregado" or "intentos_agotados" => (Accion.Nada, string.Empty, "Ya presentaste este examen"),
-            _ => (Accion.Nada, string.Empty, "Por ahora no puedes presentarlo"),
-        };
+        return EstadoDeEvaluacion.Calcular(e, pendientes);
     }
 
     private View Tarjeta(EvaluacionDelAlumno e)
     {
-        var (accion, textoBoton, frase) = QuePuedeHacer(e);
+        var vista = QuePuedeHacer(e);
+        var (accion, textoBoton, frase) = (vista.Accion, vista.Boton, vista.Frase);
         var textos = new VerticalStackLayout { Spacing = 4, VerticalOptions = LayoutOptions.Center };
         var titulo = Ds.Cuerpo(e.Titulo, 20, Ds.Tinta);
         titulo.FontFamily = Ds.FuenteMedia;
@@ -215,9 +205,10 @@ public sealed class EvaluacionesPage : ContentPage
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 16, AutomationId = $"eval-{e.Id}" };
         fila.Add(Ds.IconoCategoria("examen", 52), 0, 0);
         fila.Add(textos, 1, 0);
-        if (accion != Accion.Nada)
+        SemanticProperties.SetDescription(fila, $"{e.Titulo}. {frase}");
+        if (vista.TieneBoton)
         {
-            var boton = Ds.Boton(textoBoton, accion == Accion.VerResultado ? Ds.Rango.Secondary : Ds.Rango.Primary, async (_, _) => await Abrir(e, accion), 60, 170);
+            var boton = Ds.Boton(textoBoton, accion == AccionDeEvaluacion.VerResultado ? Ds.Rango.Secondary : Ds.Rango.Primary, async (_, _) => await Abrir(e, accion), 60, 170);
             boton.AutomationId = $"eval-boton-{e.Id}";
             boton.VerticalOptions = LayoutOptions.Center;
             fila.Add(Ds.Capsula(boton), 2, 0);
@@ -225,12 +216,12 @@ public sealed class EvaluacionesPage : ContentPage
         return Ds.Tarjeta(fila, Ds.RadioTarjeta, new Thickness(20, 16));
     }
 
-    private static async Task Abrir(EvaluacionDelAlumno e, Accion accion)
+    private static async Task Abrir(EvaluacionDelAlumno e, AccionDeEvaluacion accion)
     {
-        if (accion == Accion.VerResultado && e.MiIntento is { } intento)
+        if (accion == AccionDeEvaluacion.VerResultado && e.MiIntento is { } intento)
             await Shell.Current.GoToAsync($"examen-entrega?intento={Uri.EscapeDataString(intento.Id)}");
         else
-            await Shell.Current.GoToAsync($"examen-antesala?asignacion={Uri.EscapeDataString(e.Id)}&reanudar={(accion == Accion.Continuar ? 1 : 0)}");
+            await Shell.Current.GoToAsync($"examen-antesala?asignacion={Uri.EscapeDataString(e.Id)}&reanudar={(accion == AccionDeEvaluacion.Continuar ? 1 : 0)}");
     }
 
     // ----------------------------------------------------------------------------- ¿Quién eres?

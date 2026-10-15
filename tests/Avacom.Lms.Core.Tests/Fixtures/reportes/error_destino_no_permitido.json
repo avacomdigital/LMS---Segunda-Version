@@ -1,0 +1,6 @@
+{
+  "codigo": "destino_no_permitido",
+  "destino_tipo": "extraible",
+  "detail": "El administrador del colegio no permite guardar reportes en memorias extraíbles. Elige una carpeta de este equipo o de la red.",
+  "permiso": "reports.export"
+}

@@ -138,6 +138,14 @@ public sealed class ExamenAntesalaPage : ContentPage
         _contenido.Add(hechos);
         if (a.Asignacion.LimiteEn is { } limite)
             _contenido.Add(Ds.Secundario($"Fecha límite: {ExamenAyudas.Hora(limite)}", 16));
+        if (!string.IsNullOrWhiteSpace(a.Asignacion.Descripcion))
+            _contenido.Add(Ds.Cuerpo(a.Asignacion.Descripcion!, 16, Ds.TintaMedia));
+        // RF-004: el alumno sabe desde antes de empezar CUÁNDO verá su resultado (nunca cuál es).
+        var publicacion = Ds.Secundario("Resultado: " + EstadoDeEvaluacion.CuandoSePublica(
+            new EvaluacionDelAlumno(a.Asignacion.Id, a.Asignacion.Titulo, a.Asignacion.CursoRotulo, a.Asignacion.Estado, string.Empty, null, a.Asignacion.LimiteEn,
+                                    a.Asignacion.Plazo, null, a.Asignacion.Preguntas, a.PuedeComenzar, a.Motivo, a.MiIntento, a.Asignacion.Resultados, a.Asignacion.PublicarEn)) + ".", 15);
+        publicacion.AutomationId = "antesala-publicacion";
+        _contenido.Add(publicacion);
 
         // Las condiciones: el texto obligatorio del nivel (JRN-010). El alumno sabe SIEMPRE bajo qué condiciones presenta.
         var condiciones = a.Condiciones;

@@ -1,0 +1,208 @@
+{
+  "alumnos": [
+    {
+      "alumno": "Alumno 01",
+      "alumno_id": "86ba7626-ed7c-42f0-aa0a-d3a7acfecee7",
+      "atencion": [],
+      "clases_asistidas": 1,
+      "clases_total": 2,
+      "estudios_completados": 0,
+      "estudios_total": 1,
+      "evaluaciones_presentadas": 0,
+      "evaluaciones_sin_presentar": 0,
+      "evaluaciones_total": 1,
+      "motivo": "",
+      "porcentaje_aciertos": 100,
+      "porcentaje_participacion": 100
+    },
+    {
+      "alumno": "Alumno 02",
+      "alumno_id": "b75de8f8-e422-4eb9-ba99-81d0a2562304",
+      "atencion": [],
+      "clases_asistidas": 1,
+      "clases_total": 2,
+      "estudios_completados": 0,
+      "estudios_total": 1,
+      "evaluaciones_presentadas": 0,
+      "evaluaciones_sin_presentar": 0,
+      "evaluaciones_total": 1,
+      "motivo": "",
+      "porcentaje_aciertos": 44.44,
+      "porcentaje_participacion": 100
+    },
+    {
+      "alumno": "Alumno 03",
+      "alumno_id": "5520435a-cd34-4be1-8fec-fae4ef9431f5",
+      "atencion": [],
+      "clases_asistidas": 1,
+      "clases_total": 2,
+      "estudios_completados": 0,
+      "estudios_total": 1,
+      "evaluaciones_presentadas": 0,
+      "evaluaciones_sin_presentar": 0,
+      "evaluaciones_total": 1,
+      "motivo": "",
+      "porcentaje_aciertos": null,
+      "porcentaje_participacion": 0
+    },
+    {
+      "alumno": "Alumno 04",
+      "alumno_id": "b0ec626c-7bd5-401c-b8e2-4a9e36720bc6",
+      "atencion": [],
+      "clases_asistidas": 1,
+      "clases_total": 2,
+      "estudios_completados": 0,
+      "estudios_total": 1,
+      "evaluaciones_presentadas": 0,
+      "evaluaciones_sin_presentar": 0,
+      "evaluaciones_total": 1,
+      "motivo": "",
+      "porcentaje_aciertos": 100,
+      "porcentaje_participacion": 100
+    },
+    {
+      "alumno": "Alumno 05",
+      "alumno_id": "21ba5549-076f-46a8-9c95-6dffdafbbff9",
+      "atencion": [],
+      "clases_asistidas": 1,
+      "clases_total": 2,
+      "estudios_completados": 0,
+      "estudios_total": 1,
+      "evaluaciones_presentadas": 0,
+      "evaluaciones_sin_presentar": 0,
+      "evaluaciones_total": 1,
+      "motivo": "",
+      "porcentaje_aciertos": null,
+      "porcentaje_participacion": 0
+    },
+    {
+      "alumno": "Alumno 06",
+      "alumno_id": "5d34c528-2e83-4c77-a51b-50b927522df3",
+      "atencion": [],
+      "clases_asistidas": 1,
+      "clases_total": 2,
+      "estudios_completados": 0,
+      "estudios_total": 1,
+      "evaluaciones_presentadas": 0,
+      "evaluaciones_sin_presentar": 0,
+      "evaluaciones_total": 1,
+      "motivo": "",
+      "porcentaje_aciertos": 100,
+      "porcentaje_participacion": 100
+    },
+    {
+      "alumno": "Juan P.",
+      "alumno_id": "eae2a376-31b0-4ea2-9611-45e73b9ce2a1",
+      "atencion": [],
+      "clases_asistidas": 1,
+      "clases_total": 2,
+      "estudios_completados": 0,
+      "estudios_total": 1,
+      "evaluaciones_presentadas": 0,
+      "evaluaciones_sin_presentar": 0,
+      "evaluaciones_total": 1,
+      "motivo": "",
+      "porcentaje_aciertos": 0,
+      "porcentaje_participacion": 100
+    }
+  ],
+  "atencion": [],
+  "avisos": [],
+  "clases": [
+    {
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "finalizada_en": 1790002430000,
+      "incompleta": true,
+      "iniciada_en": 1790002430000,
+      "leccion_rotulo": "Los tres estados de la materia",
+      "participantes": 2,
+      "promedio_aciertos": 100,
+      "promedio_participacion": 50,
+      "sesion_id": "e57f0249-4890-4d7d-a538-f7e20b9f1c8c"
+    },
+    {
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "finalizada_en": 1790000030000,
+      "incompleta": false,
+      "iniciada_en": 1790000000000,
+      "leccion_rotulo": "Los tres estados de la materia",
+      "participantes": 5,
+      "promedio_aciertos": 61.11,
+      "promedio_participacion": 80,
+      "sesion_id": "b457ece7-b59e-40d0-a4a1-a76b196eef5c"
+    }
+  ],
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790002430000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": true,
+    "integracion": {
+      "equipos": 7,
+      "estado": "incompleta",
+      "motivo_linea": "1 tableta aún no sincroniza",
+      "motivos": [
+        {
+          "codigo": "conexion_perdida",
+          "equipos": 1,
+          "texto": "1 tableta perdió la conexión y aún no envía lo que guardó"
+        }
+      ],
+      "sin_sincronizar": 1,
+      "texto": "1 tableta sin sincronizar"
+    },
+    "texto": "Datos al 21 sep · 09:53 · 1 tableta sin sincronizar"
+  },
+  "escala": null,
+  "evaluaciones": [
+    {
+      "alumnos": 7,
+      "asignacion_id": "2c81d3be-bd4e-4b26-89b5-2dc3ac88e81c",
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "estado": "activa",
+      "pendientes": 0,
+      "por_revisar": 0,
+      "presentaron": 0,
+      "publicadas": 0,
+      "titulo": "Examen de los estados"
+    }
+  ],
+  "generado_en": 1790002430000,
+  "generado_por": {
+    "id": "3013ed4e-9fdf-41ea-a2ab-0e0a3d9c6e58",
+    "rotulo": "Prof. Gómez"
+  },
+  "grupo": {
+    "codigo": "8A",
+    "id": "2dfe055b-7bfc-42fe-9825-904b38666076",
+    "nivel_clave": "",
+    "nombre": "Octavo A",
+    "periodo": "2026"
+  },
+  "modo": "simple",
+  "nominal": true,
+  "objetivos": {
+    "disponible": false,
+    "texto": "Aún no disponible: el dominio por objetivo llega con el módulo de objetivos."
+  },
+  "privacidad": {
+    "alumnos": 7,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790002430000,
+  "tipo": "grupo",
+  "titulo": "Reporte del grupo",
+  "totales": {
+    "alumnos": 7,
+    "clases": 2,
+    "en_atencion": 0,
+    "estudios": 1,
+    "evaluaciones": 1,
+    "promedio_aciertos": 68.89,
+    "promedio_participacion": 71.43
+  }
+}

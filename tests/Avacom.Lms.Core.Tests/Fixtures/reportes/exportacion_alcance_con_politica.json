@@ -1,0 +1,73 @@
+{
+  "advertencia": "El archivo incluirá nombres de alumnos. Una vez fuera de este equipo, el colegio ya no controla quién lo abre.",
+  "alumnos": 7,
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790003390000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": false,
+    "integracion": {
+      "equipos": 7,
+      "estado": "completa",
+      "motivo_linea": "",
+      "motivos": [],
+      "sin_sincronizar": 0,
+      "texto": "Todo sincronizado"
+    },
+    "texto": "Datos al 21 sep · 10:09"
+  },
+  "filas": 11,
+  "formato": "xlsx",
+  "formatos": [
+    "xlsx",
+    "csv"
+  ],
+  "incluye": [
+    "asistencia",
+    "participación",
+    "aciertos",
+    "evaluaciones",
+    "estudio"
+  ],
+  "nombre_sugerido": "reporte-grupo-8A-2026-09-21-1009.xlsx",
+  "nominal": true,
+  "politica": {
+    "exigir_razon": true,
+    "extraibles_permitidos": false,
+    "razones": [
+      {
+        "codigo": "entrega_a_familias",
+        "etiqueta": "Entrega a las familias"
+      },
+      {
+        "codigo": "entrega_a_coordinacion",
+        "etiqueta": "Entrega a coordinación o secretaría"
+      },
+      {
+        "codigo": "reunion_de_equipo",
+        "etiqueta": "Reunión del equipo docente"
+      },
+      {
+        "codigo": "respaldo_del_profesor",
+        "etiqueta": "Respaldo del propio profesor"
+      },
+      {
+        "codigo": "otra_gestion_escolar",
+        "etiqueta": "Otra gestión escolar"
+      }
+    ]
+  },
+  "privacidad": {
+    "alumnos": 7,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790003390000,
+  "texto_alcance": "Vas a guardar el reporte del grupo 8A (7 alumnos, asistencia, participación, aciertos, evaluaciones y estudio, datos al 21 sep · 10:09)",
+  "tipo": "grupo",
+  "titulo": "Reporte del grupo",
+  "umbral_aplicado": false
+}

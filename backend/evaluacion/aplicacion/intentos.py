@@ -330,8 +330,11 @@ class PreguntasDelIntento(_Alumno):
             if intento["estado"] not in cat.ACEPTAN_RESPUESTAS:
                 raise TransicionInvalida(f"El intento está «{intento['estado']}»: ya no se muestran sus preguntas.", estado=intento["estado"])
             self.sesion_de(ctx, intento)
+            # RF-002.5/6: las opciones se barajan con la semilla del intento (siempre la misma: el alumno recupera exactamente su examen) sólo si la
+            # asignación lo pide; sin `mezclar_opciones` la fuente las entrega en su orden y la clave sigue viviendo en la biblioteca.
+            semilla = intento["semilla"] if asignacion.get("mezclar_opciones", True) else ""
             vista = self.s.contenido.preguntas(asignacion["fuente_curso"], asignacion["curso_ref"], intento["curso_version"], asignacion["objeto_ref"],
-                                               list(intento["armado"]), intento["semilla"], intento_id=intento["id"], dispositivo=ctx.huella,
+                                               list(intento["armado"]), semilla, intento_id=intento["id"], dispositivo=ctx.huella,
                                                alumno_id=ctx.alumno_id)
             respondidas = {r["pregunta_ref"]: {"respuesta": r["respuesta"], "secuencia": r["secuencia"]} for r in intento["respuestas"]}
             return {"intento_id": intento["id"], "titulo": vista.get("titulo") or asignacion["titulo"], "instrucciones": vista.get("instrucciones"),
@@ -390,20 +393,32 @@ class EntregarIntento(_Alumno):
             return self._cuerpo(intento, asignacion, ahora)
 
     def _cuerpo(self, intento: dict, asignacion: dict, ahora: int) -> dict:
-        """PAN-123: confirmación de la entrega y qué sigue. NUNCA dice «calificado» mientras quede un reactivo por revisar."""
+        """PAN-123: confirmación de la entrega y qué sigue, según la POLÍTICA de publicación (RF-004). NUNCA dice «calificado» mientras quede un reactivo
+        por revisar, y nunca revela la nota: sólo cuándo podrá verla."""
+        politica = asignacion["resultados"]
+        disponible = self.motor.resultado_disponible(asignacion, intento)
         if intento["estado"] == cat.EN_REVISION or intento.get("requiere_revision"):
             que_sigue = "en_revision"
-        elif asignacion["resultados"] == cat.NUNCA:
+        elif politica == cat.NUNCA:
             que_sigue = "sin_resultado"
-        elif asignacion["resultados"] == cat.AL_ENTREGAR and intento["estado"] == cat.CALIFICADO:
-            que_sigue = "resultado_al_liberar" if not self.motor.resultado_disponible(asignacion, intento) else "sin_resultado"
+        elif disponible:
+            que_sigue = "resultado_disponible"
+        elif self.motor.resultado_retenido_por(asignacion, intento) is not None:
+            que_sigue = "resultado_en_libro"                # la política ya lo mostraría, pero la calificación aún no está publicada en el libro
+        elif politica == cat.AL_ENTREGAR:
+            que_sigue = "resultado_pronto"                  # inmediata, pero la biblioteca aún no puso la nota (calificación pendiente)
+        elif politica == cat.RESULTADOS_PROGRAMADOS:
+            que_sigue = "resultado_programado"
+        elif politica == cat.AL_FINALIZAR_GRUPO:
+            que_sigue = "resultado_al_terminar_grupo"
         else:
             que_sigue = "resultado_al_liberar"
         return {"intento": {"id": intento["id"], "asignacion_id": intento["asignacion_id"], "estado": intento["estado"], "numero": intento["numero"],
                             "respondidas": len(intento["respuestas"]), "total": len(intento["armado"]), "fuera_de_plazo": bool(intento.get("fuera_de_plazo"))},
                 "entregado_en": intento.get("entregado_en"), "origen_entrega": intento.get("origen_entrega") or "",
                 "que_sigue": {"codigo": que_sigue, "texto": cat.QUE_SIGUE[que_sigue]},
-                "resultado_disponible": self.motor.resultado_disponible(asignacion, intento), "servidor_en": ahora}
+                "resultados": politica, "publicar_en": asignacion.get("publicar_en"),
+                "resultado_disponible": disponible, "servidor_en": ahora}
 
 
 # ========================================================================= el profesor sobre el intento
@@ -495,5 +510,6 @@ class AnularIntento(_Docente):
             uow.auditoria.registrar(actor.id, cat.A_INTENTO_ANULADO, "m10_intento_formal", intento["id"], anterior={"estado": anterior},
                                     nuevo={"estado": cat.ANULADO, "anulado_por": intento["anulado_por"]}, motivo=intento["motivo_anulacion"])
             self.motor.avisar(uow, asignacion, "evaluacion_panel", intento_id=intento["id"])
+            self.motor.asegurar_publicacion(uow, asignacion, ahora, grupo=True)      # un intento anulado queda resuelto (`al_finalizar_grupo`)
             return {"intento_id": intento["id"], "estado": intento["estado"], "anulado_por": intento["anulado_por"], "anulado_en": intento["anulado_en"],
                     "motivo": intento["motivo_anulacion"]}

@@ -232,21 +232,6 @@
         "elementos": [
           {
             "media_ref": null,
-            "ref": "x-liquid",
-            "texto": "Líquido",
-            "texto_alternativo": null,
-            "tramos": [
-              {
-                "cursiva": false,
-                "matematica": false,
-                "negrita": false,
-                "texto": "Líquido"
-              }
-            ],
-            "url": null
-          },
-          {
-            "media_ref": null,
             "ref": "x-gas",
             "texto": "Gas",
             "texto_alternativo": null,
@@ -271,6 +256,21 @@
                 "matematica": false,
                 "negrita": false,
                 "texto": "Sólido"
+              }
+            ],
+            "url": null
+          },
+          {
+            "media_ref": null,
+            "ref": "x-liquid",
+            "texto": "Líquido",
+            "texto_alternativo": null,
+            "tramos": [
+              {
+                "cursiva": false,
+                "matematica": false,
+                "negrita": false,
+                "texto": "Líquido"
               }
             ],
             "url": null
@@ -378,21 +378,6 @@
         "opciones": [
           {
             "media_ref": null,
-            "opcion_ref": "c",
-            "texto": "Vapor de agua",
-            "texto_alternativo": null,
-            "tramos": [
-              {
-                "cursiva": false,
-                "matematica": false,
-                "negrita": false,
-                "texto": "Vapor de agua"
-              }
-            ],
-            "url": null
-          },
-          {
-            "media_ref": null,
             "opcion_ref": "a",
             "texto": "Aceite de cocina",
             "texto_alternativo": null,
@@ -408,15 +393,15 @@
           },
           {
             "media_ref": null,
-            "opcion_ref": "d",
-            "texto": "Sal",
+            "opcion_ref": "c",
+            "texto": "Vapor de agua",
             "texto_alternativo": null,
             "tramos": [
               {
                 "cursiva": false,
                 "matematica": false,
                 "negrita": false,
-                "texto": "Sal"
+                "texto": "Vapor de agua"
               }
             ],
             "url": null
@@ -432,6 +417,21 @@
                 "matematica": false,
                 "negrita": false,
                 "texto": "Jugo de naranja"
+              }
+            ],
+            "url": null
+          },
+          {
+            "media_ref": null,
+            "opcion_ref": "d",
+            "texto": "Sal",
+            "texto_alternativo": null,
+            "tramos": [
+              {
+                "cursiva": false,
+                "matematica": false,
+                "negrita": false,
+                "texto": "Sal"
               }
             ],
             "url": null
@@ -486,15 +486,15 @@
         "opciones": [
           {
             "media_ref": null,
-            "opcion_ref": "b",
-            "texto": "Condensación",
+            "opcion_ref": "a",
+            "texto": "Evaporación",
             "texto_alternativo": null,
             "tramos": [
               {
                 "cursiva": false,
                 "matematica": false,
                 "negrita": false,
-                "texto": "Condensación"
+                "texto": "Evaporación"
               }
             ],
             "url": null
@@ -516,15 +516,15 @@
           },
           {
             "media_ref": null,
-            "opcion_ref": "a",
-            "texto": "Evaporación",
+            "opcion_ref": "b",
+            "texto": "Condensación",
             "texto_alternativo": null,
             "tramos": [
               {
                 "cursiva": false,
                 "matematica": false,
                 "negrita": false,
-                "texto": "Evaporación"
+                "texto": "Condensación"
               }
             ],
             "url": null
@@ -639,36 +639,6 @@
         "derecha": [
           {
             "media_ref": null,
-            "ref": "r-condensation",
-            "texto": "Condensación",
-            "texto_alternativo": null,
-            "tramos": [
-              {
-                "cursiva": false,
-                "matematica": false,
-                "negrita": false,
-                "texto": "Condensación"
-              }
-            ],
-            "url": null
-          },
-          {
-            "media_ref": null,
-            "ref": "r-solidification",
-            "texto": "Solidificación",
-            "texto_alternativo": null,
-            "tramos": [
-              {
-                "cursiva": false,
-                "matematica": false,
-                "negrita": false,
-                "texto": "Solidificación"
-              }
-            ],
-            "url": null
-          },
-          {
-            "media_ref": null,
             "ref": "r-melting",
             "texto": "Fusión",
             "texto_alternativo": null,
@@ -693,6 +663,36 @@
                 "matematica": false,
                 "negrita": false,
                 "texto": "Evaporación"
+              }
+            ],
+            "url": null
+          },
+          {
+            "media_ref": null,
+            "ref": "r-solidification",
+            "texto": "Solidificación",
+            "texto_alternativo": null,
+            "tramos": [
+              {
+                "cursiva": false,
+                "matematica": false,
+                "negrita": false,
+                "texto": "Solidificación"
+              }
+            ],
+            "url": null
+          },
+          {
+            "media_ref": null,
+            "ref": "r-condensation",
+            "texto": "Condensación",
+            "texto_alternativo": null,
+            "tramos": [
+              {
+                "cursiva": false,
+                "matematica": false,
+                "negrita": false,
+                "texto": "Condensación"
               }
             ],
             "url": null
@@ -857,21 +857,6 @@
         "elementos": [
           {
             "media_ref": null,
-            "ref": "y-gas",
-            "texto": "Vapor",
-            "texto_alternativo": null,
-            "tramos": [
-              {
-                "cursiva": false,
-                "matematica": false,
-                "negrita": false,
-                "texto": "Vapor"
-              }
-            ],
-            "url": null
-          },
-          {
-            "media_ref": null,
             "ref": "y-solid",
             "texto": "Hielo",
             "texto_alternativo": null,
@@ -881,6 +866,21 @@
                 "matematica": false,
                 "negrita": false,
                 "texto": "Hielo"
+              }
+            ],
+            "url": null
+          },
+          {
+            "media_ref": null,
+            "ref": "y-gas",
+            "texto": "Vapor",
+            "texto_alternativo": null,
+            "tramos": [
+              {
+                "cursiva": false,
+                "matematica": false,
+                "negrita": false,
+                "texto": "Vapor"
               }
             ],
             "url": null
@@ -984,10 +984,10 @@
     }
   ],
   "intento": {
-    "alumno_id": "08337623-9bb9-46d4-afc8-a069cc15170b",
+    "alumno_id": "1cf252f6-48a2-4559-822f-282dadf7550f",
     "alumno_rotulo": "Juan P.",
     "estado": "en_revision_docente",
-    "id": "d7ad1e9a-f341-452c-95d1-608d63877ada",
+    "id": "b29e234f-8570-4ad5-bc39-a120f761e0f1",
     "pendientes": [
       "l3-q5",
       "l3-q12"

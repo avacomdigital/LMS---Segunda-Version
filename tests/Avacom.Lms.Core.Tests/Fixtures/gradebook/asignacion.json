@@ -1,0 +1,105 @@
+{
+  "alumnos": [
+    {
+      "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+      "intentos": [
+        {
+          "calificacion": {
+            "aciertos": 10,
+            "actualizada_en": 1790000000000,
+            "adaptacion": "",
+            "ajustada": false,
+            "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+            "asignacion_id": "529fa4a2-837f-4ba8-a03c-0f974c2f7c59",
+            "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+            "desempeno_docente": "",
+            "desempeno_motivo": "",
+            "desfase_con_evaluacion": false,
+            "estado": "definitiva",
+            "evaluador_id": "sistema",
+            "grupo_id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
+            "id": "bf569d30-c6a2-4b17-8999-3937d07c136d",
+            "intento_id": "a7299316-5ab2-4e1f-a80e-eacf54b5918b",
+            "nivel_clave": "secundaria",
+            "numero_intento": 1,
+            "origen": "automatica",
+            "periodo": "2026",
+            "preguntas": 12,
+            "presentacion": {
+              "aprobacion": {
+                "cumple_criterio": true
+              },
+              "desempeno": {
+                "clave": "basico",
+                "nivel": "Básico",
+                "origen": "calculo",
+                "tramo": 2
+              },
+              "escala": {
+                "codigo": "co-1-5",
+                "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+                "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
+                "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+                "numero": 1,
+                "tipo": "numerica",
+                "version_id": "e0521e03-c62f-449b-936f-f2630c3accdb"
+              },
+              "interno": 71.43,
+              "presentada": {
+                "clave": "3.8",
+                "etiqueta": "3.8",
+                "valor": 3.8
+              },
+              "provisional": false
+            },
+            "publicada": true,
+            "publicada_en": 1790000000000,
+            "publicada_por": "1c51b3c6-cbf1-4111-8641-0b53229fc024",
+            "puntaje_efectivo": 71.43,
+            "puntaje_original": 71.43,
+            "registrada_en": 1790000000000,
+            "regla_puntuacion": "mod10.porcentaje.v1",
+            "retroalimentacion": {},
+            "version": 2
+          },
+          "calificacion_pendiente": false,
+          "calificado_por": "sistema",
+          "entregado_en": 1790000000000,
+          "estado": "calificado",
+          "id": "a7299316-5ab2-4e1f-a80e-eacf54b5918b",
+          "numero": 1,
+          "porcentaje": 71.4286,
+          "requiere_revision": false
+        }
+      ],
+      "resultado": {
+        "calificacion_aplicable_id": "bf569d30-c6a2-4b17-8999-3937d07c136d",
+        "estado": "definitivo",
+        "estado_simple": "completado",
+        "intentos_registrados": 1,
+        "intentos_total": 1,
+        "politica_intentos": "ultimo",
+        "publicada": true,
+        "puntaje_aplicable": 71.43
+      },
+      "rotulo": "Juan P."
+    }
+  ],
+  "asignacion": {
+    "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+    "estado": "activa",
+    "grupo_id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
+    "id": "529fa4a2-837f-4ba8-a03c-0f974c2f7c59",
+    "intentos_permitidos": 1,
+    "resultados": "tras_liberar",
+    "titulo": "Examen de estados de la materia"
+  },
+  "clasificacion": {
+    "afecta_oficial": true,
+    "definida": false,
+    "objetivos": [],
+    "tipo_evaluacion": "sumativa"
+  },
+  "politica_intentos": "ultimo",
+  "servidor_en": 1790000000000
+}

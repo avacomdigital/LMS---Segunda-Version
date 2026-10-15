@@ -1,0 +1,88 @@
+{
+  "calificacion": {
+    "aciertos": 11,
+    "actualizada_en": 1790000000000,
+    "adaptacion": "",
+    "ajustada": true,
+    "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+    "asignacion_id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
+    "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+    "desempeno_docente": "",
+    "desempeno_motivo": "",
+    "desfase_con_evaluacion": false,
+    "estado": "revisada",
+    "evaluador_id": "1c51b3c6-cbf1-4111-8641-0b53229fc024",
+    "grupo_id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
+    "id": "c9ddeb6e-747d-416a-b67a-028df7dc43b5",
+    "intento_id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+    "nivel_clave": "secundaria",
+    "numero_intento": 1,
+    "origen": "docente",
+    "periodo": "2026",
+    "preguntas": 12,
+    "presentacion": {
+      "aprobacion": {
+        "cumple_criterio": true
+      },
+      "desempeno": {
+        "clave": "alto",
+        "nivel": "Alto",
+        "origen": "calculo",
+        "tramo": 3
+      },
+      "escala": {
+        "codigo": "co-1-5",
+        "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+        "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
+        "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+        "numero": 1,
+        "tipo": "numerica",
+        "version_id": "e0521e03-c62f-449b-936f-f2630c3accdb"
+      },
+      "interno": 85.0,
+      "presentada": {
+        "clave": "4.4",
+        "etiqueta": "4.4",
+        "valor": 4.4
+      },
+      "provisional": true
+    },
+    "publicada": false,
+    "publicada_en": null,
+    "publicada_por": "",
+    "puntaje_efectivo": 85.0,
+    "puntaje_original": 95.24,
+    "registrada_en": 1790000000000,
+    "regla_puntuacion": "mod10.revision_docente.v1",
+    "retroalimentacion": {},
+    "version": 2
+  },
+  "historial": [
+    {
+      "actor_id": "1c51b3c6-cbf1-4111-8641-0b53229fc024",
+      "en": 1790000000000,
+      "estado_anterior": "",
+      "estado_nuevo": "revisada",
+      "motivo": "",
+      "numero": 1,
+      "puntaje_anterior": null,
+      "puntaje_nuevo": 95.24,
+      "solicitud_id": "reg:d9d4e299-fa70-4142-81b2-775828e2ab00",
+      "tipo": "registro"
+    },
+    {
+      "actor_id": "1c51b3c6-cbf1-4111-8641-0b53229fc024",
+      "en": 1790000000000,
+      "estado_anterior": "revisada",
+      "estado_nuevo": "revisada",
+      "motivo": "Se reconoció una respuesta correcta que la rúbrica inicial no contemplaba",
+      "numero": 2,
+      "puntaje_anterior": 95.24,
+      "puntaje_nuevo": 85.0,
+      "solicitud_id": "cap-aj-1",
+      "tipo": "ajuste"
+    }
+  ],
+  "reintento": false,
+  "servidor_en": 1790000000000
+}

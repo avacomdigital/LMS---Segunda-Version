@@ -38,6 +38,10 @@ class Contenido(Protocol):
         """Compara las respuestas con la clave DONDE VIVE, siempre con `version`. `items`: `[{objeto_ref, pregunta_ref, respuesta}]` (hasta 200).
         Devuelve `{pregunta_ref: veredicto | None}`; `None` = la biblioteca no estaba (se guarda sin calificar)."""
 
+    def examenes_disponibles(self, fuente: str) -> dict:
+        """Los exámenes de todos los cursos instalados en la fuente (`{fuente, disponible, cursos[{curso_ref, titulo, version, examenes[]}], omitidos[]}`),
+        para elegir cuál aplicar sin estar en una clase. Un curso que falla se omite con su motivo. Lanza FuenteNoDisponible sólo si la fuente no existe."""
+
     def version_instalada(self, fuente: str, curso_ref: str) -> str | None: ...
 
 

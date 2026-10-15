@@ -108,10 +108,12 @@ def examen_preguntas(origen, curso_ref: str, objeto_ref: str, ids: list[str], se
     salida = []
     for ref in ids:
         pregunta = curso_aula.sin_claves({k: v for k, v in por_id[ref].items() if k != "teacherNotes"})
-        for clave in ("options", "right", "items"):
-            lista = pregunta.get(clave)
-            if isinstance(lista, list) and len(lista) > 1:
-                random.Random(f"{semilla or ''}|{ref}|{clave}").shuffle(lista)
+        # Sin semilla no se baraja (la asignación no pide mezclar opciones): el orden es el del banco, igual que hace la biblioteca sin `seed`.
+        if semilla:
+            for clave in ("options", "right", "items"):
+                lista = pregunta.get(clave)
+                if isinstance(lista, list) and len(lista) > 1:
+                    random.Random(f"{semilla}|{ref}|{clave}").shuffle(lista)
         salida.append(pregunta)
     return {"courseId": manifiesto.get("id"), "version": manifiesto.get("version"), "objectId": examen.get("id"), "title": examen.get("title"),
             "instructions": examen.get("instructions"), "questions": salida}

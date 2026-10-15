@@ -93,6 +93,38 @@ class ContenidoEvaluacion:
             "titulo": str(objeto.get("title") or "Examen"), "ajustes": armado_dom.ajustes_de_biblioteca(pool.get("settings") or {}), "pool": lista,
         }
 
+    def examenes_disponibles(self, fuente: str) -> dict:
+        """Los exámenes (objetos `exam`) de TODOS los cursos instalados en la fuente, para que el profesor elija cuál aplicar sin estar dentro de una clase.
+        Pide cada curso con `mode=exam` (con `mode=class`, el modo del aula, el examen no aparece). Un curso que falla no tumba a los demás: queda en
+        `omitidos` con su motivo. Nada se guarda (artículo 14). Devuelve `{fuente, disponible, motivo, cursos: [{curso_ref, titulo, version, examenes:
+        [{objeto_ref, titulo, leccion_ref, leccion_titulo, preguntas}]}], omitidos: [{curso_ref, motivo}]}`."""
+        origen = self._origen(fuente, "")
+        estado = origen.estado()
+        salida = {"fuente": origen.nombre, "disponible": bool(estado.get("disponible")), "motivo": estado.get("motivo") or "",
+                  "sugerencia": estado.get("sugerencia"), "cursos": [], "omitidos": []}
+        if not salida["disponible"]:
+            return salida
+        for curso in estado.get("cursos_instalados") or []:
+            curso_ref = str(curso.get("curso_ref") or "")
+            if not curso_ref:
+                continue
+            try:
+                esquema = fuentes_examen.esquema(origen, curso_ref)
+            except (e10.ErrorEvaluacion, e7.ErrorAula) as error:
+                salida["omitidos"].append({"curso_ref": curso_ref, "motivo": getattr(error, "detalle", "") or error.__class__.__name__})
+                continue
+            examenes = []
+            for leccion in esquema.get("lessons") or []:
+                for objeto in leccion.get("objects") or []:
+                    if objeto.get("type") != "exam" or not objeto.get("id"):
+                        continue
+                    examenes.append({"objeto_ref": str(objeto["id"]), "titulo": str(objeto.get("title") or "Examen"), "leccion_ref": str(leccion.get("id") or ""),
+                                     "leccion_titulo": str(leccion.get("title") or ""), "preguntas": objeto.get("questionCount")})
+            if examenes:
+                salida["cursos"].append({"curso_ref": curso_ref, "titulo": str(esquema.get("title") or curso.get("titulo") or curso_ref),
+                                         "version": str(esquema.get("version") or curso.get("version") or ""), "examenes": examenes})
+        return salida
+
     def version_instalada(self, fuente: str, curso_ref: str) -> str | None:
         try:
             estado = self._origen(fuente, curso_ref).estado()

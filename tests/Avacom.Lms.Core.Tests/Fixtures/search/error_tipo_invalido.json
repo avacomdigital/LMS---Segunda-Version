@@ -1,0 +1,13 @@
+{
+  "codigo": "datos_invalidos",
+  "detail": "«alumno» no es un tipo de resultado conocido.",
+  "parametro": "type",
+  "validos": [
+    "course",
+    "lesson",
+    "resource",
+    "assessment",
+    "study",
+    "class"
+  ]
+}

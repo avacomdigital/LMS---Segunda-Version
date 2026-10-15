@@ -91,13 +91,41 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("assessment.attempt.void", "evaluacion", "Anular un intento ya entregado: decisión humana y motivada (INV-018)", O, True),
     ("assessment.review", "evaluacion", "Puntuar a mano los reactivos de revisión docente y publicar el intento (CAP-062)", O, True),
     ("assessment.results.view", "evaluacion", "Ver los resultados de una evaluación y liberarlos al alumno (DEC-032)", O, True),
+    # --- MOD-011 · Gradebook (sección J de su ficha: los cinco primeros; `grades.publish` es una EXTENSIÓN TÉCNICA PROPUESTA: el Maestro regula la visibilidad de las
+    # notas pero no da una función propia a publicar). Los evalúa `gradebook.infraestructura.autorizacion.AutorizacionGradebook`. Leer el libro usa `results.read`.
+    ("grades.modify", "gradebook", "Calificar a mano un reactivo de revisión docente y ajustar una calificación con motivo (FUN-120, FUN-123)", O, True),
+    ("grades.reopen", "gradebook", "Reabrir una calificación para recalificar (FUN-122)", O, True),
+    ("grades.rubric.apply", "gradebook", "Aplicar una rúbrica a una entrega (FUN-121)", O, True),
+    ("grades.mode.set", "gradebook", "Configurar el modo, la escala y la política de calificación por nivel educativo (FUN-124, FUN-125, FUN-129)", O, True),
+    ("grades.export", "gradebook", "Exportar el libro de calificaciones de un grupo (FUN-128; llega con V1)", O, True),
+    ("grades.publish", "gradebook", "Publicar las calificaciones al alumno y retirar su publicación (extensión técnica propuesta)", O, True),
+    # --- MOD-021 · Search (sección J de su ficha). `search.query` abre la búsqueda; lo que se puede LEER de cada tipo lo siguen decidiendo los permisos de lectura del módulo
+    # propietario (`content.read`, `assessment.read`, `study.assignment.review`, `classroom.results.view`) y su alcance (BR-088). `search.reindex` mantiene el índice y no da
+    # lectura de nada. Los evalúa `search.infraestructura.autorizacion.AutorizacionSearch`.
+    ("search.query", "busqueda", "Buscar cursos, lecciones, recursos, evaluaciones, estudios asignados y clases, sólo entre lo que el rol puede leer (CAP-124, CAP-125, BR-088)", O, False),
+    ("search.reindex", "busqueda", "Mantener el índice de búsqueda: reconstruirlo tras una restauración, sincronizarlo y ver su detalle (FUN-215, CAP-128)", O, False),
+    # --- MOD-013 · Reporting (sección J de su ficha; `reports.student.view` ya existía arriba). `reports.settings.manage` es una EXTENSIÓN TÉCNICA PROPUESTA: el Maestro no da
+    # función a configurar el umbral de privacidad (BR-086) ni la política de exportación. Los evalúa `reporting.infraestructura.autorizacion.AutorizacionReporting`.
+    ("reports.view", "reportes", "Ver el reporte de una clase terminada y filtrar los reportes (CAP-081, FUN-143)", O, True),
+    ("reports.group.view", "reportes", "Ver el avance de un grupo (FUN-139)", O, True),
+    ("reports.usage.view", "reportes", "Ver el uso de equipos y sesiones, sin datos de personas (FUN-142)", O, False),
+    ("reports.curriculum.view", "reportes", "Ver la cobertura curricular real contra la planeada (FUN-141; llega con V1)", O, False),
+    ("reports.export", "reportes", "Exportar un reporte a archivo para entregarlo sin internet (FUN-146)", O, True),
+    ("reports.rebuild", "reportes", "Reconstruir los agregados de reportes desde la cola de los módulos (FUN-147)", O, False),
+    ("reports.settings.manage", "reportes", "Configurar el umbral de privacidad y la política de exportación de reportes (extensión técnica propuesta)", O, True),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
 
+# Calificar y publicar es del profesor sobre SUS grupos; la administración configura el modo y exporta, pero no califica directamente (el Maestro se lo niega).
+PERMISOS_DE_CALIFICACION_DEL_DOCENTE = ("grades.modify", "grades.reopen", "grades.rubric.apply", "grades.publish")
+
 # Los tres `assessment.*` del intento del alumno: sólo el rol STUDENT los tiene, sobre lo suyo. El Maestro le niega a la administración «el intento del alumno».
 PERMISOS_DE_EVALUACION_DEL_ALUMNO = ("assessment.attempt.start", "assessment.answer.submit", "assessment.attempt.submit")
-# Los que opera el profesor sobre sus grupos (el administrador los tiene sobre toda la organización).
+# Puntuar a mano y publicar una revisión (CAP-062) es CALIFICAR, y la administración no califica directamente (el Maestro de MOD-011): sólo el profesor, sobre sus grupos. La
+# administración lee el libro (`results.read`) y configura (`grades.mode.set`), pero no puntúa ni publica una revisión ni siquiera por las rutas provisionales de MOD-010.
+PERMISOS_DE_EVALUACION_SOLO_DEL_DOCENTE = ("assessment.review",)
+# Los que opera el profesor sobre sus grupos (el administrador los tiene sobre toda la organización, salvo `assessment.review`).
 PERMISOS_DE_EVALUACION_DEL_DOCENTE = ("assessment.exam_mode.set", "assessment.deadline.set", "assessment.deadline.enforce", "assessment.assign",
                                       "assessment.exam_mode.override", "assessment.exam_mode.downgrade", "assessment.read", "assessment.attempt.reactivate",
                                       "assessment.attempt.void", "assessment.review", "assessment.results.view")
@@ -147,6 +175,10 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
     }),
     "TEACHER": ("Profesor", Menu.TEACHER, 2, {
         "student.progress.read": G, "results.read": G, "reports.student.view": G, "content.read": O, "content.project": G,
+        # Busca sobre lo que puede leer: el catálogo (toda la organización) y lo de sus grupos.
+        "search.query": G,
+        # Ve el reporte de sus clases y de sus grupos, el avance de sus alumnos y exporta lo suyo (sin el uso de equipos: eso es de reportes, administración y soporte).
+        "reports.view": G, "reports.group.view": G, "reports.export": G,
         "identity.user.read": G, "identity.user.create": G, "identity.user.update": G, "identity.user.unlock": G,
         "identity.password.reset": G, "identity.password.change_own": S, "identity.exam_access.grant": G,
         "identity.session.read": G, "identity.session.revoke": G, "identity.session.revoke_own": S,
@@ -161,22 +193,33 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "study.assignment.create": G, "study.assignment.review": G,
         # Asigna evaluaciones, vigila el examen, reactiva, admite tabletas, revisa y libera resultados, sobre sus grupos.
         **{c: G for c in PERMISOS_DE_EVALUACION_DEL_DOCENTE},
+        # Califica a mano, aplica rúbricas, ajusta, reabre y publica las calificaciones de sus grupos (el libro lo lee con `results.read`).
+        **{c: G for c in PERMISOS_DE_CALIFICACION_DEL_DOCENTE},
     }),
     "ADMIN": ("Administrador", Menu.ADMIN, 3, {
-        # Todo salvo lo que el Maestro le niega: calificar directamente, el modo de estudio del alumno y el intento del alumno.
+        # Todo salvo lo que el Maestro le niega: calificar directamente (también puntuar una revisión), el modo de estudio del alumno y el intento del alumno.
         **{c: a for c, a in _TODOS_ORG.items()
-           if c not in ("student.progress.write", "student.exam.attempt", *PERMISOS_DE_ESTUDIO_DEL_ALUMNO, *PERMISOS_DE_EVALUACION_DEL_ALUMNO)},
+           if c not in ("student.progress.write", "student.exam.attempt", *PERMISOS_DE_ESTUDIO_DEL_ALUMNO, *PERMISOS_DE_EVALUACION_DEL_ALUMNO,
+                        *PERMISOS_DE_CALIFICACION_DEL_DOCENTE, *PERMISOS_DE_EVALUACION_SOLO_DEL_DOCENTE)},
     }),
     "REPORTS": ("Reportes", Menu.REPORTS, 2, {
         # Sólo lectura. Ninguna escritura sobre datos académicos, en ninguna circunstancia.
         "student.progress.read": O, "results.read": O, "reports.student.view": O, "content.read": O,
         "identity.user.read": O, "identity.group.read": O, "identity.role.read": O,
+        # Busca en el catálogo (`content.read`); no lee evaluaciones, estudios ni clases, así que de esos tipos no ve nada.
+        "search.query": O,
+        # Lectura de toda la organización: el reporte de clases, grupos y alumnos, el uso de equipos y la exportación. No reconstruye (eso es del técnico y la administración).
+        "reports.view": O, "reports.group.view": O, "reports.usage.view": O, "reports.curriculum.view": O, "reports.export": O,
         "identity.password.change_own": S, "identity.session.read": S, "identity.session.revoke_own": S,
     }),
     "TECHNICIAN": ("Técnico AVACOM", Menu.TECHNICIAN, 2, {
         # Diagnóstico, red, dispositivos y respaldos. Sin acceso a datos personales ni evidencias (BR-097): lee los logs
         # (`diagnostics.read`, sólo identificadores y cifras) pero NUNCA la bitácora (`audit.read`) ni la exporta (`audit.export`).
         "identity.device.manage": O, "identity.role.read": O, "identity.session.read": O, "diagnostics.read": O,
+        # Reconstruye el índice de búsqueda tras restaurar un respaldo (no busca ni lee datos académicos).
+        "search.reindex": O,
+        # Ve cuánto se usan los equipos (sin personas) y reconstruye los agregados de reportes tras restaurar un respaldo; NO lee reportes de clases, grupos ni alumnos (BR-097).
+        "reports.usage.view": O, "reports.rebuild": O,
         "identity.password.change_own": S, "identity.session.revoke_own": S,
     }),
 }

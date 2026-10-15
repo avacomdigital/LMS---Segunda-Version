@@ -1,0 +1,822 @@
+{
+  "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+  "plantillas": [
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "gen-0-5",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "5"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "5",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Numérica de 0 a 5",
+      "pais": "",
+      "problemas": [],
+      "referencia": "Conversión lineal de 0–100 a 0–5.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "gen-0-10",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "10"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "10",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Numérica de 0 a 10",
+      "pais": "",
+      "problemas": [],
+      "referencia": "Conversión lineal de 0–100 a 0–10.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "gen-0-20",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "interpolada",
+        "decimales": 0,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "20"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "20",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Numérica de 0 a 20",
+      "pais": "",
+      "problemas": [],
+      "referencia": "Conversión lineal de 0–100 a 0–20.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "gen-0-100",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "interpolada",
+        "decimales": 0,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "100"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "100",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Numérica de 0 a 100",
+      "pais": "",
+      "problemas": [],
+      "referencia": "La escala interna tal cual.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "gen-letras",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "tramos",
+        "decimales": 0,
+        "puntos": [],
+        "redondeo": "mitad_arriba",
+        "tipo": "alfabetica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "F",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "F",
+            "hasta": "60",
+            "nivel_desempeno": "No alcanza",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "D",
+            "descripcion": "",
+            "desde": "60",
+            "etiqueta": "D",
+            "hasta": "70",
+            "nivel_desempeno": "Suficiente",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "C",
+            "descripcion": "",
+            "desde": "70",
+            "etiqueta": "C",
+            "hasta": "80",
+            "nivel_desempeno": "Satisfactorio",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "B",
+            "descripcion": "",
+            "desde": "80",
+            "etiqueta": "B",
+            "hasta": "90",
+            "nivel_desempeno": "Notable",
+            "orden": 4
+          },
+          {
+            "aprueba": true,
+            "clave": "A",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "A",
+            "hasta": "100",
+            "nivel_desempeno": "Sobresaliente",
+            "orden": 5
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Letras A, B, C, D, F",
+      "pais": "",
+      "problemas": [],
+      "referencia": "Tramos de diez puntos (90/80/70/60), práctica habitual de la escala alfabética.",
+      "tipo": "alfabetica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "gen-conceptual",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "tramos",
+        "decimales": 0,
+        "puntos": [],
+        "redondeo": "mitad_arriba",
+        "tipo": "cualitativa",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "Bajo",
+            "hasta": "60",
+            "nivel_desempeno": "Bajo",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "descripcion": "",
+            "desde": "60",
+            "etiqueta": "Básico",
+            "hasta": "75",
+            "nivel_desempeno": "Básico",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "descripcion": "",
+            "desde": "75",
+            "etiqueta": "Alto",
+            "hasta": "90",
+            "nivel_desempeno": "Alto",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "Superior",
+            "hasta": "100",
+            "nivel_desempeno": "Superior",
+            "orden": 4
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Conceptual: Superior, Alto, Básico, Bajo",
+      "pais": "",
+      "problemas": [],
+      "referencia": "Cuatro conceptos; las denominaciones y los cortes se configuran.",
+      "tipo": "cualitativa"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "es-0-10",
+      "definicion": {
+        "aprobacion_minima": "5",
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "10"
+          ]
+        ],
+        "redondeo": "abajo",
+        "tipo": "numerica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "IN",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "Insuficiente",
+            "hasta": "50",
+            "nivel_desempeno": "Insuficiente",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "SU",
+            "descripcion": "",
+            "desde": "50",
+            "etiqueta": "Suficiente",
+            "hasta": "60",
+            "nivel_desempeno": "Suficiente",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "BI",
+            "descripcion": "",
+            "desde": "60",
+            "etiqueta": "Bien",
+            "hasta": "70",
+            "nivel_desempeno": "Bien",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "NT",
+            "descripcion": "",
+            "desde": "70",
+            "etiqueta": "Notable",
+            "hasta": "90",
+            "nivel_desempeno": "Notable",
+            "orden": 4
+          },
+          {
+            "aprueba": true,
+            "clave": "SB",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "Sobresaliente",
+            "hasta": "100",
+            "nivel_desempeno": "Sobresaliente",
+            "orden": 5
+          }
+        ],
+        "valor_max": "10",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato"
+      ],
+      "nombre": "España · 0 a 10 (Insuficiente a Sobresaliente)",
+      "pais": "ES",
+      "problemas": [],
+      "referencia": "Calificaciones numéricas de 0 a 10 con los términos IN, SU, BI, NT y SB (normativa estatal de educación obligatoria; las comunidades autónomas la concretan). Educación Infantil no se califica con notas: use el modo simple.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "us-letras",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "tramos",
+        "decimales": 0,
+        "puntos": [],
+        "redondeo": "mitad_arriba",
+        "tipo": "alfabetica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "F",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "F",
+            "hasta": "60",
+            "nivel_desempeno": "No alcanza",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "D",
+            "descripcion": "",
+            "desde": "60",
+            "etiqueta": "D",
+            "hasta": "70",
+            "nivel_desempeno": "Suficiente",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "C",
+            "descripcion": "",
+            "desde": "70",
+            "etiqueta": "C",
+            "hasta": "80",
+            "nivel_desempeno": "Satisfactorio",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "B",
+            "descripcion": "",
+            "desde": "80",
+            "etiqueta": "B",
+            "hasta": "90",
+            "nivel_desempeno": "Notable",
+            "orden": 4
+          },
+          {
+            "aprueba": true,
+            "clave": "A",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "A",
+            "hasta": "100",
+            "nivel_desempeno": "Sobresaliente",
+            "orden": 5
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Estados Unidos · letras A–F",
+      "pais": "US",
+      "problemas": [],
+      "referencia": "Escala de letras con tramos de diez puntos. Distritos y estados cambian los cortes, admiten más/menos (A−, B+) y definen el mínimo aprobatorio.",
+      "tipo": "alfabetica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "us-porcentaje",
+      "definicion": {
+        "aprobacion_minima": "60",
+        "conversion": "interpolada",
+        "decimales": 0,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "100"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "100",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Estados Unidos · porcentaje 0–100",
+      "pais": "US",
+      "problemas": [],
+      "referencia": "Porcentaje de 0 a 100; el mínimo aprobatorio (60) lo fija cada distrito.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "mx-0-10",
+      "definicion": {
+        "aprobacion_minima": "6",
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "10"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "10",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato"
+      ],
+      "nombre": "México · 0 a 10 (se aprueba con 6)",
+      "pais": "MX",
+      "problemas": [],
+      "referencia": "Escala de 0 a 10 con 6 como mínimo aprobatorio. La educación básica oficial no asienta calificaciones menores a 5 y la Nueva Escuela Mexicana usa en algunos grados valoraciones descriptivas: si su institución aplica 5–10, defina una escala propia.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "co-1-5",
+      "definicion": {
+        "aprobacion_minima": "3",
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "1"
+          ],
+          [
+            "100",
+            "5"
+          ]
+        ],
+        "redondeo": "abajo",
+        "tipo": "numerica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "Bajo",
+            "hasta": "50",
+            "nivel_desempeno": "Bajo",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "descripcion": "",
+            "desde": "50",
+            "etiqueta": "Básico",
+            "hasta": "75",
+            "nivel_desempeno": "Básico",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "descripcion": "",
+            "desde": "75",
+            "etiqueta": "Alto",
+            "hasta": "90",
+            "nivel_desempeno": "Alto",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "Superior",
+            "hasta": "100",
+            "nivel_desempeno": "Superior",
+            "orden": 4
+          }
+        ],
+        "valor_max": "5",
+        "valor_min": "1"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato"
+      ],
+      "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+      "pais": "CO",
+      "problemas": [],
+      "referencia": "Escala nacional de desempeño Superior, Alto, Básico y Bajo; la escala numérica y sus equivalencias las define cada institución en su sistema institucional de evaluación (Decreto 1290 de 2009). Se trunca (no se redondea hacia arriba) para que el redondeo no lleve un resultado por encima del corte de aprobación.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "cl-1-7",
+      "definicion": {
+        "aprobacion_minima": "4",
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "1"
+          ],
+          [
+            "60",
+            "4"
+          ],
+          [
+            "100",
+            "7"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "7",
+        "valor_min": "1"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria"
+      ],
+      "nombre": "Chile · 1,0 a 7,0 (se aprueba con 4,0 al 60 %)",
+      "pais": "CL",
+      "problemas": [],
+      "referencia": "Notas de 1,0 a 7,0 con 4,0 como mínimo aprobatorio; el 4,0 corresponde habitualmente al 60 % de exigencia, que cada establecimiento puede cambiar. Educación Parvularia no califica con notas: use el modo simple.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "pe-0-20",
+      "definicion": {
+        "aprobacion_minima": "11",
+        "conversion": "interpolada",
+        "decimales": 0,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "20"
+          ]
+        ],
+        "redondeo": "mitad_arriba",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "20",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "secundaria",
+        "bachillerato"
+      ],
+      "nombre": "Perú · vigesimal 0 a 20 (se aprueba con 11)",
+      "pais": "PE",
+      "problemas": [],
+      "referencia": "Escala vigesimal con 11 como mínimo aprobatorio, usada en secundaria y en educación superior.",
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "pe-literal",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "tramos",
+        "decimales": 0,
+        "puntos": [],
+        "redondeo": "mitad_arriba",
+        "tipo": "competencias",
+        "tramos": [
+          {
+            "aprueba": null,
+            "clave": "C",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "C",
+            "hasta": "55",
+            "nivel_desempeno": "En inicio",
+            "orden": 1
+          },
+          {
+            "aprueba": null,
+            "clave": "B",
+            "descripcion": "",
+            "desde": "55",
+            "etiqueta": "B",
+            "hasta": "70",
+            "nivel_desempeno": "En proceso",
+            "orden": 2
+          },
+          {
+            "aprueba": null,
+            "clave": "A",
+            "descripcion": "",
+            "desde": "70",
+            "etiqueta": "A",
+            "hasta": "90",
+            "nivel_desempeno": "Logro esperado",
+            "orden": 3
+          },
+          {
+            "aprueba": null,
+            "clave": "AD",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "AD",
+            "hasta": "100",
+            "nivel_desempeno": "Logro destacado",
+            "orden": 4
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "preescolar",
+        "primaria",
+        "secundaria"
+      ],
+      "nombre": "Perú · literal AD, A, B, C (competencias)",
+      "pais": "PE",
+      "problemas": [],
+      "referencia": "Escala literal por competencias del Currículo Nacional. Los cortes sobre 0–100 son una equivalencia aproximada con la escala vigesimal: la evaluación por competencias es una valoración docente, no sólo un cálculo (use la valoración docente para fijar el nivel).",
+      "tipo": "competencias"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "ec-0-10",
+      "definicion": {
+        "aprobacion_minima": "7",
+        "conversion": "interpolada",
+        "decimales": 2,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "100",
+            "10"
+          ]
+        ],
+        "redondeo": "abajo",
+        "tipo": "numerica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "NAAR",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "No alcanza los aprendizajes requeridos",
+            "hasta": "40.1",
+            "nivel_desempeno": "No alcanza los aprendizajes requeridos",
+            "orden": 1
+          },
+          {
+            "aprueba": false,
+            "clave": "PAAR",
+            "descripcion": "",
+            "desde": "40.1",
+            "etiqueta": "Próximo a alcanzar los aprendizajes requeridos",
+            "hasta": "70",
+            "nivel_desempeno": "Próximo a alcanzar los aprendizajes requeridos",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "AAR",
+            "descripcion": "",
+            "desde": "70",
+            "etiqueta": "Alcanza los aprendizajes requeridos",
+            "hasta": "90",
+            "nivel_desempeno": "Alcanza los aprendizajes requeridos",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "DAR",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "Domina los aprendizajes requeridos",
+            "hasta": "100",
+            "nivel_desempeno": "Domina los aprendizajes requeridos",
+            "orden": 4
+          }
+        ],
+        "valor_max": "10",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria",
+        "bachillerato"
+      ],
+      "nombre": "Ecuador · 0 a 10 (DAR, AAR, PAAR, NAAR)",
+      "pais": "EC",
+      "problemas": [],
+      "referencia": "Escala cualitativa y cuantitativa del Ministerio de Educación: 9–10 DAR, 7–8,99 AAR, 4,01–6,99 PAAR, ≤ 4 NAAR; se aprueba con 7. Educación Inicial usa una valoración descriptiva: use el modo simple.",
+      "tipo": "numerica"
+    }
+  ],
+  "servidor_en": 1790000000000
+}

@@ -1,0 +1,5 @@
+{
+  "codigo": "consulta_invalida",
+  "detail": "Escribe al menos 2 letras.",
+  "minimo": 2
+}

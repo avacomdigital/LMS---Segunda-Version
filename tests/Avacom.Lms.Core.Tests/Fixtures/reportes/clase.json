@@ -1,0 +1,130 @@
+{
+  "avisos": [],
+  "clase": {
+    "actividades": 1,
+    "curso_rotulo": "Estados de la materia y sus cambios",
+    "duracion_ms": 30000,
+    "equipos": 5,
+    "finalizada_en": 1790000030000,
+    "grupo": {
+      "codigo": "8A",
+      "id": "2dfe055b-7bfc-42fe-9825-904b38666076",
+      "nivel_clave": "",
+      "nombre": "Octavo A",
+      "periodo": "2026"
+    },
+    "iniciada_en": 1790000000000,
+    "leccion_rotulo": "Los tres estados de la materia",
+    "participantes": 5,
+    "sesion_id": "b457ece7-b59e-40d0-a4a1-a76b196eef5c"
+  },
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790002430000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": false,
+    "integracion": {
+      "equipos": 5,
+      "estado": "completa",
+      "motivo_linea": "",
+      "motivos": [],
+      "sin_sincronizar": 0,
+      "texto": "Todo sincronizado"
+    },
+    "texto": "Datos al 21 sep · 09:53"
+  },
+  "filas": [
+    {
+      "aciertos": 5,
+      "actividades_entregadas": 1,
+      "actividades_recibidas": 1,
+      "alumno": "Alumno 01",
+      "alumno_id": "86ba7626-ed7c-42f0-aa0a-d3a7acfecee7",
+      "calificadas": 5,
+      "entregas_por_cola": 0,
+      "estado": "conectado",
+      "porcentaje_aciertos": 100,
+      "porcentaje_participacion": 100,
+      "presente_ms": 30000
+    },
+    {
+      "aciertos": 3,
+      "actividades_entregadas": 1,
+      "actividades_recibidas": 1,
+      "alumno": "Alumno 02",
+      "alumno_id": "b75de8f8-e422-4eb9-ba99-81d0a2562304",
+      "calificadas": 5,
+      "entregas_por_cola": 0,
+      "estado": "conectado",
+      "porcentaje_aciertos": 44.44,
+      "porcentaje_participacion": 100,
+      "presente_ms": 30000
+    },
+    {
+      "aciertos": 0,
+      "actividades_entregadas": 0,
+      "actividades_recibidas": 1,
+      "alumno": "Alumno 03",
+      "alumno_id": "5520435a-cd34-4be1-8fec-fae4ef9431f5",
+      "calificadas": 0,
+      "entregas_por_cola": 0,
+      "estado": "conectado",
+      "porcentaje_aciertos": null,
+      "porcentaje_participacion": 0,
+      "presente_ms": 30000
+    },
+    {
+      "aciertos": 5,
+      "actividades_entregadas": 1,
+      "actividades_recibidas": 1,
+      "alumno": "Alumno 04",
+      "alumno_id": "b0ec626c-7bd5-401c-b8e2-4a9e36720bc6",
+      "calificadas": 5,
+      "entregas_por_cola": 0,
+      "estado": "conectado",
+      "porcentaje_aciertos": 100,
+      "porcentaje_participacion": 100,
+      "presente_ms": 30000
+    },
+    {
+      "aciertos": 0,
+      "actividades_entregadas": 1,
+      "actividades_recibidas": 1,
+      "alumno": "Juan P.",
+      "alumno_id": "eae2a376-31b0-4ea2-9611-45e73b9ce2a1",
+      "calificadas": 5,
+      "entregas_por_cola": 0,
+      "estado": "conectado",
+      "porcentaje_aciertos": 0,
+      "porcentaje_participacion": 100,
+      "presente_ms": 30000
+    }
+  ],
+  "generado_en": 1790002430000,
+  "generado_por": {
+    "id": "3013ed4e-9fdf-41ea-a2ab-0e0a3d9c6e58",
+    "rotulo": "Prof. Gómez"
+  },
+  "nominal": true,
+  "objetivos": {
+    "disponible": false,
+    "texto": "Aún no disponible: el dominio por objetivo llega con el módulo de objetivos."
+  },
+  "privacidad": {
+    "alumnos": 5,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790002430000,
+  "tipo": "clase",
+  "titulo": "Reporte de la clase",
+  "totales": {
+    "actividades": 1,
+    "participantes": 5,
+    "promedio_aciertos": 61.11,
+    "promedio_participacion": 80
+  }
+}

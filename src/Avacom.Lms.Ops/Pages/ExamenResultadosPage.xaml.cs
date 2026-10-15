@@ -140,11 +140,23 @@ public partial class ExamenResultadosPage : ContentPage
         fila.Add(izquierda, 0, 0);
         fila.Add(derecha, 1, 0);
 
+        var publicados = r.Filas.Count(f => f.ResultadoPublicado);
+        if (publicados > 0) derecha.Add(ExamenUi.Total(publicados, "ya lo ven", ExamenUi.TintaExito));
+
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(fila);
-        pila.Add(Ds.Secundario(r.LiberadosEn is { } lib
-            ? $"Resultados liberados a los alumnos a las {ExamenTexto.Hora(lib)}."
-            : "Los alumnos todavía no ven estos resultados: los liberas tú desde el panel.", 14));
+        // RF-004: aquí el profesor ve todas las notas antes de publicar; se dice con claridad qué ven ya los alumnos y por qué.
+        var politica = PoliticasDeResultados.Normalizar(r.Resultados);
+        pila.Add(Ds.Secundario(r.LiberadosEn is not null
+            ? ExamenTexto.Publicacion(r.Resultados, r.PublicarEn, r.LiberadosEn, r.LiberadosPor) + ". Lo que estaba por revisar se ve cuando publiques su calificación."
+            : politica switch
+            {
+                PoliticasDeResultados.AlEntregar => "Cada alumno ve su resultado apenas queda calificado del todo.",
+                PoliticasDeResultados.Nunca => "Los alumnos no ven estos resultados desde la tableta.",
+                PoliticasDeResultados.AlFinalizarGrupo => "Los alumnos todavía no ven estos resultados: se publican solos cuando todo el grupo termine, o antes si tú los publicas (a todos, desde el panel, o a un alumno aquí).",
+                PoliticasDeResultados.Programada => $"Los alumnos todavía no ven estos resultados: se publican solos {(r.PublicarEn is { } cuando ? "a las " + ExamenTexto.Hora(cuando) : "en la fecha fijada")}, o antes si tú los publicas (a todos, desde el panel, o a un alumno aquí).",
+                _ => "Los alumnos todavía no ven estos resultados: los publicas tú, a todos desde el panel o a un alumno aquí.",
+            }, 14));
         if (porRevisar > 0 || r.Filas.Any(f => !f.Definitivo && f.Porcentaje is not null))
             pila.Add(Ds.Secundario("Lo marcado como provisional todavía tiene respuestas por revisar.", 14));
         return ExamenUi.Tarjeta(pila);
@@ -155,7 +167,8 @@ public partial class ExamenResultadosPage : ContentPage
         ColumnDefinitions =
         [
             new ColumnDefinition(new GridLength(2.4, GridUnitType.Star)), new ColumnDefinition(new GridLength(230)), new ColumnDefinition(new GridLength(170)),
-            new ColumnDefinition(new GridLength(130)), new ColumnDefinition(new GridLength(140)), new ColumnDefinition(new GridLength(100)), new ColumnDefinition(new GridLength(24)),
+            new ColumnDefinition(new GridLength(130)), new ColumnDefinition(new GridLength(140)), new ColumnDefinition(new GridLength(100)),
+            new ColumnDefinition(new GridLength(180)), new ColumnDefinition(new GridLength(24)),
         ],
         ColumnSpacing = 16,
     };
@@ -171,14 +184,34 @@ public partial class ExamenResultadosPage : ContentPage
         }
         var encabezado = Rejilla();
         encabezado.Margin = new Thickness(4, 4, 4, 0);
-        string[] titulos = ["ALUMNO", "ESTADO", "RESULTADO", "¿APROBÓ?", "FUERA DE PLAZO", "AVISOS"];
+        string[] titulos = ["ALUMNO", "ESTADO", "RESULTADO", "¿APROBÓ?", "FUERA DE PLAZO", "AVISOS", "PUBLICACIÓN"];
         for (var i = 0; i < titulos.Length; i++) encabezado.Add(EstudioUi.Eyebrow(titulos[i]), i, 0);
         pila.Add(encabezado);
-        foreach (var fila in r.Filas) pila.Add(Fila(fila));
+        var publicable = PoliticasDeResultados.Normalizar(r.Resultados) != PoliticasDeResultados.Nunca;
+        foreach (var fila in r.Filas) pila.Add(Fila(fila, publicable));
         return ExamenUi.Tarjeta(pila);
     }
 
-    private static View Fila(FilaDeResultados f)
+    /// <summary>RF-004 (publicación individual): el profesor publica el resultado de UN alumno calificado sin esperar al grupo ni a la fecha.</summary>
+    private async Task PublicarAUnoAsync(FilaDeResultados f)
+    {
+        if (f.IntentoId is null) return;
+        var api = Sesion.Evaluacion;
+        var r = await api.LiberarResultadoAsync(Actor, f.IntentoId);
+        if (r is null)
+        {
+            AvisoHost.Clear();
+            AvisoHost.Add(ExamenUi.Aviso($"No se pudo publicar el resultado de {f.Rotulo}", ExamenTexto.Error(api.UltimoError, api.UltimoMotivo), Tono.Ambar));
+        }
+        else
+        {
+            AvisoHost.Clear();
+            AvisoHost.Add(ExamenUi.Aviso($"{f.Rotulo} ya puede ver su resultado", "Queda registrado con tu nombre y la hora.", Tono.Exito));
+        }
+        await CargarAsync(forzar: true);
+    }
+
+    private View Fila(FilaDeResultados f, bool publicable)
     {
         var g = Rejilla();
         g.Add(new Label { Text = f.Rotulo, FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Tinta, VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.TailTruncation }, 0, 0);
@@ -204,9 +237,23 @@ public partial class ExamenResultadosPage : ContentPage
             TextColor = Ds.TintaMedia, VerticalOptions = LayoutOptions.Center,
         }, 5, 0);
 
+        // RF-004: qué ve ya este alumno y, si está calificado y todavía no lo ve, el botón para publicárselo a él solo.
+        if (f.ResultadoPublicado)
+            g.Add(ExamenUi.Pildora(f.LiberadoEn is { } lib ? $"Lo ve desde las {ExamenTexto.Hora(lib)}" : "Ya lo ve", Tono.Exito, 13), 6, 0);
+        else if (publicable && f.ListoParaPublicar && f.IntentoId is not null)
+        {
+            var publicar = ExamenUi.Accion("Publicar", Ds.Rango.Secondary, () => PublicarAUnoAsync(f), 150, $"resultados-publicar-{f.AlumnoId}", 48, margen: false);
+            publicar.Vista.VerticalOptions = LayoutOptions.Center;
+            g.Add(publicar.Vista, 6, 0);
+        }
+        else if (f.Estado == EstadosIntento.Calificado && !publicable)
+            g.Add(Ds.Secundario("No se publica", 13), 6, 0);
+        else if (f.Estado is EstadosIntento.Entregado or EstadosIntento.EnRevision)
+            g.Add(Ds.Secundario(f.CalificacionPendiente ? "Espera a la biblioteca" : "Por revisar", 13), 6, 0);
+
         if (f.IntentoId is { } intento)
         {
-            g.Add(new Label { Text = "›", FontFamily = Ds.FuenteLigera, FontSize = 28, TextColor = Ds.TintaSuave, VerticalOptions = LayoutOptions.Center }, 6, 0);
+            g.Add(new Label { Text = "›", FontFamily = Ds.FuenteLigera, FontSize = 28, TextColor = Ds.TintaSuave, VerticalOptions = LayoutOptions.Center }, 7, 0);
             Ds.Tocable(g, () => Shell.Current.GoToAsync($"examen-expediente?intento={Uri.EscapeDataString(intento)}"));
             SemanticProperties.SetDescription(g, $"Expediente de {f.Rotulo}");
         }

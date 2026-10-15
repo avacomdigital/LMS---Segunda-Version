@@ -1,0 +1,77 @@
+{
+  "alumnos": [
+    {
+      "agregados": [
+        {
+          "calificaciones": 0,
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "oficial": false,
+          "pendientes": 0,
+          "periodo": "2026",
+          "ponderado": false,
+          "promedio_simple": null,
+          "provisionales": 1,
+          "publicadas": 0
+        }
+      ],
+      "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+      "celdas": {
+        "f307d2fb-cc69-4206-a4d8-5c20d5cfad12": {
+          "ajustada": false,
+          "calificacion_id": null,
+          "estado": "provisional",
+          "estado_simple": "completado",
+          "intentos": {
+            "registrados": 0,
+            "total": 1
+          },
+          "politica_intentos": "ultimo",
+          "presentacion": null,
+          "publicada": false,
+          "puntaje_efectivo": null,
+          "puntaje_original": null,
+          "version": null
+        }
+      },
+      "rotulo": "Juan P."
+    }
+  ],
+  "asignaciones": [
+    {
+      "afecta_oficial": true,
+      "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "estado": "activa",
+      "id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
+      "por_revisar": 1,
+      "resultados": "tras_liberar",
+      "tipo_evaluacion": "sumativa",
+      "titulo": "Examen de estados de la materia"
+    }
+  ],
+  "escala": {
+    "codigo": "co-1-5",
+    "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+    "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+    "numero": 1,
+    "tipo": "numerica",
+    "version_id": "e0521e03-c62f-449b-936f-f2630c3accdb"
+  },
+  "grupo": {
+    "codigo": "8A",
+    "id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
+    "nivel_clave": "secundaria",
+    "nombre": "Octavo A",
+    "periodo": "2026"
+  },
+  "modo": "calificaciones",
+  "politica_intentos": "ultimo",
+  "servidor_en": 1790000000000,
+  "totales": {
+    "alumnos": 1,
+    "asignaciones": 1,
+    "pendientes": 1,
+    "por_revisar": 1,
+    "sin_publicar": 0
+  }
+}

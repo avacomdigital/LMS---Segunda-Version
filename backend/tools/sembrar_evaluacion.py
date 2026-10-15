@@ -22,6 +22,7 @@ import urllib.request
 CURSO = "avacom.co.lower-secondary.6.science.states-of-matter"
 EXAMEN = "l3-exam"
 ADMIN_DNI, ADMIN_CLAVE = "1042888795", "Rectoria.2026!"
+PIN_MAESTRO = "482913"          # RN-03: desde el acceso de octubre el primer arranque exige un PIN maestro y la administración lo da al entrar
 DOCENTE_DNI, DOCENTE_CLAVE = "80.123.456", "Docente.2026!"
 NOMBRES = ["Juan P.", "Ana Ruiz", "Luis Mora", "Eva Soto", "Pablo Gil", "Marta Paz", "Hugo Rey", "Lola Vera"]
 
@@ -39,8 +40,11 @@ def llamar(base: str, metodo: str, ruta: str, cuerpo: dict | None = None, token:
         return e.code, json.loads(e.read() or b"{}")
 
 
-def iniciar_sesion(base: str, identificador: str, secreto: str) -> str:
-    estado, cuerpo = llamar(base, "POST", "/api/acceso/sesiones/", {"identificador": identificador, "secreto": secreto})
+def iniciar_sesion(base: str, identificador: str, secreto: str, pin_maestro: str = "") -> str:
+    cuerpo_entrada = {"identificador": identificador, "secreto": secreto}
+    if pin_maestro:
+        cuerpo_entrada["pin_maestro"] = pin_maestro
+    estado, cuerpo = llamar(base, "POST", "/api/acceso/sesiones/", cuerpo_entrada)
     if estado != 200:
         raise SystemExit(f"No se pudo iniciar sesión como {identificador}: {estado} {cuerpo}")
     return cuerpo["token"]
@@ -58,10 +62,11 @@ def main() -> None:
 
     estado, cuerpo = llamar(base, "POST", "/api/acceso/instalacion/", {
         "organizacion": {"codigo": "IE-PRUEBA", "nombre": "IE de pruebas", "pais": "CO", "idioma": "es", "locale": "es-CO"},
-        "administrador": {"alias": "Rectoría", "nombres": "Ana", "apellidos": "Pérez", "dni": ADMIN_DNI, "password": ADMIN_CLAVE}})
+        "administrador": {"alias": "Rectoría", "nombres": "Ana", "apellidos": "Pérez", "dni": ADMIN_DNI, "password": ADMIN_CLAVE},
+        "pin_maestro": PIN_MAESTRO})
     if estado not in (201, 409):
         raise SystemExit(f"No se pudo instalar el nodo: {estado} {cuerpo}")
-    admin = iniciar_sesion(base, ADMIN_DNI, ADMIN_CLAVE)
+    admin = iniciar_sesion(base, ADMIN_DNI, ADMIN_CLAVE, PIN_MAESTRO)
 
     estado, grupo = llamar(base, "POST", "/api/acceso/grupos/", {"codigo": "8A", "nombre": "Octavo A", "periodo": "2026"}, admin)
     if estado == 409:

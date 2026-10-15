@@ -14,6 +14,7 @@ from __future__ import annotations
 from ..dominio import bloqueo
 from ..dominio import catalogos as cat
 from ..dominio import intento as int_dom
+from ..dominio import respuestas as resp_dom
 from ..dominio.errores import NoEncontrado
 from .alumno import _Alumno
 from .asignaciones import vista_asignacion
@@ -24,18 +25,13 @@ from .puertos import Actor, UnidadDeTrabajo
 SIETE_DIAS_MS = 7 * 24 * 3_600_000
 
 
-def _ultimo_por_alumno(intentos: list[dict]) -> dict[str, dict]:
-    """El intento más reciente (el de mayor número) de cada alumno."""
-    ultimos: dict[str, dict] = {}
-    for it in intentos:
-        previo = ultimos.get(it["alumno_id"])
-        if previo is None or it["numero"] > previo["numero"]:
-            ultimos[it["alumno_id"]] = it
-    return ultimos
+_ultimo_por_alumno = int_dom.ultimo_por_alumno
 
 
-def totales_de(uow: UnidadDeTrabajo, asignacion: dict) -> dict:
-    """Los contadores de una asignación, por alumno (su intento más reciente). Sirve a la lista, al panel y a los resultados."""
+def totales_de(uow: UnidadDeTrabajo, asignacion: dict, ahora: int | None = None, latido_seg: int = 5) -> dict:
+    """Los contadores de una asignación, por alumno (su intento más reciente). Sirve a la lista, al panel y a los resultados (RF-012):
+    además de los estados, cuántos van sin señal reciente (problemas de conexión antes de la pausa), cuántos reactivos esperan al profesor,
+    cuántos resultados están listos para publicar y cuántos ya publicados."""
     destinatarios = destinatarios_de(uow, asignacion)
     ultimos = _ultimo_por_alumno(uow.intentos.de_asignacion(asignacion["id"]))
     admisiones = {a["alumno_id"] for a in uow.admisiones.de_asignacion(asignacion["id"], solo_en_espera=True)}
@@ -43,6 +39,7 @@ def totales_de(uow: UnidadDeTrabajo, asignacion: dict) -> dict:
     cuenta = {e: 0 for e in cat.ESTADOS_INTENTO}
     for it in ultimos.values():
         cuenta[it["estado"]] += 1
+    umbral_senal = max(2 * int(latido_seg), 1) * 1000
     return {
         "destinatarios": len(destinatarios),
         "sin_intento": sum(1 for d in destinatarios if d["id"] not in ultimos),
@@ -51,7 +48,21 @@ def totales_de(uow: UnidadDeTrabajo, asignacion: dict) -> dict:
         "entregados": cuenta[cat.ENTREGADO], "en_revision": cuenta[cat.EN_REVISION], "calificados": cuenta[cat.CALIFICADO], "anulados": cuenta[cat.ANULADO],
         "con_incidentes": sum(1 for it in ultimos.values() if it["id"] in con_incidentes),
         "pendientes_decision": sum(1 for it in ultimos.values() if it.get("envio_tardio") == cat.TARDIO_PENDIENTE),
+        # RF-012: problemas de conexión (sin señal hace más de dos latidos, todavía sin pausar) y entregas que esperan a la biblioteca
+        "sin_senal": (sum(1 for it in ultimos.values() if it["estado"] in cat.CORRIENDO and int_dom.silencio_ms(it, ahora) > umbral_senal)
+                      if ahora is not None else 0),
+        "calificacion_pendiente": sum(1 for it in ultimos.values() if it["estado"] in cat.ENTREGADOS and it.get("calificacion_pendiente")),
+        "reactivos_por_revisar": sum(len(resp_dom.pendientes_de_revision(it["respuestas"])) for it in ultimos.values() if it["estado"] == cat.EN_REVISION),
+        "listos_para_publicar": sum(1 for it in ultimos.values()
+                                    if it["estado"] == cat.CALIFICADO and not it.get("calificacion_pendiente") and not Motor.resultado_disponible(asignacion, it)),
+        "publicados": sum(1 for it in ultimos.values() if Motor.resultado_disponible(asignacion, it)),
     }
+
+
+def vista_publicacion(asignacion: dict) -> dict:
+    """La política de publicación y su estado, para el profesor (RF-004)."""
+    return {"resultados": asignacion["resultados"], "publicar_en": asignacion.get("publicar_en"), "liberados_en": asignacion.get("liberados_en"),
+            "liberados_por": asignacion.get("liberados_por") or ""}
 
 
 def resumen_de_incidentes(lista: list[dict]) -> dict:
@@ -109,6 +120,7 @@ class PanelDeAsignacion(_Lectura):
         with self.s.uow() as uow:
             asignacion = self._asignacion(uow, asignacion_id, ahora)
             self.s.autorizacion.exigir(actor, cat.P_READ, asignacion)
+            asignacion = self.motor.asegurar_publicacion(uow, asignacion, ahora, grupo=True)
             destinatarios = destinatarios_de(uow, asignacion)
             intentos = self._al_dia(uow, asignacion, ahora)
             ultimos = _ultimo_por_alumno(intentos)
@@ -121,16 +133,18 @@ class PanelDeAsignacion(_Lectura):
                 it = ultimos.get(d["id"])
                 adm = admisiones.get(d["id"])
                 tableta = (uow.dispositivos.por_id(it["dispositivo_id"]) if it and it.get("dispositivo_id") else None) or tabletas.get(d["id"])
-                filas.append(self._fila(d, it, adm, tableta, incidentes.get(it["id"], []) if it else [], nivel, ahora))
+                filas.append(self._fila(d, it, adm, tableta, incidentes.get(it["id"], []) if it else [], nivel, ahora, asignacion))
             filas.sort(key=lambda f: (f["_prioridad"], f["rotulo"].lower()))
             for f in filas:
                 f.pop("_prioridad")
             return {"asignacion": {k: asignacion[k] for k in ("id", "titulo", "estado", "nivel_examen", "nivel_declarado", "plazo", "abre_en", "limite_en",
-                                                              "gracia_ms", "reactivacion", "intentos_permitidos", "sesion_id", "resultados", "liberados_en",
-                                                              "objeto_rotulo", "curso_rotulo", "grupo_rotulo", "preguntas_por_alumno")},
-                    "servidor_en": ahora, "totales": totales_de(uow, asignacion), "filas": filas}
+                                                              "gracia_ms", "reactivacion", "intentos_permitidos", "sesion_id", "resultados", "publicar_en",
+                                                              "liberados_en", "liberados_por", "descripcion", "objeto_rotulo", "curso_rotulo", "grupo_rotulo",
+                                                              "preguntas_por_alumno", "total_banco", "estrategia")},
+                    "servidor_en": ahora, "totales": totales_de(uow, asignacion, ahora, self.s.config.latido_seg), "filas": filas}
 
-    def _fila(self, alumno: dict, it: dict | None, adm: dict | None, tableta: dict | None, incidentes: list[dict], nivel: str, ahora: int) -> dict:
+    def _fila(self, alumno: dict, it: dict | None, adm: dict | None, tableta: dict | None, incidentes: list[dict], nivel: str, ahora: int,
+              asignacion: dict) -> dict:
         en_espera = adm is not None and adm["estado"] == cat.EN_ESPERA
         suspendido = bool(it) and it["estado"] in cat.SUSPENDIDOS
         reloj = int_dom.reloj(it, ahora) if it and it["estado"] in cat.ACEPTAN_RESPUESTAS else None
@@ -167,6 +181,10 @@ class PanelDeAsignacion(_Lectura):
             "origen_entrega": (it or {}).get("origen_entrega") or "", "requiere_revision": bool(it and it.get("requiere_revision")),
             "porcentaje": it.get("porcentaje") if it and it["estado"] in cat.ENTREGADOS else None,
             "anulado_por": it.get("anulado_por") if it and it["estado"] == cat.ANULADO else None,
+            "calificacion_pendiente": bool(it and it.get("calificacion_pendiente")),
+            "reactivos_por_revisar": len(resp_dom.pendientes_de_revision(it["respuestas"])) if it and it["estado"] == cat.EN_REVISION else 0,
+            "resultado_publicado": Motor.resultado_publicado(asignacion, it),
+            "liberado_en": (it or {}).get("liberado_en"),
         }
 
 
@@ -244,6 +262,7 @@ class ResultadosDeAsignacion(_Lectura):
         with self.s.uow() as uow:
             asignacion = self._asignacion(uow, asignacion_id, ahora)
             self.s.autorizacion.exigir(actor, cat.P_RESULTS_VIEW, asignacion)
+            asignacion = self.motor.asegurar_publicacion(uow, asignacion, ahora, grupo=True)
             destinatarios = destinatarios_de(uow, asignacion)
             ultimos = _ultimo_por_alumno(self._al_dia(uow, asignacion, ahora))
             incidentes = uow.incidentes.de_intentos([i["id"] for i in ultimos.values()])
@@ -251,7 +270,7 @@ class ResultadosDeAsignacion(_Lectura):
             filas, porcentajes = [], []
             for d in destinatarios:
                 it = ultimos.get(d["id"])
-                final = bool(it) and it["estado"] == cat.CALIFICADO
+                final = bool(it) and it["estado"] == cat.CALIFICADO and not it.get("calificacion_pendiente")
                 if final and it["porcentaje"] is not None:
                     porcentajes.append(it["porcentaje"])
                 filas.append({"alumno_id": d["id"], "rotulo": d["rotulo"], "intento_id": it["id"] if it else None, "estado": it["estado"] if it else "sin_intento",
@@ -259,9 +278,13 @@ class ResultadosDeAsignacion(_Lectura):
                               "puntaje_maximo": it.get("puntaje_maximo") if it else None, "definitivo": final,
                               "aprobado": (it["porcentaje"] >= aprobacion) if final and aprobacion is not None and it["porcentaje"] is not None else None,
                               "fuera_de_plazo": bool(it and it.get("fuera_de_plazo")), "requiere_revision": bool(it and it.get("requiere_revision")),
-                              "incidentes": len(incidentes.get(it["id"], [])) if it else 0})
-            return {"asignacion_id": asignacion_id, "titulo": asignacion["titulo"], "aprobacion_pct": aprobacion, "liberados_en": asignacion.get("liberados_en"),
-                    "promedio_porcentaje": round(sum(porcentajes) / len(porcentajes), 2) if len(porcentajes) >= 3 else None,
+                              "calificacion_pendiente": bool(it and it.get("calificacion_pendiente")),
+                              "incidentes": len(incidentes.get(it["id"], [])) if it else 0,
+                              # RF-004: el profesor ve todo antes de publicar; aquí se dice qué ve ya cada alumno y quién lo publicó
+                              "resultado_publicado": Motor.resultado_publicado(asignacion, it),
+                              "liberado_en": (it or {}).get("liberado_en"), "liberado_por": (it or {}).get("liberado_por") or ""})
+            return {"asignacion_id": asignacion_id, "titulo": asignacion["titulo"], "aprobacion_pct": aprobacion, **vista_publicacion(asignacion),
+                    "estado": asignacion["estado"], "promedio_porcentaje": round(sum(porcentajes) / len(porcentajes), 2) if len(porcentajes) >= 3 else None,
                     "datos_suficientes": len(porcentajes) >= 3, "filas": filas, "servidor_en": ahora}
 
 
@@ -315,12 +338,21 @@ class MisEvaluaciones(_Estado):
 
     def _resumen(self, uow: UnidadDeTrabajo, ctx: Contexto, asignacion: dict, propios: list[dict], ultimo: dict | None, ahora: int) -> dict:
         puede, motivo, _ = self._puede_comenzar(uow, ctx, asignacion, propios)
+        if ultimo is not None and ultimo["estado"] == cat.CALIFICADO:
+            asignacion = self.motor.asegurar_publicacion(uow, asignacion, ahora, grupo=True)     # lo que la política ya provocó (RF-004)
+        disponible = bool(ultimo) and self.motor.resultado_disponible(asignacion, ultimo)
+        # La política de MOD-010 ya lo mostraría pero lo retiene otro módulo (el libro de calificaciones: la calificación aún no está publicada): la tableta lo dice con esas palabras.
+        retenido_por = None if disponible or not ultimo else self.motor.resultado_retenido_por(asignacion, ultimo)
         return {"id": asignacion["id"], "titulo": asignacion["titulo"], "curso_rotulo": asignacion["curso_rotulo"], "estado": asignacion["estado"],
                 "nivel_examen": asignacion["nivel_examen"], "abre_en": asignacion.get("abre_en"), "limite_en": asignacion.get("limite_en"),
                 "plazo": asignacion["plazo"], "sesion_id": asignacion["sesion_id"], "preguntas": asignacion["preguntas_por_alumno"],
+                "duracion_seg": Antesala._duracion(asignacion), "descripcion": asignacion.get("descripcion") or "",
+                # RF-005/006: la política (sin la nota) para que la tableta diga «calificado · lo publica tu profesor» o «resultado el …»
+                "resultados": asignacion["resultados"], "publicar_en": asignacion.get("publicar_en"),
                 "puede_comenzar": puede, "motivo": motivo,
                 "mi_intento": ({"id": ultimo["id"], "numero": ultimo["numero"], "estado": ultimo["estado"],
-                                "resultado_disponible": self.motor.resultado_disponible(asignacion, ultimo)} if ultimo else None)}
+                                "calificacion_pendiente": bool(ultimo.get("calificacion_pendiente")), "requiere_revision": bool(ultimo.get("requiere_revision")),
+                                "resultado_disponible": disponible, "retenido_por": retenido_por} if ultimo else None)}
 
 
 class EstudiantesConEvaluacion(_CasoDeUso):
@@ -371,8 +403,8 @@ class Antesala(_Estado):
                 "asignacion": {"id": asignacion["id"], "titulo": asignacion["titulo"], "curso_rotulo": asignacion["curso_rotulo"], "estado": asignacion["estado"],
                                "preguntas": asignacion["preguntas_por_alumno"], "duracion_seg": self._duracion(asignacion),
                                "intentos_permitidos": asignacion.get("intentos_permitidos"), "intentos_usados": usados, "plazo": asignacion["plazo"],
-                               "limite_en": asignacion.get("limite_en"), "resultados": asignacion["resultados"],
-                               "permite_retroceso": bool(asignacion.get("permite_retroceso", True))},
+                               "limite_en": asignacion.get("limite_en"), "resultados": asignacion["resultados"], "publicar_en": asignacion.get("publicar_en"),
+                               "descripcion": asignacion.get("descripcion") or "", "permite_retroceso": bool(asignacion.get("permite_retroceso", True))},
                 "condiciones": bloqueo.condiciones(nivel),
                 "dispositivo": ({"id": tableta["id"], "capacidad": tableta["capacidad"], "alcanza": tableta["alcanza"], "nivel_exigido": nivel}
                                 if tableta else {"id": None, "capacidad": ctx.capacidad, "alcanza": bloqueo.alcanza(ctx.capacidad, nivel), "nivel_exigido": nivel}),

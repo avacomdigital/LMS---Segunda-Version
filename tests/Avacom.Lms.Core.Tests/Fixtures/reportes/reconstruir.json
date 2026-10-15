@@ -1,0 +1,17 @@
+{
+  "borradas": {
+    "m13_avance_alumno": 9,
+    "m13_avance_grupo": 2,
+    "m13_clase": 2,
+    "m13_clase_alumno": 7,
+    "m13_estado_dispositivo": 0,
+    "m13_estado_proyeccion": 1,
+    "m13_marca_consumidor": 3
+  },
+  "clases_proyectadas_de_mas": 0,
+  "eventos": 18,
+  "fallidos": [],
+  "grupos": 2,
+  "grupos_fallidos": [],
+  "servidor_en": 1790002430000
+}

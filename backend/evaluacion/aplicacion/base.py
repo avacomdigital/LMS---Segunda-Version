@@ -39,6 +39,9 @@ class ConfigEvaluacion:
     desfase_reloj_ms: int = 5_000              # INV-017
     armado_intentos: int = 200
     archivado_ms: int = cat.ARCHIVO_TRAS_MS
+    # RF-004: la política de publicación institucional (la que toma una asignación nueva si el profesor no elige otra). Por defecto MANUAL: ningún
+    # alumno ve una nota sin que alguien, o la política que el profesor eligió, lo haya decidido (D-26).
+    resultados_por_defecto: str = cat.TRAS_LIBERAR
 
 
 @dataclass

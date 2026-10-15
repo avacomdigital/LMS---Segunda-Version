@@ -1,0 +1,71 @@
+{
+  "escalas": [],
+  "modos": [
+    "simple",
+    "calificaciones"
+  ],
+  "niveles": [
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "preescolar",
+      "por_defecto": true,
+      "version": 0
+    },
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "primaria",
+      "por_defecto": true,
+      "version": 0
+    },
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "secundaria",
+      "por_defecto": true,
+      "version": 0
+    },
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "bachillerato",
+      "por_defecto": true,
+      "version": 0
+    },
+    {
+      "actualizada_en": null,
+      "actualizada_por": "",
+      "escala": null,
+      "modo": "simple",
+      "nivel_clave": "preuniversitario",
+      "por_defecto": true,
+      "version": 0
+    }
+  ],
+  "politica": {
+    "institucion": "",
+    "jurisdiccion": "",
+    "pais": "",
+    "politica_intentos": "ultimo",
+    "politica_provisional": true,
+    "ponderaciones": {},
+    "ponderaciones_aplicadas": false,
+    "version": 0
+  },
+  "politicas_de_intentos": [
+    "ultimo",
+    "mejor",
+    "primero",
+    "promedio"
+  ],
+  "servidor_en": 1790000000000
+}

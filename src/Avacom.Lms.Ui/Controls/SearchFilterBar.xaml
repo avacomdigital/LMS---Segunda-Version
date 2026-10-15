@@ -41,7 +41,7 @@
                     </Border.Stroke>
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                         <Path Aspect="Uniform" Data="M229.66,218.34 L179.59,168.28 A88.11,88.11 0 1 0 168.28,179.59 L218.34,229.66 A8,8 0 0 0 229.66,218.34 Z M40,112 A72,72 0 1 1 112,184 A72.08,72.08 0 0 1 40,112 Z" Fill="#52525B" HeightRequest="20" VerticalOptions="Center" WidthRequest="20" />
-                        <Entry x:Name="Entrada" Grid.Column="1" BackgroundColor="Transparent" ClassId="neumo" FontFamily="InterRegular" FontSize="16" Placeholder="Buscar cursos, temas o códigos" PlaceholderColor="#71717A" ReturnType="Search" TextChanged="OnTextoCambiado" TextColor="#18181B" VerticalOptions="Center" />
+                        <Entry x:Name="Entrada" Grid.Column="1" BackgroundColor="Transparent" ClassId="neumo" FontFamily="InterRegular" FontSize="16" Placeholder="Buscar cursos, temas o códigos" PlaceholderColor="#71717A" ReturnType="Search" Completed="OnCompletado" TextChanged="OnTextoCambiado" TextColor="#18181B" VerticalOptions="Center" />
                     </Grid>
                 </Border>
                 <HorizontalStackLayout x:Name="FiltrosHost" Grid.Column="1" Spacing="10" VerticalOptions="Center" />

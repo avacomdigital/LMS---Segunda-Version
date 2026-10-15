@@ -2,35 +2,41 @@
   "asignacion": {
     "abre_en": null,
     "curso_rotulo": "Estados de la materia y sus cambios",
+    "descripcion": "",
     "estado": "activa",
+    "estrategia": "fixed",
     "gracia_ms": 900000,
     "grupo_rotulo": "Octavo A",
-    "id": "18beb971-9fa0-4567-b5e3-2a4bda89938e",
+    "id": "33a3f7d9-78e2-43d0-8320-17419781ea54",
     "intentos_permitidos": 1,
     "liberados_en": null,
+    "liberados_por": "",
     "limite_en": null,
     "nivel_declarado": "supervisado",
     "nivel_examen": "supervisado",
     "objeto_rotulo": "Examen de estados de la materia",
     "plazo": "blando",
     "preguntas_por_alumno": 12,
+    "publicar_en": null,
     "reactivacion": "profesor",
     "resultados": "tras_liberar",
     "sesion_id": "",
-    "titulo": "Examen de estados de la materia"
+    "titulo": "Examen de estados de la materia",
+    "total_banco": 12
   },
   "filas": [
     {
       "admision": null,
-      "alumno_id": "08337623-9bb9-46d4-afc8-a069cc15170b",
+      "alumno_id": "1cf252f6-48a2-4559-822f-282dadf7550f",
       "anulado_por": null,
       "bloqueo": {
         "resultado": "aplicado"
       },
+      "calificacion_pendiente": false,
       "dispositivo": {
         "alcanza": true,
         "capacidad": "supervisado",
-        "id": "f6ac0bc8-18d2-457f-bac8-fea33c7d2ec5",
+        "id": "0491dd54-9f27-414e-9ca4-fd5aeb4d9d99",
         "nombre": "Tableta de Juan"
       },
       "envio_tardio": "",
@@ -47,12 +53,14 @@
           "tipo": "salida_de_app"
         }
       },
-      "intento_id": "d7ad1e9a-f341-452c-95d1-608d63877ada",
+      "intento_id": "b29e234f-8570-4ad5-bc39-a120f761e0f1",
+      "liberado_en": null,
       "nivel_efectivo": "supervisado",
       "numero": 1,
       "origen_entrega": "",
       "porcentaje": null,
       "pregunta_actual": "l3-q1",
+      "reactivos_por_revisar": 0,
       "reloj": {
         "congelado": false,
         "consumido_ms": 5000,
@@ -64,6 +72,7 @@
       "requiere_reactivacion": false,
       "requiere_revision": false,
       "respondidas": 1,
+      "resultado_publicado": false,
       "rotulo": "Juan P.",
       "silencio_ms": 0,
       "total": 12
@@ -72,6 +81,7 @@
   "servidor_en": 1790000005000,
   "totales": {
     "anulados": 0,
+    "calificacion_pendiente": 0,
     "calificados": 0,
     "con_incidentes": 1,
     "destinatarios": 1,
@@ -79,10 +89,14 @@
     "en_espera_admision": 0,
     "en_revision": 0,
     "entregados": 0,
+    "listos_para_publicar": 0,
     "no_iniciados": 0,
     "pendientes_decision": 0,
+    "publicados": 0,
+    "reactivos_por_revisar": 0,
     "restaurando": 0,
     "sin_intento": 0,
+    "sin_senal": 0,
     "suspendidos": 0
   }
 }

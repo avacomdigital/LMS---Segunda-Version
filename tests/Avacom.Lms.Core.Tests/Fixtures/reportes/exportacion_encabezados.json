@@ -1,0 +1,17 @@
+{
+  "Content-Disposition": "attachment; filename*=UTF-8''reporte-grupo-8A-2026-09-21-0953.csv",
+  "Content-Length": "2025",
+  "Content-Type": "text/csv; charset=utf-8",
+  "X-Avacom-Export-Bytes": "2025",
+  "X-Avacom-Export-Corte-En": "1790002430000",
+  "X-Avacom-Export-Destino": "extraible",
+  "X-Avacom-Export-Expira-En": "1790003330000",
+  "X-Avacom-Export-Filas": "11",
+  "X-Avacom-Export-Formato": "csv",
+  "X-Avacom-Export-Huella": "6eb9e308ece83b1c0be6bc57e1079f8b3661b10abe2597d77d47b8d7930e4a0d",
+  "X-Avacom-Export-Id": "68567725-b997-4350-a164-1ba04c6c7036",
+  "X-Avacom-Export-Nombre": "reporte-grupo-8A-2026-09-21-0953.csv",
+  "X-Avacom-Export-Nominal": "true",
+  "X-Avacom-Export-Tipo": "grupo",
+  "X-Avacom-Export-Umbral-Aplicado": "false"
+}

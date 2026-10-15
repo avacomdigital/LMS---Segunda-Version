@@ -1,0 +1,36 @@
+{
+  "aprobacion_pct": 60,
+  "cubrir_todos_los_temas": false,
+  "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+  "curso_rotulo": "Estados de la materia y sus cambios",
+  "curso_version": "1.0.0",
+  "estrategia": "fixed",
+  "fuente": "ejemplo",
+  "leccion_ref": "l3-assessment",
+  "mezclar_opciones": true,
+  "objeto_ref": "l3-exam",
+  "preguntas_sugeridas": 12,
+  "resultados_por_defecto": "tras_liberar",
+  "resultados_sugeridos": "tras_liberar",
+  "servidor_en": 1790000125000,
+  "temas": [
+    "t-changes",
+    "t-states"
+  ],
+  "tiempo": {
+    "estimado_banco_seg": 700,
+    "extra_pct": null,
+    "fijo_seg": null,
+    "politica": "none"
+  },
+  "tipos": {
+    "fill_blanks": 2,
+    "matching": 1,
+    "multiple_choice": 3,
+    "open": 2,
+    "ordering": 2,
+    "true_false": 2
+  },
+  "titulo": "Examen de estados de la materia",
+  "total_banco": 12
+}
