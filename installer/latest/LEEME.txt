@@ -1,8 +1,8 @@
-﻿AVACOM OPS Master 2.8.0 (revision 7a72a0bd)
+﻿AVACOM OPS Master 2.8.2 (revision a12a63f2)
 
 Esta carpeta es lo que se sube como release de GitHub:
 
-  AVACOM-OPS-Master-Setup-2.8.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
+  AVACOM-OPS-Master-Setup-2.8.2.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
   SHA256.txt                            la huella del instalador y del codigo que lleva
   AVACOM-Verificar-Instalador.bat       revisa el equipo, el instalador y lo ya instalado, y busca
                                         el error exacto cuando algo falla. NO modifica nada.

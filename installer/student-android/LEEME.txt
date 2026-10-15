@@ -1,6 +1,6 @@
-﻿Student LMS 2.8.1  (codigo de version 20801, android-arm64)
-Archivo : Student LMS 2.8.1.apk
-SHA-256 : D1EA776558CAE53218C258C59DB7C11C05EA4B4B85D0EBD775ADB28739C19CAB
+﻿Student LMS 2.8.2  (codigo de version 20802, android-arm64)
+Archivo : Student LMS 2.8.2.apk
+SHA-256 : 3AECAD867A48A606E4A222D31232FE058CB4BB4E09E01CE1296C119F3886F95C
 Firma   : Signer #1 certificate SHA-256 digest: 16efdeaffb023e8b5b6704d9412911652bc7e4f405fcc3faf23eb92511a65ce0
-Git     : 7a72a0bd  (con cambios sin confirmar en src)
+Git     : a12a63f2  (con cambios sin confirmar en src)
 Paquete : com.avacom.lms.student  |  Android minimo declarado: 5.0 (API 21)  |  Objetivo de pruebas: Android 13 y 14 (API 33 y 34)

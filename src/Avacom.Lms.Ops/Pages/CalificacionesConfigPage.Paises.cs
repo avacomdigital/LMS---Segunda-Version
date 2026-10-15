@@ -92,13 +92,16 @@ public partial class CalificacionesConfigPage
 
     private static int OrdenDeNivel(string nivel) => NivelesEducativos.Todos.ToList().IndexOf(nivel) is var i and >= 0 ? i : int.MaxValue;
 
-    /// <summary>El país que se enseña: el que se tocó o, de entrada, el de la institución (si tiene plantillas) o el primero del catálogo.</summary>
+    /// <summary>El país que se enseña: el que se tocó o, de entrada, el de la institución, o el del sistema que ya usa un nivel, o el primero del catálogo (siempre que tenga sistemas).</summary>
     private string? PaisMostrado(PlantillasDeEscalas catalogo)
     {
         if (_paisDelSistema is not null) return _paisDelSistema;
         var paises = FiltroDePlantillas.Paises(catalogo.Plantillas);
         var propio = _config?.Politica.Pais?.Trim().ToUpperInvariant();
         if (!string.IsNullOrEmpty(propio) && paises.Contains(propio)) return propio;
+        var enUso = _config?.Niveles.Where(n => n.EnModoCalificaciones).OrderBy(n => OrdenDeNivel(n.NivelClave)).Select(n => n.Escala?.Pais?.Trim().ToUpperInvariant())
+                            .FirstOrDefault(pais => !string.IsNullOrEmpty(pais) && paises.Contains(pais));
+        if (enUso is not null) return enUso;
         if (paises.Count > 0) return paises[0];
         return FiltroDePlantillas.HayGenericas(catalogo.Plantillas) ? FiltroDePlantillas.Genericas : null;
     }

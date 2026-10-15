@@ -1,16 +1,16 @@
 {
   "items": [
     {
-      "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+      "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
       "alumno_rotulo": "Juan P.",
-      "asignacion_id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
-      "calificacion_id": "c9ddeb6e-747d-416a-b67a-028df7dc43b5",
+      "asignacion_id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
+      "calificacion_id": "cb74409b-261e-44d4-bd33-55c081c1ab1f",
       "curso_rotulo": "Estados de la materia y sus cambios",
       "entregado_en": 1790000000000,
       "estado_intento": "calificado",
-      "grupo_id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
+      "grupo_id": "aaa24399-46b8-4f25-802b-de7fa5fb2cdf",
       "grupo_rotulo": "Octavo A",
-      "intento_id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+      "intento_id": "0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
       "motivo": "reabierta",
       "n_pendientes": 0,
       "pendientes": [],

@@ -51,9 +51,10 @@ public partial class CalificacionesConfigPage : ContentPage
             if (!CalificacionesUi.PuedeConfigurar)
             {
                 SubtituloLabel.Text = string.Empty;
+                SistemaHost.Clear();
                 PoliticaHost.Clear();
-                PoliticaHost.Add(CalificacionesUi.SinAcceso("La configuración académica es de la administración",
-                    "Sólo la administración elige el modo y la escala de cada nivel. El profesorado y los reportes ven las calificaciones en el libro."));
+                PoliticaHost.Add(CalificacionesUi.SinAcceso("El sistema de calificación lo elige la administración",
+                    "Sólo la administración elige el país, el sistema y la escala de cada nivel. El profesorado ve el sistema en el libro de calificaciones y cada estudiante lo ve junto a su nota publicada."));
                 return;
             }
             if (_config is null)
@@ -101,6 +102,7 @@ public partial class CalificacionesConfigPage : ContentPage
                         : ExamenUi.Aviso("No se pudo actualizar la configuración", CalificacionesUi.Error(api), Tono.Ambar));
                     return;
                 }
+                SistemaHost.Clear();
                 PoliticaHost.Clear();
                 NivelesHost.Clear();
                 EscalasHost.Clear();

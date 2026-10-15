@@ -14,9 +14,9 @@
           "publicadas": 0
         }
       ],
-      "alumno_id": "ac9e22fa-28d8-4439-a298-b11dd7d2b6b7",
+      "alumno_id": "6baf2a9d-87bb-45e0-98a1-cf50394d582d",
       "celdas": {
-        "79559179-f683-4239-b6f2-506542dea2c9": {
+        "f958712c-1cf7-47d3-b91b-a6083b94be68": {
           "ajustada": false,
           "calificacion_id": null,
           "estado": "sin_registro",
@@ -42,7 +42,7 @@
       "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
       "curso_rotulo": "Estados de la materia y sus cambios",
       "estado": "activa",
-      "id": "79559179-f683-4239-b6f2-506542dea2c9",
+      "id": "f958712c-1cf7-47d3-b91b-a6083b94be68",
       "por_revisar": 0,
       "resultados": "tras_liberar",
       "tipo_evaluacion": "sumativa",
@@ -52,7 +52,7 @@
   "escala": null,
   "grupo": {
     "codigo": "P1",
-    "id": "16dfac47-09a4-449b-a2b5-082cb0d5f8d0",
+    "id": "1934ccaf-c8ba-4cc2-87ad-c8c2a0069198",
     "nivel_clave": "preescolar",
     "nombre": "Párvulos",
     "periodo": "2026"

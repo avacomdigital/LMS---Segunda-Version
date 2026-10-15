@@ -4,8 +4,8 @@
       "activa": true,
       "codigo": "co-1-5",
       "creada_en": 1790000000000,
-      "creada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
-      "id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+      "creada_por": "84b998a5-1c50-4283-8f66-31547fd627d4",
+      "id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
       "jurisdiccion": "Antioquia",
       "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
       "pais": "CO",
@@ -13,7 +13,7 @@
       "tipo": "numerica",
       "ultima_version": {
         "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
-        "id": "e0521e03-c62f-449b-936f-f2630c3accdb",
+        "id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e",
         "numero": 1
       }
     }
@@ -43,14 +43,42 @@
     },
     {
       "actualizada_en": 1790000000000,
-      "actualizada_por": "244b5d9d-3e87-4406-b98b-529bfc208c4e",
+      "actualizada_por": "84b998a5-1c50-4283-8f66-31547fd627d4",
       "escala": {
+        "aprobacion_minima": 3.0,
+        "aprueba_desde": "Básico",
         "codigo": "co-1-5",
-        "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+        "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
+        "jurisdiccion": "Antioquia",
         "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
         "numero": 1,
+        "pais": "CO",
         "tipo": "numerica",
-        "version_id": "e0521e03-c62f-449b-936f-f2630c3accdb"
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "etiqueta": "Bajo"
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "etiqueta": "Básico"
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "etiqueta": "Alto"
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "etiqueta": "Superior"
+          }
+        ],
+        "valor_max": 5.0,
+        "valor_min": 1.0,
+        "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
       },
       "modo": "calificaciones",
       "nivel_clave": "secundaria",

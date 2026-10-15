@@ -318,14 +318,14 @@
     }
   ],
   "intento": {
-    "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+    "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
     "alumno_rotulo": "Juan P.",
-    "asignacion_id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
+    "asignacion_id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
     "calificacion_id": null,
     "calificacion_version": null,
     "estado": "en_revision_docente",
-    "grupo_id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
-    "id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+    "grupo_id": "aaa24399-46b8-4f25-802b-de7fa5fb2cdf",
+    "id": "0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
     "pendientes": [
       "l3-q5",
       "l3-q12"

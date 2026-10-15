@@ -6,17 +6,17 @@
     "actualizada_en": 1790000000000,
     "adaptacion": "",
     "ajustada": false,
-    "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
-    "asignacion_id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
+    "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
+    "asignacion_id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
     "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
     "desempeno_docente": "",
     "desempeno_motivo": "",
     "desfase_con_evaluacion": false,
     "estado": "revisada",
-    "evaluador_id": "1c51b3c6-cbf1-4111-8641-0b53229fc024",
-    "grupo_id": "4701a01c-6d18-46bd-b311-0e36eed8205c",
-    "id": "c9ddeb6e-747d-416a-b67a-028df7dc43b5",
-    "intento_id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+    "evaluador_id": "96630f34-b415-4886-9556-9f7bb5c97f05",
+    "grupo_id": "aaa24399-46b8-4f25-802b-de7fa5fb2cdf",
+    "id": "cb74409b-261e-44d4-bd33-55c081c1ab1f",
+    "intento_id": "0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
     "nivel_clave": "secundaria",
     "numero_intento": 1,
     "origen": "docente",
@@ -34,12 +34,12 @@
       },
       "escala": {
         "codigo": "co-1-5",
-        "escala_id": "bed0eeb7-f64e-4ec3-ad18-f11d8bb4f84f",
+        "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
         "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
         "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
         "numero": 1,
         "tipo": "numerica",
-        "version_id": "e0521e03-c62f-449b-936f-f2630c3accdb"
+        "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
       },
       "interno": 95.24,
       "presentada": {
@@ -60,7 +60,7 @@
     "version": 1
   },
   "estado": "calificado",
-  "intento_id": "d9d4e299-fa70-4142-81b2-775828e2ab00",
+  "intento_id": "0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
   "registrada": true,
   "resultado": "creada",
   "servidor_en": 1790000000000

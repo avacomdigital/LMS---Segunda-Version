@@ -35,6 +35,13 @@
       "pais": "",
       "problemas": [],
       "referencia": "Conversión lineal de 0–100 a 0–5.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 5.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     },
     {
@@ -71,6 +78,13 @@
       "pais": "",
       "problemas": [],
       "referencia": "Conversión lineal de 0–100 a 0–10.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 10.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     },
     {
@@ -107,6 +121,13 @@
       "pais": "",
       "problemas": [],
       "referencia": "Conversión lineal de 0–100 a 0–20.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 20.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     },
     {
@@ -143,6 +164,13 @@
       "pais": "",
       "problemas": [],
       "referencia": "La escala interna tal cual.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 100.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     },
     {
@@ -221,6 +249,39 @@
       "pais": "",
       "problemas": [],
       "referencia": "Tramos de diez puntos (90/80/70/60), práctica habitual de la escala alfabética.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": "D",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "F",
+            "etiqueta": "F"
+          },
+          {
+            "aprueba": true,
+            "clave": "D",
+            "etiqueta": "D"
+          },
+          {
+            "aprueba": true,
+            "clave": "C",
+            "etiqueta": "C"
+          },
+          {
+            "aprueba": true,
+            "clave": "B",
+            "etiqueta": "B"
+          },
+          {
+            "aprueba": true,
+            "clave": "A",
+            "etiqueta": "A"
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
       "tipo": "alfabetica"
     },
     {
@@ -289,6 +350,143 @@
       "pais": "",
       "problemas": [],
       "referencia": "Cuatro conceptos; las denominaciones y los cortes se configuran.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": "Básico",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "etiqueta": "Bajo"
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "etiqueta": "Básico"
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "etiqueta": "Alto"
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "etiqueta": "Superior"
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
+      "tipo": "cualitativa"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "es-terminos",
+      "definicion": {
+        "aprobacion_minima": null,
+        "conversion": "tramos",
+        "decimales": 0,
+        "puntos": [],
+        "redondeo": "mitad_arriba",
+        "tipo": "cualitativa",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "IN",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "Insuficiente",
+            "hasta": "50",
+            "nivel_desempeno": "Insuficiente",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "SU",
+            "descripcion": "",
+            "desde": "50",
+            "etiqueta": "Suficiente",
+            "hasta": "60",
+            "nivel_desempeno": "Suficiente",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "BI",
+            "descripcion": "",
+            "desde": "60",
+            "etiqueta": "Bien",
+            "hasta": "70",
+            "nivel_desempeno": "Bien",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "NT",
+            "descripcion": "",
+            "desde": "70",
+            "etiqueta": "Notable",
+            "hasta": "90",
+            "nivel_desempeno": "Notable",
+            "orden": 4
+          },
+          {
+            "aprueba": true,
+            "clave": "SB",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "Sobresaliente",
+            "hasta": "100",
+            "nivel_desempeno": "Sobresaliente",
+            "orden": 5
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria"
+      ],
+      "nombre": "España · Primaria y ESO · IN, SU, BI, NT, SB",
+      "pais": "ES",
+      "problemas": [],
+      "referencia": "En Primaria y ESO se califica con los términos Insuficiente (IN), Suficiente (SU), Bien (BI), Notable (NT) y Sobresaliente (SB); se aprueba desde Suficiente. La normativa estatal la concretan las comunidades autónomas. Educación Infantil no se califica con notas: use el modo simple.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": "Suficiente",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "IN",
+            "etiqueta": "Insuficiente"
+          },
+          {
+            "aprueba": true,
+            "clave": "SU",
+            "etiqueta": "Suficiente"
+          },
+          {
+            "aprueba": true,
+            "clave": "BI",
+            "etiqueta": "Bien"
+          },
+          {
+            "aprueba": true,
+            "clave": "NT",
+            "etiqueta": "Notable"
+          },
+          {
+            "aprueba": true,
+            "clave": "SB",
+            "etiqueta": "Sobresaliente"
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
       "tipo": "cualitativa"
     },
     {
@@ -367,14 +565,46 @@
       },
       "jurisdiccion": "",
       "niveles": [
-        "primaria",
         "secundaria",
         "bachillerato"
       ],
-      "nombre": "España · 0 a 10 (Insuficiente a Sobresaliente)",
+      "nombre": "España · Bachillerato · 0 a 10 (Insuficiente a Sobresaliente)",
       "pais": "ES",
       "problemas": [],
-      "referencia": "Calificaciones numéricas de 0 a 10 con los términos IN, SU, BI, NT y SB (normativa estatal de educación obligatoria; las comunidades autónomas la concretan). Educación Infantil no se califica con notas: use el modo simple.",
+      "referencia": "Calificaciones numéricas de 0 a 10 (se aprueba con 5) acompañadas de los términos IN, SU, BI, NT y SB; es la escala de Bachillerato y la que acompaña a los términos en el expediente de ESO. Las comunidades autónomas la concretan.",
+      "sistema": {
+        "aprobacion_minima": 5.0,
+        "aprueba_desde": "Suficiente",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "IN",
+            "etiqueta": "Insuficiente"
+          },
+          {
+            "aprueba": true,
+            "clave": "SU",
+            "etiqueta": "Suficiente"
+          },
+          {
+            "aprueba": true,
+            "clave": "BI",
+            "etiqueta": "Bien"
+          },
+          {
+            "aprueba": true,
+            "clave": "NT",
+            "etiqueta": "Notable"
+          },
+          {
+            "aprueba": true,
+            "clave": "SB",
+            "etiqueta": "Sobresaliente"
+          }
+        ],
+        "valor_max": 10.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     },
     {
@@ -453,7 +683,175 @@
       "pais": "US",
       "problemas": [],
       "referencia": "Escala de letras con tramos de diez puntos. Distritos y estados cambian los cortes, admiten más/menos (A−, B+) y definen el mínimo aprobatorio.",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": "D",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "F",
+            "etiqueta": "F"
+          },
+          {
+            "aprueba": true,
+            "clave": "D",
+            "etiqueta": "D"
+          },
+          {
+            "aprueba": true,
+            "clave": "C",
+            "etiqueta": "C"
+          },
+          {
+            "aprueba": true,
+            "clave": "B",
+            "etiqueta": "B"
+          },
+          {
+            "aprueba": true,
+            "clave": "A",
+            "etiqueta": "A"
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
       "tipo": "alfabetica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "us-gpa",
+      "definicion": {
+        "aprobacion_minima": "1",
+        "conversion": "interpolada",
+        "decimales": 2,
+        "puntos": [
+          [
+            "0",
+            "0"
+          ],
+          [
+            "60",
+            "1"
+          ],
+          [
+            "70",
+            "2"
+          ],
+          [
+            "80",
+            "3"
+          ],
+          [
+            "90",
+            "4"
+          ],
+          [
+            "100",
+            "4"
+          ]
+        ],
+        "redondeo": "abajo",
+        "tipo": "numerica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "F",
+            "descripcion": "",
+            "desde": "0",
+            "etiqueta": "F",
+            "hasta": "60",
+            "nivel_desempeno": "No alcanza",
+            "orden": 1
+          },
+          {
+            "aprueba": true,
+            "clave": "D",
+            "descripcion": "",
+            "desde": "60",
+            "etiqueta": "D",
+            "hasta": "70",
+            "nivel_desempeno": "Suficiente",
+            "orden": 2
+          },
+          {
+            "aprueba": true,
+            "clave": "C",
+            "descripcion": "",
+            "desde": "70",
+            "etiqueta": "C",
+            "hasta": "80",
+            "nivel_desempeno": "Satisfactorio",
+            "orden": 3
+          },
+          {
+            "aprueba": true,
+            "clave": "B",
+            "descripcion": "",
+            "desde": "80",
+            "etiqueta": "B",
+            "hasta": "90",
+            "nivel_desempeno": "Notable",
+            "orden": 4
+          },
+          {
+            "aprueba": true,
+            "clave": "A",
+            "descripcion": "",
+            "desde": "90",
+            "etiqueta": "A",
+            "hasta": "100",
+            "nivel_desempeno": "Sobresaliente",
+            "orden": 5
+          }
+        ],
+        "valor_max": "4",
+        "valor_min": "0"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "secundaria",
+        "bachillerato",
+        "preuniversitario"
+      ],
+      "nombre": "Estados Unidos · GPA 0,0 a 4,0 (A = 4,0)",
+      "pais": "US",
+      "problemas": [],
+      "referencia": "Promedio de puntos de 0,0 a 4,0 con A = 4,0, B = 3,0, C = 2,0, D = 1,0 y F = 0,0; entre una letra y otra se interpola. Cada distrito o universidad cambia los cortes, admite más y menos (A−, B+) y pondera los cursos avanzados; el mínimo aprobatorio (aquí D, 1,0) lo fija cada institución.",
+      "sistema": {
+        "aprobacion_minima": 1.0,
+        "aprueba_desde": "D",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "F",
+            "etiqueta": "F"
+          },
+          {
+            "aprueba": true,
+            "clave": "D",
+            "etiqueta": "D"
+          },
+          {
+            "aprueba": true,
+            "clave": "C",
+            "etiqueta": "C"
+          },
+          {
+            "aprueba": true,
+            "clave": "B",
+            "etiqueta": "B"
+          },
+          {
+            "aprueba": true,
+            "clave": "A",
+            "etiqueta": "A"
+          }
+        ],
+        "valor_max": 4.0,
+        "valor_min": 0.0
+      },
+      "tipo": "numerica"
     },
     {
       "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
@@ -489,6 +887,13 @@
       "pais": "US",
       "problemas": [],
       "referencia": "Porcentaje de 0 a 100; el mínimo aprobatorio (60) lo fija cada distrito.",
+      "sistema": {
+        "aprobacion_minima": 60.0,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 100.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     },
     {
@@ -523,7 +928,59 @@
       "nombre": "México · 0 a 10 (se aprueba con 6)",
       "pais": "MX",
       "problemas": [],
-      "referencia": "Escala de 0 a 10 con 6 como mínimo aprobatorio. La educación básica oficial no asienta calificaciones menores a 5 y la Nueva Escuela Mexicana usa en algunos grados valoraciones descriptivas: si su institución aplica 5–10, defina una escala propia.",
+      "referencia": "Escala de 0 a 10 con 6 como mínimo aprobatorio. La educación básica oficial no asienta calificaciones menores a 5 y la Nueva Escuela Mexicana usa en algunos grados valoraciones descriptivas: para la escala que empieza en 5 use «México · 5 a 10».",
+      "sistema": {
+        "aprobacion_minima": 6.0,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 10.0,
+        "valor_min": 0.0
+      },
+      "tipo": "numerica"
+    },
+    {
+      "advertencia": "Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.",
+      "codigo": "mx-5-10",
+      "definicion": {
+        "aprobacion_minima": "6",
+        "conversion": "interpolada",
+        "decimales": 1,
+        "puntos": [
+          [
+            "0",
+            "5"
+          ],
+          [
+            "60",
+            "6"
+          ],
+          [
+            "100",
+            "10"
+          ]
+        ],
+        "redondeo": "abajo",
+        "tipo": "numerica",
+        "tramos": [],
+        "valor_max": "10",
+        "valor_min": "5"
+      },
+      "jurisdiccion": "",
+      "niveles": [
+        "primaria",
+        "secundaria"
+      ],
+      "nombre": "México · 5 a 10 (se aprueba con 6)",
+      "pais": "MX",
+      "problemas": [],
+      "referencia": "Escala de 5 a 10, donde 5 es «no aprobado» y 6 el mínimo aprobatorio (aquí el 60 % del resultado interno): la que se usa en Secundaria y en varios grados de Primaria. En otros grados la escala empieza en 6: su institución debe confirmar cuál aplica a cada grado.",
+      "sistema": {
+        "aprobacion_minima": 6.0,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 10.0,
+        "valor_min": 5.0
+      },
       "tipo": "numerica"
     },
     {
@@ -600,6 +1057,34 @@
       "pais": "CO",
       "problemas": [],
       "referencia": "Escala nacional de desempeño Superior, Alto, Básico y Bajo; la escala numérica y sus equivalencias las define cada institución en su sistema institucional de evaluación (Decreto 1290 de 2009). Se trunca (no se redondea hacia arriba) para que el redondeo no lleve un resultado por encima del corte de aprobación.",
+      "sistema": {
+        "aprobacion_minima": 3.0,
+        "aprueba_desde": "Básico",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "etiqueta": "Bajo"
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "etiqueta": "Básico"
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "etiqueta": "Alto"
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "etiqueta": "Superior"
+          }
+        ],
+        "valor_max": 5.0,
+        "valor_min": 1.0
+      },
       "tipo": "numerica"
     },
     {
@@ -638,6 +1123,13 @@
       "pais": "CL",
       "problemas": [],
       "referencia": "Notas de 1,0 a 7,0 con 4,0 como mínimo aprobatorio; el 4,0 corresponde habitualmente al 60 % de exigencia, que cada establecimiento puede cambiar. Educación Parvularia no califica con notas: use el modo simple.",
+      "sistema": {
+        "aprobacion_minima": 4.0,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 7.0,
+        "valor_min": 1.0
+      },
       "tipo": "numerica"
     },
     {
@@ -672,6 +1164,13 @@
       "pais": "PE",
       "problemas": [],
       "referencia": "Escala vigesimal con 11 como mínimo aprobatorio, usada en secundaria y en educación superior.",
+      "sistema": {
+        "aprobacion_minima": 11.0,
+        "aprueba_desde": null,
+        "tramos": [],
+        "valor_max": 20.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     },
     {
@@ -739,6 +1238,34 @@
       "pais": "PE",
       "problemas": [],
       "referencia": "Escala literal por competencias del Currículo Nacional. Los cortes sobre 0–100 son una equivalencia aproximada con la escala vigesimal: la evaluación por competencias es una valoración docente, no sólo un cálculo (use la valoración docente para fijar el nivel).",
+      "sistema": {
+        "aprobacion_minima": null,
+        "aprueba_desde": null,
+        "tramos": [
+          {
+            "aprueba": null,
+            "clave": "C",
+            "etiqueta": "C"
+          },
+          {
+            "aprueba": null,
+            "clave": "B",
+            "etiqueta": "B"
+          },
+          {
+            "aprueba": null,
+            "clave": "A",
+            "etiqueta": "A"
+          },
+          {
+            "aprueba": null,
+            "clave": "AD",
+            "etiqueta": "AD"
+          }
+        ],
+        "valor_max": null,
+        "valor_min": null
+      },
       "tipo": "competencias"
     },
     {
@@ -815,6 +1342,34 @@
       "pais": "EC",
       "problemas": [],
       "referencia": "Escala cualitativa y cuantitativa del Ministerio de Educación: 9–10 DAR, 7–8,99 AAR, 4,01–6,99 PAAR, ≤ 4 NAAR; se aprueba con 7. Educación Inicial usa una valoración descriptiva: use el modo simple.",
+      "sistema": {
+        "aprobacion_minima": 7.0,
+        "aprueba_desde": "Alcanza los aprendizajes requeridos",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "NAAR",
+            "etiqueta": "No alcanza los aprendizajes requeridos"
+          },
+          {
+            "aprueba": false,
+            "clave": "PAAR",
+            "etiqueta": "Próximo a alcanzar los aprendizajes requeridos"
+          },
+          {
+            "aprueba": true,
+            "clave": "AAR",
+            "etiqueta": "Alcanza los aprendizajes requeridos"
+          },
+          {
+            "aprueba": true,
+            "clave": "DAR",
+            "etiqueta": "Domina los aprendizajes requeridos"
+          }
+        ],
+        "valor_max": 10.0,
+        "valor_min": 0.0
+      },
       "tipo": "numerica"
     }
   ],

@@ -13,8 +13,8 @@
         <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
             <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
                 <Label Text="CONFIGURACIÓN ACADÉMICA" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                <Label x:Name="TituloLabel" Text="Modo y escala de cada nivel" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
-                <Label x:Name="SubtituloLabel" Text="Elige cómo se ve el resultado de cada nivel educativo." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <Label x:Name="TituloLabel" Text="Sistema de calificación" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Elige el país y el sistema con que se califica cada nivel educativo, y cómo se ve el resultado." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
             </VerticalStackLayout>
             <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
         </Grid>
@@ -24,6 +24,7 @@
         </VerticalStackLayout>
         <ScrollView x:Name="Desplazable" Grid.Row="2">
             <VerticalStackLayout x:Name="Cuerpo" HorizontalOptions="Center" WidthRequest="1280" Spacing="14" Padding="0,0,0,40">
+                <VerticalStackLayout x:Name="SistemaHost" Spacing="14" />
                 <VerticalStackLayout x:Name="PoliticaHost" Spacing="14" />
                 <VerticalStackLayout x:Name="NivelesHost" Spacing="14" />
                 <VerticalStackLayout x:Name="EscalasHost" Spacing="14" />

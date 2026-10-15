@@ -1,8 +1,8 @@
 {
-  "alumno_id": "c52c271e-fb49-4c01-8ba6-f3a2f2110812",
+  "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
   "items": [
     {
-      "asignacion_id": "f307d2fb-cc69-4206-a4d8-5c20d5cfad12",
+      "asignacion_id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
       "calificacion": {
         "aprobacion": {
           "cumple_criterio": true
@@ -14,8 +14,40 @@
           "tramo": 3
         },
         "escala": {
+          "aprobacion_minima": 3.0,
+          "aprueba_desde": "Básico",
+          "codigo": "co-1-5",
+          "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
+          "jurisdiccion": "Antioquia",
           "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
-          "tipo": "numerica"
+          "numero": 1,
+          "pais": "CO",
+          "tipo": "numerica",
+          "tramos": [
+            {
+              "aprueba": false,
+              "clave": "bajo",
+              "etiqueta": "Bajo"
+            },
+            {
+              "aprueba": true,
+              "clave": "basico",
+              "etiqueta": "Básico"
+            },
+            {
+              "aprueba": true,
+              "clave": "alto",
+              "etiqueta": "Alto"
+            },
+            {
+              "aprueba": true,
+              "clave": "superior",
+              "etiqueta": "Superior"
+            }
+          ],
+          "valor_max": 5.0,
+          "valor_min": 1.0,
+          "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
         },
         "numero_intento": 1,
         "presentada": {

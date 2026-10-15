@@ -34,6 +34,11 @@ public sealed class ContratoGradebookTests
         Assert.Equal(celda.PuntajeOriginal, celda.PuntajeEfectivo);
         Assert.True(celda.Presentacion!.Provisional);                                  // sin publicar: la presentación es provisional
         Assert.Equal("co-1-5", celda.Presentacion.Escala!.Codigo);
+        // El sistema del nivel a la vista del profesor: país, rango, desde dónde se aprueba y sus niveles.
+        Assert.Equal(("CO", 1m, 5m, 3m, "Básico"), (l.Escala.Pais, l.Escala.ValorMin, l.Escala.ValorMax, l.Escala.AprobacionMinima, l.Escala.ApruebaDesde));
+        Assert.Equal(new[] { "Bajo", "Básico", "Alto", "Superior" }, l.Escala.Tramos!.Select(t => t.Etiqueta).ToArray());
+        Assert.Equal(new bool?[] { false, true, true, true }, l.Escala.Tramos!.Select(t => t.Aprueba).ToArray());
+        Assert.Equal("De 1 a 5 · Se aprueba con 3 o más", GradebookTexto.ResumenDelSistema(l.Escala));
         var agregado = Assert.Single(fila.Agregados);
         Assert.False(agregado.Oficial);
         Assert.False(agregado.Ponderado);                                              // el promedio es simple e informativo
@@ -124,6 +129,7 @@ public sealed class ContratoGradebookTests
         Assert.Equal(2, d.Revisiones.Count);                                           // las dos revisiones del profesor, con su traza
         Assert.Equal("calificado", d.Intento!.Estado);
         Assert.False(c.DesfaseConEvaluacion);
+        Assert.Equal(("co-1-5", "CO", "Se aprueba con 3 o más"), (d.Sistema!.Codigo, d.Sistema.Pais, GradebookTexto.MinimoParaAprobar(d.Sistema)));
     }
 
     [Fact]
@@ -209,6 +215,10 @@ public sealed class ContratoGradebookTests
         Assert.Equal(4.4m, item.Calificacion!.Presentada!.Valor);
         Assert.Equal("Alto", item.Calificacion.Desempeno!.Nivel);
         Assert.NotEmpty(item.Calificacion.Retroalimentacion!);
+        // Junto a su nota, el alumno lee con qué sistema se presentó (el de la versión con que se publicó) y desde dónde se aprueba.
+        var sistema = item.Calificacion.Escala!;
+        Assert.Equal(("co-1-5", "CO", 3m, "Básico"), (sistema.Codigo, sistema.Pais, sistema.AprobacionMinima, sistema.ApruebaDesde));
+        Assert.Equal("De 1 a 5 · Se aprueba con 3 o más", GradebookTexto.ResumenDelSistema(sistema));
         Assert.DoesNotContain("interno", Leer("mias_publicada"));
         Assert.DoesNotContain("puntaje_efectivo", Leer("mias_publicada"));
     }
@@ -292,6 +302,17 @@ public sealed class ContratoGradebookTests
         Assert.True(p.Plantillas.Count >= 15);
         Assert.All(p.Plantillas, x => Assert.Contains("orientativa", x.Advertencia));
         Assert.Equal(new[] { "CL", "CO", "EC", "ES", "MX", "PE", "US" }, p.Plantillas.Select(x => x.Pais).Where(x => !string.IsNullOrEmpty(x)).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToArray());
+        // Los sistemas de la tabla internacional, cada uno con su resumen listo para leerse.
+        var porCodigo = p.Plantillas.ToDictionary(x => x.Codigo);
+        Assert.Equal(("Se aprueba desde Suficiente", ""), (GradebookTexto.MinimoParaAprobar(porCodigo["es-terminos"].Sistema), GradebookTexto.Rango(porCodigo["es-terminos"].Sistema)));
+        Assert.Equal("Insuficiente · Suficiente · Bien · Notable · Sobresaliente", GradebookTexto.Niveles(porCodigo["es-terminos"].Sistema));
+        Assert.Equal("De 0 a 4 · Se aprueba con 1 o más", GradebookTexto.ResumenDelSistema(porCodigo["us-gpa"].Sistema));
+        Assert.Equal("De 5 a 10 · Se aprueba con 6 o más", GradebookTexto.ResumenDelSistema(porCodigo["mx-5-10"].Sistema));
+        Assert.Equal("De 1 a 7 · Se aprueba con 4 o más", GradebookTexto.ResumenDelSistema(porCodigo["cl-1-7"].Sistema));
+        Assert.Equal("De 0 a 20 · Se aprueba con 11 o más", GradebookTexto.ResumenDelSistema(porCodigo["pe-0-20"].Sistema));
+        Assert.Equal("C · B · A · AD", GradebookTexto.Niveles(porCodigo["pe-literal"].Sistema));
+        Assert.Null(GradebookTexto.MinimoParaAprobar(porCodigo["pe-literal"].Sistema));                    // las competencias no fijan un umbral: no se inventa uno
+        Assert.Equal("De 0 a 10 · Se aprueba con 7 o más", GradebookTexto.ResumenDelSistema(porCodigo["ec-0-10"].Sistema));
         var e = Cargar<EscalaAdoptada>("escala");
         Assert.Equal(("co-1-5", "numerica", "co-1-5"), (e.Codigo, e.Tipo, e.PlantillaOrigen));
         var v = Assert.Single(e.Versiones!);

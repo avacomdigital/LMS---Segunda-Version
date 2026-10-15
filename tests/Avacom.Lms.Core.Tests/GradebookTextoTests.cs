@@ -53,6 +53,54 @@ public sealed class GradebookTextoTests
     [InlineData(" no ")]
     public void ElMotivoExigeAlMenosTresLetras(string? motivo) => Assert.NotNull(GradebookTexto.ValidarMotivo(motivo));
 
+    // ---------------------------------------------------------------------------------- el sistema de calificación
+
+    private static EscalaResumen Sistema(string nombre, decimal? min = null, decimal? max = null, decimal? aprobacion = null, string? apruebaDesde = null, params string[] niveles) =>
+        new("e1", "codigo", nombre, "v1", 1, "numerica", "CO", null, min, max, aprobacion, apruebaDesde, niveles.Select(n => new TramoResumen(n, n, null)).ToList());
+
+    [Fact]
+    public void Sistema_NumericoDiceRangoYMinimoParaAprobar()
+    {
+        var co = Sistema("Colombia · 1,0 a 5,0 (Bajo a Superior)", 1, 5, 3, "Básico", "Bajo", "Básico", "Alto", "Superior");
+        Assert.Equal("Colombia · 1,0 a 5,0 (Bajo a Superior)", GradebookTexto.Sistema(co));
+        Assert.Equal("De 1 a 5", GradebookTexto.Rango(co));
+        Assert.Equal("Se aprueba con 3 o más", GradebookTexto.MinimoParaAprobar(co));
+        Assert.Equal("De 1 a 5 · Se aprueba con 3 o más", GradebookTexto.ResumenDelSistema(co));
+        Assert.Equal("Bajo · Básico · Alto · Superior", GradebookTexto.Niveles(co));
+        Assert.Equal("Se aprueba con 4,5 o más", GradebookTexto.MinimoParaAprobar(Sistema("x", 0, 10, 4.5m)));
+    }
+
+    [Fact]
+    public void Sistema_PorNivelesAprueba_DesdeElPrimeroQueAprueba_SinNumeros()
+    {
+        var es = Sistema("España · Primaria y ESO", apruebaDesde: "Suficiente", niveles: ["Insuficiente", "Suficiente", "Bien"]);
+        Assert.Equal(string.Empty, GradebookTexto.Rango(es));
+        Assert.Equal("Se aprueba desde Suficiente", GradebookTexto.MinimoParaAprobar(es));
+        Assert.Equal("Se aprueba desde Suficiente", GradebookTexto.ResumenDelSistema(es));
+    }
+
+    [Fact]
+    public void Sistema_SinMinimo_NoInventaUnUmbral()
+    {
+        var peru = Sistema("Perú · literal AD, A, B, C", niveles: ["C", "B", "A", "AD"]);
+        Assert.Null(GradebookTexto.MinimoParaAprobar(peru));
+        Assert.Equal(string.Empty, GradebookTexto.ResumenDelSistema(peru));
+        Assert.Equal("C · B · A · AD", GradebookTexto.Niveles(peru));
+    }
+
+    [Fact]
+    public void Sistema_LoQueElNodoNoDijoSeDiceConPalabrasOQuedaVacio()
+    {
+        Assert.Equal("Sin sistema de calificación", GradebookTexto.Sistema(null));
+        Assert.Equal(string.Empty, GradebookTexto.ResumenDelSistema(null));
+        Assert.Equal(string.Empty, GradebookTexto.Niveles(null));
+        Assert.Null(GradebookTexto.MinimoParaAprobar(null));
+        // Una nota publicada con una versión que ya no se lee trae sólo nombre y tipo: no revienta ni inventa nada.
+        var minimo = new EscalaResumen("", "", "Colombia · 1,0 a 5,0", "", 0, "numerica");
+        Assert.Equal("Colombia · 1,0 a 5,0", GradebookTexto.Sistema(minimo));
+        Assert.Equal(string.Empty, GradebookTexto.ResumenDelSistema(minimo));
+    }
+
     [Fact]
     public void ElMotivoValidoNoDaError() => Assert.Null(GradebookTexto.ValidarMotivo("Error de transcripción"));
 
