@@ -196,6 +196,15 @@ public sealed class ResultadosPage : ContentPage
         if (nota.Desempeno?.Nivel is { Length: > 0 } nivel) textos.Add(Ds.Pildora(nivel, Ds.ExitoSuave, Ds.Tinta, 14));
         if (nota.Aprobacion?.CumpleCriterio is { } cumple)
             textos.Add(Ds.Secundario(cumple ? "Alcanzaste lo esperado." : "Todavía puedes mejorar: tu profesor te dirá cómo.", 15));
+        // Con qué sistema se leyó la nota (el de su país o institución, tal como se publicó) y desde dónde se aprueba: así «4,0» o «NT» significan algo.
+        if (nota.Escala is { } sistema && !string.IsNullOrWhiteSpace(sistema.Nombre))
+        {
+            var lectura = GradebookTexto.ResumenDelSistema(sistema);
+            var bloqueSistema = new VerticalStackLayout { Spacing = 0, Margin = new Thickness(0, 6, 0, 0), AutomationId = $"resultado-sistema-{item.AsignacionId}" };
+            bloqueSistema.Add(Ds.Secundario($"Sistema de calificación: {GradebookTexto.Sistema(sistema)}", 13));
+            if (lectura.Length > 0) bloqueSistema.Add(Ds.Secundario(lectura, 13));
+            textos.Add(bloqueSistema);
+        }
         if (nota.Retroalimentacion is { Count: > 0 } retro)
         {
             foreach (var (clave, rotulo) in new[] { ("fortalezas", "Lo que haces bien"), ("dificultades", "Lo que te cuesta"), ("oportunidades", "Para mejorar"), ("comentario", "Tu profesor dice") })

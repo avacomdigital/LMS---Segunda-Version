@@ -27,6 +27,7 @@ from .base import (
     presentar_con,
     salida_calificacion,
     salida_version,
+    sistema_de,
 )
 from .derivados import clasificacion_efectiva, politica_de_intentos
 from .puertos import Actor, UnidadDeTrabajo
@@ -36,10 +37,7 @@ MINIMO_PARA_PROMEDIO = 3                      # CMP-043: con menos de tres alumn
 
 
 def _escala_a_resumen(version: dict | None) -> dict | None:
-    if version is None:
-        return None
-    return {"escala_id": version["escala_id"], "codigo": version["codigo"], "nombre": version["nombre"], "version_id": version["id"], "numero": version["numero"],
-            "tipo": version["definicion"].tipo}
+    return None if version is None else sistema_de(version)
 
 
 def _presentacion(c: dict, modo: str, version: dict | None) -> dict | None:
@@ -210,7 +208,11 @@ class DetalleDeCalificacion(_CasoDeUso):
                 raise NoEncontrado("No existe esa calificación.", calificacion_id=calificacion_id)
             exigir_sobre_resultado(uow, self.s.autorizacion, actor, cat.P_READ, grupo_id=c["grupo_id"], asignacion_id=c["asignacion_id"])
             intento = uow.evaluacion.intento(c["intento_id"])
-            return {"calificacion": salida_calificacion(uow, c, intento=intento), "historial": [salida_version(v) for v in uow.versiones.de(c["id"])],
+            salida = salida_calificacion(uow, c, intento=intento)
+            version_id = ((salida["presentacion"] or {}).get("escala") or {}).get("version_id")      # la versión con que se presentó (la estampada, si ya se publicó)
+            version = uow.escalas.version(version_id) if version_id else None
+            return {"calificacion": salida, "sistema": None if version is None else sistema_de(version),
+                    "historial": [salida_version(v) for v in uow.versiones.de(c["id"])],
                     "revisiones": [{"pregunta_ref": r["pregunta_ref"], "numero": r["numero"], "tipo": r["tipo"], "forma": r["forma"], "puntaje": pj.como_numero(r["puntaje"]),
                                     "puntaje_maximo": pj.como_numero(r["puntaje_maximo"]), "criterios": r["criterios"], "comentario": r["comentario"],
                                     "revisor_id": r["revisor_id"], "revisada_en": r["revisada_en"]} for r in uow.revisiones.de_intento(c["intento_id"])],
@@ -281,12 +283,24 @@ class MisResultados(_CasoDeUso):
         with self.s.uow(lectura=True) as uow:
             self.s.autorizacion.exigir_alumno(actor)
             items = []
+            sistemas: dict[str, dict | None] = {}                 # una lectura por versión de escala, no una por evaluación
             for a in uow.evaluacion.asignaciones_del_alumno(actor.id):
-                items.append(self._item(uow, a, actor.id))
+                items.append(self._item(uow, a, actor.id, sistemas))
             return {"alumno_id": actor.id, "items": items, "servidor_en": ahora}
 
     @staticmethod
-    def _item(uow: UnidadDeTrabajo, a: dict, alumno_id: str) -> dict:
+    def _sistema(uow: UnidadDeTrabajo, presentacion: dict, sistemas: dict[str, dict | None]) -> dict:
+        """El sistema de calificación con que se presentó la nota: su nombre, país, rango y desde dónde se aprueba. Se lee la versión con que se PUBLICÓ (no la
+        vigente hoy), así que lo que el alumno lee es lo que significó su nota. Si esa versión ya no se puede leer, quedan al menos el nombre y el tipo."""
+        publicada = presentacion.get("escala") or {}
+        version_id = publicada.get("version_id")
+        if version_id and version_id not in sistemas:
+            version = uow.escalas.version(version_id)
+            sistemas[version_id] = None if version is None else sistema_de(version)
+        return (sistemas.get(version_id) if version_id else None) or {"nombre": publicada.get("nombre"), "tipo": publicada.get("tipo")}
+
+    @staticmethod
+    def _item(uow: UnidadDeTrabajo, a: dict, alumno_id: str, sistemas: dict[str, dict | None] | None = None) -> dict:
         intentos = uow.evaluacion.intentos_del_alumno(a["id"], alumno_id)
         contexto = contexto_de(uow, a, alumno_id)
         modo, _ = modo_del_nivel(uow, contexto["nivel_clave"])
@@ -318,7 +332,7 @@ class MisResultados(_CasoDeUso):
             return {**base, "estado": estado_de_entrega(intentos, califs), "calificacion": None}
         return {**base, "estado": "publicado", "calificacion": {
             "presentada": presentacion.get("presentada"), "desempeno": presentacion.get("desempeno"), "aprobacion": presentacion.get("aprobacion"),
-            "escala": {"nombre": (presentacion.get("escala") or {}).get("nombre"), "tipo": (presentacion.get("escala") or {}).get("tipo")},
+            "escala": MisResultados._sistema(uow, presentacion, {} if sistemas is None else sistemas),
             "retroalimentacion": retro, "publicada_en": publicada_en, "numero_intento": numero_intento}}
 
     @staticmethod

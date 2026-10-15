@@ -141,6 +141,13 @@ def modo_del_nivel(uow: UnidadDeTrabajo, nivel_clave: str) -> tuple[str, dict | 
     return cat.CALIFICACIONES, uow.escalas.version(config["escala_version_id"])
 
 
+def sistema_de(version: dict) -> dict:
+    """La escala de un nivel con lo que hace falta para leer una nota suya: quién es (con su versión), de qué país, su rango, desde dónde se aprueba y sus
+    tramos. Es lo que ven el profesor en el libro y el alumno junto a su nota; la presentación estampada al publicar no cambia."""
+    return {"escala_id": version["escala_id"], "codigo": version["codigo"], "nombre": version["nombre"], "version_id": version["id"], "numero": version["numero"],
+            "tipo": version["definicion"].tipo, "pais": version.get("pais") or "", "jurisdiccion": version.get("jurisdiccion") or "", **esc.describir(version["definicion"])}
+
+
 def presentar_con(version: dict, calificacion: dict) -> dict:
     """La presentación de una calificación con UNA versión de escala, con su identidad para poder interpretarla después."""
     salida = esc.presentar(calificacion["puntaje_efectivo"], version["definicion"], calificacion.get("desempeno_docente") or "")

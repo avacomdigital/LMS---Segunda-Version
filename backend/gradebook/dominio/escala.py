@@ -304,6 +304,15 @@ def lineal(minimo: Decimal, maximo: Decimal) -> tuple[tuple[Decimal, Decimal], .
     return ((pj.CERO, minimo), (pj.CIEN, maximo))
 
 
+def describir(d: DefinicionEscala) -> dict:
+    """Lo que hace falta saber de una escala para leer una nota suya sin conocer el resto: su rango, desde dónde se aprueba y sus tramos (clave, nombre y si
+    aprueban). Lo muestra el libro al profesor y «Mis resultados» al alumno junto al nombre del sistema; no convierte nada."""
+    tramos = sorted(d.tramos, key=lambda t: t.orden)
+    return {"valor_min": pj.como_numero(d.valor_min), "valor_max": pj.como_numero(d.valor_max), "aprobacion_minima": pj.como_numero(d.aprobacion_minima),
+            "aprueba_desde": next((t.etiqueta for t in tramos if t.aprueba), None),
+            "tramos": [{"clave": t.clave, "etiqueta": t.etiqueta, "aprueba": t.aprueba} for t in tramos]}
+
+
 def presentacion_a_dict(p: Presentacion) -> dict:
     """La presentación en cuatro bloques separados (resultado interno, calificación presentada, desempeño, criterio de aprobación)."""
     return {

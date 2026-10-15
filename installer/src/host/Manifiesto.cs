@@ -12,8 +12,9 @@ namespace Avacom.Ops.Host;
 ///   protegidos     la base nunca se reemplaza. La copia previa es obligatoria y
 ///                  una migracion que falla restaura la copia y se detiene.
 ///
-/// Pasar a protegidos cuando exista el modulo de progreso y calificaciones es
-/// cambiar ese valor al compilar (Build-Installer.ps1 -PoliticaDatos).
+/// Desde que existe el libro de calificaciones (MOD-011) la politica por defecto
+/// es protegidos (Build-Installer.ps1 -PoliticaDatos): hay notas que no se
+/// pueden dar por desechables.
 /// </summary>
 internal static class Manifiesto
 {

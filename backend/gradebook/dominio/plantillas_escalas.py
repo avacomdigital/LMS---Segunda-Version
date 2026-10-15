@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from . import catalogos as cat
-from .escala import DefinicionEscala, Tramo, a_dict, lineal, validar
+from .escala import DefinicionEscala, Tramo, a_dict, describir, lineal, validar
 
 ADVERTENCIA = ("Plantilla orientativa: no es una equivalencia oficial ni válida para todo un país. La institución debe revisarla con su normativa y su "
                "sistema de evaluación, ajustarla y adoptarla (queda versionada) antes de presentar calificaciones con ella.")
@@ -72,22 +72,37 @@ PLANTILLAS: tuple[Plantilla, ...] = (
     Plantilla("gen-conceptual", "Conceptual: Superior, Alto, Básico, Bajo", "", "", TODOS, _por_tramos(cat.CUALITATIVA, _CONCEPTUAL),
               "Cuatro conceptos; las denominaciones y los cortes se configuran."),
     # -------------------------------------------------------------------------------------------------------- España
-    Plantilla("es-0-10", "España · 0 a 10 (Insuficiente a Sobresaliente)", "ES", "", ("primaria", "secundaria", "bachillerato"),
+    Plantilla("es-terminos", "España · Primaria y ESO · IN, SU, BI, NT, SB", "ES", "", ("primaria", "secundaria"),
+              _por_tramos(cat.CUALITATIVA, (("IN", "Insuficiente", 0, 50, False), ("SU", "Suficiente", 50, 60, True), ("BI", "Bien", 60, 70, True),
+                                            ("NT", "Notable", 70, 90, True), ("SB", "Sobresaliente", 90, 100, True))),
+              "En Primaria y ESO se califica con los términos Insuficiente (IN), Suficiente (SU), Bien (BI), Notable (NT) y Sobresaliente (SB); se aprueba desde "
+              "Suficiente. La normativa estatal la concretan las comunidades autónomas. Educación Infantil no se califica con notas: use el modo simple."),
+    Plantilla("es-0-10", "España · Bachillerato · 0 a 10 (Insuficiente a Sobresaliente)", "ES", "", ("secundaria", "bachillerato"),
               _numerica(0, 10, decimales=1, aprobacion=5, redondeo=cat.ABAJO, tramos=_tramos((
                   ("IN", "Insuficiente", 0, 50, False), ("SU", "Suficiente", 50, 60, True), ("BI", "Bien", 60, 70, True),
                   ("NT", "Notable", 70, 90, True), ("SB", "Sobresaliente", 90, 100, True)))),
-              "Calificaciones numéricas de 0 a 10 con los términos IN, SU, BI, NT y SB (normativa estatal de educación obligatoria; las comunidades autónomas la "
-              "concretan). Educación Infantil no se califica con notas: use el modo simple."),
+              "Calificaciones numéricas de 0 a 10 (se aprueba con 5) acompañadas de los términos IN, SU, BI, NT y SB; es la escala de Bachillerato y la que "
+              "acompaña a los términos en el expediente de ESO. Las comunidades autónomas la concretan."),
     # ------------------------------------------------------------------------------------------------ Estados Unidos
     Plantilla("us-letras", "Estados Unidos · letras A–F", "US", "", TODOS, _por_tramos(cat.ALFABETICA, _LETRAS),
               "Escala de letras con tramos de diez puntos. Distritos y estados cambian los cortes, admiten más/menos (A−, B+) y definen el mínimo aprobatorio."),
+    Plantilla("us-gpa", "Estados Unidos · GPA 0,0 a 4,0 (A = 4,0)", "US", "", ("secundaria", "bachillerato", "preuniversitario"),
+              _numerica(0, 4, decimales=2, aprobacion=1, redondeo=cat.ABAJO, puntos=((0, 0), (60, 1), (70, 2), (80, 3), (90, 4), (100, 4)), tramos=_tramos((
+                  ("F", "F", 0, 60, False, "No alcanza"), ("D", "D", 60, 70, True, "Suficiente"), ("C", "C", 70, 80, True, "Satisfactorio"),
+                  ("B", "B", 80, 90, True, "Notable"), ("A", "A", 90, 100, True, "Sobresaliente")))),
+              "Promedio de puntos de 0,0 a 4,0 con A = 4,0, B = 3,0, C = 2,0, D = 1,0 y F = 0,0; entre una letra y otra se interpola. Cada distrito o universidad cambia "
+              "los cortes, admite más y menos (A−, B+) y pondera los cursos avanzados; el mínimo aprobatorio (aquí D, 1,0) lo fija cada institución."),
     Plantilla("us-porcentaje", "Estados Unidos · porcentaje 0–100", "US", "", TODOS, _numerica(0, 100, decimales=0, aprobacion=60),
               "Porcentaje de 0 a 100; el mínimo aprobatorio (60) lo fija cada distrito."),
     # ---------------------------------------------------------------------------------------------------------- México
     Plantilla("mx-0-10", "México · 0 a 10 (se aprueba con 6)", "MX", "", ("primaria", "secundaria", "bachillerato"),
               _numerica(0, 10, decimales=1, aprobacion=6),
               "Escala de 0 a 10 con 6 como mínimo aprobatorio. La educación básica oficial no asienta calificaciones menores a 5 y la Nueva Escuela Mexicana "
-              "usa en algunos grados valoraciones descriptivas: si su institución aplica 5–10, defina una escala propia."),
+              "usa en algunos grados valoraciones descriptivas: para la escala que empieza en 5 use «México · 5 a 10»."),
+    Plantilla("mx-5-10", "México · 5 a 10 (se aprueba con 6)", "MX", "", ("primaria", "secundaria"),
+              _numerica(5, 10, decimales=1, aprobacion=6, redondeo=cat.ABAJO, puntos=((0, 5), (60, 6), (100, 10))),
+              "Escala de 5 a 10, donde 5 es «no aprobado» y 6 el mínimo aprobatorio (aquí el 60 % del resultado interno): la que se usa en Secundaria y en varios grados "
+              "de Primaria. En otros grados la escala empieza en 6: su institución debe confirmar cuál aplica a cada grado."),
     # ------------------------------------------------------------------------------------------------------- Colombia
     Plantilla("co-1-5", "Colombia · 1,0 a 5,0 (Bajo a Superior)", "CO", "", ("primaria", "secundaria", "bachillerato"),
               _numerica(1, 5, decimales=1, aprobacion=3, redondeo=cat.ABAJO, tramos=_tramos((
@@ -127,7 +142,8 @@ def plantilla(codigo: str) -> Plantilla | None:
 
 def como_dict(p: Plantilla) -> dict:
     return {"codigo": p.codigo, "nombre": p.nombre, "pais": p.pais, "jurisdiccion": p.jurisdiccion, "niveles": list(p.niveles), "referencia": p.referencia,
-            "advertencia": p.advertencia, "tipo": p.definicion.tipo, "definicion": a_dict(p.definicion), "problemas": validar(p.definicion)}
+            "advertencia": p.advertencia, "tipo": p.definicion.tipo, "definicion": a_dict(p.definicion), "problemas": validar(p.definicion),
+            "sistema": describir(p.definicion)}
 
 
 def listar(pais: str | None = None) -> list[dict]:

@@ -546,9 +546,10 @@ end;
 { ------------------------------------------- Pantalla «Datos del aula» (tactil) }
 
 { Solo aparece si ya hay datos de una instalacion anterior Y la politica de esta
-  version deja elegir (datos reemplazables). Cuando llegue el modulo de progreso
-  y calificaciones y la politica pase a protegidos, la pantalla desaparece sola
-  y los datos se conservan siempre. Son dos opciones grandes, sin escribir. }
+  version deja elegir (datos reemplazables). Con el libro de calificaciones la
+  politica es protegidos: la pantalla no aparece y los datos se conservan siempre
+  (el codigo sigue aqui por si una version futura vuelve a ofrecerla). Son dos
+  opciones grandes, sin escribir. }
 procedure CrearPaginaDatos;
 begin
   PaginaDatos := CreateInputOptionPage(PaginaValidacion.ID,
@@ -569,6 +570,16 @@ function EligioEmpezarDeCero: Boolean;
 begin
   Result := (PaginaDatos <> nil) and PoliticaReemplazable and HayDatosPrevios
             and (PaginaDatos.SelectedValueIndex = 1);
+end;
+
+{ ¿Se ofrece la pantalla «Datos del aula»? Sólo si la política de esta versión deja
+  elegir (datos reemplazables) Y ya hay datos de una instalación anterior. Con datos
+  protegidos NUNCA se ofrece: los datos se conservan siempre. Una sola función para
+  la pantalla real (ShouldSkipPage) y para el diagnóstico, de modo que el arnés
+  prueba lo que de verdad se usa. }
+function PantallaDeDatosSeOfrece(ConDatosPrevios: Boolean): Boolean;
+begin
+  Result := PoliticaReemplazable and ConDatosPrevios;
 end;
 
 { ------------------------------------------------------------- Diagnostico }
@@ -605,7 +616,7 @@ var
 begin
   EjecutarValidaciones;
 
-  SetArrayLength(Lineas, NumeroChecks + 6);
+  SetArrayLength(Lineas, NumeroChecks + 7);
   Lineas[0] := 'Diagnostico de AVACOM OPS Master ' + '{#VersionProducto}';
   Lineas[1] := 'Carpeta prevista: ' + WizardDirValue;
   for i := 0 to NumeroChecks - 1 do
@@ -619,6 +630,12 @@ begin
   else
     Lineas[NumeroChecks + 4] := 'Datos previos: no';
   Lineas[NumeroChecks + 5] := 'Resultado: ' + ResumenValidacion.Caption;
+  { Lo que el arnes comprueba de la politica: con datos previos (los de ESTE equipo o,
+    si no los hay, unos supuestos) ¿se ofreceria la pantalla de elegir qué hacer con ellos? }
+  if PantallaDeDatosSeOfrece(True) then
+    Lineas[NumeroChecks + 6] := 'Pantalla de datos con datos previos: si'
+  else
+    Lineas[NumeroChecks + 6] := 'Pantalla de datos con datos previos: no';
 
   SaveStringsToUTF8File(Archivo, Lineas, False);
 end;
@@ -638,7 +655,7 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result := False;
   if (PaginaDatos <> nil) and (PageID = PaginaDatos.ID) then
-    Result := (not PoliticaReemplazable) or (not HayDatosPrevios);
+    Result := not PantallaDeDatosSeOfrece(HayDatosPrevios);
 end;
 
 { ------------------------------------------------------ Pantalla final (datos) }

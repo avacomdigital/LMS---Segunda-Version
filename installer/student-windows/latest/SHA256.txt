@@ -1,8 +1,8 @@
-﻿AVACOM-Student-Setup-2.7.0.exe
-SHA256  7312647C311B61140FEA4D86E6C1F3AEEBB8AE41D1CE22D8BD8B1DAC02AB2163
-Version 2.7.0
-Revision 802526bc
-Arbol-limpio no (15 archivos sin confirmar en lo que entra en este instalador; ver manifiesto.json)
-Huella-app 78cdd21ba67464edc44e5a3134bae4dc7342f5c34b815a8a5d64bfe2f8db8256
-Huella-asistente 47a5b5c89c1800cbc9398b43b267e3033b3a35db1fd9f19148c224e330072d2a
-Empaquetado 2026-10-15 01:55:49 -05:00
+﻿AVACOM-Student-Setup-2.8.1.exe
+SHA256  991FF4B87F73BCE18A0ACB4FD2D0AF1875A643D7CD16BB9CDAE5E71ACF02B0A4
+Version 2.8.1
+Revision 7a72a0bd
+Arbol-limpio no (3 archivos sin confirmar en lo que entra en este instalador; ver manifiesto.json)
+Huella-app aef747ac0704528fb1f4a7712b5115521a646f12f962f91d499e68ef97e1271d
+Huella-asistente 5ca30e6636b0b951ef53be20a7603858f185144a151df7473564ff7025e21f0b
+Empaquetado 2026-10-15 12:05:28 -05:00

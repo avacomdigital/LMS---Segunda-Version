@@ -171,7 +171,8 @@ public sealed record DetalleDeCalificacion(
     [property: JsonPropertyName("historial")] IReadOnlyList<VersionDeCalificacion> Historial,
     [property: JsonPropertyName("revisiones")] IReadOnlyList<RevisionRegistrada> Revisiones,
     [property: JsonPropertyName("intento")] IntentoResumen? Intento,
-    [property: JsonPropertyName("servidor_en")] long ServidorEn);
+    [property: JsonPropertyName("servidor_en")] long ServidorEn,
+    [property: JsonPropertyName("sistema")] EscalaResumen? Sistema = null);
 
 // ------------------------------------------------------------------------------------------------- el libro
 
@@ -248,13 +249,30 @@ public sealed record LibroDelGrupo(
     public bool EnModoCalificaciones => Modo == ModosDeNivel.Calificaciones;
 }
 
+/// <summary>
+/// El sistema de calificación de un nivel: quién es (con su versión) y lo que hace falta para leer una nota suya — de qué país, su rango, desde dónde se aprueba y sus tramos.
+/// Lo calcula el nodo; los campos de después de <see cref="Tipo"/> son opcionales porque una calificación ya publicada puede venir de una versión que ya no se lee.
+/// </summary>
 public sealed record EscalaResumen(
     [property: JsonPropertyName("escala_id")] string EscalaId,
     [property: JsonPropertyName("codigo")] string Codigo,
     [property: JsonPropertyName("nombre")] string Nombre,
     [property: JsonPropertyName("version_id")] string VersionId,
     [property: JsonPropertyName("numero")] int Numero,
-    [property: JsonPropertyName("tipo")] string Tipo);
+    [property: JsonPropertyName("tipo")] string Tipo,
+    [property: JsonPropertyName("pais")] string? Pais = null,
+    [property: JsonPropertyName("jurisdiccion")] string? Jurisdiccion = null,
+    [property: JsonPropertyName("valor_min")] decimal? ValorMin = null,
+    [property: JsonPropertyName("valor_max")] decimal? ValorMax = null,
+    [property: JsonPropertyName("aprobacion_minima")] decimal? AprobacionMinima = null,
+    [property: JsonPropertyName("aprueba_desde")] string? ApruebaDesde = null,
+    [property: JsonPropertyName("tramos")] IReadOnlyList<TramoResumen>? Tramos = null);
+
+/// <summary>Un nivel de desempeño del sistema (un tramo): su clave corta («SU»), su nombre («Suficiente») y si con él se aprueba (nulo: el sistema no lo dice).</summary>
+public sealed record TramoResumen(
+    [property: JsonPropertyName("clave")] string Clave,
+    [property: JsonPropertyName("etiqueta")] string Etiqueta,
+    [property: JsonPropertyName("aprueba")] bool? Aprueba);
 
 // ------------------------------------------------------------------------------------ la revisión docente
 
@@ -424,7 +442,8 @@ public sealed record PlantillaDeEscala(
     [property: JsonPropertyName("pais")] string? Pais = null,
     [property: JsonPropertyName("jurisdiccion")] string? Jurisdiccion = null,
     [property: JsonPropertyName("niveles")] IReadOnlyList<string>? Niveles = null,
-    [property: JsonPropertyName("referencia")] string? Referencia = null);
+    [property: JsonPropertyName("referencia")] string? Referencia = null,
+    [property: JsonPropertyName("sistema")] EscalaResumen? Sistema = null);
 
 public sealed record PlantillasDeEscalas(
     [property: JsonPropertyName("plantillas")] IReadOnlyList<PlantillaDeEscala> Plantillas,
@@ -483,7 +502,8 @@ public sealed record NotaPublicada(
     [property: JsonPropertyName("aprobacion")] CriterioDeAprobacion? Aprobacion,
     [property: JsonPropertyName("retroalimentacion")] Dictionary<string, string>? Retroalimentacion = null,
     [property: JsonPropertyName("publicada_en")] long? PublicadaEn = null,
-    [property: JsonPropertyName("numero_intento")] int? NumeroIntento = null);
+    [property: JsonPropertyName("numero_intento")] int? NumeroIntento = null,
+    [property: JsonPropertyName("escala")] EscalaResumen? Escala = null);
 
 public sealed record MisResultados(
     [property: JsonPropertyName("alumno_id")] string AlumnoId,

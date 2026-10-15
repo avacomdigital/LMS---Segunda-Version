@@ -51,8 +51,9 @@ param(
     # Que se hace con la base de datos al actualizar. Es un dato de cada version:
     #   reemplazables  la base todavia es desechable (se conserva si migra bien)
     #   protegidos     nunca se reemplaza; copia previa obligatoria y rollback
-    # Al llegar el modulo de progreso y calificaciones, cambiar a 'protegidos'.
-    [ValidateSet('reemplazables', 'protegidos')] [string] $PoliticaDatos = 'reemplazables',
+    # Desde que llego el libro de calificaciones (MOD-011) hay notas que proteger: el valor por defecto es 'protegidos'
+    # (si una migracion falla, el asistente devuelve el equipo a la version anterior con sus datos; no hay pantalla de eleccion).
+    [ValidateSet('reemplazables', 'protegidos')] [string] $PoliticaDatos = 'protegidos',
     [switch] $OmitirPruebas,
     [switch] $OmitirApp,
     [switch] $OmitirEnsayo,
@@ -557,7 +558,7 @@ Paso '7/8  Verificando el codigo del asistente en este Windows'
 # Compilar no prueba que Pascal Script funcione. Esto ejecuta las diez
 # comprobaciones del equipo de verdad, sin instalar nada, y aborta si alguna
 # no llega a dar un veredicto.
-& (Join-Path $PSScriptRoot 'Verificar-Asistente.ps1') -Iscc $iscc
+& (Join-Path $PSScriptRoot 'Verificar-Asistente.ps1') -Iscc $iscc -PoliticaDatos $PoliticaDatos
 
 # Los dos .bat (un solo archivo cada uno, con el PowerShell dentro) se regeneran
 # desde sus fuentes para que no se queden atras:

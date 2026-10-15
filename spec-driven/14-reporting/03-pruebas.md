@@ -9,12 +9,13 @@
 
 | Qué | Resultado |
 |---|---|
-| Backend · **toda** la suite (`manage.py test`, todas las apps) | **__BACKEND_TOTAL__ pruebas, OK** (7 omitidas: las de siempre, no son de este módulo) |
+| Backend · **toda** la suite (`manage.py test`, todas las apps) | **1864 pruebas, OK** (7 omitidas: las de siempre, no son de este módulo; es la compuerta de `Build-Installer.ps1`, que la corre completa antes de empaquetar) |
 | Backend · app `reporting` | **164 pruebas, OK** (1 omitida: la captura de contrato, que sólo corre con `AVACOM_CAPTURAR_CONTRATO`) |
 | Core (`dotnet test`) | **1190 OK** (380 son de MOD-013) |
 | OPS (`dotnet test`) | **389 OK** (257 son de MOD-013) |
 | Student (`dotnet test`) | **102 OK** (sin cambios: MOD-013 no tiene pantallas de alumno) |
 | Compilación de OPS y de Student para Windows | **0 errores, 0 advertencias** |
+| Instalador **2.8.0** (`installer/latest`) | **Construido y ensayado de punta a punta** (`Ensayar-Paquete.ps1`: instalación nueva, primer arranque, actualización con datos desde la 2.7.0 y migración que falla). Dentro van `Backend\reporting` (49 archivos idénticos a los del repositorio), `acceso 0017` y el OPS con la exportación; en el nodo empaquetado `/api/reportes/clases/` responde 401 (sesión obligatoria). **No** se instaló en un equipo de aula (§5, punto 9) |
 | Verificación en vivo con UI Automation, capturas y «memorias» simuladas | **Hecha** (§4): lectura, roles, privacidad, política, exportación completa y todos sus fallos |
 | Contra una memoria USB **física**, FAT32/exFAT, carpeta de red real, antivirus real, Android | **No** (§5) |
 
@@ -111,7 +112,7 @@ Queda: **8A** (7 estudiantes, modo calificaciones, escala Colombia 1–5), **P1*
 6. **Un cierre brusco** (matar OPS a mitad): el temporal `.parte` se borra al siguiente arranque si tiene más de 20 minutos; no se mató el proceso a propósito.
 7. **Exportar ≥ 1000 filas en la pantalla.** Lo cubren las pruebas automáticas (3000 filas escritas por bloques en el backend; archivo grande por bloques con avance en OPS); en vivo los grupos de prueba tienen ≤ 10 filas.
 8. **Android.** MOD-013 no tiene pantallas en Student; sólo se compiló Windows (OPS y Student).
-9. **La instalación real.** OPS se probó compilada en una carpeta de pruebas con el perfil de UI Automation, no desde el instalador. El instalador se reconstruyó en `installer/latest` (ver el LEEME de esa carpeta).
+9. **La instalación real.** OPS se probó compilada en una carpeta de pruebas con el perfil de UI Automation, no desde el instalador. El instalador 2.8.0 está en `installer/latest` (15 de octubre de 2026, SHA-256 `98672194C1CD9EE84B1ED0DE7FDEF34FA4765F23628E17FFBB8B198246A189E5`): salió de la misma compilación que MOD-011 (política de datos `protegidos`), con la suite completa del backend en verde y un ensayo del paquete que comprueba que `/api/reportes/clases/` exista y pida sesión. Pero **nadie ha instalado ese `.exe` en un equipo de aula** ni ha exportado un reporte desde esa instalación: la exportación a archivo sólo se vio con OPS compilado en la carpeta de pruebas.
 
 ## 6 · Revisión independiente
 

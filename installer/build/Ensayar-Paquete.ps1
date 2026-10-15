@@ -325,6 +325,11 @@ try {
         Comprobar ($evaluacion.Estado -ne 404 -and $evaluacion.Estado -ne 500) "El modulo de evaluacion esta en el paquete (respondio $($evaluacion.Estado))" "/api/evaluacion/ respondio $($evaluacion.Estado)"
         $estudio = Pedir "http://127.0.0.1:$puertoA/api/modo-estudio/estado/"
         Comprobar ($estudio.Estado -in 200, 401, 403) "El modulo de modo estudio esta en el paquete (respondio $($estudio.Estado))" "/api/modo-estudio/estado/ respondio $($estudio.Estado)"
+        # Los modulos que llegaron despues tambien van en el paquete: su ruta existe y responde (200, o 401/403 con la sesion obligatoria). Una ruta que no llego daria 404.
+        foreach ($modulo in @(@('libro de calificaciones (gradebook)', 'api/gradebook/configuracion/'), @('busqueda (search)', 'api/search/status/'), @('reportes (reporting)', 'api/reportes/clases/'))) {
+            $respuestaModulo = Pedir "http://127.0.0.1:$puertoA/$($modulo[1])"
+            Comprobar ($respuestaModulo.Estado -in 200, 401, 403) "El modulo de $($modulo[0]) esta en el paquete (/$($modulo[1]) respondio $($respuestaModulo.Estado))" "/$($modulo[1]) respondio $($respuestaModulo.Estado): $($respuestaModulo.Cuerpo)"
+        }
 
         # Los registros: JSON Lines en la carpeta del nodo, ninguno dentro del programa ni en la carpeta ajena.
         $logs = Join-Path $datosA 'Logs'
@@ -590,6 +595,99 @@ public static class Prueba {
     } else {
         Write-Host ''
         Write-Host '  (sin -VersionAnterior: se omite el ensayo de la actualizacion con datos)' -ForegroundColor DarkGray
+    }
+
+    # ======================================== E · datos PROTEGIDOS: una migracion que falla no pierde nada
+    # Con el libro de calificaciones hay notas que proteger. Si la politica del paquete es «protegidos», una actualizacion cuya migracion falla NO retira ni reemplaza la base:
+    # el host se detiene (codigo 6) y deja la copia de seguridad, y el asistente restaura datos y configuracion (`restaurar-datos`). Aqui se provoca una migracion
+    # que falla de verdad (un historial de migraciones inconsistente en la base, como el de una base a medio migrar) y se comprueba que no se pierde nada.
+    $manifiestoDelPaquete = Join-Path $Staging 'manifiesto.json'
+    $politicaDelPaquete = if (Test-Path $manifiestoDelPaquete) { [string](Get-Content $manifiestoDelPaquete -Raw -Encoding UTF8 | ConvertFrom-Json).politica_datos } else { '' }
+    if ($VersionAnterior -and (Test-Path (Join-Path $VersionAnterior 'Backend\manage.py')) -and (Test-Path (Join-Path $VersionAnterior 'Runtime\Python\python.exe'))) {
+        Titulo 'E · Datos protegidos: una migracion que falla no pierde nada y la copia se restaura'
+        Comprobar ($politicaDelPaquete -eq 'protegidos') 'El manifiesto del paquete declara politica_datos = protegidos' "El manifiesto del paquete dice politica_datos = '$politicaDelPaquete'"
+        if ($politicaDelPaquete -eq 'protegidos') {
+            $instE = Join-Path $Raiz 'E\AVACOM\OPS Master'
+            $datosE = Join-Path $Raiz 'E\datos'
+            $carpetaE = Join-Path $Raiz 'E'
+            Armar-Instalacion (Join-Path $VersionAnterior 'Backend') (Join-Path $VersionAnterior 'Runtime') $instE
+            Limpiar-Entorno
+            Fijar-Datos $datosE
+            $codigo = Host-Ejecutar $instE @('preparar')
+            Comprobar ($codigo -eq 0) 'E · La version anterior prepara su nodo' "El host viejo devolvio $codigo"
+            $configE = Join-Path $datosE 'Config\backend.env'
+            Poner-Valor $configE 'AVACOM_OPS_BACKEND_PORT' (Puerto-Libre)
+
+            $versionConPinE = Test-Path (Join-Path $instE 'Backend\acceso\management\commands\acceso_pin_maestro.py')
+            if ($versionConPinE) { $env:AVACOM_LMS_PIN_MAESTRO = '739104' }
+            $instalacionE = Python-Del-Nodo $instE $datosE @('manage.py', 'acceso_instalar', '--codigo', 'ENSAYO', '--nombre', 'Ensayo del instalador', '--pais', 'CO',
+                '--admin-dni', '1000000001', '--admin-nombres', 'Ensayo', '--admin-apellidos', 'Del Instalador', '--admin-password', 'Ensayo.2026!')
+            Remove-Item Env:\AVACOM_LMS_PIN_MAESTRO -ErrorAction SilentlyContinue
+            Comprobar ($instalacionE.Codigo -eq 0) 'E · Se creo la organizacion y el administrador con el backend viejo' "acceso_instalar fallo: $($instalacionE.Salida)"
+            Limpiar-Entorno
+            Fijar-Datos $datosE
+
+            $clavesE = @{}
+            foreach ($k in 'AVACOM_LMS_CLAVE_DATOS', 'AVACOM_LMS_CLAVE_INDICE', 'AVACOM_LMS_CLAVE_TOKENS', 'AVACOM_LMS_SECRET') { $clavesE[$k] = Leer-Valor $configE $k }
+            # Configuracion «tocada a mano»: la actualizacion la corregiria; si la copia se restaura, vuelve tal como estaba.
+            Poner-Valor $configE 'AVACOM_AULA_PERMITIR_EJEMPLO' '1'
+
+            # Lo que hace el asistente: copia de seguridad, apartar lo viejo, copiar lo nuevo.
+            $codigo = Host-Ejecutar $instE @('respaldar', '2.7.0')
+            Comprobar ($codigo -eq 0) 'E · El host viejo hace la copia de seguridad antes de actualizar' "respaldar devolvio $codigo"
+            Remove-Item (Join-Path $instE 'Backend') -Recurse -Force
+            Remove-Item (Join-Path $instE 'Runtime') -Recurse -Force
+            Copiar-Carpeta $backendNuevo (Join-Path $instE 'Backend')
+            Copiar-Carpeta $runtimeNuevo (Join-Path $instE 'Runtime')
+            Copy-Item $manifiestoDelPaquete (Join-Path $instE 'manifiesto.json') -ErrorAction SilentlyContinue
+
+            # La base «a medio migrar»: se borra del historial la primera migracion de `acceso` (todas las versiones la tienen) y las demas quedan aplicadas sin su
+            # antecesora: Django se niega a migrar (historial inconsistente), sea cual sea la version anterior.
+            $utf8SinMarca = New-Object Text.UTF8Encoding($false)
+            [IO.File]::WriteAllText((Join-Path $carpetaE 'envenenar.py'), @'
+import os, sqlite3
+c = sqlite3.connect(os.environ['AVACOM_LMS_DB'])
+c.execute("delete from django_migrations where app = 'acceso' and name = '0001_initial'")
+c.commit()
+'@, $utf8SinMarca)
+            [IO.File]::WriteAllText((Join-Path $carpetaE 'estado.py'), @'
+import os, sqlite3
+c = sqlite3.connect(os.environ['AVACOM_LMS_DB'])
+print(c.execute('PRAGMA integrity_check').fetchone()[0])
+print(c.execute('select count(*) from m01_persona').fetchone()[0])
+print(c.execute("select count(*) from django_migrations where app = 'acceso' and name = '0001_initial'").fetchone()[0])
+'@, $utf8SinMarca)
+            $veneno = Python-Del-Nodo $instE $datosE @((Join-Path $carpetaE 'envenenar.py'))
+            Comprobar ($veneno.Codigo -eq 0) 'E · Se provoco una migracion que va a fallar (historial inconsistente en la base)' "No se pudo preparar la prueba: $($veneno.Salida)"
+            $antes = @((Python-Del-Nodo $instE $datosE @((Join-Path $carpetaE 'estado.py'))).Salida -split "`r?`n" | Where-Object { $_.Trim() })
+
+            Limpiar-Entorno
+            Fijar-Datos $datosE
+            $codigo = Host-Ejecutar $instE @('preparar') 400
+            Comprobar ($codigo -eq 6) "E · El host NUEVO se detiene cuando la migracion falla (codigo 6)" "preparar devolvio $codigo (se esperaba 6: no pudo migrar)"
+            $estadoE = Leer-Texto (Join-Path $datosE 'Logs\preparacion-estado.txt')
+            Comprobar ($estadoE -match 'copia de seguridad') 'E · El motivo dice que se conserva la copia de seguridad' "El motivo no lo dice: '$estadoE'"
+
+            $durante = @((Python-Del-Nodo $instE $datosE @((Join-Path $carpetaE 'estado.py'))).Salida -split "`r?`n" | Where-Object { $_.Trim() })
+            Comprobar ($durante.Count -ge 3 -and $durante[0] -eq 'ok' -and [int]$durante[1] -ge 1) 'E · La base NO se reemplazo ni se vacio: sigue integra y con sus personas' "Estado de la base tras el fallo: $($durante -join ' | ')"
+            Comprobar ($antes.Count -ge 3 -and [int]$antes[2] -eq 0 -and $durante.Count -ge 3 -and [int]$durante[2] -eq 0) 'E · Es la misma base de antes (sigue con el historial dañado que se le provoco), no una nueva' "La base cambio: $($durante -join ' | ') (antes: $($antes -join ' | '))"
+            Comprobar (-not ((Leer-Texto (Join-Path $datosE 'Logs\preparacion-aviso.txt')) -match 'empezo con una nueva')) 'E · No se avisa de «base nueva»: con datos protegidos nunca se empieza de cero' 'El aviso dice que se empezo con una base nueva'
+
+            # Lo que hace el asistente al ver el codigo 6: devolver los datos desde la copia.
+            Limpiar-Entorno
+            Fijar-Datos $datosE
+            $codigo = Host-Ejecutar $instE @('restaurar-datos') 240
+            Comprobar ($codigo -eq 0) 'E · restaurar-datos devuelve los datos desde la copia' "restaurar-datos devolvio $codigo"
+            $despues = @((Python-Del-Nodo $instE $datosE @((Join-Path $carpetaE 'estado.py'))).Salida -split "`r?`n" | Where-Object { $_.Trim() })
+            Comprobar ($despues.Count -ge 3 -and $despues[0] -eq 'ok' -and [int]$despues[1] -ge 1) 'E · Tras restaurar, la base esta integra y con sus personas' "Estado tras restaurar: $($despues -join ' | ')"
+            Comprobar ($despues.Count -ge 3 -and [int]$despues[2] -eq 1) 'E · Tras restaurar, la base es la de la copia (con su historial sano, sin el daño que se le provoco despues)' "Estado tras restaurar: $($despues -join ' | ')"
+            foreach ($k in $clavesE.Keys) {
+                Comprobar ((Leer-Valor $configE $k) -eq $clavesE[$k]) "E · $k vuelve a ser la de la copia" "$k no coincide con la de la copia"
+            }
+            Comprobar ((Leer-Valor $configE 'AVACOM_AULA_PERMITIR_EJEMPLO') -eq '1') 'E · backend.env vuelve a ser el de la copia (lo que la actualizacion habia corregido, tal como estaba)' 'backend.env no se restauro'
+        }
+    } elseif ($VersionAnterior) {
+        Write-Host '  (E se omite: la version anterior no tiene Backend\ y Runtime\Python)' -ForegroundColor Yellow
     }
 } catch {
     Falla "El ensayo se interrumpio: $($_.Exception.Message)"

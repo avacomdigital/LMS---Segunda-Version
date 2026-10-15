@@ -1,8 +1,8 @@
-﻿AVACOM OPS Master 2.7.0 (revision 802526bc)
+﻿AVACOM OPS Master 2.8.0 (revision 7a72a0bd)
 
 Esta carpeta es lo que se sube como release de GitHub:
 
-  AVACOM-OPS-Master-Setup-2.7.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
+  AVACOM-OPS-Master-Setup-2.8.0.exe   el instalador (no se versiona: supera los 100 MB de GitHub)
   SHA256.txt                            la huella del instalador y del codigo que lleva
   AVACOM-Verificar-Instalador.bat       revisa el equipo, el instalador y lo ya instalado, y busca
                                         el error exacto cuando algo falla. NO modifica nada.
@@ -39,4 +39,4 @@ nombres y apellidos: la contrasena inicial la genera el sistema) y el PIN maestr
 La hoja de acceso se muestra una sola vez. Luego el administrador entra con documento, contrasena
 inicial y PIN maestro. Crea los grupos y alumnos en Grupos (o deja que se registren solos). En
 cada tableta, AVACOM Student pide la direccion del aula que muestra la ultima pantalla del instalador.
-Politica de datos de esta version: reemplazables.
+Politica de datos de esta version: protegidos.

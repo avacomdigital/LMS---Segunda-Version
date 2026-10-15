@@ -2,7 +2,7 @@ namespace Avacom.Lms.Student.Pages;
 public partial class StudentMenuPage : ContentPage
 {
     // Tamaño del tablero en las unidades de diseño de OPS (teselas de 146 x 168, 20 de holgura abajo para las sombras) y lo que ocupan alrededor: cabecera (86), dock (96) y el saludo (~130).
-    private const double EscenarioAncho = 543.5, EscenarioAlto = 461, ReservaVertical = 86 + 96 + 130;
+    private const double EscenarioAncho = 623, EscenarioAlto = 461, ReservaVertical = 86 + 96 + 130;
     // Tope de lo que «Salir» hace hacia el nodo con el pase todavía vigente (avisar la salida y vaciar la cola): JRN-022 pide ≤ 3 s en total.
     private static readonly TimeSpan TopeDeSalida = TimeSpan.FromMilliseconds(1500);
     private bool _saliendo;
@@ -23,7 +23,7 @@ public partial class StudentMenuPage : ContentPage
     private void AplicarPermisos()
     {
         var visitante = Sesion.EsVisitante;
-        foreach (var tesela in new View[] { TeselaPerfil, TeselaProgreso })
+        foreach (var tesela in new View[] { TeselaPerfil, TeselaProgreso, TeselaEvaluaciones })
         {
             tesela.Opacity = visitante ? 0.32 : 1;
             tesela.IsEnabled = !visitante;

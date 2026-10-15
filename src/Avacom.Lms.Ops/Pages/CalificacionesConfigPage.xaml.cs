@@ -114,6 +114,7 @@ public partial class CalificacionesConfigPage : ContentPage
             Pintar();
         }
         finally { _cargando = false; }
+        await CargarPlantillasAsync();
     }
 
     // ---------------------------------------------------------------------------------------------- pintar
@@ -122,6 +123,8 @@ public partial class CalificacionesConfigPage : ContentPage
     {
         if (_config is not { } c) return;
         var y = Desplazable.ScrollY;
+        SistemaHost.Clear();
+        SistemaHost.Add(SistemaPorPais(c));
         PoliticaHost.Clear();
         PoliticaHost.Add(Politica(c.Politica));
         NivelesHost.Clear();

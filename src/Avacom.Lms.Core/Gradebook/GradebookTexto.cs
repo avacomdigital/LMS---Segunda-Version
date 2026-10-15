@@ -147,6 +147,31 @@ public static class GradebookTexto
 
     public static string Hora(long ms) => DateTimeOffset.FromUnixTimeMilliseconds(ms).ToLocalTime().ToString("g", Cultura);
 
+    // ------------------------------------------------------------------------------- el sistema de calificación
+
+    /// <summary>El nombre del sistema con que se presenta una nota, tal como lo adoptó la institución: «Colombia · 1,0 a 5,0 (Bajo a Superior)». Las plantillas por país ya llevan el país en el nombre.</summary>
+    public static string Sistema(EscalaResumen? e) => string.IsNullOrWhiteSpace(e?.Nombre) ? "Sin sistema de calificación" : e.Nombre;
+
+    /// <summary>El rango de un sistema numérico: «De 1 a 5». Vacío si el sistema no es numérico o el nodo no lo dijo.</summary>
+    public static string Rango(EscalaResumen? e) => e is { ValorMin: { } min, ValorMax: { } max } ? $"De {Puntaje(min)} a {Puntaje(max)}" : string.Empty;
+
+    /// <summary>
+    /// Desde dónde se aprueba: «Se aprueba con 3 o más» en un sistema numérico, «Se aprueba desde Suficiente» en uno por niveles. Nulo si el sistema no fija un mínimo (una escala por competencias es una
+    /// valoración, no un umbral): entonces no se inventa uno.
+    /// </summary>
+    public static string? MinimoParaAprobar(EscalaResumen? e) =>
+        e is null ? null
+        : e.AprobacionMinima is { } minimo ? $"Se aprueba con {Puntaje(minimo)} o más"
+        : !string.IsNullOrWhiteSpace(e.ApruebaDesde) ? $"Se aprueba desde {e.ApruebaDesde}"
+        : null;
+
+    /// <summary>Los niveles del sistema de menor a mayor: «Bajo · Básico · Alto · Superior». Vacío si el sistema no tiene niveles.</summary>
+    public static string Niveles(EscalaResumen? e) => e?.Tramos is { Count: > 0 } tramos ? string.Join(" · ", tramos.Select(t => t.Etiqueta)) : string.Empty;
+
+    /// <summary>Lo esencial de un sistema en una línea: «De 1 a 5 · Se aprueba con 3 o más». Vacío si no hay nada que decir.</summary>
+    public static string ResumenDelSistema(EscalaResumen? e) =>
+        string.Join(" · ", new[] { Rango(e), MinimoParaAprobar(e) ?? string.Empty }.Where(parte => parte.Length > 0));
+
     // --------------------------------------------------------------------------------------- validar lo escrito
 
     public const int MinimoDeMotivo = 3;

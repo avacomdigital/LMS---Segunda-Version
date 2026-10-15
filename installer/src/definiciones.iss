@@ -18,10 +18,12 @@
 ; Politica de datos de ESTA version, escrita tambien en manifiesto.json:
 ;   reemplazables  la base todavia es desechable (se conserva si migra bien y el
 ;                  asistente deja elegir "Empezar de cero")
-;   protegidos     nunca se reemplaza; sin pantalla de eleccion
-; Build-Installer.ps1 -PoliticaDatos la sobrescribe con /DPoliticaDatos=...
+;   protegidos     nunca se reemplaza; sin pantalla de eleccion; una migracion que
+;                  falla devuelve el equipo a la version anterior con sus datos
+; Desde que llego el libro de calificaciones (MOD-011) hay notas que proteger y la
+; politica es "protegidos". Build-Installer.ps1 -PoliticaDatos la sobrescribe con /DPoliticaDatos=...
 #ifndef PoliticaDatos
-  #define PoliticaDatos     "reemplazables"
+  #define PoliticaDatos     "protegidos"
 #endif
 
 ; Carpeta preparada por Build-Installer.ps1. Se puede sobrescribir con

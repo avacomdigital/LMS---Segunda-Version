@@ -17,7 +17,7 @@ import re
 from ..dominio import catalogos as cat
 from ..dominio import plantillas_escalas as plantillas
 from ..dominio.errores import ConflictoDeVersion, DatosInvalidos, EscalaNoVigente, ModoBloqueado, NoEncontrado
-from .base import _CasoDeUso, exigir_en_asignacion, exigir_nodo_instalado
+from .base import _CasoDeUso, exigir_en_asignacion, exigir_nodo_instalado, sistema_de
 from .derivados import ReconstruirDerivados, RecalcularResultado, clasificacion_efectiva, politica_de_intentos
 from .escalas import escala_a_salida
 from .puertos import Actor
@@ -26,8 +26,7 @@ from .puertos import Actor
 def nivel_a_salida(uow, nivel_clave: str, fila: dict | None) -> dict:
     version = uow.escalas.version(fila["escala_version_id"]) if fila and fila.get("escala_version_id") else None
     return {"nivel_clave": nivel_clave, "modo": fila["modo"] if fila else cat.SIMPLE, "por_defecto": fila is None, "version": fila["version"] if fila else 0,
-            "escala": None if version is None else {"escala_id": version["escala_id"], "codigo": version["codigo"], "nombre": version["nombre"],
-                                                    "version_id": version["id"], "numero": version["numero"], "tipo": version["definicion"].tipo},
+            "escala": None if version is None else sistema_de(version),
             "actualizada_en": fila["actualizada_en"] if fila else None, "actualizada_por": fila["actualizada_por"] if fila else ""}
 
 

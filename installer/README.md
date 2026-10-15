@@ -420,15 +420,30 @@ descarga nada.
 Es un dato de cada versión (`manifiesto.json` → `politica_datos`, compilada con
 `Build-Installer.ps1 -PoliticaDatos`):
 
-| | `reemplazables` (hoy) | `protegidos` |
+| | `reemplazables` (hasta la 2.7.0) | `protegidos` (desde la 2.8.0, el valor por defecto) |
 |---|---|---|
 | Base | Se conserva si migra; si no migra se reemplaza, dejando antes la copia | Se conserva siempre |
 | Copia previa | Sí | Obligatoria |
 | Migración que falla | Base nueva y aviso | Se restaura la copia y se vuelve a la versión anterior |
 | Botones Conservar / Empezar de cero | Sí | No |
 
-Al llegar el módulo de progreso y calificaciones, pasar a `protegidos` es
-cambiar ese valor al compilar.
+Con el libro de calificaciones (MOD-011) ya hay notas que no se pueden dar por
+desechables, así que desde la 2.8.0 la política por defecto es `protegidos`
+(`Build-Installer.ps1 -PoliticaDatos`, `definiciones.iss` y su comentario). El
+código de la pantalla «Datos del aula» sigue en `codigo.iss` por si una versión
+futura vuelve a ofrecerla; con `protegidos` no aparece nunca.
+
+**Lo que demuestra el build.** `Verificar-Asistente.ps1` compila el arnés con la
+política del instalador **y con la contraria** y comprueba que la pantalla de
+elegir qué hacer con los datos se ofrece sólo con `reemplazables` (la misma
+función `PantallaDeDatosSeOfrece` que usa el asistente). El ensayo del paquete
+(`Ensayar-Paquete.ps1`, bloque **E**) parte de una base con datos de la versión
+anterior, provoca una migración que falla de verdad (un historial de migraciones
+inconsistente) y comprueba que el host nuevo se detiene con el código 6 **sin
+reemplazar ni vaciar la base** (sigue siendo la misma, con sus personas), que
+`restaurar-datos` devuelve la base y `backend.env` desde la copia (las claves y
+lo que la actualización habría corregido, tal como estaban) y que el aviso no habla
+de «base nueva». Hace falta `-VersionAnterior`; sin él, E se omite.
 
 ### Claves de acceso
 

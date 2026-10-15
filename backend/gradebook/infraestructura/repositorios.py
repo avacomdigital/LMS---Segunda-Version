@@ -122,7 +122,7 @@ def _definicion_de(version: m.EscalaVersion) -> DefinicionEscala:
 
 def _version_a_dict(version: m.EscalaVersion) -> dict:
     return {"id": version.id, "escala_id": version.escala_id, "codigo": version.escala.codigo, "nombre": version.escala.nombre, "activa": version.escala.activa,
-            "numero": version.numero, "definicion": _definicion_de(version), "huella": version.huella, "nota": version.nota, "vigente_desde": version.vigente_desde,
+            "pais": version.escala.pais, "jurisdiccion": version.escala.jurisdiccion, "numero": version.numero, "definicion": _definicion_de(version), "huella": version.huella, "nota": version.nota, "vigente_desde": version.vigente_desde,
             "creada_por": version.creada_por}
 
 

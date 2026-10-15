@@ -43,8 +43,8 @@
                      existe en la referencia: ocupa la celda contigua a Asignaturas, fuera del aro, y conserva el orden de lectura.
                      Se diseña en unidades de OPS (441 de alto más 20 de holgura por debajo: sin ella el recorte del contenedor corta la punta inferior y las sombras de las teselas de abajo) y el code-behind lo escala al espacio disponible (EscenarioBox toma el tamaño ya escalado
                      para que el ScrollView mida bien). Las seis opciones sin acción todavía no llevan Tapped. -->
-                <Grid x:Name="EscenarioBox" WidthRequest="543.5" HeightRequest="461" HorizontalOptions="Center">
-                    <AbsoluteLayout x:Name="Escenario" AnchorX="0" AnchorY="0" HeightRequest="461" HorizontalOptions="Start" VerticalOptions="Start" WidthRequest="543.5">
+                <Grid x:Name="EscenarioBox" WidthRequest="623" HeightRequest="461" HorizontalOptions="Center">
+                    <AbsoluteLayout x:Name="Escenario" AnchorX="0" AnchorY="0" HeightRequest="461" HorizontalOptions="Start" VerticalOptions="Start" WidthRequest="623">
                         <!-- Envolvente medida sobre la referencia, como en OPS. El SVG conserva 587:654 y queda alineado con los seis huecos del núcleo hexagonal. -->
                         <Image AbsoluteLayout.LayoutBounds="124,11,374,416" Aspect="AspectFit" InputTransparent="True" Source="colorhexagon.png" ZIndex="0" />
 
@@ -68,6 +68,11 @@
                         <!-- «Modo de estudio» (MOD-008): en cualquier tableta; no pide código (eso es «Clase en vivo»), pregunta quién eres. Ocupa la celda libre de abajo a la izquierda, fuera del aro, simétrica con «Clase en vivo». -->
                         <ui:ProfessorHexTile x:Name="TesalaEstudio" AbsoluteLayout.LayoutBounds="0,273,146,168" AccentColor="#019D60" Text="Modo de estudio" Tapped="OnEstudio"
                             IconGeometry="M251.76,88.94 L131.76,24.94 C130.67,24.35 129.38,24 128,24 C126.62,24 125.33,24.35 124.2,24.96 L124.24,24.94 L4.24,88.94 C1.7,90.31 0,92.96 0,96 C0,99.04 1.7,101.69 4.2,103.04 L4.24,103.06 L32,117.87 L32,166.29 L32,166.32 C32,170.41 33.54,174.14 36.07,176.95 L36.06,176.94 C49.16,191.53 78.51,216 128,216 C128.32,216 128.7,216 129.08,216 C145.95,216 162.08,212.79 176.88,206.93 L176,207.24 L176,240 C176,244.42 179.58,248 184,248 C188.42,248 192,244.42 192,240 L192,199.51 C202.75,193.24 211.96,185.74 219.85,177.04 L219.94,176.94 C222.46,174.14 224,170.41 224,166.32 L224,166.29 L224,117.87 L251.76,103.06 C254.3,101.69 256,99.04 256,96 C256,92.96 254.3,90.31 251.8,88.96 L251.76,88.94 Z M128,200 C84.73,200 59.28,178.86 48,166.29 L48,126.4 L124.24,167.06 C125.33,167.65 126.62,168 128,168 C129.38,168 130.67,167.65 131.8,167.04 L131.76,167.06 L176,143.47 L176,189.81 C163.4,195.69 147.52,200 128,200 Z M208,166.25 C203.23,171.53 197.99,176.21 192.29,180.3 L192,180.5 L192,134.93 L208,126.4 Z M188,118.94 L187.78,118.81 L131.78,88.94 C130.72,88.39 129.47,88.06 128.14,88.06 C123.72,88.06 120.14,91.65 120.14,96.06 C120.14,99.06 121.79,101.67 124.22,103.04 L124.26,103.06 L171,128 L128,150.93 L25,96 L128,41.07 L231,96 Z" />
+
+                        <!-- «Exámenes» (MOD-010): lo que el profesor aplicó a esta persona. Hasta ahora sólo estaba en el dock y quien esperaba un examen no lo encontraba;
+                             ocupa la celda libre de arriba a la derecha, fuera del aro, simétrica con «Clase en vivo» (por eso el tablero mide 623 de ancho: el aro queda centrado). -->
+                        <ui:ProfessorHexTile x:Name="TeselaEvaluaciones" AbsoluteLayout.LayoutBounds="477,0,146,168" AccentColor="#4F46E5" Text="Exámenes" Tapped="OnEvaluaciones" AutomationId="tesela-evaluaciones"
+                            IconGeometry="M56,40 H200 A16,16 0 0 1 216,56 V216 A16,16 0 0 1 200,232 H56 A16,16 0 0 1 40,216 V56 A16,16 0 0 1 56,40 Z M56,56 V216 H200 V56 Z M96,24 H160 V56 H96 Z M88,104 H168 V120 H88 Z M88,144 H168 V160 H88 Z M88,184 H136 V200 H88 Z" />
                     </AbsoluteLayout>
                 </Grid>
             </VerticalStackLayout>

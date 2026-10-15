@@ -109,13 +109,18 @@ class ConfiguracionPorNivelTests(_ConPreescolar):
         self.gb("/niveles/secundaria/", {"modo": "calificaciones", "escala_id": self.adoptar("gen-0-5")["id"]}, metodo="put", cliente=self.admin)
 
     def test_una_plantilla_aplicada_a_un_nivel_que_no_se_sugiere_se_avisa_sin_impedirlo(self):
-        """Respetar las diferencias normativas por nivel: ES califica con notas desde primaria; en preescolar la plantilla no se sugiere (se usa el modo simple)."""
-        escala = self.adoptar("es-0-10")
-        v = self.gb("/niveles/preescolar/", {"modo": "calificaciones", "escala_id": escala["id"], "validar": True}, metodo="put", cliente=self.admin)
+        """Respetar las diferencias normativas por nivel: en España Primaria y ESO califican con términos (IN…SB) y Bachillerato con 0–10; en preescolar ninguna
+        plantilla se sugiere (se usa el modo simple)."""
+        terminos, numerica = self.adoptar("es-terminos"), self.adoptar("es-0-10")
+        v = self.gb("/niveles/preescolar/", {"modo": "calificaciones", "escala_id": terminos["id"], "validar": True}, metodo="put", cliente=self.admin)
         self.assertTrue(v["permitido"])
         self.assertTrue(any("no se sugiere para el nivel preescolar" in w for w in v["advertencias"]), v["advertencias"])
-        ok = self.gb("/niveles/primaria/", {"modo": "calificaciones", "escala_id": escala["id"], "validar": True}, metodo="put", cliente=self.admin)
+        ok = self.gb("/niveles/primaria/", {"modo": "calificaciones", "escala_id": terminos["id"], "validar": True}, metodo="put", cliente=self.admin)
         self.assertFalse(any("no se sugiere" in w for w in ok["advertencias"]))
+        # La escala de Bachillerato (0–10) no es la de Primaria: se avisa, y se puede aplicar igual.
+        otra = self.gb("/niveles/primaria/", {"modo": "calificaciones", "escala_id": numerica["id"], "validar": True}, metodo="put", cliente=self.admin)
+        self.assertTrue(otra["permitido"])
+        self.assertTrue(any("no se sugiere para el nivel primaria" in w for w in otra["advertencias"]), otra["advertencias"])
 
     def test_el_modo_calificaciones_exige_una_escala_vigente(self):
         r = self.gb("/niveles/primaria/", {"modo": "calificaciones"}, metodo="put", cliente=self.admin, esperado=400)

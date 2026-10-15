@@ -47,10 +47,23 @@ public partial class CalificacionesPage
     {
         var calif = libro.EnModoCalificaciones;
         var texto = new VerticalStackLayout { Spacing = 6, VerticalOptions = LayoutOptions.Center };
-        texto.Add(new Label { Text = calif ? "Modo calificaciones" : "Modo simple", FontFamily = Ds.FuenteMedia, FontSize = 22, TextColor = Ds.Tinta });
-        texto.Add(Ds.Secundario(calif
-            ? $"Escala del nivel: {libro.Escala?.Nombre ?? "sin escala elegida"}"
-            : "Este nivel no muestra notas: sólo si cada estudiante completó la evaluación.", 15));
+        // El sistema de calificación a la vista: con notas, cuál es (nombre con su país), su rango, desde dónde se aprueba y sus niveles; sin notas, por qué y quién lo cambia.
+        texto.Add(new Label { Text = calif ? "Sistema de calificación" : "Modo simple", FontFamily = Ds.FuenteMedia, FontSize = 22, TextColor = Ds.Tinta });
+        if (calif)
+        {
+            texto.Add(new Label { Text = GradebookTexto.Sistema(libro.Escala), FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap, AutomationId = "calificaciones-sistema" });
+            var resumen = GradebookTexto.ResumenDelSistema(libro.Escala);
+            if (resumen.Length > 0) texto.Add(Ds.Secundario(resumen, 15));
+            var niveles = GradebookTexto.Niveles(libro.Escala);
+            if (niveles.Length > 0) texto.Add(Ds.Secundario($"Niveles: {niveles}", 15));
+        }
+        else
+        {
+            texto.Add(Ds.Secundario("Este nivel no muestra notas: sólo si cada estudiante completó la evaluación.", 15));
+            texto.Add(Ds.Secundario(CalificacionesUi.PuedeConfigurar
+                ? "Para calificar con el sistema de un país (España, Estados Unidos, México, Colombia, Chile, Perú, Ecuador…) elígelo en «Sistema de calificación»."
+                : "La administración puede elegir el sistema de calificación de este nivel.", 15));
+        }
         texto.Add(Ds.Secundario($"Intento que cuenta: {GradebookTexto.Politica(libro.PoliticaIntentos).ToLowerInvariant()}", 15));
 
         var totales = new HorizontalStackLayout { Spacing = 30, VerticalOptions = LayoutOptions.Center };
@@ -84,7 +97,7 @@ public partial class CalificacionesPage
                 CalificacionesUi.Seguro(nameof(CalificacionesPage), "Revisiones", () => AbrirBandejaAsync(null)), null, "calificaciones-revisiones").Vista);
         }
         if (CalificacionesUi.PuedeConfigurar)
-            acciones.Add(ExamenUi.Accion("Configuración académica", Ds.Rango.Secondary,
+            acciones.Add(ExamenUi.Accion("Sistema de calificación", calif ? Ds.Rango.Secondary : Ds.Rango.Primary,
                 CalificacionesUi.Seguro(nameof(CalificacionesPage), "Configuracion", () => Shell.Current.GoToAsync("calificaciones-config")), null, "calificaciones-configuracion").Vista);
         if (acciones.Children.Count > 0) pila.Add(acciones);
         return ExamenUi.Tarjeta(pila);

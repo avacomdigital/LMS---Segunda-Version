@@ -263,7 +263,9 @@ public partial class CalificacionDetallePage : ContentPage
                 ? (string.IsNullOrWhiteSpace(c.DesempenoMotivo) ? "Lo fijó el profesor con su criterio pedagógico" : $"Motivo: {c.DesempenoMotivo}")
                 : "Sale de la escala del nivel", 280, "calificacion-bloque-desempeno"));
         fila.Add(CalificacionesUi.Bloque("Criterio de aprobación", GradebookTexto.Aprobacion(p?.Aprobacion),
-            "Sólo el criterio de la escala: aprobar o promover lo decide la institución", 280, "calificacion-bloque-aprobacion"));
+            GradebookTexto.MinimoParaAprobar(_detalle?.Sistema) is { } minimo
+                ? $"{minimo} (sistema: {GradebookTexto.Sistema(_detalle?.Sistema)}). Aprobar o promover lo decide la institución"
+                : "Sólo el criterio de la escala: aprobar o promover lo decide la institución", 280, "calificacion-bloque-aprobacion"));
         pila.Add(fila);
         return ExamenUi.Tarjeta(pila);
     }
