@@ -220,6 +220,6 @@ class ResultadoDelAlumno(_Alumno):
                 v = (r or {}).get("veredicto") or {}
                 detalle.append({"pregunta_ref": ref, "respondida": r is not None, "puntaje": puntaje, "puntaje_maximo": maximo, "correcta": v.get("correcta"),
                                 "retroalimentacion": v.get("retroalimentacion") or [], "comentario": ((r or {}).get("revision") or {}).get("comentario", "")})
-            return {"intento_id": intento["id"], "porcentaje": intento["porcentaje"], "puntaje": intento["puntaje"], "puntaje_maximo": intento["puntaje_maximo"],
+            return {"intento_id": intento["id"], "asignacion_id": asignacion["id"], "porcentaje": intento["porcentaje"], "puntaje": intento["puntaje"], "puntaje_maximo": intento["puntaje_maximo"],
                     "aprobado": (intento["porcentaje"] >= aprobacion) if aprobacion is not None and intento["porcentaje"] is not None else None,
                     "aprobacion_pct": aprobacion, "detalle": detalle, "servidor_en": ahora}

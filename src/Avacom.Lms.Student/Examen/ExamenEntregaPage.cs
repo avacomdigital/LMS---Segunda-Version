@@ -1,4 +1,5 @@
 using Avacom.Lms.Core.Evaluacion;
+using Avacom.Lms.Core.Gradebook;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
 
@@ -133,6 +134,18 @@ public sealed class ExamenEntregaPage : ContentPage
 
     // ----------------------------------------------------------------------------------- resultado
 
+    /// <summary>La nota que el profesor publicó en el libro (MOD-011) para esta evaluación, ya presentada con la escala del nivel; null si no hay (modo simple, sin publicar o sin conexión).</summary>
+    private static async Task<NotaPublicada?> NotaPublicadaAsync(string? asignacionId)
+    {
+        if (string.IsNullOrEmpty(asignacionId)) return null;
+        try
+        {
+            var mios = await Sesion.Gradebook.MisResultadosAsync(Sesion.AlumnoParaEvaluar, Sesion.Dispositivo);
+            return mios?.Items.FirstOrDefault(i => i.AsignacionId == asignacionId)?.Calificacion;
+        }
+        catch (Exception ex) { RegistroDeFallos.Escribir("student", "ExamenEntregaPage.NotaPublicada", ex); return null; }
+    }
+
     private async Task MostrarResultadoAsync(string intentoId)
     {
         _contenido.Clear();
@@ -156,9 +169,37 @@ public sealed class ExamenEntregaPage : ContentPage
             return;
         }
 
+        // La nota publicada, con la escala que eligió el nivel («A+», «4,0», «8/10»): la grande. El porcentaje de aciertos pasa a ser un dato de apoyo.
+        var publicada = await NotaPublicadaAsync(resultado.AsignacionId);
         var porcentaje = resultado.Porcentaje is { } p ? $"{Math.Round(p):0} %" : "—";
-        var nota = new Label { Text = porcentaje, FontFamily = Ds.FuenteMedia, FontSize = 64, TextColor = Ds.Tinta, HorizontalTextAlignment = TextAlignment.Center, AutomationId = "resultado-porcentaje" };
-        _contenido.Add(nota);
+        if (publicada?.Presentada is { } presentada && GradebookTexto.Valor(presentada) is { Length: > 0 } valor)
+        {
+            var grande = new Label { Text = valor, FontFamily = Ds.FuenteMedia, FontSize = 64, TextColor = Ds.Tinta, HorizontalTextAlignment = TextAlignment.Center, AutomationId = "resultado-nota" };
+            _contenido.Add(grande);
+            if (publicada.Desempeno?.Nivel is { Length: > 0 } nivel)
+            {
+                var desempeno = Ds.Pildora(nivel, Ds.ExitoSuave, Ds.Tinta, 17);
+                desempeno.HorizontalOptions = LayoutOptions.Center;
+                desempeno.AutomationId = "resultado-desempeno";
+                _contenido.Add(desempeno);
+            }
+            if (publicada.Escala is { } sistema && !string.IsNullOrWhiteSpace(sistema.Nombre))
+            {
+                var lectura = Ds.Secundario($"Sistema de calificación: {GradebookTexto.Sistema(sistema)}", 15);
+                lectura.HorizontalTextAlignment = TextAlignment.Center;
+                lectura.AutomationId = "resultado-sistema";
+                _contenido.Add(lectura);
+            }
+            var apoyo = Ds.Secundario($"{porcentaje} de aciertos", 16);
+            apoyo.HorizontalTextAlignment = TextAlignment.Center;
+            apoyo.AutomationId = "resultado-porcentaje";
+            _contenido.Add(apoyo);
+        }
+        else
+        {
+            var nota = new Label { Text = porcentaje, FontFamily = Ds.FuenteMedia, FontSize = 64, TextColor = Ds.Tinta, HorizontalTextAlignment = TextAlignment.Center, AutomationId = "resultado-porcentaje" };
+            _contenido.Add(nota);
+        }
         if (resultado.Aprobado is { } aprobado)
         {
             var pildora = Ds.Pildora(aprobado ? "Aprobado" : $"Todavía no llegas al {resultado.AprobacionPct:0} % que pide el examen", aprobado ? Ds.ExitoSuave : Ds.AlertaSuave, Ds.Tinta, 17);

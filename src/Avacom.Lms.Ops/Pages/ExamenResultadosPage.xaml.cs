@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Avacom.Lms.Core.Evaluacion;
+using Avacom.Lms.Core.Gradebook;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Examen;
@@ -20,6 +21,7 @@ public partial class ExamenResultadosPage : ContentPage
 
     private bool _visible, _cargando;
     private string _firma = string.Empty;
+    private NotasDeAsignacion? _notas;
     private IDispatcherTimer? _sondeo;
 
     private static string Actor => Sesion.ProfesorId;
@@ -85,7 +87,12 @@ public partial class ExamenResultadosPage : ContentPage
                 ContenidoHost.Add(ExamenUi.Tarjeta(Ds.Secundario(ExamenTexto.Error(api.UltimoError, api.UltimoMotivo), 16)));
                 return;
             }
-            var firma = JsonSerializer.Serialize(resultados);
+            // La nota de cada alumno con la escala de su nivel («A+», «4,0»): la pone el libro (MOD-011). Sin libro o en modo simple no hay nota y se ve el porcentaje, como antes.
+            NotasDeAsignacion? notas = null;
+            try { notas = await Sesion.Gradebook.NotasDeAsignacionAsync(Actor, AsignacionId); }
+            catch (Exception ex) { RegistroDeFallos.Escribir("ops", "ExamenResultadosPage.Notas", ex); }
+            _notas = notas;
+            var firma = JsonSerializer.Serialize(resultados) + JsonSerializer.Serialize(notas);
             if (!forzar && firma == _firma) return;
             _firma = firma;
             Pintar(resultados);
@@ -221,8 +228,17 @@ public partial class ExamenResultadosPage : ContentPage
         // Un intento anulado no cuenta: no se muestra un porcentaje que ya no vale.
         if (f.Porcentaje is { } pct && f.Estado != EstadosIntento.Anulado)
         {
-            resultado.Add(new Label { Text = ExamenTexto.Porcentaje(pct), FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta });
-            if (!f.Definitivo) resultado.Add(Ds.Secundario("provisional", 13));
+            if (_notas?.DeIntento(f.IntentoId) is { } presentacion && GradebookTexto.Valor(presentacion.Presentada) is { Length: > 0 } nota)
+            {
+                // La nota con la escala elegida va primero; el porcentaje de aciertos queda como dato de apoyo.
+                resultado.Add(new Label { Text = nota, FontFamily = Ds.FuenteMedia, FontSize = 20, TextColor = Ds.Tinta, AutomationId = $"resultados-nota-{f.AlumnoId}" });
+                resultado.Add(Ds.Secundario(ExamenTexto.Porcentaje(pct) + (!f.Definitivo || presentacion.Provisional ? " · provisional" : string.Empty), 13));
+            }
+            else
+            {
+                resultado.Add(new Label { Text = ExamenTexto.Porcentaje(pct), FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta });
+                if (!f.Definitivo) resultado.Add(Ds.Secundario("provisional", 13));
+            }
         }
         else resultado.Add(Ds.Secundario("—", 17));
         g.Add(resultado, 2, 0);

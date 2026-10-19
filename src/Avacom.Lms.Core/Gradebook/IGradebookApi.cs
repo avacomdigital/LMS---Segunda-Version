@@ -21,6 +21,8 @@ public interface IGradebookApi
 
     // ---- leer
     Task<LibroDelGrupo?> LibroAsync(string actor, string grupoId, string? asignacionId = null, string? periodo = null, string? cursoRef = null, string? busqueda = null, CancellationToken ct = default);
+    /// <summary>La calificación presentada de cada intento de una evaluación (la escala del nivel), para ponerla junto al porcentaje en los resultados del examen.</summary>
+    Task<NotasDeAsignacion?> NotasDeAsignacionAsync(string actor, string asignacionId, CancellationToken ct = default);
     Task<ResumenDePeriodo?> ResumenAsync(string actor, string grupoId, string? periodo = null, string? cursoRef = null, CancellationToken ct = default);
     Task<DetalleDeCalificacion?> CalificacionAsync(string actor, string calificacionId, CancellationToken ct = default);
 

@@ -358,7 +358,8 @@ public sealed record ResultadoDeIntento(
     [property: JsonPropertyName("aprobado")] bool? Aprobado,
     [property: JsonPropertyName("aprobacion_pct")] double? AprobacionPct,
     [property: JsonPropertyName("detalle")] IReadOnlyList<DetalleDeResultado>? Detalle,
-    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0);
+    [property: JsonPropertyName("servidor_en")] long ServidorEn = 0,
+    [property: JsonPropertyName("asignacion_id")] string? AsignacionId = null);
 
 // ----------------------------------------------------------------------------- descubrir y antesala
 

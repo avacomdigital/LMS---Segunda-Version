@@ -53,6 +53,9 @@ public sealed class GradebookApi(HttpClient http, Uri baseUri) : ClienteJson(htt
     public Task<DetalleDeCalificacion?> CalificacionAsync(string actor, string calificacionId, CancellationToken ct = default) =>
         ObtenerAsync<DetalleDeCalificacion>(Ruta(Cal(calificacionId), ("actor", actor)), ct);
 
+    public Task<NotasDeAsignacion?> NotasDeAsignacionAsync(string actor, string asignacionId, CancellationToken ct = default) =>
+        ObtenerAsync<NotasDeAsignacion>(Ruta($"asignaciones/{Esc(asignacionId)}/", ("actor", actor)), ct);
+
     // ====================================================================================== revisión docente
 
     public Task<BandejaDeRevision?> BandejaAsync(string actor, string? grupoId = null, string? asignacionId = null, CancellationToken ct = default) =>

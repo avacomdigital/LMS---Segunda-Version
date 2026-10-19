@@ -493,6 +493,27 @@ public sealed record ResultadoDelAlumno(
     public bool TieneNota => Calificacion is not null;
 }
 
+/// <summary>Lo mínimo de <c>GET /gradebook/asignaciones/{id}/</c> para pintar la nota de cada intento de una evaluación con la escala del nivel.</summary>
+public sealed record NotasDeAsignacion(
+    [property: JsonPropertyName("alumnos")] IReadOnlyList<NotasDeAlumno> Alumnos)
+{
+    /// <summary>La presentación de la calificación de un intento (null si no hay: modo simple, sin registrar o anulada).</summary>
+    public Presentacion? DeIntento(string? intentoId) =>
+        string.IsNullOrEmpty(intentoId) ? null : Alumnos.SelectMany(a => a.Intentos).FirstOrDefault(i => i.Id == intentoId)?.Calificacion?.Presentacion;
+}
+
+public sealed record NotasDeAlumno(
+    [property: JsonPropertyName("alumno_id")] string AlumnoId,
+    [property: JsonPropertyName("intentos")] IReadOnlyList<NotaDeIntento> Intentos);
+
+public sealed record NotaDeIntento(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("calificacion")] CalificacionDeIntento? Calificacion = null);
+
+public sealed record CalificacionDeIntento(
+    [property: JsonPropertyName("presentacion")] Presentacion? Presentacion = null,
+    [property: JsonPropertyName("publicada")] bool Publicada = false);
+
 public sealed record AciertosEnSimbolos([property: JsonPropertyName("simbolos")] IReadOnlyList<string> Simbolos);
 
 /// <summary>La nota publicada tal como la presenta la escala del nivel. No incluye el resultado interno.</summary>
