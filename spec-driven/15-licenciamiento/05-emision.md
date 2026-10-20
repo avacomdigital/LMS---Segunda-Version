@@ -113,7 +113,7 @@ Se hace **una vez**, con el CTO presente, en un equipo **sin red** y con la memo
 | 6 | Construir un instalador **con** esa pública y comprobar que activa una licencia emitida con la herramienta (`verificar` y una activación real) | `03-pruebas.md` |
 | 7 | Reconstruir `Build-Emisor.ps1` si el dominio del nodo cambió | Versión de la carpeta portátil |
 
-**Rotación.** Se genera `prod-2027-1`, su pública entra a un instalador **antes** de emitir con ella, y se sigue emitiendo con la vigente hasta que los nodos la traigan. Los nodos conservan las públicas anteriores mientras haya licencias vivas firmadas con ellas (LIC-E-14, probado con dos llaves).
+**Rotación.** Se genera `prod-2027-1`, su pública entra a un instalador **antes** de emitir con ella, y se sigue emitiendo con la vigente hasta que los nodos la traigan. Un nodo acepta las llaves públicas que `produccion.json` marca como `vigente` o `siguiente`; **una llave `retirada` deja de verificar** y lo firmado con ella se toma por inexistente (el colegio cae a la evaluación, y a degradada si ésta ya venció). Por eso la anterior se queda como `vigente` o `siguiente` mientras haya licencias vivas firmadas con ella (LIC-E-14, probado con dos llaves) y sólo se retira cuando el registro (`registro ver`) muestra que ya no queda ninguna.
 
 **Pérdida o robo de la privada.** Avisar de inmediato al CTO. Se genera una llave nueva, se publica un instalador que la traiga y se **reemiten** las licencias firmadas con la anterior (con el registro se sabe cuáles). Una licencia ya emitida **no se puede revocar sin internet**: esa es la razón de ser de la revocación firmada de V1.
 
