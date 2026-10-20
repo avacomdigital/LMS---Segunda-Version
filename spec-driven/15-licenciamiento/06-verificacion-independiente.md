@@ -16,7 +16,7 @@
 | Interoperabilidad emisor ↔ nodo (`backend/licenciamiento/tests/test_emisor_real.py`) | **13 de 13** en ≈ 13 s: el emisor real firma, el nodo real activa, renueva y traslada por su API. Se salta sola sin la herramienta; sólo usa llaves que crea en una carpeta temporal. Comprueba la tolerancia de `desde` con relojes de −30, −45 y −72 horas, el traslado del técnico y que el técnico no renueva |
 | Clasificación de rutas frente a la licencia | **316 rutas: 109 intocables · 178 núcleo · 29 licenciables**, igual que en la segunda foto. Ninguna ruta de una clase, un examen, el modo estudio, el inicio de sesión ni la lectura de calificaciones se puede apagar (inventario recorriendo el resolvedor real de Django) |
 | Fallas de reloj y límites | **Tres defectos confirmados y ya corregidos: H-13, H-14 y H-15** (§2) |
-| Módulo de licencia del backend (250 pruebas) sobre el árbol commiteado | **250 de 250** (6 omitidas por diseño) en ≈ 147 s; la suite completa de la otra sesión (2195, 14 omitidas) se toma como línea base del backend y se repite una vez, cuando los arreglos de §2 estén dentro |
+| Módulo de licencia del backend sobre el árbol commiteado | **250 de 250** (6 omitidas por diseño) en ≈ 147 s antes de los arreglos y **262 de 262** (6 omitidas) con ellos (12 pruebas nuevas: 9 del reloj y 3 de los límites), con las 100 del emisor también en verde; la suite completa de la otra sesión (2195, 14 omitidas) se toma como línea base del backend y se repite una vez, cuando los arreglos de §2 estén dentro |
 | Pruebas de .NET sobre el árbol commiteado (12:07) | **Core 2122 · OPS 453 · Student 102**, todas correctas (líneas base antes de empezar: 1221 · 399 · 102; la diferencia incluye lo de otros módulos que se commiteó a la vez) |
 | **Regresión en vivo de las 316 rutas** con la licencia en cada estado (evaluación, activa, en gracia, degradada) contra un nodo aislado por HTTP real: 1244 peticiones | **0 desvíos**: toda ruta licenciable con su módulo apagado responde exactamente `402 no_disponible_por_licencia` con su capacidad y con el módulo encendido no lo responde; **ninguna de las 109 intocables ni de las 178 de núcleo** responde nunca ese 402, y todas responden lo mismo en los cuatro estados que con la licencia activa |
 | 5xx de ese barrido | 25 rutas, **iguales en los cuatro estados** (no vienen de la licencia): 21 son 503 («AVACOM Biblioteca no está encendida en este equipo»: el nodo de prueba no tiene la biblioteca conectada) y 2 son 501 («llega en una versión posterior») —ambos por diseño— y **1 par es un defecto real de otro módulo, ya corregido**: `DELETE …/padron/grupos/<id>/estudiantes/` y `POST …/estudiantes/<id>/` daban `TypeError` sin atrapar (500) porque `PadronMatriculaView` atiende dos rutas con firmas distintas; ahora 405 (`Bugfix:` e3784980, 4 pruebas nuevas) |
@@ -60,7 +60,15 @@ backend/.venv/Scripts/python.exe -m unittest discover -s tools/licencias/tests -
 
 # 13 pruebas de interoperabilidad emisor ↔ nodo (≈ 13 s)
 cd backend && .venv/Scripts/python.exe manage.py test licenciamiento.tests.test_emisor_real
+
+# Las rutas del backend con la licencia en los cuatro estados y el cupo, por HTTP real sin ventanas (≈ 2,5 min; nodo aislado en el puerto 8014; 25 comprobaciones)
+backend/.venv/Scripts/python.exe tests/Avacom.Lms.Ops.Uia/licencia_en_vivo.py todo
+
+# La pantalla Licencia de OPS por UI Automation (≈ 12 min, con las ventanas en primer plano y el candado de pantalla; 58 comprobaciones)
+backend/.venv/Scripts/python.exe tests/Avacom.Lms.Ops.Uia/recorrido_licencia.py --ops <Avacom.Lms.Ops.exe> --salida <carpeta>
 ```
+
+Los dos últimos guiones están en el repositorio (`tests/Avacom.Lms.Ops.Uia`, commit `e26f9db9`; su explicación, en el README de esa carpeta). Sólo corren en un árbol de desarrollo: firman con las llaves de desarrollo de las pruebas, como lo haría AVACOM con la solicitud que OPS guarda. El aviso de cupo del estado sale de la instantánea que el programador recalcula (cada 5 minutos en producción), así que el guion lo espera en lugar de exigirlo al instante.
 
 ## 3b · Observaciones de interfaz (del recorrido; no son fallas de licencia)
 
@@ -76,8 +84,8 @@ Se juzgaron con las capturas y la cuadrícula de tercios. La pantalla **Licencia
 ## 4 · Pendiente (se completa en este documento)
 
 1. (Opcional) El recorrido de Student por UIA con el cupo de equipos agotado, con una copia de sus `Preferences` para no tocar las de quien trabaja en el equipo.
-2. Una segunda corrida completa del backend, **una sola vez**, cuando estén dentro los arreglos de §2 (H-13, H-14, H-15), y las 100 pruebas del emisor contra el dominio ya corregido.
-3. El contenido del instalador reconstruido: sin emisor, sin llave de desarrollo, sin llaves privadas, con la pública de producción cuando exista (hoy `produccion.json` está vacío); y reconstruir el paquete portátil del emisor con el dominio final.
+2. Una segunda corrida completa del backend, **una sola vez**, cuando estén dentro los arreglos de §2 (H-13, H-14, H-15); la hace la otra sesión. Las 100 pruebas del emisor ya pasaron contra el dominio corregido.
+3. El contenido del instalador reconstruido: sin emisor, sin llave de desarrollo, sin llaves privadas, con la pública de producción cuando exista (hoy `produccion.json` está vacío). **El paquete portátil del emisor ya se reconstruyó con el dominio final** (2026-10-20 13:01, `vendor/` idéntico al dominio del backend archivo por archivo, sin llaves ni pruebas; SHA-256 del zip `af3de15a8573381a33c9c4e20887dcd3dcc798c74c1800c5c43cfe832d01b3ec`) y su humo con su propio Python —ceremonia de llaves, emisión y registro— pasó; si el dominio vuelve a cambiar hay que reconstruirlo.
 4. Repetir el recorrido de la pantalla Licencia contra la compilación final de OPS (con los arreglos de interfaz de U-2 y U-3).
 
 ## 5 · Lo que esta verificación no puede comprobar
