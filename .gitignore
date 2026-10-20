@@ -109,3 +109,12 @@ installer/student-android/descargas-apk.csv
 # Arnés de UI Automation de Student: capturas, textos y pid de cada corrida
 tests/Avacom.Lms.Student.Uia/salida/
 tests/Avacom.Lms.Ops.Uia/salida/
+
+# Emisor de licencias (uso interno de AVACOM, MOD-018): llaves privadas, registro de emisiones, entradas, salidas y la carpeta portatil que arma Build-Emisor.ps1
+*.avkey
+tools/licencias/datos/
+tools/licencias/entrada/
+tools/licencias/salida/
+tools/licencias/dist/
+tools/licencias/vendor/
+tools/licencias/python/

@@ -1,0 +1,34 @@
+AVACOM · Emisor de Licencias (uso interno de AVACOM)
+====================================================
+
+Esta carpeta es la herramienta con la que AVACOM firma las licencias de AVACOM OPS Master.
+NO se entrega a ningún cliente. NO viaja en el instalador del colegio.
+
+QUÉ HACE
+  1. Lee la SOLICITUD (.avreq) que genera el computador maestro del colegio.
+  2. Firma una LICENCIA (.avlic) con la llave privada de AVACOM.
+  3. Escribe la licencia y una hoja de entrega, y deja un renglón en el registro de emisiones.
+
+CÓMO SE USA
+  - Modo guiado:   doble clic en  Emitir-Licencia.bat   (un menú numerado te hace las preguntas).
+  - Línea de comandos, desde una consola abierta en esta carpeta:
+        avacom-licencias solicitud ver  entrada\solicitud.avreq
+        avacom-licencias emitir --solicitud entrada\solicitud.avreq --privada F:\claves\prod-2026-1.avkey --aula "Colegio X" --plan anual-aula --hasta 2027-10-31
+        avacom-licencias verificar salida\colegio-x-20261020-s1.avlic --publica claves-publicas\prod-2026-1.pub
+        avacom-licencias registro ver
+        avacom-licencias planes
+    La guía paso a paso está en spec-driven\15-licenciamiento\guia-usuario-interno.md.
+
+REGLAS DE ORO
+  - La llave privada (.avkey) vive en su memoria USB, cifrada con una frase de paso. NUNCA en esta carpeta, ni por correo, ni en la nube.
+  - Trabaja en un computador SIN conexión a internet.
+  - Lee el resumen antes de escribir EMITIR.
+  - No edites ni borres el registro de emisiones (datos\registro-emisiones.jsonl).
+
+CARPETAS
+  entrada\          aquí dejas las solicitudes (.avreq) que te entregan
+  salida\           aquí quedan las licencias (.avlic) y sus hojas de entrega
+  datos\            el registro de emisiones
+  planes\           los planes (datos provisionales hasta que el CTO conteste Q-L1)
+  claves-publicas\  las llaves públicas (.pub) con las que se verifica
+  python\, vendor\, avacom_licencias\    la herramienta (no se tocan)

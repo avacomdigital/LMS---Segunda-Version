@@ -1,0 +1,10 @@
+{
+  "nombre": "anual-sin-tope",
+  "descripcion": "Como anual-aula pero SIN tope de equipos ni de usuarios. Pide una confirmación aparte al emitir.",
+  "tipo": "produccion",
+  "meses": 12,
+  "gracia_dias": 30,
+  "limites": { "equipos": "sin_tope", "usuarios": "sin_tope", "concurrentes_normal": 50, "concurrentes_pico": 100 },
+  "capacidades": ["*"],
+  "confirmacion_extra": true
+}
