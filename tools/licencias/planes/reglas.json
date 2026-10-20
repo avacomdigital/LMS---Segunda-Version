@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "nota": "Lo que decidió el CTO del modelo comercial (2026-10-20) y ninguna licencia puede contradecir, ni con una opción de «emitir». Cambiar un valor no toca código: se edita aquí y se vuelve a armar el paquete del emisor.",
+  "gracia_dias": 30,
+  "tamano_maximo": { "equipos": 60, "usuarios": 1200 }
+}

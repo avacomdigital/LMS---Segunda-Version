@@ -36,7 +36,7 @@ class LicenciaNuevaTests(BaseConCarpeta):
         self.assertEqual(len(archivos), 1)
         lic = self.leer(archivos[0])
         self.assertEqual((lic.serie, lic.aula, lic.tipo), (1, "Colegio San Martín", "produccion"))
-        self.assertEqual(lic.limites, licencia.Limites(55, 1200, 50, 100))
+        self.assertEqual(lic.limites, licencia.Limites(60, 1200, 50, 100))                     # el tamaño máximo de un aula que fijó el CTO (Q-L1)
         self.assertEqual(lic.capacidades, frozenset({"*"}))
         self.assertEqual((lic.gracia_dias, lic.liberacion_pendiente), (30, False))
         hoja = archivos[0].with_suffix(".txt").read_text(encoding="utf-8-sig")
@@ -62,11 +62,17 @@ class LicenciaNuevaTests(BaseConCarpeta):
         self.assertEqual(r.codigo, 0, r.error)
         self.assertEqual(len(self.licencias()), 1)
 
-    def test_el_plan_sin_tope_pide_una_segunda_confirmacion(self):
+    def test_un_plan_sin_tope_pide_una_segunda_confirmacion_si_las_reglas_del_cto_lo_permiten(self):
+        """El plan «sin tope» ya no se entrega (el CTO fijó el tamaño máximo, Q-L1), pero el mecanismo de la segunda confirmación sigue ahí para una carpeta de planes sin esa regla."""
+        planes = self.dir / "planes-sin-reglas"
+        planes.mkdir()
+        (planes / "sin-tope.json").write_text(json.dumps({
+            "nombre": "sin-tope", "tipo": "produccion", "meses": 12, "gracia_dias": 30, "capacidades": ["*"], "confirmacion_extra": True,
+            "limites": {"equipos": "sin_tope", "usuarios": "sin_tope", "concurrentes_normal": 50, "concurrentes_pico": 100}}), encoding="utf-8")
         sol = self.guardar("sol.avreq", self.nodo.solicitud())
-        self.assertEqual(self.emitir(sol, "--plan", "anual-sin-tope", entradas=["EMITIR"]).codigo, 2)
+        self.assertEqual(self.emitir(sol, "--planes", str(planes), "--plan", "sin-tope", entradas=["EMITIR"]).codigo, 2)
         self.assertEqual(self.licencias(), [])
-        r = self.emitir(sol, "--plan", "anual-sin-tope", entradas=["SIN TOPE", "EMITIR"])
+        r = self.emitir(sol, "--planes", str(planes), "--plan", "sin-tope", entradas=["SIN TOPE", "EMITIR"])
         self.assertEqual(r.codigo, 0, r.error)
         lic = self.leer(self.licencias()[0])
         self.assertEqual((lic.limites.equipos, lic.limites.usuarios), (licencia.ILIMITADO, licencia.ILIMITADO))
@@ -74,13 +80,42 @@ class LicenciaNuevaTests(BaseConCarpeta):
 
     def test_limites_modulos_y_gracia_a_mano(self):
         sol = self.guardar("sol.avreq", self.nodo.solicitud())
-        r = self.emitir(sol, "--equipos", "10", "--usuarios", "99", "--normal", "5", "--pico", "8", "--capacidades", "reportes,busqueda", "--gracia", "15", "--tipo", "evaluacion")
+        r = self.emitir(sol, "--equipos", "10", "--usuarios", "99", "--normal", "5", "--pico", "8", "--capacidades", "reportes,busqueda", "--gracia", "30", "--tipo", "evaluacion")
         self.assertEqual(r.codigo, 0, r.error)
         lic = self.leer(self.licencias()[0])
         self.assertEqual(lic.limites, licencia.Limites(10, 99, 5, 8))
         self.assertEqual(lic.capacidades, frozenset({"reportes", "busqueda"}))
-        self.assertEqual((lic.gracia_dias, lic.tipo), (15, "evaluacion"))
+        self.assertEqual((lic.gracia_dias, lic.tipo), (30, "evaluacion"))
         self.assertIn("EVALUACIÓN", r.salida)
+
+    def test_las_reglas_del_cto_no_se_contradicen_ni_con_una_opcion(self):
+        """Q-L16 · la gracia son 30 días corridos EXACTOS y Q-L1 · un aula no pasa de 60 equipos y 1200 usuarios, ni con «sin_tope»: nada se firma ni se registra."""
+        sol = self.guardar("sol.avreq", self.nodo.solicitud())
+        for opciones, texto in ((("--gracia", "15"), "30 días corridos exactos"), (("--gracia", "45"), "30 días corridos exactos"), (("--gracia", "0"), "30 días corridos exactos"),
+                                (("--equipos", "61"), "tamaño máximo"), (("--usuarios", "1201"), "tamaño máximo"),
+                                (("--equipos", "sin_tope"), "tamaño máximo"), (("--usuarios", "sin_tope"), "tamaño máximo")):
+            r = self.emitir(sol, *opciones)
+            self.assertEqual(r.codigo, 1, opciones)
+            self.assertIn(texto, r.error + r.salida, opciones)
+        self.assertEqual(self.licencias(), [])
+        self.assertEqual(Registro(self.registro).verificar()[2], 0)
+        r = self.emitir(sol, "--equipos", "60", "--usuarios", "1200", "--gracia", "30")           # justo el máximo y la gracia exacta
+        self.assertEqual(r.codigo, 0, r.error)
+
+    def test_un_plan_que_contradice_las_reglas_no_se_carga(self):
+        """Las reglas valen también para los planes: un plan con 45 días de gracia o 80 equipos no se puede ni elegir."""
+        planes = self.dir / "planes-malos"
+        planes.mkdir()
+        (planes / "reglas.json").write_text(json.dumps({"version": 1, "gracia_dias": 30, "tamano_maximo": {"equipos": 60, "usuarios": 1200}}), encoding="utf-8")
+        (planes / "grande.json").write_text(json.dumps({
+            "nombre": "grande", "tipo": "produccion", "meses": 12, "gracia_dias": 30, "capacidades": ["*"],
+            "limites": {"equipos": 80, "usuarios": 1200, "concurrentes_normal": 50, "concurrentes_pico": 100}}), encoding="utf-8")
+        sol = self.guardar("sol.avreq", self.nodo.solicitud())
+        r = self.emitir(sol, "--planes", str(planes), "--plan", "grande")
+        self.assertEqual(r.codigo, 1)
+        self.assertIn("grande.json", r.error + r.salida)
+        self.assertIn("tamaño máximo", r.error + r.salida)
+        self.assertEqual(self.licencias(), [])
 
     def test_opciones_que_no_valen(self):
         sol = self.guardar("sol.avreq", self.nodo.solicitud())
@@ -415,9 +450,13 @@ class RegistroYPlanesTests(BaseConCarpeta):
     def test_planes(self):
         r = correr(["planes"])
         self.assertEqual(r.codigo, 0, r.error)
-        for nombre in ("anual-aula", "anual-sin-tope", "evaluacion"):
+        for nombre in ("anual-aula", "evaluacion"):
             self.assertIn(nombre, r.salida)
-        self.assertIn("provisionales", r.salida)
+        self.assertNotIn("anual-sin-tope", r.salida)                                           # contradice el tamaño máximo que fijó el CTO
+        self.assertIn("gracia de 30 días corridos exactos", r.salida)
+        self.assertIn("tamaño máximo de un aula: 60 equipos y 1200 usuarios", r.salida)
+        self.assertIn("60 equipos", r.salida)
+        self.assertIn("provisional", r.salida)                                                 # lo demás (concurrentes, módulos, meses) todavía lo es
 
     def test_la_herramienta_sin_comando_muestra_ayuda(self):
         self.assertEqual(correr(["--version"]).codigo, 0)

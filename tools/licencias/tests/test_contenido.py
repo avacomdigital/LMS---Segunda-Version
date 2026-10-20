@@ -54,10 +54,38 @@ class ContenidoTests(unittest.TestCase):
 
     def test_los_planes_de_fabrica_son_validos_y_emitibles(self):
         planes = pl.cargar()
-        self.assertEqual(sorted(planes), ["anual-aula", "anual-sin-tope", "evaluacion"])
+        self.assertEqual(sorted(planes), ["anual-aula", "evaluacion"])
+        reglas = pl.cargar_reglas()
+        self.assertEqual((reglas.gracia_dias, reglas.max_equipos, reglas.max_usuarios), (30, 60, 1200))      # lo que decidió el CTO: Q-L16 y Q-L1
         for plan in planes.values():
             self.assertIn(plan.tipo, (licencia.TIPO_PRODUCCION, licencia.TIPO_EVALUACION))
-        self.assertTrue(planes["anual-sin-tope"].confirmacion_extra)
+            self.assertEqual(plan.gracia_dias, 30, plan.nombre)
+            self.assertLessEqual(plan.equipos, 60, plan.nombre)
+            self.assertLessEqual(plan.usuarios, 1200, plan.nombre)
+        self.assertEqual((planes["anual-aula"].equipos, planes["anual-aula"].usuarios), (60, 1200))
+
+    def test_las_reglas_del_cto_son_un_dato_y_se_comprueban(self):
+        with tempfile.TemporaryDirectory() as carpeta:
+            self.assertEqual(pl.cargar_reglas(carpeta), pl.Reglas())                          # sin reglas.json no se exige nada
+            ruta = Path(carpeta) / pl.ARCHIVO_DE_REGLAS
+            ruta.write_text('{"version": 1, "gracia_dias": 30, "tamano_maximo": {"equipos": 60, "usuarios": 1200}}', encoding="utf-8")
+            reglas = pl.cargar_reglas(carpeta)
+            pl.comprobar(reglas, gracia_dias=30, equipos=60, usuarios=1200)                    # justo en el límite
+            for argumentos in (dict(gracia_dias=29, equipos=1, usuarios=1), dict(gracia_dias=31, equipos=1, usuarios=1), dict(gracia_dias=30, equipos=61, usuarios=1),
+                               dict(gracia_dias=30, equipos=1, usuarios=1201), dict(gracia_dias=30, equipos=licencia.ILIMITADO, usuarios=1)):
+                with self.assertRaises(pl.ErrorDePlan, msg=str(argumentos)):
+                    pl.comprobar(reglas, **argumentos)
+            ruta.write_text("{ no es json", encoding="utf-8")
+            with self.assertRaises(pl.ErrorDePlan):
+                pl.cargar_reglas(carpeta)
+            ruta.write_text('{"version": 1, "tamano_maximo": {"equipos": 0}}', encoding="utf-8")
+            with self.assertRaises(pl.ErrorDePlan):
+                pl.cargar_reglas(carpeta)
+
+    def test_reglas_json_no_se_confunde_con_un_plan(self):
+        with tempfile.TemporaryDirectory() as carpeta:
+            (Path(carpeta) / pl.ARCHIVO_DE_REGLAS).write_text('{"version": 1, "gracia_dias": 30}', encoding="utf-8")
+            self.assertEqual(pl.cargar(carpeta), {})
 
     def test_un_plan_de_desarrollo_o_con_datos_malos_se_rechaza(self):
         base = {"nombre": "x", "tipo": "produccion", "meses": 12, "gracia_dias": 30,

@@ -234,6 +234,7 @@ def cmd_emitir(a) -> int:
         raise ErrorDeUso(f"No se encontró la llave privada «{ruta_privada}».")
     try:
         plan = pl.obtener(a.plan or PLAN_POR_OMISION, a.planes)
+        reglas = pl.cargar_reglas(a.planes)
     except pl.ErrorDePlan as error:
         raise ErrorDeUso(str(error)) from error
     if a.liberacion_pendiente is not None and a.reemplaza:
@@ -300,7 +301,7 @@ def cmd_emitir(a) -> int:
 
     # --- construir, mostrar y confirmar
     try:
-        lic = emision.construir(sol, peticion, licencia_id=licencia_id, serie=serie, ahora_ms=ahora)
+        lic = emision.construir(sol, peticion, licencia_id=licencia_id, serie=serie, ahora_ms=ahora, reglas=reglas)
     except emision.ErrorDeEmision as error:
         raise ErrorDeUso(str(error)) from error
     avisos = emision.advertencias_de_solicitud(sol, ahora, huella.NIVEL_INSTALACION)
@@ -397,6 +398,7 @@ def cmd_registro_ver(a) -> int:
 def cmd_planes(a) -> int:
     try:
         todos = pl.cargar(a.planes)
+        reglas = pl.cargar_reglas(a.planes)
     except pl.ErrorDePlan as error:
         raise ErrorDeUso(str(error)) from error
     if not todos:
@@ -406,7 +408,8 @@ def cmd_planes(a) -> int:
         _p(f"  {plan.descripcion}")
         _p(f"  {pres.ETIQUETA_TIPO.get(plan.tipo, plan.tipo)} · {plan.meses} {'mes' if plan.meses == 1 else 'meses'} · gracia {plan.gracia_dias} días · "
            f"{pres.limites(licencia.Limites(plan.equipos, plan.usuarios, plan.concurrentes_normal, plan.concurrentes_pico))} · módulos: {pres.modulos(frozenset(plan.capacidades))}")
-    _p("Valores provisionales hasta que el CTO conteste Q-L1.")
+    _p(f"Reglas del CTO (planes/{pl.ARCHIVO_DE_REGLAS}): {reglas.descripcion()}. Ninguna opción de «emitir» las contradice.")
+    _p("Lo demás de los planes (concurrentes, módulos, meses) sigue siendo provisional (Q-L1).")
     return 0
 
 
@@ -439,9 +442,9 @@ def _parser() -> argparse.ArgumentParser:
     e.add_argument("--plan", help=f"Plan (por omisión «{PLAN_POR_OMISION}»); mira «planes»")
     e.add_argument("--hasta", help="Último día de vigencia, AAAA-MM-DD (UTC)")
     e.add_argument("--meses", type=int, help="Meses de vigencia desde hoy (si no se da --hasta, manda el plan)")
-    e.add_argument("--gracia", type=int, help="Días de gracia")
-    e.add_argument("--equipos", help="Límite de equipos (número o sin_tope)")
-    e.add_argument("--usuarios", help="Límite de usuarios (número o sin_tope)")
+    e.add_argument("--gracia", type=int, help="Días de gracia (la regla del CTO, en planes/reglas.json, es de 30 días corridos exactos: otro valor se rechaza)")
+    e.add_argument("--equipos", help="Límite de equipos (un número; el máximo de un aula lo fija planes/reglas.json)")
+    e.add_argument("--usuarios", help="Límite de usuarios (un número; el máximo de un aula lo fija planes/reglas.json)")
     e.add_argument("--normal", help="Concurrentes en operación normal (número o sin_tope)")
     e.add_argument("--pico", help="Concurrentes en pico (número o sin_tope)")
     e.add_argument("--capacidades", help="Módulos separados por coma (por omisión los del plan; * = todos)")

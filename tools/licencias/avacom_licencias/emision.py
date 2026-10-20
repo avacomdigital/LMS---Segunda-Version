@@ -7,6 +7,8 @@ Reglas que importan (están en la guía interna y en `requerimientos.md`, §8.1)
   · `desde` = hoy a las 00:00 UTC MENOS UN DÍA: un colegio sin internet puede tener el reloj atrasado y una licencia que «todavía no empieza» lo devolvería a la evaluación (H-08).
   · `vence` = las 23:59:59.999 UTC del día elegido.
   · Sólo se emiten los tipos `produccion` y `evaluacion`: el de `desarrollo` no se firma con una llave de producción.
+  · Las reglas del CTO (`planes/reglas.json`) no se pueden contradecir ni con una opción: la gracia son 30 días corridos exactos (Q-L16) y un aula no pasa de 60 equipos y 1200 usuarios,
+    ni con «sin_tope» (Q-L1).
   · Lo que se escribe se vuelve a LEER con el lector del nodo y debe decir exactamente lo pedido: un archivo que no verifica no se entrega.
 """
 from __future__ import annotations
@@ -48,7 +50,8 @@ class Peticion:
         return licencia.ILIMITADO in (self.equipos, self.usuarios, self.normal, self.pico)
 
 
-def validar(p: Peticion) -> None:
+def validar(p: Peticion, reglas: pl.Reglas | None = None) -> None:
+    """`reglas` son las del CTO (`planes/reglas.json`): la gracia exacta y el tamaño máximo de un aula. El emisor siempre las pasa; sin ellas sólo valen las reglas del formato."""
     if p.tipo not in pl.TIPOS_EMITIBLES:
         raise ErrorDeEmision(f"El tipo «{p.tipo}» no se emite con una llave de producción. Sólo: {', '.join(pl.TIPOS_EMITIBLES)}.")
     if not 0 <= p.gracia_dias <= licencia.MAX_GRACIA_DIAS:
@@ -66,6 +69,11 @@ def validar(p: Peticion) -> None:
         raise ErrorDeEmision(f"Los días de liberación pendiente deben estar entre 1 y {licencia.MAX_GRACIA_DIAS}.")
     if (p.hasta is None) == (p.meses is None):
         raise ErrorDeEmision("Indica la vigencia: o una fecha (--hasta AAAA-MM-DD) o unos meses (--meses N), no las dos ni ninguna.")
+    if reglas is not None:
+        try:
+            pl.comprobar(reglas, gracia_dias=p.gracia_dias, equipos=p.equipos, usuarios=p.usuarios)
+        except pl.ErrorDePlan as error:
+            raise ErrorDeEmision(str(error)) from error
 
 
 # --------------------------------------------------------------------------------------------------------------- fechas
@@ -111,9 +119,9 @@ def limpiar_aula(texto: str | None) -> str:
     return t[:120].strip()
 
 
-def construir(sol, p: Peticion, *, licencia_id: str, serie: int, ahora_ms: int) -> licencia.Licencia:
+def construir(sol, p: Peticion, *, licencia_id: str, serie: int, ahora_ms: int, reglas: pl.Reglas | None = None) -> licencia.Licencia:
     """La `Licencia` del dominio del nodo, lista para firmar. `sol` es una `Solicitud` YA verificada."""
-    validar(p)
+    validar(p, reglas)
     if serie < 1:
         raise ErrorDeEmision("La serie debe ser 1 o mayor.")
     desde, vence = fechas(ahora_ms, hasta=p.hasta, meses=p.meses)

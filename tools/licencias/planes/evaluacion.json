@@ -1,9 +1,9 @@
 {
   "nombre": "evaluacion",
-  "descripcion": "Evaluación de un mes para una demostración o una prueba en el aula (sólo con aprobación comercial).",
+  "descripcion": "Evaluación de un mes para una demostración o una prueba en el aula (sólo con aprobación comercial). Como todo plan, 30 días de gracia exactos (Q-L16).",
   "tipo": "evaluacion",
   "meses": 1,
-  "gracia_dias": 7,
+  "gracia_dias": 30,
   "limites": { "equipos": 20, "usuarios": 300, "concurrentes_normal": 20, "concurrentes_pico": 40 },
   "capacidades": ["*"]
 }

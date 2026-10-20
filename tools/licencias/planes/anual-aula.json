@@ -1,9 +1,9 @@
 {
   "nombre": "anual-aula",
-  "descripcion": "Un aula, un año, 30 días de gracia, 55 equipos, 1200 usuarios y todos los módulos (valores provisionales, Q-L1).",
+  "descripcion": "Un aula, un año, 30 días de gracia, 60 equipos, 1200 usuarios y todos los módulos (el tamaño máximo que fijó el CTO, Q-L1; la gracia exacta, Q-L16).",
   "tipo": "produccion",
   "meses": 12,
   "gracia_dias": 30,
-  "limites": { "equipos": 55, "usuarios": 1200, "concurrentes_normal": 50, "concurrentes_pico": 100 },
+  "limites": { "equipos": 60, "usuarios": 1200, "concurrentes_normal": 50, "concurrentes_pico": 100 },
   "capacidades": ["*"]
 }

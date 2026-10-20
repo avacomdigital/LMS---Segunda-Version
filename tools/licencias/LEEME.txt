@@ -29,6 +29,7 @@ CARPETAS
   entrada\          aquí dejas las solicitudes (.avreq) que te entregan
   salida\           aquí quedan las licencias (.avlic) y sus hojas de entrega
   datos\            el registro de emisiones
-  planes\           los planes (datos provisionales hasta que el CTO conteste Q-L1)
+  planes\           los planes y reglas.json, lo que decidió el CTO y ninguna licencia puede contradecir: gracia de 30 días corridos exactos y un aula de 60 equipos y 1200 usuarios como máximo
+                    (lo demás de los planes sigue siendo provisional, Q-L1)
   claves-publicas\  las llaves públicas (.pub) con las que se verifica
   python\, vendor\, avacom_licencias\    la herramienta (no se tocan)

@@ -12,6 +12,7 @@ import uuid
 from datetime import date
 
 from avacom_licencias import emision
+from avacom_licencias import planes as pl
 from avacom_licencias.dominio_nodo import catalogos, firma, huella, licencia, solicitud
 
 from licenciamiento.dominio import estado  # noqa: E402 — disponible porque avacom_licencias.dominio_nodo ya puso el dominio en sys.path
@@ -97,6 +98,21 @@ class ValidarTests(unittest.TestCase):
         for nombre, p in casos.items():
             with self.subTest(nombre), self.assertRaises(emision.ErrorDeEmision):
                 emision.validar(p)
+
+    def test_las_reglas_del_cto_se_aplican_a_lo_que_se_pide(self):
+        """Q-L16 (gracia de 30 días corridos exactos) y Q-L1 (60 equipos y 1200 usuarios como máximo, ni «sin_tope»). Sin reglas sólo valen las del formato."""
+        reglas = pl.Reglas(gracia_dias=30, max_equipos=60, max_usuarios=1200)
+        emision.validar(peticion(equipos=60, usuarios=1200), reglas)
+        casos = {"gracia de 29": peticion(gracia_dias=29), "gracia de 31": peticion(gracia_dias=31), "gracia de cero": peticion(gracia_dias=0), "61 equipos": peticion(equipos=61),
+                 "1201 usuarios": peticion(usuarios=1201), "equipos sin tope": peticion(equipos=licencia.ILIMITADO), "usuarios sin tope": peticion(usuarios=licencia.ILIMITADO)}
+        for nombre, p in casos.items():
+            with self.subTest(nombre), self.assertRaises(emision.ErrorDeEmision):
+                emision.validar(p, reglas)
+        emision.validar(peticion(equipos=500, usuarios=9000, gracia_dias=45))                    # sin reglas: el formato lo permite
+        sol = solicitud.leer_solicitud(NodoDePrueba().solicitud())
+        with self.assertRaises(emision.ErrorDeEmision):
+            emision.construir(sol, peticion(equipos=61), licencia_id="a7a7a7a7-0001-4000-8000-000000000001", serie=1, ahora_ms=AHORA, reglas=reglas)
+        emision.construir(sol, peticion(equipos=60), licencia_id="a7a7a7a7-0001-4000-8000-000000000001", serie=1, ahora_ms=AHORA, reglas=reglas)
 
 
 class ConstruirTests(unittest.TestCase):
