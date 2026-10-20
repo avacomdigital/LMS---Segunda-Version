@@ -60,17 +60,24 @@ class FechasTests(unittest.TestCase):
         emision.fechas(AHORA, hasta=date(2050, 1, 1), meses=None)
 
     def test_una_licencia_emitida_hoy_vale_para_un_nodo_con_el_reloj_atrasado(self):
-        """LIC-E-04 · H-08: el margen del emisor cubre un reloj atrasado hasta casi un día y medio (desde = ayer a las 00:00 UTC)."""
+        """LIC-E-04 · H-08: el margen del emisor (desde = ayer a las 00:00 UTC, de 24 a 48 horas antes de emitir) MÁS el día de tolerancia que el nodo da a `desde` cubren un reloj atrasado
+        hasta 63 horas con la hora de este caso (AHORA son las 15:00 UTC: desde queda 39 h atrás) y, a cualquier hora del día de emisión, siempre hasta 48 horas."""
         nodo = NodoDePrueba()
         sol = solicitud.leer_solicitud(nodo.solicitud())
         lic = emision.construir(sol, peticion(), licencia_id="a7a7a7a7-0001-4000-8000-000000000001", serie=1, ahora_ms=AHORA)
-        for atraso_horas in (0, 20, 38):
+        for atraso_horas in (0, 20, 38, 48, 62, 63):
             e = estado.calcular(estado.Contexto(licencia=lic, ahora=AHORA - atraso_horas * 3_600_000, instalada_en=AHORA - 60 * DIA_MS, coincidencia=OK))
             self.assertEqual(e.estado, "activa", f"con {atraso_horas} h de atraso")
-        # Más allá del margen (≈ 39 h) el nodo ve la licencia como «aún no vigente» y vuelve a su evaluación; si ésta ya terminó, queda degradado (H-08): el emisor no puede evitarlo
-        en_evaluacion = estado.calcular(estado.Contexto(licencia=lic, ahora=AHORA - 40 * 3_600_000, instalada_en=AHORA - 5 * DIA_MS, coincidencia=OK))
+        for hora in range(24):
+            ahora = ms(2026, 10, 20, hora, 59, 59)
+            de_esa_hora = emision.construir(sol, peticion(), licencia_id="a7a7a7a7-0001-4000-8000-000000000001", serie=1, ahora_ms=ahora)
+            e = estado.calcular(estado.Contexto(licencia=de_esa_hora, ahora=ahora - 48 * 3_600_000, instalada_en=ahora - 60 * DIA_MS, coincidencia=OK))
+            self.assertEqual(e.estado, "activa", f"emitida a las {hora}:59 UTC y con 48 h de atraso")
+        # Más allá del margen y la tolerancia (64 h) el nodo ve la licencia como «aún no vigente» y vuelve a su evaluación; si ésta ya terminó, queda degradado (H-08). Al INSTALAR, el nodo
+        # ni la acepta (400 `aun_no_vigente`): esto sólo ocurre si el reloj se atrasó después de activar, y el emisor no puede evitarlo
+        en_evaluacion = estado.calcular(estado.Contexto(licencia=lic, ahora=AHORA - 64 * 3_600_000, instalada_en=AHORA - 5 * DIA_MS, coincidencia=OK))
         self.assertEqual((en_evaluacion.estado, en_evaluacion.motivo), ("sin_licencia", "aun_no_vigente"))
-        evaluacion_vencida = estado.calcular(estado.Contexto(licencia=lic, ahora=AHORA - 40 * 3_600_000, instalada_en=AHORA - 60 * DIA_MS, coincidencia=OK))
+        evaluacion_vencida = estado.calcular(estado.Contexto(licencia=lic, ahora=AHORA - 64 * 3_600_000, instalada_en=AHORA - 60 * DIA_MS, coincidencia=OK))
         self.assertEqual(evaluacion_vencida.estado, "degradada")
 
 
