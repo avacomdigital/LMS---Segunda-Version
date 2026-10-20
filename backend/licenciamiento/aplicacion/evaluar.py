@@ -46,7 +46,7 @@ class Entradas:
     origen: str
     ahora_reloj: int
     monotono: int
-    previo: tuple[int, int] | None
+    previo: tuple[int, int, int] | None
     instalacion: dict | None
     vigente: dict | None
     liberadas_db: set
@@ -100,7 +100,7 @@ class Evaluar(_CasoDeUso):
                 plan = self._planear(entradas)
                 asentado = self._aplicar(plan.escrituras)
                 s.vivo.publicar(plan.instantanea)
-                s.vivo.recordar_reloj(entradas.ahora_reloj, entradas.monotono)
+                s.vivo.recordar_reloj(entradas.ahora_reloj, entradas.monotono, plan.instantanea.estado.ahora)
                 return plan.instantanea
             except Exception:   # noqa: BLE001 — R-04: un fallo de licenciamiento nunca cierra nada
                 log.exception("No se pudo evaluar la licencia; se conserva el último estado bueno", extra={"evento": "licencia.evaluacion_fallo", "ruta": "bad"})
@@ -176,7 +176,9 @@ class Evaluar(_CasoDeUso):
         # ---- 3. el reloj confiable (P-06)
         marca_externa = max(e.anclas.marcas.values(), default=0)
         marca = max(e.marca_db, marca_externa, e.ultima_audit or 0)
-        lectura = rj.leer(ahora, marca, politica.tolerancia_retroceso_ms)
+        # El piso monótono (H-13 · H-14): con el reloj de pared por debajo de la marca, el tiempo de la licencia sigue corriendo con el reloj monótono de ESTE proceso en vez de congelarse
+        piso = rj.piso_monotono(e.previo[2] if e.previo else None, e.previo[1] if e.previo else None, e.monotono)
+        lectura = rj.leer(ahora, marca, politica.tolerancia_retroceso_ms, piso)
         confirmado_en = e.obs[cat.O_CONFIRMADO]["en"] if e.obs[cat.O_CONFIRMADO] else 0
         previo_ret = e.obs[cat.O_RETROCESO]
         if lectura.retroceso and (previo_ret is None or ahora - previo_ret["en"] >= cat.REPETICION_OBSERVACION_MS):

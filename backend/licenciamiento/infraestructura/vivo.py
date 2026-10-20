@@ -15,7 +15,7 @@ class EstadoVivo:
     def __init__(self):
         self._candado = threading.Lock()
         self._instantanea: Instantanea | None = None
-        self._reloj: tuple[int, int] | None = None
+        self._reloj: tuple[int, int, int] | None = None
         self._pendientes: dict[tuple[int, str, str], int] = {}
         self._asentados: set[tuple[int, str, str]] = set()
         self._cuentas: dict[str, int] = {}
@@ -28,12 +28,13 @@ class EstadoVivo:
         with self._candado:
             self._instantanea = instantanea
 
-    def reloj_previo(self) -> tuple[int, int] | None:
+    def reloj_previo(self) -> tuple[int, int, int] | None:
+        """`(reloj de pared, monótono, instante confiable)` de la lectura anterior de ESTE proceso, o None en el primer ciclo."""
         return self._reloj
 
-    def recordar_reloj(self, reloj_ms: int, monotono_ms: int) -> None:
+    def recordar_reloj(self, reloj_ms: int, monotono_ms: int, confiable_ms: int | None = None) -> None:
         with self._candado:
-            self._reloj = (int(reloj_ms), int(monotono_ms))
+            self._reloj = (int(reloj_ms), int(monotono_ms), int(reloj_ms if confiable_ms is None else confiable_ms))
 
     def registrar_bloqueo(self, actor: str, clave: str, ahora_ms: int) -> None:
         hora = int(ahora_ms) // 3_600_000

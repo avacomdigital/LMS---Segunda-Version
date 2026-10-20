@@ -24,10 +24,31 @@ class LecturaDeReloj:
     retroceso: bool         # más que la tolerancia
 
 
-def leer(reloj_ms: int, marca_alta_ms: int, tolerancia_ms: int) -> LecturaDeReloj:
-    """`ahora = max(reloj, marca alta)`. Hay retroceso si el reloj quedó por debajo de la marca alta más que la tolerancia."""
+def piso_monotono(confiable_previo_ms: int | None, monotono_previo_ms: int | None, monotono_ms: int) -> int:
+    """
+    El instante confiable que el reloj monótono GARANTIZA dentro de un mismo proceso: el confiable de la lectura anterior más lo que de verdad pasó desde entonces (el monótono no se
+    cambia desde el reloj del sistema). Sin lectura anterior —el primer ciclo de un proceso— no hay piso: 0 (tras un reinicio sólo se pierde el tiempo apagado, que nadie puede aprovechar).
+    """
+    if confiable_previo_ms is None or monotono_previo_ms is None:
+        return 0
+    return int(confiable_previo_ms) + max(0, int(monotono_ms) - int(monotono_previo_ms))
+
+
+def leer(reloj_ms: int, marca_alta_ms: int, tolerancia_ms: int, piso_ms: int = 0) -> LecturaDeReloj:
+    """
+    `ahora = max(reloj, marca alta)`. Hay retroceso si el reloj quedó por debajo de la marca alta más que la tolerancia.
+
+    Con retroceso el reloj de pared ya no dice cuánto tiempo pasó, y `max(reloj, marca)` sería un valor FIJO —la marca—: el tiempo de la licencia se congelaría hasta que la hora de
+    pared alcanzara la marca y atrasar la fecha alargaría la licencia lo que se atrasó (H-13), o dejaría sin efecto el tope de 72 h de un salto sospechoso (H-14). Por eso, SÓLO con
+    retroceso, el instante confiable no baja del piso que garantiza el reloj monótono (`piso_monotono`). Con el reloj en orden no interviene: una deriva de ppm entre el monótono y el
+    de pared no puede adelantar el confiable tras meses de funcionamiento.
+    """
     atras = max(0, int(marca_alta_ms) - int(reloj_ms))
-    return LecturaDeReloj(max(int(reloj_ms), int(marca_alta_ms)), int(reloj_ms), int(marca_alta_ms), atras, atras > tolerancia_ms)
+    retroceso = atras > tolerancia_ms
+    ahora = max(int(reloj_ms), int(marca_alta_ms))
+    if retroceso:
+        ahora = max(ahora, int(piso_ms))
+    return LecturaDeReloj(ahora, int(reloj_ms), int(marca_alta_ms), atras, retroceso)
 
 
 def marca_siguiente(marca_alta_ms: int, ahora_confiable_ms: int) -> int:
