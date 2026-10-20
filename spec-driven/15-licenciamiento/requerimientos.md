@@ -233,21 +233,24 @@ Reglas, en orden:
 
 Lo que decide **cada licencia** (vigencia, gracia, límites, módulos) viaja **dentro** de ella; la política sólo cubre lo que una licencia no puede decir.
 
-### 5.6 · Tablas `m18_*` (propuesta lógica; el diseño físico lo fija `01-diseno.md`)
+### 5.6 · Tablas `m18_*` (**como las construyó el nodo**, `backend/licenciamiento/models.py`)
+
+Esta especificación proponía una tabla `m18_nodo`, una `m18_solicitud` y una `m18_aviso`; la implementación las resolvió de otro modo (lo que manda es el código probado):
 
 | Tabla | Para qué | Clase | Notas |
 |---|---|---|---|
-| `m18_licencia` | **Historial de sólo inserción** de cada archivo aceptado (`activada`, `renovada`, `reactivada`, `liberada`) | Propia (perderla es perder la historia) | Guarda el **archivo firmado completo** (≤ 16 KiB) además de columnas para consultar. **La fila no es de confianza**: al arrancar el nodo **vuelve a verificar** la firma; una fila alterada se ignora y deja `licencia.firma_invalida`. Triggers contra `UPDATE` y `DELETE` |
-| `m18_nodo` | **Una fila**: `instalada_en`, `marca_alta`, `huella_distinta_desde`, `salto_adelante_desde`, `reactivada_en`, llave pública del nodo | Propia | Un trigger **impide bajar** `marca_alta` |
-| `m18_solicitud` | Solicitudes generadas (nonce, creada, nivel, SHA-256, estado `generada`/`atendida`/`caducada`) | Propia | Sin huellas crudas |
-| `m18_aviso` | Avisos escalonados ya emitidos: (`licencia_id`, `serie`, tipo, umbral) **único** | Propia | Un aviso por umbral cruzado: idempotente |
-| `m18_evento_salida` | Cola de salida de los eventos `licencia.*.v1` | Propia | Patrón de `m09` y `m19` |
+| `m18_licencia` | **Historial de sólo inserción** de cada hecho (`activada`, `renovada`, `reactivada`, `liberada`) | Propia (perderla es perder la historia) | Guarda el **archivo firmado completo** (nulo en una liberación). **La fila no es de confianza**: el nodo **vuelve a verificar** la firma con las llaves de ahora; una fila que ya no pasa se toma como ausente y deja una observación `firma_invalida`. Trigger contra `UPDATE` |
+| `m18_observacion` | Hechos observados que **explican** el estado: primera vez que la huella no coincidió y cuándo volvió, un reloj que retrocedió o saltó, la confirmación del administrador, un ancla alterada, una firma inválida | Propia | Sólo inserción, con cifras y sin contenido. **Sustituye a las columnas de `m18_nodo`** (`huella_distinta_desde`, `salto_adelante_desde`) y a `m18_aviso` |
+| `m18_marca_alta` | El instante más alto que el nodo ha visto | Propia | Un trigger **impide bajarla** |
+| `m18_instalacion` | Una fila: cuándo empezó la ventana de evaluación | Propia | Además está en el ancla de fuera de la base: si la base trae una fecha más tardía (restauró un respaldo viejo) vale la menor |
+| `m18_consumo` | El último conteo de equipos y usuarios (FUN-190) | **Derivada** (se puede borrar) | Se guarda una vez por hora, con su evento |
+| `m18_evento_salida` | Cola de salida de los eventos `licencia.*.v1` | Propia | **`clave` única**: escribir el mismo evento dos veces no hace nada (idempotente). Es lo que hace que un aviso (30/14/7/3/1) y una transición salgan **una sola vez** |
 
-No hay tabla de «estado actual» (§5.4) ni de consumo (se calcula contra los dueños). Ninguna tabla `m18_*` tiene claves foráneas fuera del módulo.
+Las **solicitudes** no se guardan: dejan un asiento `licencia.solicitud_generada` (nivel, `k`, cuántos factores y el hash del archivo). No hay tabla de «estado actual» (§5.4). Ninguna tabla `m18_*` tiene claves foráneas fuera del módulo.
 
-**Anclas fuera de la base** (que un respaldo restaurado no rebobina): un archivo `ancla` en la carpeta de estado, una clave del registro y la fecha del último asiento de la bitácora encadenada. `marca alta = max(base, anclas)`; el vencimiento se mide contra ella.
+**Anclas fuera de la base** (que un respaldo restaurado no rebobina): el archivo `ancla-reloj.json` en la carpeta de estado (la marca alta y el inicio de la evaluación, con una **verificación HMAC** derivada del secreto de instalación: si alguien lo edita no cuenta y se avisa como integridad alterada), la clave del registro `HKLM\SOFTWARE\AVACOM\OPS Master\Licencia` (sólo en producción) y la **fecha del último asiento de la bitácora encadenada**. `marca alta = max(base, anclas, última bitácora)`; el vencimiento se mide contra ella.
 
-**Carpeta de estado** (`%ProgramData%\AVACOM\OPS Master\Config\licencia\`, R-11): copia de la última licencia aceptada (`actual.avlic`, para reactivar tras restaurar una base vieja), la llave privada del nodo y el secreto de instalación (ambos con DPAPI de máquina) y el ancla.
+**Carpeta de estado** (`%ProgramData%\AVACOM\OPS Master\Config\licencia\`, R-11; en producción **siempre** esa: una variable de entorno no puede moverla): `actual.avlic` (copia de la licencia vigente, el espejo para reactivar tras restaurar una base vieja), `liberadas.json` (las licencias que este nodo liberó: una base restaurada no las resucita), `ancla-reloj.json`, `instalacion.bin` (el secreto de instalación) y `nodo.key` (la llave Ed25519 del nodo), ambos con **DPAPI de máquina**. Un secreto o una llave que **no se pueden abrir** (otro Windows, un disco clonado) se **ponen en cuarentena** (`<nombre>.ilegible-<fecha>`, se conservan los últimos 5) en vez de reemplazarse en silencio.
 
 ### 5.7 · Lo que **no** se guarda
 
@@ -326,7 +329,7 @@ La licencia entra por un **puerto** con dos adaptadores, igual que el resto de l
 | **InspeccionarArchivo** | apoyo | Técnico · Admin | `license.activate` | — | Verifica y **resume** sin instalar nada (qué acción tomaría) | — | `licencia.firma_invalida` si no verifica |
 | **ActivarLicencia** | CAP-110 · FUN-188 | Técnico · Admin | `license.activate` | Archivo válido; la huella coincide (o trae `LIBERACION_PENDIENTE`); no hay otra licencia **distinta** instalada | Historial + estado en memoria + copia en la carpeta de estado | `licencia.activada.v1` | `licencia.activada` |
 | **RenovarLicencia** | CAP-113 · FUN-191 | Admin | `license.renew` | Misma `id_licencia` y `serie` **mayor** | Ídem | `licencia.renovada.v1` | `licencia.renovada` |
-| **LiberarEquipo** | JRN-020 | Técnico · Admin | `license.activate` | Hay licencia instalada | `.avrel` firmado con la llave del nodo; este equipo pasa a gracia (no se corta la clase) **(propuesto)** | `licencia.liberada.v1` (extensión) | `licencia.liberada` |
+| **LiberarEquipo** | JRN-020 | Técnico · Admin | `license.activate` | Hay licencia instalada | `.avrel` firmado con la llave del nodo; este equipo **vuelve a `sin_licencia`** (así lo construyó el nodo): la clase no se corta —el núcleo nunca se degrada— y los módulos licenciables se apagan cuando termine la evaluación. Se puede deshacer volviendo a activar el mismo archivo | `licencia.liberada.v1` (extensión) | `licencia.liberada` |
 | **ReactivarTrasRestauracion** | FUN-194 · TST-060 | Sistema (arranque) | actor `sistema` | La copia de la carpeta de estado verifica y su huella coincide, y la base no la tiene o tiene una serie menor | Inserta `reactivada` | `licencia.reactivada.v1` | `licencia.reactivada` |
 | **EvaluarEstado** (programador) | FUN-192 · FUN-193 | Sistema | — | Temporizador | Transiciones a gracia y a degradada | `licencia.periodo_gracia_iniciado.v1` · `licencia.funciones_degradadas.v1` | `licencia.gracia_iniciada` · `licencia.degradada` |
 | **AvisarEscalonado** | CAP-114 | Sistema | — | Se cruzó 30/14/7/3/1 | Un aviso por umbral (`m18_aviso`) | `licencia.aviso_emitido.v1` (extensión) | — |
@@ -514,7 +517,7 @@ La lógica va en archivos **sin MAUI** que `Ops.Tests` y `Student.Tests` puedan 
 
 **Guardar una copia** (CAP-111): `copia/` → destinos → `AVACOM-licencia-AAAA-MM-DD.avlic` + hoja `.txt`. «Guárdala en un lugar seguro del colegio: si el equipo se daña, con este archivo se recupera la licencia.»
 
-**Liberar este equipo** (JRN-020): una confirmación explícita («Vas a dejar de usar esta licencia en este equipo. Podrás seguir dando clase *n* días mientras instalas el equipo nuevo») y el `.avrel` a un destino.
+**Liberar este equipo** (JRN-020): una confirmación explícita («Vas a dejar de usar esta licencia en este equipo. Podrás seguir dando clase; los reportes, la búsqueda y los ajustes avanzados dejarán de estar disponibles cuando termine la evaluación. Si cambias de idea, vuelve a cargar el mismo archivo de la licencia») y el `.avrel` a un destino.
 
 **Banner persistente por rol** (molde `PinBanner` de `DashboardPage`):
 
@@ -730,18 +733,21 @@ El detalle, con resultados y con lo que **no** se pudo comprobar, queda en `03-p
 | LT-45…LT-48 | Instalador conserva la carpeta de estado · cero internet · Student sin lógica y kiosco intacto · contenido del paquete (sin emisor, sin llave de desarrollo, sin privadas, **con** pública de producción) |
 | LT-50…LT-54 | Emisor ↔ nodo diferencial · resumen, confirmación y fechas · privada cifrada y registro encadenado · empaquetado portátil · rotación de llaves |
 
-## 12 · Alineación con la implementación (2026-10-20, ≈ 10:05)
+## 12 · Alineación con la implementación (2026-10-20, ≈ 11:20)
 
 | Tema | Estado |
 |---|---|
-| Formato de los tres archivos (§5.1) | **Alineado** con `dominio/tlv.py`, `licencia.py`, `solicitud.py` y `firma.py` |
-| Estados, política y reloj (§5.4, §5.5) | **Alineado** con `estado.py`, `politica.py` y `reloj.py` |
-| Huella y cupo puros (§5.2, §6.7) | **Alineado** con `huella.py`, `smbios.py` y `cupo.py` |
-| Tabla de rutas (§6.6) | **Difiere** en H-02 (`politicas/`) y H-03 (`boletines/`, `exportaciones/`): enviado a la otra sesión |
-| Cupo de usuarios y de equipos (§6.7) | Pendiente (Fase 2). H-04 … H-07 enviados |
-| Tablas `m18_*`, rutas, middleware y programador (§5.6, §6) | Pendiente (Fase 2) |
-| Pantallas de OPS (§7) | Pendiente (Fase 3) |
-| Emisor (§8) | **Responsabilidad de esta sesión**: ver `05-emision.md` |
+| Formato de los tres archivos (§5.1) | **Alineado** con `dominio/tlv.py`, `licencia.py`, `solicitud.py` y `firma.py`; el emisor y el nodo se probaron **juntos** (10 pruebas de interoperabilidad) |
+| Estados, política y reloj (§5.4, §5.5) | **Alineado** con `estado.py`, `politica.py` y `reloj.py`. **Defecto abierto BUG-1**: el nodo acepta una licencia con `desde` hasta 24 h en el futuro pero el estado no aplica esa tolerancia (reportado a la otra sesión) |
+| Huella y cupo puros (§5.2, §6.7) | **Alineado** con `huella.py` (D-3: `k` de `n` entre los factores de unidad; `ProcessorId` no sella), `smbios.py` y `cupo.py` |
+| Tabla de rutas (§6.6) | **Alineado**: `rutas.py` ya saca `politicas/`, `boletines/` y `exportaciones/` de los licenciables (H-02 y H-03). Foto actual: 109 intocables · 178 núcleo · 29 licenciables |
+| Cupo de usuarios y de equipos (§6.7) | **Alineado**: un solo punto en `CrearUsuario._crear` (sin visitantes ni retirados); el de equipos sólo en `RegistrarDispositivo` y `RegistrarLatido` (`resolver(cupo=…)`, sin `MASTER`); `CupoAgotado` hereda de `ErrorAcceso` / `ErrorDispositivos` (402) |
+| Tablas `m18_*` (§5.6) | **Distinto de lo propuesto, y vale lo construido**: `m18_instalacion`, `m18_licencia`, `m18_observacion`, `m18_marca_alta`, `m18_consumo`, `m18_evento_salida` (la sección 5.6 ya lo dice) |
+| Rutas `/api/licencia/` (§6.4) | **9 rutas**: `estado/`, `consumo/`, `capacidades/`, `copia/`, `solicitud/`, `activar/`, `renovar/`, `liberar/` y `reloj/confirmar/`. **`inspeccionar/` no existe**: la confirmación de OPS no puede mostrar el resumen de la licencia **antes** de activarla (propuesta abierta) |
+| Middleware, programador, `/health/` (§6.6, §6.8) | Construidos. El middleware deja pasar `HEAD` y `OPTIONS` (esta especificación decía «`HEAD` como `GET`»: pendiente de decidir) |
+| Instalador (§9) | Construido en curso: marcador de canal, prueba de contenido del paquete, puerta `-ExigirLlaveDeProduccion`, estado de la licencia en la última pantalla y en el verificador |
+| Pantallas de OPS y textos de Student (§7) | Pendiente (Fase 3, otra sesión) |
+| Emisor (§8) | **Construido y probado**: `05-emision.md`; 100 pruebas del emisor + 10 de interoperabilidad con el nodo |
 
 Esta tabla se vuelve a llenar al cierre de cada fase.
 

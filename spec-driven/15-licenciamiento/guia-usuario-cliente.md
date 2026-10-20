@@ -126,7 +126,7 @@ Se hace cuando el computador se daña o se reemplaza. Tu licencia **se traslada*
 2. Instala AVACOM OPS en el equipo **nuevo** y **restaura** el respaldo.
 3. Genera la solicitud **desde el equipo nuevo** (sección 4, paso 1).
 4. Según el estado del equipo viejo:
-   - **Si todavía enciende:** en su pantalla **Licencia**, toca **Liberar este equipo** y guarda el archivo `.avrel` en una memoria USB. Entrégalo a AVACOM junto con la solicitud: te darán la licencia definitiva.
+   - **Si todavía enciende:** en su pantalla **Licencia**, toca **Liberar este equipo** y guarda el archivo `.avrel` en una memoria USB. Entrégalo a AVACOM junto con la solicitud: te darán la licencia definitiva. (Ese equipo viejo queda sin licencia: sigue dando clase, pero sus reportes, búsqueda y ajustes avanzados se apagan al terminar la evaluación. Si cambias de idea, vuelve a cargar su archivo `.avlic` y todo regresa.)
    - **Si ya no enciende:** entrega sólo la solicitud. AVACOM te dará una licencia con un plazo (por ejemplo, 45 días) y verás el mensaje «Puedes seguir instalando y dar clase *n* días mientras se libera». Cuando AVACOM confirme que el equipo viejo ya no se usa, te darán la definitiva.
 5. Carga la licencia en el equipo nuevo (sección 4, paso 3).
 
