@@ -20,7 +20,8 @@
 | Pruebas de .NET sobre el árbol commiteado (12:07) | **Core 2122 · OPS 453 · Student 102**, todas correctas (líneas base antes de empezar: 1221 · 399 · 102; la diferencia incluye lo de otros módulos que se commiteó a la vez) |
 | **Regresión en vivo de las 316 rutas** con la licencia en cada estado (evaluación, activa, en gracia, degradada) contra un nodo aislado por HTTP real: 1244 peticiones | **0 desvíos**: toda ruta licenciable con su módulo apagado responde exactamente `402 no_disponible_por_licencia` con su capacidad y con el módulo encendido no lo responde; **ninguna de las 109 intocables ni de las 178 de núcleo** responde nunca ese 402, y todas responden lo mismo en los cuatro estados que con la licencia activa |
 | 5xx de ese barrido | 25 rutas, **iguales en los cuatro estados** (no vienen de la licencia): 21 son 503 («AVACOM Biblioteca no está encendida en este equipo»: el nodo de prueba no tiene la biblioteca conectada) y 2 son 501 («llega en una versión posterior») —ambos por diseño— y **1 par es un defecto real de otro módulo, ya corregido**: `DELETE …/padron/grupos/<id>/estudiantes/` y `POST …/estudiantes/<id>/` daban `TypeError` sin atrapar (500) porque `PadronMatriculaView` atiende dos rutas con firmas distintas; ahora 405 (`Bugfix:` e3784980, 4 pruebas nuevas) |
-| UIA de la pantalla Licencia de OPS, Student con el cupo de equipos agotado, contenido del instalador reconstruido | **Pendiente**: el guion de UIA está listo y espera la pantalla (la otra sesión está haciendo su propio recorrido visual y sólo puede haber uno a la vez) |
+| **Recorrido por UI Automation de la pantalla Licencia de OPS** (nodo aislado en un puerto propio, memoria USB simulada con una unidad virtual, **sin teclado**, con la regla de tercios en cada captura; OPS compilado por la otra sesión a las 12:29) | **58 de 58 comprobaciones cumplidas**: evaluación con su aviso desde el primer día · activar en los tres pasos con una licencia firmada a partir de la solicitud que OPS guardó (una sola confirmación) · el botón final dice «Instalar la licencia» sin licencia y «Renovar la licencia» con una licencia **activa** y la administración, y «Instalar la licencia» en gracia o en pausa · copia de custodia (los tres archivos, la hoja sin documentos ni nombres) · renovar (serie 2) · «Vencida · en gracia» sin módulos en pausa · «Funciones en pausa» con los cuatro módulos «En pausa» y el aviso en el menú principal · **el soporte técnico ve la licencia y NO renueva** («Renovar es de la administración», y no cambia nada) · la administración renueva y los módulos se encienden · liberar (el `.avrel` queda en la memoria y el equipo vuelve a «En evaluación») y volver a activar el mismo archivo · **el profesor no ve botón ni aviso de licencia** · con la licencia en pausa, **Reportes** y **Buscar** lo dicen en pantalla con el texto común y **Evaluaciones, Calificaciones y Clase de hoy** (núcleo) abren sin ningún aviso |
+| Student con el cupo de equipos agotado, contenido del instalador reconstruido | **Pendiente** (§4) |
 
 ## 2 · Defectos encontrados
 
@@ -60,12 +61,23 @@ backend/.venv/Scripts/python.exe -m unittest discover -s tools/licencias/tests -
 cd backend && .venv/Scripts/python.exe manage.py test licenciamiento.tests.test_emisor_real
 ```
 
+## 3b · Observaciones de interfaz (del recorrido; no son fallas de licencia)
+
+Se juzgaron con las capturas y la cuadrícula de tercios. La pantalla **Licencia** cumple la composición: tres tarjetas entre 1/6 y 5/6 del alto, cada una en su tercio, y las hojas en el tercio central.
+
+| # | Qué se vio | Estado |
+|---|---|---|
+| U-1 | En la primera compilación que se probó (12:07) la **hoja** era translúcida y dejaba ver el texto de la tarjeta de estado de abajo | **Corregido** por la otra sesión (blanco opaco): comprobado en la compilación de las 12:29 |
+| U-2 | El **aviso de licencia del menú principal tapa la parte alta de la tesela «Reportes»** (el panal empieza a 90 px del borde y la franja ocupa de 96 a 157 px, con un ancho que cruza los dos tercios). Como el aviso de evaluación existe desde el primer día, se verá durante 30 días | Reportado a la otra sesión |
+| U-3 | **Buscar** con el módulo en pausa muestra el recuadro genérico «No se pudo cargar todo · No se pudo buscar. …» con el texto común; **Reportes**, en cambio, tiene su tarjeta propia «No disponible con la licencia de este equipo» con «Ver la licencia». Una licencia en pausa no es un fallo de carga | Reportado |
+| U-4 | Con «Funciones en pausa» la tarjeta de la izquierda deja de caber y su última nota queda fuera de la vista (es un `ScrollView`, se desplaza con el dedo) | Menor |
+
 ## 4 · Pendiente (se completa en este documento)
 
-1. Recorrido por UI Automation de la pantalla **Licencia** de OPS en un nodo aislado (puerto propio, unidad virtual para la memoria USB, **sin teclado**): evaluación, activar en tres pasos, copia de custodia, renovar, gracia, funciones en pausa, soporte técnico que no renueva, liberar, volver a activar y el profesor que no ve nada; con la regla de tercios en cada captura.
-2. Student con el cupo de equipos agotado: la tableta nueva debe ver «Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu profesor» y las ya registradas no deben notar nada.
-3. Una segunda corrida completa del backend, **una sola vez**, cuando estén dentro los arreglos de §2 (H-13, H-14, H-15), y las 100 pruebas del emisor contra el dominio ya corregido.
-4. El contenido del instalador reconstruido: sin emisor, sin llave de desarrollo, sin llaves privadas, con la pública de producción cuando exista (hoy `produccion.json` está vacío); y reconstruir el paquete portátil del emisor con el dominio final.
+1. Student con el cupo de equipos agotado: la tableta nueva debe ver «Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu profesor» y las ya registradas no deben notar nada.
+2. Una segunda corrida completa del backend, **una sola vez**, cuando estén dentro los arreglos de §2 (H-13, H-14, H-15), y las 100 pruebas del emisor contra el dominio ya corregido.
+3. El contenido del instalador reconstruido: sin emisor, sin llave de desarrollo, sin llaves privadas, con la pública de producción cuando exista (hoy `produccion.json` está vacío); y reconstruir el paquete portátil del emisor con el dominio final.
+4. Repetir el recorrido de la pantalla Licencia contra la compilación final de OPS (con los arreglos de interfaz de U-2 y U-3).
 
 ## 5 · Lo que esta verificación no puede comprobar
 

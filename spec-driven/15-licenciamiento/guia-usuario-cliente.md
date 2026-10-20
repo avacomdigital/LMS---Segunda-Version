@@ -71,7 +71,7 @@ Entrega ese archivo a tu contacto de AVACOM (por correo o en la memoria USB). AV
 1. Copia el archivo `.avlic` que te mandó AVACOM a la memoria USB (en la carpeta principal) o a la carpeta Descargas del computador maestro.
 2. En la pantalla **Licencia** toca **Activar o renovar**, luego **Ya tengo el archivo de licencia**. Aparecen como tarjetas los archivos `.avlic` que encuentra en tus memorias y en Documentos, Escritorio y Descargas (nombre, lugar, fecha y tamaño). Si no aparece, toca **Buscar de nuevo**.
 3. Toca la tarjeta de tu licencia. La hoja te pide **confirmar antes de instalar**: dice qué archivo es, de dónde viene y cuándo se guardó. **Sólo te pregunta una vez.**
-4. Toca **Instalar la licencia** (o **Renovar la licencia**, si ya había una en uso y eres de la administración). El aula comprueba que el archivo sea de AVACOM y de **este** computador y lo instala al momento. Las clases no se interrumpen.
+4. Toca **Instalar la licencia** (o **Renovar la licencia**, si ya había una licencia **activa** y eres de la administración). El aula comprueba que el archivo sea de AVACOM y de **este** computador y lo instala al momento. Las clases no se interrumpen.
 5. La hoja dice **Licencia activada** (o renovada) y la pantalla cambia. Toca **Listo**.
 
 ### Después de instalar: revisa lo que contrataste
@@ -117,7 +117,7 @@ Es igual que la primera vez, con el mismo botón:
 
 1. **Licencia → Activar o renovar** → **Guardar la solicitud** (la solicitud lleva el código de tu licencia actual).
 2. Entrega el archivo a AVACOM.
-3. Recibe el nuevo `.avlic` y **cárgalo** con **Activar o renovar → Ya tengo el archivo de licencia**. Con una licencia en uso, el botón final dice **Renovar la licencia**.
+3. Recibe el nuevo `.avlic` y **cárgalo** con **Activar o renovar → Ya tengo el archivo de licencia**. Con la licencia **activa** y una cuenta de la administración, el botón final dice **Renovar la licencia**; si la licencia ya venció (gracia) o está en pausa, dice **Instalar la licencia**: hace lo mismo y deja «Licencia renovada».
 
 **Renovar lo hace la administración.** Si lo intenta el soporte técnico, la pantalla dice «Renovar es de la administración»: pídeselo a la administración del colegio.
 
