@@ -383,12 +383,19 @@ class PadronEstudiantesView(VistaPadron):
 
 
 class PadronMatriculaView(VistaPadron):
-    def post(self, request, pk: str):
+    """Una sola vista para dos rutas: POST en `…/estudiantes/` matricula y DELETE en `…/estudiantes/<usuario_id>/` retira. El método que no corresponde a la ruta es un 405 (antes, una
+    firma que no coincidía daba un `TypeError` sin atrapar: un 500)."""
+
+    def post(self, request, pk: str, usuario_id: str | None = None):
+        if usuario_id is not None:
+            raise exceptions.MethodNotAllowed("POST")
         datos = _validar(s.MatriculaEntrada, request.data)
         salida = pad.MatricularEstudiante(self.s).ejecutar(self.actor(request), pk, datos["usuario_id"])
         return Response(salida, status=200 if salida.get("ya_estaba") else 201)
 
-    def delete(self, request, pk: str, usuario_id: str):
+    def delete(self, request, pk: str, usuario_id: str | None = None):
+        if usuario_id is None:
+            raise exceptions.MethodNotAllowed("DELETE")
         pad.RetirarEstudiante(self.s).ejecutar(self.actor(request), pk, usuario_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
