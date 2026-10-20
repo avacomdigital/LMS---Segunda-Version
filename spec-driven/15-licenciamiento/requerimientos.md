@@ -478,6 +478,7 @@ Las variables `AVACOM_LICENCIA_*` sólo cambian **dónde viven los archivos y co
 | LIC-B-23 | **Debe** no cambiar ninguna prueba existente | R-14 | La suite completa del backend en verde **sin licencia** | LT-35 |
 | LIC-B-24 | **Debe** entregar la copia de la licencia vigente (CAP-111) | CAP-111 | `GET copia/` devuelve el archivo firmado idéntico al instalado y una hoja de texto | LT-36 |
 | LIC-B-25 | **Debe** hacer que el instante confiable **avance con el reloj monótono del proceso** aunque el reloj de pared esté por debajo de la marca alta, y que el aplazamiento por un salto sospechoso se mida con ese mismo instante | P-06 · H-13 · H-14 | Con una licencia de 30 días de vigencia y 30 de gracia, atrasar la fecha 100 días degrada a los ~51 días reales (no a los 151); adelantar la fecha y devolverla aplaza la degradación 72 horas reales (no lo que duró el salto) y un nodo degradado no recupera sus módulos; tras un reinicio sólo se pierde el tiempo apagado | LT-28 |
+| LIC-B-26 | **Debe** rechazar (`campo_invalido`) una licencia con un límite en 0 —equipos, usuarios, concurrentes normales o en pico—, aunque esté bien firmada | R-01 · H-15 | Una licencia con concurrencia 0 no se instala; con el mínimo (1) y con «sin tope» sí, y la clase admite al primer alumno. Un 0 no limita: detiene (el aula responde «aula llena» al primer alumno y no se registra ninguna tableta ni persona nueva) | LT-02 |
 
 
 ---
@@ -718,7 +719,7 @@ El detalle, con resultados y con lo que **no** se pudo comprobar, queda en `03-p
 | ID | Qué comprueba |
 |---|---|
 | LT-01 | ≥ 100 000 mutaciones con semilla fija: **0 aceptadas** |
-| LT-02 | Rechazos por forma: versión menor y mayor, `kid` desconocido, etiqueta crítica desconocida, archivo truncado, bytes sobrantes, topes |
+| LT-02 | Rechazos por forma: versión menor y mayor, `kid` desconocido, etiqueta crítica desconocida, archivo truncado, bytes sobrantes, topes, **un límite en 0** |
 | LT-03 · LT-04 | Forma canónica (texto, orden) · etiquetas críticas y no críticas |
 | LT-05 · LT-06 | Huella: relleno OEM, k de n (2 de 2, 2 de 3, 3 de 4), `ProcessorId` que no sella, nivel `instalacion` · sin identificadores crudos |
 | LT-07 | Tabla de estados × reloj × gracia completa |
