@@ -40,8 +40,8 @@ anotar = ra.anotar
 
 # El inventario se arma en OTRO proceso (con Django levantado sobre una base y unos logs temporales) y vuelve como JSON.
 INVENTARIO = r'''
-import json, os, re, sys, tempfile
-raiz = tempfile.mkdtemp(prefix="inventario-rutas-")
+import json, os, re, sys
+raiz = sys.argv[2]
 os.environ["AVACOM_LMS_DIR_LOGS"] = os.path.join(raiz, "logs")
 os.environ["AVACOM_LMS_DB"] = os.path.join(raiz, "inventario.sqlite3")
 os.environ["DJANGO_SETTINGS_MODULE"] = "avacom_lms.settings"
@@ -87,7 +87,12 @@ print(json.dumps(filas))
 
 
 def inventario() -> list[dict]:
-    r = subprocess.run([ra.python_backend(), "-c", INVENTARIO, str(rl.BACKEND)], capture_output=True, text=True, encoding="utf-8", cwd=rl.BACKEND, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    raiz = tempfile.mkdtemp(prefix="inventario-rutas-")        # base y logs del proceso del inventario; se borran al terminar él (ya no tiene nada abierto)
+    try:
+        r = subprocess.run([ra.python_backend(), "-c", INVENTARIO, str(rl.BACKEND), raiz], capture_output=True, text=True, encoding="utf-8", cwd=rl.BACKEND,
+                           env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    finally:
+        shutil.rmtree(raiz, ignore_errors=True)
     if r.returncode != 0:
         raise RuntimeError("No se pudo armar el inventario de rutas:\n" + r.stderr[-1500:])
     return json.loads(r.stdout.strip().splitlines()[-1])
