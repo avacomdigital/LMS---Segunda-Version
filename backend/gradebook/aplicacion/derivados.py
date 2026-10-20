@@ -15,15 +15,20 @@ from .base import _CasoDeUso, contexto_de, exigir_nodo_instalado
 from .puertos import Actor, UnidadDeTrabajo
 
 
-def clasificacion_efectiva(uow: UnidadDeTrabajo, asignacion: dict) -> dict:
-    """La clasificación pedagógica de una evaluación: la que se definió o, sin ella, la razonable por su tipo (un examen es sumativo y cuenta para lo
-    oficial; una actividad es formativa y no)."""
-    fila = uow.clasificaciones.get(asignacion["id"])
+def clasificacion_de(asignacion: dict, fila: dict | None) -> dict:
+    """La clasificación pedagógica de una evaluación dada su fila (si la hay): la que se definió o, sin ella, la razonable por su tipo (un examen es sumativo y
+    cuenta para lo oficial; una actividad es formativa y no). No consulta nada: quien ya leyó las filas de muchas evaluaciones de una vez la usa sin una consulta más
+    por evaluación."""
     if fila is not None:
         return {"tipo_evaluacion": fila["tipo_evaluacion"], "afecta_oficial": fila["afecta_oficial"], "objetivos": fila.get("objetivos") or [], "definida": True}
     if asignacion.get("tipo") == "examen":
         return {"tipo_evaluacion": cat.SUMATIVA, "afecta_oficial": True, "objetivos": [], "definida": False}
     return {"tipo_evaluacion": cat.FORMATIVA, "afecta_oficial": False, "objetivos": [], "definida": False}
+
+
+def clasificacion_efectiva(uow: UnidadDeTrabajo, asignacion: dict) -> dict:
+    """La clasificación de UNA evaluación (con una consulta)."""
+    return clasificacion_de(asignacion, uow.clasificaciones.get(asignacion["id"]))
 
 
 def politica_de_intentos(uow: UnidadDeTrabajo, asignacion: dict) -> str:

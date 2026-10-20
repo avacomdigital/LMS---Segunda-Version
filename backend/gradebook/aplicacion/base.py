@@ -9,11 +9,18 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+import re
+from decimal import Decimal, InvalidOperation
+
 from ..dominio import catalogos as cat
+from ..dominio import curso as cur
 from ..dominio import escala as esc
 from ..dominio import puntaje as pj
 from ..dominio.errores import DatosInvalidos, FueraDeAlcance, NodoNoInstalado
 from .puertos import Actor, Autorizacion, Reloj, UnidadDeTrabajo
+
+NODO_PARAMETROS = ("country", "level", "grade", "subject", "topic")      # los mismos filtros del árbol que usan Reportes y la búsqueda
+_CODIGO_DE_NODO = re.compile(r"^[\w.:-]{1,64}$")
 
 
 @dataclass(frozen=True)
@@ -67,6 +74,68 @@ def version_esperada(datos: dict, *, obligatorio: bool = True) -> int | None:
 
 def comentario_de(datos: dict, campo: str = "comentario") -> str:
     return str(datos.get(campo) or "").strip()[:cat.MAX_COMENTARIO]
+
+
+def filtro_de_materia(consulta: dict) -> dict[str, str]:
+    """
+    El nodo académico que trae una consulta (país, nivel, grado, materia, tema), con `materia` como atajo de `subject`: lo que el profesor de matemáticas pide para ver juntos
+    todos sus cursos de la materia. Cada valor tiene que parecer un CÓDIGO (letras, números y `. _ : -`, hasta 64). Vacío = sin filtro.
+    """
+    salida: dict[str, str] = {}
+    for clave in NODO_PARAMETROS:
+        valor = consulta.get(clave)
+        if clave == "subject" and valor in (None, ""):
+            valor = consulta.get("materia")
+        if valor in (None, ""):
+            continue
+        texto = str(valor)
+        if not _CODIGO_DE_NODO.match(texto):
+            raise DatosInvalidos("El filtro por materia trae un código que no es válido.", filtro=clave)
+        salida[clave] = texto
+    return salida
+
+
+def materias_de(uow: UnidadDeTrabajo, asignaciones: list[dict]) -> list[dict]:
+    """Las materias de unas evaluaciones (por el `curso_ref` de cada una), con su nombre según la biblioteca si responde y sus cursos: lo que una pantalla ofrece como fichas
+    para segmentar el libro cuando un mismo profesor dicta varios cursos de una materia."""
+    cursos: dict[str, dict] = {}
+    for a in asignaciones:
+        ref = a.get("curso_ref") or ""
+        c = cursos.setdefault(ref, {"curso_ref": ref, "curso_rotulo": a.get("curso_rotulo") or "", "materia": cur.materia_de(ref), "evaluaciones": 0})
+        c["evaluaciones"] += 1
+        if not c["curso_rotulo"] and a.get("curso_rotulo"):
+            c["curso_rotulo"] = a["curso_rotulo"]
+    nombres = uow.arbol.nombres_de_materias() if cursos else {}
+    materias: dict[str, dict] = {}
+    for c in cursos.values():
+        codigo = c["materia"]
+        m = materias.setdefault(codigo, {"codigo": codigo, "rotulo": nombres.get(codigo) or cur.rotulo_de_materia(codigo), "cursos": [], "evaluaciones": 0})
+        m["cursos"].append({"curso_ref": c["curso_ref"], "curso_rotulo": c["curso_rotulo"], "evaluaciones": c["evaluaciones"]})
+        m["evaluaciones"] += c["evaluaciones"]
+    for m in materias.values():
+        m["cursos"].sort(key=lambda x: (x["curso_rotulo"].lower(), x["curso_ref"]))
+    return sorted(materias.values(), key=lambda x: (x["codigo"] == cur.SIN_MATERIA, x["rotulo"].lower()))
+
+
+def puntos_de(intento: dict | None) -> tuple[Decimal | None, Decimal | None]:
+    """Los puntos BRUTOS que MOD-010 contó en un intento (14 de 18), a dos decimales; `(None, None)` si no los tiene o no son coherentes. No se recalcula nada."""
+    if not intento:
+        return None, None
+    try:
+        puntos = Decimal(str(intento.get("puntaje")))
+        maximo = Decimal(str(intento.get("puntaje_maximo")))
+    except (InvalidOperation, TypeError, ValueError):
+        return None, None
+    if not puntos.is_finite() or not maximo.is_finite() or maximo <= 0 or puntos < 0 or puntos > maximo:
+        return None, None
+    return pj.redondear(puntos, 2, cat.MITAD_ARRIBA), pj.redondear(maximo, 2, cat.MITAD_ARRIBA)
+
+
+def bruto_de(c: dict) -> dict:
+    """La calificación en bruto, tal como la ve el profesor (y el alumno cuando se publica): los puntos sobre el máximo, los aciertos sobre las preguntas y el porcentaje. Sin
+    puntos no hay cifras inventadas: cada valor va en nulo."""
+    return {"puntos": pj.como_numero(c.get("puntos")), "puntos_maximos": pj.como_numero(c.get("puntos_maximos")), "aciertos": c.get("aciertos"), "preguntas": c.get("preguntas"),
+            "porcentaje": pj.como_numero(c.get("puntaje_efectivo"))}
 
 
 def exigir_nodo_instalado(uow: UnidadDeTrabajo) -> str:
@@ -183,6 +252,7 @@ def salida_calificacion(uow: UnidadDeTrabajo, c: dict, *, intento: dict | None =
         "nivel_clave": c["nivel_clave"], "periodo": c["periodo"], "curso_ref": c["curso_ref"], "numero_intento": c["numero_intento"],
         "puntaje_original": pj.como_numero(c["puntaje_original"]), "puntaje_efectivo": pj.como_numero(c["puntaje_efectivo"]),
         "ajustada": c["puntaje_efectivo"] != c["puntaje_fuente"], "aciertos": c.get("aciertos"), "preguntas": c.get("preguntas"),
+        "puntos": pj.como_numero(c.get("puntos")), "puntos_maximos": pj.como_numero(c.get("puntos_maximos")), "bruto": bruto_de(c), "materia": cur.materia_de(c["curso_ref"]),
         "regla_puntuacion": c["regla_puntuacion"], "origen": c["origen"], "evaluador_id": c["evaluador_id"], "estado": c["estado"], "version": c["version"],
         "publicada": c["estado"] == cat.DEFINITIVA, "publicada_en": c["publicada_en"], "publicada_por": c["publicada_por"],
         "desempeno_docente": c["desempeno_docente"], "desempeno_motivo": c["desempeno_motivo"], "retroalimentacion": c["retroalimentacion"],

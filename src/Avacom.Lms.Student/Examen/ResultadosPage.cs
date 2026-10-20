@@ -110,7 +110,7 @@ public sealed class ResultadosPage : ContentPage
                                   : Mensaje("No pudimos ver tus resultados ahora", api.UltimoMotivo ?? "Inténtalo de nuevo en un momento."), "sin-datos");
                 return;                      // un tropiezo del sondeo no borra lo que ya se ve
             }
-            var firma = string.Join("|", mios.Items.Select(i => $"{i.AsignacionId}:{i.Modo}:{i.EstadoSimple}:{i.Estado}:{i.Calificacion?.PublicadaEn}:{i.Aciertos?.Simbolos.Count}"));
+            var firma = string.Join("|", mios.Items.Select(i => $"{i.AsignacionId}:{i.Modo}:{i.EstadoSimple}:{i.Estado}:{i.Calificacion?.PublicadaEn}:{i.Aciertos?.Simbolos.Count}:{i.Nota?.Porcentaje}"));
             if (firma == _firma) return;    // lo mismo que ya se ve: no se repinta
             Pintar(mios.Items.Count == 0
                 ? Mensaje("Todavía no tienes resultados", "Cuando presentes una evaluación, aquí verás cómo vas.")
@@ -177,6 +177,12 @@ public sealed class ResultadosPage : ContentPage
     private static View ParteSimple(ResultadoDelAlumno item, VerticalStackLayout textos)
     {
         textos.Add(Ds.Pildora(GradebookTexto.EstadoSimple(item.EstadoSimple), item.EstadoSimple == EstadosSimples.Completado ? Ds.ExitoSuave : Ds.Lienzo, Ds.Tinta, 14));
+        if (item.Nota is { } nota)
+        {
+            // El profesor publicó el resultado: la nota es el porcentaje del examen (sin escala) y desde cuándo se ve.
+            textos.Add(Ds.Secundario($"{nota.Aciertos} de {nota.Preguntas} respuestas correctas", 15));
+            if (nota.PublicadaEn is { } cuando) textos.Add(Ds.Secundario($"Publicada el {GradebookTexto.Hora(cuando)}", 13));
+        }
         if (item.Aciertos is { Simbolos.Count: > 0 } aciertos)
         {
             var estrellas = new Label { Text = string.Concat(aciertos.Simbolos.Select(GradebookTexto.SimboloDeAcierto)), FontSize = 24, TextColor = Ds.Alerta, LineBreakMode = LineBreakMode.WordWrap };
@@ -186,6 +192,11 @@ public sealed class ResultadosPage : ContentPage
         }
         else if (item.EstadoSimple == EstadosSimples.Completado)
             textos.Add(Ds.Secundario("Terminaste. Tu profesor te mostrará cómo te fue.", 15));
+        if (item.Nota is { } publicada)
+        {
+            var texto = GradebookTexto.NotaSimple(publicada);
+            return Circulo(texto, Ds.ExitoSuave, grande: false);
+        }
         return Circulo(GradebookTexto.Simbolo(item.Simbolo), Ds.ExitoSuave);
     }
 
@@ -194,6 +205,13 @@ public sealed class ResultadosPage : ContentPage
     {
         var nota = item.Calificacion!;
         if (nota.Desempeno?.Nivel is { Length: > 0 } nivel) textos.Add(Ds.Pildora(nivel, Ds.ExitoSuave, Ds.Tinta, 14));
+        // Con la nota publicada también se ven los puntos que obtuvo sobre el máximo y el porcentaje (el nodo sólo los manda cuando el profesor publicó): la nota se lee con los tres.
+        if (GradebookTexto.Bruto(nota.Bruto) is { Length: > 0 } bruto)
+        {
+            var puntos = Ds.Secundario(bruto, 15);
+            puntos.AutomationId = $"resultado-puntos-{item.AsignacionId}";
+            textos.Add(puntos);
+        }
         if (nota.Aprobacion?.CumpleCriterio is { } cumple)
             textos.Add(Ds.Secundario(cumple ? "Alcanzaste lo esperado." : "Todavía puedes mejorar: tu profesor te dirá cómo.", 15));
         // Con qué sistema se leyó la nota (el de su país o institución, tal como se publicó) y desde dónde se aprueba: así «4,0» o «NT» significan algo.
@@ -234,7 +252,7 @@ public sealed class ResultadosPage : ContentPage
     };
 
     private static string DescripcionAccesible(ResultadoDelAlumno item) =>
-        item.EsSimple ? $"{item.Titulo}. {GradebookTexto.EstadoSimple(item.EstadoSimple)}."
+        item.EsSimple ? $"{item.Titulo}. {GradebookTexto.EstadoSimple(item.EstadoSimple)}.{(item.Nota is { } n ? $" Resultado publicado: {GradebookTexto.NotaSimple(n)}." : string.Empty)}"
         : item.TieneNota ? $"{item.Titulo}. Resultado publicado: {(item.Calificacion!.Presentada?.Etiqueta ?? string.Empty)}. {item.Calificacion.Desempeno?.Nivel}"
         : $"{item.Titulo}. {GradebookTexto.EstadoDeEntrega(item.Estado)}.";
 }

@@ -64,6 +64,18 @@ class LibroFuente:
         from gradebook import servicios
         return servicios.resultados_del_grupo(grupo_id)
 
+    def boletin_de_alumno(self, alumno_id: str, grupo_id: str, materia: dict | None = None) -> dict | None:
+        from gradebook import servicios
+        return servicios.boletin_de_alumno(alumno_id, grupo_id, materia)
+
+    def progreso_del_alumno(self, alumno_id: str) -> list[dict]:
+        from gradebook import servicios
+        return servicios.progreso_del_alumno(alumno_id)
+
+    def politica_institucional(self) -> dict:
+        from gradebook import servicios
+        return servicios.politica_institucional()
+
     def eventos_desde(self, secuencia: int, limite: int, tipos: tuple[str, ...]) -> tuple[list[dict], int]:
         from gradebook import servicios
         return servicios.eventos_desde(secuencia, limite, tipos)

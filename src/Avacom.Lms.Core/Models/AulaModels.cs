@@ -931,6 +931,13 @@ public sealed record ErrorAula(int Estado, string? Codigo, string Detalle, strin
     public bool VisitanteNoPermitido => Codigo == "visitante_no_permitido";
     /// <summary>RN-42 y RN-43: una visita sólo puede seguir la clase y practicar.</summary>
     public bool SesionVisitanteLimitada => Codigo == "sesion_visitante_limitada";
+    // --- MOD-018 · Licensing (P-09): un bloqueo por licencia es un 402, nunca un 403 (no es un permiso: el del rol se conserva). El texto común es LicenciaTexto.ParaError. ---
+    /// <summary>402 <c>no_disponible_por_licencia</c>: el módulo (extras <c>capacidad</c> y <c>modulo</c>) está en pausa por la licencia; vuelve a funcionar al renovarla.</summary>
+    public bool EsModuloNoDisponible => Estado == 402 && Codigo == "no_disponible_por_licencia";
+    /// <summary>402 <c>cupo_agotado</c>: se llegó al cupo de equipos o de usuarios (extras <c>tipo</c>, <c>limite</c>, <c>en_uso</c>) al CREAR algo nuevo; lo que ya existe sigue igual.</summary>
+    public bool EsCupoAgotado => Estado == 402 && Codigo == "cupo_agotado";
+    /// <summary>Un error de licencia (uno de los dos 402 de MOD-018).</summary>
+    public bool PorLicencia => EsModuloNoDisponible || EsCupoAgotado;
     public long? ReintentarEnSeg => Numero("reintentar_en_seg");
     public long? IntentosRestantes => Numero("intentos_restantes");
     /// <summary>Las reglas que una clave no cumplió (<c>secreto_debil</c>), en palabras del nodo.</summary>

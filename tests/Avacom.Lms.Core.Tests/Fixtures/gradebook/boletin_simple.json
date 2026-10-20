@@ -1,0 +1,192 @@
+{
+  "alumno": {
+    "id": "492e98a4-48f9-4581-843c-6f134dabbe51",
+    "rotulo": "Ana"
+  },
+  "cursos": [
+    {
+      "bruto": {
+        "evaluaciones": 0,
+        "porcentaje": null,
+        "puntos": null,
+        "puntos_maximos": null
+      },
+      "conteo": {
+        "aprobadas": 0,
+        "completadas": 1,
+        "con_nota": 0,
+        "no_aprobadas": 0,
+        "pendientes": 0,
+        "por_revisar": 0,
+        "publicadas": 0,
+        "sin_publicar": 0,
+        "sin_registro": 0
+      },
+      "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "evaluaciones": 1,
+      "materia": "science",
+      "presentado": null,
+      "promedio_simple": null
+    }
+  ],
+  "evaluaciones": {
+    "curso_ref": "",
+    "desde": 0,
+    "items": [
+      {
+        "ajustada": false,
+        "asignacion_id": "4ae9ec87-77fc-4100-a888-70d6100723a8",
+        "bruto": null,
+        "calificacion_id": null,
+        "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "curso_rotulo": "Estados de la materia y sus cambios",
+        "estado": "sin_registro",
+        "estado_simple": "completado",
+        "fecha": 1790000000000,
+        "intentos": 1,
+        "materia": "science",
+        "numero_intento": null,
+        "presentacion": null,
+        "publicada": false,
+        "puntaje_efectivo": null,
+        "retroalimentacion": {},
+        "tipo_evaluacion": "sumativa",
+        "titulo": "Examen de estados de la materia",
+        "version": null
+      }
+    ],
+    "limite": 20,
+    "total": 1
+  },
+  "filtro": {
+    "curso_ref": null,
+    "materia": null
+  },
+  "grupo": {
+    "codigo": "P1",
+    "id": "e72bdb61-6a96-4bfb-abe8-aa62f5340038",
+    "nivel_clave": "preescolar",
+    "nombre": "Párvulos",
+    "periodo": "2026"
+  },
+  "insights": {
+    "comentarios": {
+      "dificultades": [],
+      "fortalezas": [],
+      "oportunidades": []
+    },
+    "constancia": {
+      "completadas": 1,
+      "evaluaciones": 1
+    },
+    "curso_a_reforzar": null,
+    "informativo": true,
+    "mejor_curso": null,
+    "tendencia": {
+      "calificaciones": 0,
+      "direccion": "insuficiente",
+      "minimo": 4
+    }
+  },
+  "materias": [
+    {
+      "codigo": "science",
+      "cursos": [
+        {
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "curso_rotulo": "Estados de la materia y sus cambios",
+          "evaluaciones": 1
+        }
+      ],
+      "evaluaciones": 1,
+      "rotulo": "Science"
+    }
+  ],
+  "modo": "simple",
+  "observaciones": [],
+  "recomendaciones_disponibles": [
+    {
+      "codigo": "repasar_conceptos",
+      "texto": "Repasar los conceptos básicos de la materia antes de la próxima evaluación"
+    },
+    {
+      "codigo": "practicar_ejercicios",
+      "texto": "Practicar más ejercicios del tema con el modo estudio"
+    },
+    {
+      "codigo": "leer_con_atencion",
+      "texto": "Leer con atención el enunciado completo antes de responder"
+    },
+    {
+      "codigo": "justificar_respuestas",
+      "texto": "Justificar las respuestas con el procedimiento o un ejemplo"
+    },
+    {
+      "codigo": "revisar_antes_de_entregar",
+      "texto": "Revisar las respuestas antes de entregar"
+    },
+    {
+      "codigo": "participar_en_clase",
+      "texto": "Participar más en las actividades de clase"
+    },
+    {
+      "codigo": "entregar_a_tiempo",
+      "texto": "Entregar las evaluaciones y tareas dentro del plazo"
+    },
+    {
+      "codigo": "pedir_ayuda",
+      "texto": "Pedir ayuda al profesor cuando algo no quede claro"
+    },
+    {
+      "codigo": "organizar_el_tiempo",
+      "texto": "Organizar el tiempo de estudio en casa"
+    },
+    {
+      "codigo": "trabajo_en_equipo",
+      "texto": "Colaborar con los compañeros en el trabajo en equipo"
+    },
+    {
+      "codigo": "mantener_el_ritmo",
+      "texto": "Mantener el ritmo de trabajo: va bien"
+    },
+    {
+      "codigo": "ampliar_lecturas",
+      "texto": "Ampliar con lecturas y retos adicionales: puede ir más allá"
+    },
+    {
+      "codigo": "acompanamiento_familiar",
+      "texto": "Conviene el acompañamiento de la familia en las tareas"
+    },
+    {
+      "codigo": "apoyo_especializado",
+      "texto": "Conviene valorar un apoyo pedagógico especializado"
+    }
+  ],
+  "resumen": {
+    "bruto": {
+      "evaluaciones": 0,
+      "porcentaje": null,
+      "puntos": null,
+      "puntos_maximos": null
+    },
+    "conteo": {
+      "aprobadas": 0,
+      "completadas": 1,
+      "con_nota": 0,
+      "no_aprobadas": 0,
+      "pendientes": 0,
+      "por_revisar": 0,
+      "publicadas": 0,
+      "sin_publicar": 0,
+      "sin_registro": 0
+    },
+    "evaluaciones": 1,
+    "oficial": false,
+    "ponderado": false,
+    "presentado": null,
+    "promedio_simple": null
+  },
+  "servidor_en": 1790000000000,
+  "sistema": null
+}

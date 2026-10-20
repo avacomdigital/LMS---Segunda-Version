@@ -12,6 +12,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("restablecer-contrasena", typeof(Pages.RestablecerContrasenaPage));
         Routing.RegisterRoute("elegir-contrasena", typeof(Pages.ElegirContrasenaPage));
         Routing.RegisterRoute("seguridad-aula", typeof(Pages.SeguridadAulaPage));
+        // MOD-018 · Licensing: el estado de la licencia del nodo, su activación y renovación sin internet en tres pasos, la copia de custodia y la liberación (administración y técnico)
+        Routing.RegisterRoute("licencia", typeof(Pages.LicenciaPage));
         Routing.RegisterRoute("course-editor", typeof(Pages.CourseEditorPage));
         Routing.RegisterRoute("activity-monitor", typeof(Pages.ActivityMonitorPage));
         Routing.RegisterRoute("asignaturas", typeof(Pages.AsignaturasPage));
@@ -40,6 +42,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("calificaciones-revision", typeof(Pages.RevisionBandejaPage));
         Routing.RegisterRoute("revision-docente", typeof(Pages.RevisionDocentePage));
         Routing.RegisterRoute("calificacion-detalle", typeof(Pages.CalificacionDetallePage));
+        Routing.RegisterRoute("calificacion-estudiante", typeof(Pages.CalificacionEstudiantePage));
         Routing.RegisterRoute("calificaciones-config", typeof(Pages.CalificacionesConfigPage));
         // MOD-021 · Search: la búsqueda del menú principal (cursos, lecciones, recursos, evaluaciones, estudios y clases) y sus resultados, que abren la pantalla del módulo dueño
         Routing.RegisterRoute("buscar", typeof(Pages.BuscarPage));
@@ -51,5 +54,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(Reportes.RutasDeReportes.Alumno, typeof(Pages.ReporteAlumnoPage));
         Routing.RegisterRoute(Reportes.RutasDeReportes.Uso, typeof(Pages.ReporteUsoPage));
         Routing.RegisterRoute(Reportes.RutasDeReportes.Estado, typeof(Pages.ReportesEstadoPage));
+        Routing.RegisterRoute(Reportes.RutasDeReportes.Boletin, typeof(Pages.ReporteBoletinPage));
+        Routing.RegisterRoute(Reportes.RutasDeReportes.Boletines, typeof(Pages.ReporteBoletinesPage));
     }
 }

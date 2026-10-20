@@ -59,6 +59,12 @@ public sealed class ReportesApi(HttpClient http, Uri baseUri) : ClienteJson(http
     public Task<ReporteDeUso?> UsoAsync(string actor, PeriodoPedido? periodo = null, string? grupoId = null, NodoAcademico? nodo = null, CancellationToken ct = default) =>
         ObtenerAsync<ReporteDeUso>(Ruta("uso/", [("desde", Num(periodo?.Desde)), ("hasta", Num(periodo?.Hasta)), ("grupo_id", grupoId), ("actor", actor)], nodo), ct);
 
+    public Task<ReporteDeBoletin?> BoletinAsync(string actor, string alumnoId, string? grupoId = null, NodoAcademico? nodo = null, CancellationToken ct = default) =>
+        ObtenerAsync<ReporteDeBoletin>(Ruta($"boletines/{Esc(alumnoId)}/", [("grupo_id", grupoId), ("actor", actor)], nodo), ct);
+
+    public Task<ReporteDeBoletines?> BoletinesAsync(string actor, string grupoId, NodoAcademico? nodo = null, CancellationToken ct = default) =>
+        ObtenerAsync<ReporteDeBoletines>(Ruta("boletines/", [("grupo_id", grupoId), ("actor", actor)], nodo), ct);
+
     public Task<FiltrosDeReportes?> FiltrosAsync(string actor, CancellationToken ct = default) =>
         ObtenerAsync<FiltrosDeReportes>(Ruta("filtros/", ("actor", actor)), ct);
 
@@ -76,6 +82,9 @@ public sealed class ReportesApi(HttpClient http, Uri baseUri) : ClienteJson(http
         if (cambio.UmbralPrivacidad is { } u) cuerpo["umbral_privacidad"] = u;
         if (cambio.ExtraiblesPermitidos is { } e) cuerpo["extraibles_permitidos"] = e;
         if (cambio.ExigirRazon is { } r) cuerpo["exigir_razon"] = r;
+        if (cambio.PlantillaBoletin is { } p) cuerpo["plantilla_boletin"] = p;
+        if (cambio.PeriodosBoletin is { } periodos) cuerpo["periodos_boletin"] = periodos;
+        if (cambio.LeyendaBoletin is { } l) cuerpo["leyenda_boletin"] = l;
         if (cambio.VersionEsperada is { } v) cuerpo["version_esperada"] = v;
         return ReemplazarAsync<RespuestaDeConfiguracion>(Base + "configuracion/", cuerpo, ct);
     }

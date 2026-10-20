@@ -1,0 +1,4 @@
+{
+  "codigo": "datos_invalidos",
+  "detail": "Falta la licencia: manda `licencia` (texto AVL1.…) o `archivo_b64` (los bytes del .avlic)."
+}

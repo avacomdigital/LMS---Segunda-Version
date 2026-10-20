@@ -1,0 +1,24 @@
+{
+  "campo": "recomendaciones",
+  "codigo": "datos_invalidos",
+  "desconocidas": [
+    "inventada"
+  ],
+  "detail": "Hay recomendaciones que no están en el catálogo.",
+  "validas": [
+    "repasar_conceptos",
+    "practicar_ejercicios",
+    "leer_con_atencion",
+    "justificar_respuestas",
+    "revisar_antes_de_entregar",
+    "participar_en_clase",
+    "entregar_a_tiempo",
+    "pedir_ayuda",
+    "organizar_el_tiempo",
+    "trabajo_en_equipo",
+    "mantener_el_ritmo",
+    "ampliar_lecturas",
+    "acompanamiento_familiar",
+    "apoyo_especializado"
+  ]
+}

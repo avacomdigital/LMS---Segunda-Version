@@ -14,10 +14,11 @@
           "publicadas": 0
         }
       ],
-      "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
+      "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
       "celdas": {
-        "21322d1c-33a5-47da-a80b-bc932f54aee3": {
+        "69efcd34-87ce-49cf-a39e-18db850dc68a": {
           "ajustada": false,
+          "bruto": null,
           "calificacion_id": null,
           "estado": "provisional",
           "estado_simple": "completado",
@@ -25,6 +26,7 @@
             "registrados": 0,
             "total": 1
           },
+          "nota_simple": null,
           "politica_intentos": "ultimo",
           "presentacion": null,
           "publicada": false,
@@ -33,16 +35,46 @@
           "version": null
         }
       },
+      "resumen": {
+        "conteo": {
+          "aprobadas": 0,
+          "completadas": 1,
+          "con_nota": 0,
+          "no_aprobadas": 0,
+          "pendientes": 0,
+          "por_revisar": 1,
+          "publicadas": 0,
+          "sin_publicar": 0,
+          "sin_registro": 0
+        },
+        "evaluaciones": 1,
+        "presentado": null,
+        "promedio_simple": null
+      },
       "rotulo": "Juan P."
     }
   ],
   "asignaciones": [
     {
       "afecta_oficial": true,
+      "conteo": {
+        "aprobadas": 0,
+        "completadas": 1,
+        "con_nota": 0,
+        "no_aprobadas": 0,
+        "pendientes": 0,
+        "por_revisar": 1,
+        "publicadas": 0,
+        "sin_publicar": 0,
+        "sin_registro": 0
+      },
       "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
       "curso_rotulo": "Estados de la materia y sus cambios",
       "estado": "activa",
-      "id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
+      "id": "69efcd34-87ce-49cf-a39e-18db850dc68a",
+      "liberados_en": null,
+      "liberados_por": "",
+      "materia": "science",
       "por_revisar": 1,
       "resultados": "tras_liberar",
       "tipo_evaluacion": "sumativa",
@@ -53,7 +85,7 @@
     "aprobacion_minima": 3.0,
     "aprueba_desde": "Básico",
     "codigo": "co-1-5",
-    "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
+    "escala_id": "0710daa6-a95d-4fa9-ab10-f168532251c5",
     "jurisdiccion": "Antioquia",
     "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
     "numero": 1,
@@ -83,15 +115,34 @@
     ],
     "valor_max": 5.0,
     "valor_min": 1.0,
-    "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
+    "version_id": "4e71c874-d5f4-4d43-95f2-fa1ba0a0083d"
+  },
+  "filtro": {
+    "asignacion_id": null,
+    "curso_ref": null,
+    "materia": null
   },
   "grupo": {
     "codigo": "8A",
-    "id": "aaa24399-46b8-4f25-802b-de7fa5fb2cdf",
+    "id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
     "nivel_clave": "secundaria",
     "nombre": "Octavo A",
     "periodo": "2026"
   },
+  "materias": [
+    {
+      "codigo": "science",
+      "cursos": [
+        {
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "curso_rotulo": "Estados de la materia y sus cambios",
+          "evaluaciones": 1
+        }
+      ],
+      "evaluaciones": 1,
+      "rotulo": "Science"
+    }
+  ],
   "modo": "calificaciones",
   "politica_intentos": "ultimo",
   "servidor_en": 1790000000000,

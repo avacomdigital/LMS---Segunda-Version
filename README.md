@@ -72,6 +72,7 @@ dotnet run --project src/Avacom.Lms.Ops/Avacom.Lms.Ops.csproj -f net10.0-windows
 dotnet run --project src/Avacom.Lms.Student/Avacom.Lms.Student.csproj -f net10.0-windows10.0.19041.0
 ```
 
+
 También puedes abrir directamente los ejecutables después de compilar:
 
 ```powershell

@@ -1,0 +1,113 @@
+{
+  "alumnos": [
+    {
+      "agregados": [
+        {
+          "calificaciones": 0,
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "oficial": false,
+          "pendientes": 0,
+          "periodo": "2026",
+          "ponderado": false,
+          "promedio_simple": null,
+          "provisionales": 1,
+          "publicadas": 0
+        }
+      ],
+      "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
+      "celdas": {},
+      "resumen": {
+        "conteo": {
+          "aprobadas": 0,
+          "completadas": 0,
+          "con_nota": 0,
+          "no_aprobadas": 0,
+          "pendientes": 0,
+          "por_revisar": 0,
+          "publicadas": 0,
+          "sin_publicar": 0,
+          "sin_registro": 0
+        },
+        "evaluaciones": 0,
+        "presentado": null,
+        "promedio_simple": null
+      },
+      "rotulo": "Juan P."
+    }
+  ],
+  "asignaciones": [],
+  "escala": {
+    "aprobacion_minima": 3.0,
+    "aprueba_desde": "Básico",
+    "codigo": "co-1-5",
+    "escala_id": "0710daa6-a95d-4fa9-ab10-f168532251c5",
+    "jurisdiccion": "Antioquia",
+    "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+    "numero": 1,
+    "pais": "CO",
+    "tipo": "numerica",
+    "tramos": [
+      {
+        "aprueba": false,
+        "clave": "bajo",
+        "etiqueta": "Bajo"
+      },
+      {
+        "aprueba": true,
+        "clave": "basico",
+        "etiqueta": "Básico"
+      },
+      {
+        "aprueba": true,
+        "clave": "alto",
+        "etiqueta": "Alto"
+      },
+      {
+        "aprueba": true,
+        "clave": "superior",
+        "etiqueta": "Superior"
+      }
+    ],
+    "valor_max": 5.0,
+    "valor_min": 1.0,
+    "version_id": "4e71c874-d5f4-4d43-95f2-fa1ba0a0083d"
+  },
+  "filtro": {
+    "asignacion_id": null,
+    "curso_ref": null,
+    "materia": {
+      "subject": "math"
+    }
+  },
+  "grupo": {
+    "codigo": "8A",
+    "id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
+    "nivel_clave": "secundaria",
+    "nombre": "Octavo A",
+    "periodo": "2026"
+  },
+  "materias": [
+    {
+      "codigo": "science",
+      "cursos": [
+        {
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "curso_rotulo": "Estados de la materia y sus cambios",
+          "evaluaciones": 1
+        }
+      ],
+      "evaluaciones": 1,
+      "rotulo": "Science"
+    }
+  ],
+  "modo": "calificaciones",
+  "politica_intentos": "ultimo",
+  "servidor_en": 1790000000000,
+  "totales": {
+    "alumnos": 1,
+    "asignaciones": 0,
+    "pendientes": 0,
+    "por_revisar": 0,
+    "sin_publicar": 0
+  }
+}

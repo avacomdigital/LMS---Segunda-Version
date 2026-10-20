@@ -772,12 +772,13 @@ end;
 
 procedure ComponerPantallaFinal;
 var
-  Resumen, Direcciones, Organizacion, PinMaestro, Registros, Biblioteca, Cursos, Cabecera, Notas: String;
+  Resumen, Direcciones, Organizacion, PinMaestro, Licencia, Registros, Biblioteca, Cursos, Cabecera, Notas: String;
 begin
   Resumen := LeerArchivo(CarpetaDeEstado + '\Logs\resumen-nodo.txt');
   Direcciones := ValoresDelResumen(Resumen, 'direccion');
   Organizacion := ValoresDelResumen(Resumen, 'organizacion');
   PinMaestro := ValoresDelResumen(Resumen, 'pin_maestro');
+  Licencia := ValoresDelResumen(Resumen, 'licencia');
   Registros := ValoresDelResumen(Resumen, 'registros');
   Biblioteca := ValoresDelResumen(Resumen, 'biblioteca');
   Cursos := ValoresDelResumen(Resumen, 'biblioteca_cursos');
@@ -811,6 +812,15 @@ begin
   else if (Organizacion = 'si') and ((PinMaestro = 'sin_configurar') or (PinMaestro = 'vencido')) then
     { Actualizacion de un nodo ya instalado: no tiene PIN maestro (o vencio) y sin el nadie crea su usuario ni restablece su contrasena. }
     Notas := Notas + 'Falta el PIN maestro: configúralo en OPS, Seguridad del aula. Hasta entonces nadie puede crear su usuario ni restablecer su contraseña.' + #13#10 + #13#10;
+
+  { MOD-018 · licencia: la clase NUNCA se detiene por ella; lo unico que cambia son los modulos licenciables (reportes, busqueda, importacion y administracion avanzada). Un nodo sin licencia
+    (recien instalado o actualizado) opera 30 dias de evaluacion: si nadie lo dice aqui, nadie con rol de administracion se entera. }
+  if Licencia = 'sin_licencia' then
+    Notas := Notas + 'Este equipo todavía no tiene licencia: funciona 30 días de evaluación. Actívala en OPS, Licencia (sin internet: solicitud, archivo de AVACOM y confirmar).' + #13#10 + #13#10
+  else if (Licencia = 'en_gracia') or (Licencia = 'liberacion_pendiente') then
+    Notas := Notas + 'La licencia está en periodo de gracia: todo sigue funcionando. Renuévala o reactívala en OPS, Licencia.' + #13#10 + #13#10
+  else if Licencia = 'degradada' then
+    Notas := Notas + 'La licencia se acabó: los módulos licenciables están apagados (la clase no se detiene). Renuévala en OPS, Licencia.' + #13#10 + #13#10;
 
   { AVACOM Contenido es informativo: el aula funciona igual, solo que sin cursos
     hasta que la biblioteca este abierta. El instalador no la toca ni depende de ella. }

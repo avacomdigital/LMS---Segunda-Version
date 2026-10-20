@@ -167,6 +167,12 @@ class Conflicto(ErrorAcceso):
     http = 409
 
 
+class CupoAgotado(ErrorAcceso):
+    """Se alcanzó el cupo de usuarios de la licencia (MOD-018, BR-027): no se pueden dar de alta más identidades; las que ya existen siguen funcionando. 402, no 403: no es un permiso."""
+    codigo = "cupo_agotado"
+    http = 402
+
+
 class PinMaestroNoConfigurado(Conflicto):
     """El nodo no tiene PIN maestro configurado."""
     codigo = "pin_maestro_no_configurado"

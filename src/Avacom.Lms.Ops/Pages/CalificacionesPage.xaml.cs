@@ -28,6 +28,12 @@ public partial class CalificacionesPage : ContentPage
     private readonly FilterPicker _evaluaciones = new() { Placeholder = "Todas las evaluaciones" };
     private readonly AvisoTemporal _aviso;
     private readonly Dictionary<string, string> _evaluacionPorRotulo = [];
+    private readonly Avacom.Lms.Ops.Calificaciones.Ui.HojaDeAjuste _hojaAjuste = new();
+
+    // Lo que segmenta el libro (un profesor dicta varios cursos de la misma materia): la materia y el curso los aplica el NODO; se conservan al cambiar de vista y se sueltan al cambiar de grupo.
+    private string? _materia, _curso;
+    // «Activar la edición»: con la edición activa, cada calificación del libro y del boletín ofrece «Editar» (el ajuste con motivo, que queda en el historial y en la bitácora).
+    private bool _edicion;
 
     private bool _visible, _cargando, _recargar;
     private IDispatcherTimer? _sondeo;
@@ -43,6 +49,7 @@ public partial class CalificacionesPage : ContentPage
     public CalificacionesPage()
     {
         InitializeComponent();
+        Raiz.Add(_hojaAjuste);
         _aviso = new AvisoTemporal(ResultadoHost);
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "calificaciones-actualizar").Vista);
         AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 220, "calificaciones-volver").Vista);
@@ -177,7 +184,7 @@ public partial class CalificacionesPage : ContentPage
 
         // ---- el libro del grupo
         var api = Api;
-        var libro = await api.LibroAsync(CalificacionesUi.Actor, grupo.Id);
+        var libro = await api.LibroAsync(CalificacionesUi.Actor, grupo.Id, cursoRef: _curso, soloResumen: _vista != VistaTabla, materia: _materia);
         if (!_visible || grupo.Id != _grupoElegido) return;
         if (libro is null)
         {
@@ -269,6 +276,7 @@ public partial class CalificacionesPage : ContentPage
     {
         if (nivel == _nivelElegido && periodo == _periodoElegido && grupoId == _grupoElegido) return;
         (_nivelElegido, _periodoElegido, _grupoElegido) = (nivel, periodo, grupoId);
+        (_materia, _curso) = (null, null);                       // la materia y el curso son del grupo que se veía
         _libro = null;
         _firma = string.Empty;
         _firmaDeSelector = string.Empty;
@@ -307,5 +315,37 @@ public partial class CalificacionesPage : ContentPage
     {
         if (_libro is null) return;
         Pintar();
+    }
+
+    // ------------------------------------------------------------------------------ materia y curso
+
+    /// <summary>Segmenta el libro por una materia (código del árbol) o por un curso; con los dos vacíos, todo el grupo. Lo aplica el nodo: se vuelve a leer.</summary>
+    private async Task FiltrarAsync(string? materia, string? curso)
+    {
+        if (materia == _materia && curso == _curso) return;
+        (_materia, _curso) = (materia, curso);
+        _verEstudiantes = EstudiantesPorTanda;
+        _verEvaluaciones = EvaluacionesPorTanda;
+        _firma = string.Empty;
+        await CargarAsync(forzar: true);
+    }
+
+    // ----------------------------------------------------------------------------------- la edición
+
+    private Task AlternarEdicionAsync()
+    {
+        _edicion = !_edicion;
+        _aviso.Mostrar(_edicion ? "Edición activada" : "Edición desactivada",
+            _edicion ? "Cada calificación ofrece «Editar». Todo ajuste pide un motivo y queda en el historial y en la bitácora con tu nombre y la hora. Esto no toca el curso ni su contenido."
+                     : "El libro vuelve a ser de sólo lectura.", _edicion ? Tono.Info : Tono.Neutro);
+        Pintar();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>«Editar» una calificación desde el libro: la hoja de ajuste sobre esta pantalla. Si se confirmó algún ajuste, el libro se vuelve a leer.</summary>
+    private async Task EditarAsync(string calificacionId, string alumno, string evaluacion)
+    {
+        var ajustado = await _hojaAjuste.MostrarAsync(calificacionId, alumno, evaluacion);
+        if (ajustado && _visible) await CargarAsync(forzar: true);
     }
 }

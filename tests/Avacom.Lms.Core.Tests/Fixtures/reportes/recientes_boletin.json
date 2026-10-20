@@ -1,0 +1,26 @@
+{
+  "recientes": [
+    {
+      "parametros": {
+        "grupo_id": "19114f4b-dd10-45c0-bbe6-e8f8d8269c2f"
+      },
+      "tipo": "boletin",
+      "titulo": "Boletines del grupo 8A",
+      "ultima_exportacion_en": null,
+      "ultima_vez_en": 1790000010000,
+      "veces": 1
+    },
+    {
+      "parametros": {
+        "alumno_id": "eb1d3065-62b7-4589-89f8-ff85c8eb1f3d",
+        "grupo_id": "19114f4b-dd10-45c0-bbe6-e8f8d8269c2f"
+      },
+      "tipo": "boletin",
+      "titulo": "Boletín de Juan P.",
+      "ultima_exportacion_en": null,
+      "ultima_vez_en": 1790000010000,
+      "veces": 1
+    }
+  ],
+  "servidor_en": 1790000010000
+}

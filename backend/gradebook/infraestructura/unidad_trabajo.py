@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from django.db import transaction
 
 from . import repositorios as r
+from .arbol import ArbolBiblioteca
 from .evaluacion import EvaluacionMod10
 from .guia import GuiaBiblioteca
 from .identidad import IdentidadAcceso
@@ -30,12 +31,14 @@ class Cajones:
         self.clasificaciones = r.ClasificacionesDjango()
         self.resultados = r.ResultadosDjango()
         self.agregados = r.AgregadosDjango()
+        self.observaciones = r.ObservacionesDjango()
         self.marcas = r.MarcasDjango()
         self.outbox = r.OutboxDjango()
         self.auditoria = r.AuditoriaGradebook()
         self.identidad = IdentidadAcceso()
         self.evaluacion = EvaluacionMod10()
         self.guia = GuiaBiblioteca()
+        self.arbol = ArbolBiblioteca()
 
 
 class UnidadDeTrabajoGradebook(Cajones):

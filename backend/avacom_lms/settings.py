@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "gradebook",
     "search",
     "reporting",
+    "licenciamiento",
 ]
 
 MIDDLEWARE = [
@@ -65,6 +66,9 @@ MIDDLEWARE = [
     # Bugfix 01 (QA-27): las direcciones `/api/m/<pase>/…` de los medios llevan su permiso en el camino (el visor no manda cabeceras). Reescribe la ruta
     # a la normal ANTES de `CommonMiddleware`, y por dentro de la auditoría, que registra ya la ruta sin el pase.
     "acceso.interfaces.medios.PaseDeMediosMiddleware",
+    # MOD-018: el ÚNICO sitio donde una licencia puede responder «no disponible por licencia» (402). Va DESPUÉS del pase de medios (ve ya la ruta normal) y por dentro de la
+    # auditoría; lee el estado de memoria, deja pasar ante cualquier fallo y nunca toca lo intocable (aula, evaluación en curso, modo estudio, login, latido, /health/).
+    "licenciamiento.interfaces.middleware.LicenciaMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -206,6 +210,21 @@ AVACOM_REPORTES_PROGRAMADOR = os.environ.get("AVACOM_REPORTES_PROGRAMADOR", "1")
 AVACOM_REPORTES_INTERVALO_S = float(os.environ.get("AVACOM_REPORTES_INTERVALO_S", "60"))
 AVACOM_REPORTES_EXPORTACION_TTL_S = int(os.environ.get("AVACOM_REPORTES_EXPORTACION_TTL_S", "900"))
 AVACOM_REPORTES_SINCRONIZAR = os.environ.get("AVACOM_REPORTES_SINCRONIZAR", "1") == "1"
+
+# ---------------------------------------------------------- Licensing (MOD-018)
+# App `licenciamiento` (`/api/licencia/`, tablas m18_*): valida sin internet qué puede hacer esta instalación y hasta cuándo. NUNCA detiene una clase.
+# El ENTORNO NO sale de `AVACOM_LMS_ENTORNO` (se lee de backend.env, un texto editable): un nodo es de producción si existe el marcador de canal `.avacom-canal` que escribe el instalador, si
+# corre bajo `Program Files` o si `AVACOM_LMS_ENTORNO=instalado`; sólo un repositorio de desarrollo (con `.git` y sin marcador) es desarrollo, y `manage.py test` es pruebas (P-12).
+from licenciamiento.dominio import entorno as _licencia_entorno  # noqa: E402 — puro: no importa Django
+
+AVACOM_LICENCIA_ENTORNO = _licencia_entorno.clasificar(BASE_DIR, os.environ, sys.argv)
+# "firmada" fuerza en desarrollo y pruebas la verificación real de licencias (en producción es SIEMPRE firmada, sea lo que sea esta variable); "auto" = sin licencia en desarrollo y pruebas.
+AVACOM_LICENCIA_MODO = os.environ.get("AVACOM_LICENCIA_MODO", "auto")
+# Carpeta de estado de la licencia SÓLO en desarrollo y pruebas; en producción es siempre %ProgramData%\AVACOM\OPS Master\Config\licencia\ (esta variable se ignora).
+AVACOM_LICENCIA_DIR = os.environ.get("AVACOM_LICENCIA_DIR", "")
+# "0" desactiva el hilo que valida al arrancar y recalcula el estado (por omisión cada 300 s).
+AVACOM_LICENCIA_PROGRAMADOR = os.environ.get("AVACOM_LICENCIA_PROGRAMADOR", "1") == "1"
+AVACOM_LICENCIA_INTERVALO_S = float(os.environ.get("AVACOM_LICENCIA_INTERVALO_S", "300"))
 
 # ------------------------------------------------------------- Audit (MOD-019)
 # App `audit` (`/api/auditoria/`, `/api/logs/`, tablas m19_*). Sistema de logs en archivos JSON Lines (§2 del prompt):

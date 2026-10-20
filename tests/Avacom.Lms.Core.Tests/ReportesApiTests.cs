@@ -90,6 +90,9 @@ public sealed class ReportesApiTests : IDisposable
         await api.EstadoAsync("adm-1");
         await api.ExportacionAsync("prof-1", "e 1");
         await api.ExportacionesAsync("prof-1");
+        await api.BoletinAsync("prof-1", "al-1", "g-1");
+        await api.BoletinAsync("prof-1", "al-1", null, new NodoAcademico(Subject: "math"));
+        await api.BoletinesAsync("prof-1", "g-1");
         Assert.Equal(new[]
         {
             Base + "clases/s%201/?actor=prof-1",
@@ -107,6 +110,9 @@ public sealed class ReportesApiTests : IDisposable
             Base + "estado/?actor=adm-1",
             Base + "exportaciones/e%201/?actor=prof-1",
             Base + "exportaciones/?actor=prof-1",
+            Base + "boletines/al-1/?grupo_id=g-1&actor=prof-1",
+            Base + "boletines/al-1/?actor=prof-1&subject=math",
+            Base + "boletines/?grupo_id=g-1&actor=prof-1",
         }, capturas.Select(c => c.Url).ToArray());
         Assert.All(capturas, c => { Assert.Equal(HttpMethod.Get, c.Metodo); Assert.Null(c.Cuerpo); });
     }
@@ -137,6 +143,24 @@ public sealed class ReportesApiTests : IDisposable
         Assert.Equal(3, primera.Json.GetProperty("version_esperada").GetInt32());
         Assert.Equal(new[] { "actor", "exigir_razon", "extraibles_permitidos" }, segunda.Claves);
         Assert.False(segunda.Json.GetProperty("extraibles_permitidos").GetBoolean());
+        // los ajustes del boletín viajan igual: sólo lo que se cambia
+        await api.CambiarConfiguracionAsync("adm-1", new CambioDeConfiguracion(PlantillaBoletin: "mx", PeriodosBoletin: ["1.er periodo", "2.º periodo"]));
+        var tercera = capturas[2];
+        Assert.Equal(new[] { "actor", "periodos_boletin", "plantilla_boletin" }, tercera.Claves);
+        Assert.Equal("mx", tercera.Json.GetProperty("plantilla_boletin").GetString());
+        Assert.Equal(2, tercera.Json.GetProperty("periodos_boletin").GetArrayLength());
+    }
+
+    [Fact]
+    public void ElBoletinDeUnGrupo_SePideSinAlumno_YSeEntregaComoZip()
+    {
+        var grupo = ReporteSolicitado.DeBoletin("g-1").ACuerpo();
+        Assert.Equal(new[] { "grupo_id", "tipo" }, grupo.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+        Assert.Equal(TiposDeReporte.Boletin, grupo["tipo"]);
+        var alumno = ReporteSolicitado.DeBoletin("g-1", "al-1").ACuerpo();
+        Assert.Equal("al-1", alumno["alumno_id"]);
+        Assert.Equal("zip", FormatosDeExportacion.Extension(FormatosDeExportacion.Zip));          // el nodo entrega un zip con un archivo por estudiante
+        Assert.Equal("xlsx", FormatosDeExportacion.Extension(FormatosDeExportacion.Xlsx));
     }
 
     [Fact]

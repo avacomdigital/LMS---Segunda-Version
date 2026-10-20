@@ -1,0 +1,25 @@
+{
+  "cambiado": false,
+  "observacion": {
+    "actualizada_en": 1790000000000,
+    "actualizada_por": "c6f249c6-6035-4f8c-8b8f-ad57b7ff707f",
+    "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
+    "curso_ref": "",
+    "grupo_id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
+    "id": "ed438441-4a3c-4f5c-a581-eab9b1e2a6eb",
+    "periodo": "2026",
+    "recomendaciones": [
+      {
+        "codigo": "practicar_ejercicios",
+        "texto": "Practicar más ejercicios del tema con el modo estudio"
+      },
+      {
+        "codigo": "pedir_ayuda",
+        "texto": "Pedir ayuda al profesor cuando algo no quede claro"
+      }
+    ],
+    "texto": "Va mejorando.",
+    "version": 1
+  },
+  "servidor_en": 1790000000000
+}

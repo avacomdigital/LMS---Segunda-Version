@@ -37,6 +37,8 @@
 
   Todo 403 sobre datos académicos —también el del rol técnico— deja el asiento `reporte.acceso_denegado` (TST-069).
 
+> **2026-10-19.** El boletín académico: `GET boletines/{alumno_id}/`, `GET boletines/?grupo_id=`, `reporte: {tipo: "boletin"}` al exportar (un zip con un archivo por estudiante para el grupo) y los ajustes `plantilla_boletin`, `periodos_boletin`, `leyenda_boletin` en `configuracion/`: ver [04-boletin-academico.md §4](04-boletin-academico.md#4--api-lo-que-se-añade-a-02-apimd).
+
 ## 1 · Leer
 
 | Ruta | Verbo | Permiso | Qué devuelve |

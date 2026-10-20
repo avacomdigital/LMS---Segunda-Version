@@ -17,6 +17,8 @@ urlpatterns = [
     path("api/search/", include("search.interfaces.urls")),
     # MOD-013: reportes de clase, alumno, grupo y uso de equipos (sólo lectura sobre lo de otros módulos) y su exportación a archivo en dos tiempos.
     path("api/reportes/", include("reporting.interfaces.urls")),
+    # MOD-018: estado, consumo y módulos de la licencia; solicitud, activación, renovación y liberación sin internet, mediante archivo.
+    path("api/licencia/", include("licenciamiento.interfaces.urls")),
     # Cola de medios: estado de los recursos que el nodo trae de AVACOM Contenido y reparte a las tabletas.
     path("api/medios/", include("cola_medios.interfaces.urls")),
     # MOD-019: bitácora (sólo lectura, audit.read/audit.export) y logs de diagnóstico (diagnostics.read; entrega de OPS/Student).

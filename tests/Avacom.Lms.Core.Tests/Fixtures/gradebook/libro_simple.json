@@ -14,16 +14,25 @@
           "publicadas": 0
         }
       ],
-      "alumno_id": "6baf2a9d-87bb-45e0-98a1-cf50394d582d",
+      "alumno_id": "492e98a4-48f9-4581-843c-6f134dabbe51",
       "celdas": {
-        "f958712c-1cf7-47d3-b91b-a6083b94be68": {
+        "4ae9ec87-77fc-4100-a888-70d6100723a8": {
           "ajustada": false,
+          "bruto": null,
           "calificacion_id": null,
           "estado": "sin_registro",
           "estado_simple": "completado",
           "intentos": {
             "registrados": 0,
             "total": 1
+          },
+          "nota_simple": {
+            "aciertos": 10,
+            "numero_intento": 1,
+            "porcentaje": 71.4,
+            "preguntas": 12,
+            "publicada": true,
+            "publicada_en": null
           },
           "politica_intentos": "ultimo",
           "presentacion": null,
@@ -33,16 +42,46 @@
           "version": null
         }
       },
+      "resumen": {
+        "conteo": {
+          "aprobadas": 0,
+          "completadas": 1,
+          "con_nota": 0,
+          "no_aprobadas": 0,
+          "pendientes": 0,
+          "por_revisar": 0,
+          "publicadas": 0,
+          "sin_publicar": 0,
+          "sin_registro": 0
+        },
+        "evaluaciones": 1,
+        "presentado": null,
+        "promedio_simple": null
+      },
       "rotulo": "Ana"
     }
   ],
   "asignaciones": [
     {
       "afecta_oficial": true,
+      "conteo": {
+        "aprobadas": 0,
+        "completadas": 1,
+        "con_nota": 0,
+        "no_aprobadas": 0,
+        "pendientes": 0,
+        "por_revisar": 0,
+        "publicadas": 0,
+        "sin_publicar": 0,
+        "sin_registro": 0
+      },
       "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
       "curso_rotulo": "Estados de la materia y sus cambios",
       "estado": "activa",
-      "id": "f958712c-1cf7-47d3-b91b-a6083b94be68",
+      "id": "4ae9ec87-77fc-4100-a888-70d6100723a8",
+      "liberados_en": null,
+      "liberados_por": "",
+      "materia": "science",
       "por_revisar": 0,
       "resultados": "tras_liberar",
       "tipo_evaluacion": "sumativa",
@@ -50,13 +89,32 @@
     }
   ],
   "escala": null,
+  "filtro": {
+    "asignacion_id": null,
+    "curso_ref": null,
+    "materia": null
+  },
   "grupo": {
     "codigo": "P1",
-    "id": "1934ccaf-c8ba-4cc2-87ad-c8c2a0069198",
+    "id": "e72bdb61-6a96-4bfb-abe8-aa62f5340038",
     "nivel_clave": "preescolar",
     "nombre": "Párvulos",
     "periodo": "2026"
   },
+  "materias": [
+    {
+      "codigo": "science",
+      "cursos": [
+        {
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "curso_rotulo": "Estados de la materia y sus cambios",
+          "evaluaciones": 1
+        }
+      ],
+      "evaluaciones": 1,
+      "rotulo": "Science"
+    }
+  ],
   "modo": "simple",
   "politica_intentos": "ultimo",
   "servidor_en": 1790000000000,

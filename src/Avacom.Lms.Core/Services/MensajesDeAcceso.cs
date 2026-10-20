@@ -29,6 +29,8 @@ public static class MensajesDeAcceso
     {
         if (error is null) return Generico;
         if (error.Estado == 0) return SinConexion;
+        // MOD-018 (P-19): el cupo de usuarios o de equipos lleno al crear algo nuevo, o un módulo en pausa: el texto común de la licencia, dicho para quien lo lee.
+        if (error.PorLicencia) return Licencia.LicenciaTexto.ParaError(error, audiencia) ?? Generico;
         switch (error.Codigo)
         {
             // ---------- PIN maestro

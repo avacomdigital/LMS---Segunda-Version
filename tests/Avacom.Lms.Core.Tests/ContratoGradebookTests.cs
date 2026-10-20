@@ -160,6 +160,129 @@ public sealed class ContratoGradebookTests
         Assert.Equal("Tiempo adicional del 25 %", r.Adaptacion);
     }
 
+    // ------------------------------------------------------------------------------------- el boletín
+
+    [Fact]
+    public void Boletin_TraeLoQueLlevaPorCursoSusInsightsYUnaPaginaDeEvaluaciones()
+    {
+        var b = Cargar<BoletinDelEstudiante>("boletin");
+        Assert.Equal(("Juan P.", "secundaria", true), (b.Alumno.Rotulo, b.Grupo.NivelClave, b.EnModoCalificaciones));
+        Assert.Equal("co-1-5", b.Sistema!.Codigo);
+        Assert.Equal((2, 1, 1, 1, 0), (b.Resumen.Evaluaciones, b.Resumen.Conteo.ConNota, b.Resumen.Conteo.PorRevisar, b.Resumen.Conteo.Aprobadas, b.Resumen.Conteo.SinRegistro));
+        Assert.False(b.Resumen.Oficial);
+        Assert.False(b.Resumen.Ponderado);                                                      // el promedio es simple e informativo
+        Assert.Equal(71.43m, b.Resumen.PromedioSimple);
+        Assert.Equal(("3.8", "Básico", true), (b.Resumen.Presentado!.Etiqueta, b.Resumen.Presentado.Desempeno, b.Resumen.Presentado.CumpleCriterio));
+        var curso = Assert.Single(b.Cursos);
+        Assert.Equal(("Estados de la materia y sus cambios", 2), (curso.CursoRotulo, curso.Evaluaciones));
+        Assert.Equal("insuficiente", b.Insights.Tendencia.Direccion);                           // con una sola nota no se dice hacia dónde va
+        Assert.Equal((2, 2), (b.Insights.Constancia.Completadas, b.Insights.Constancia.Evaluaciones));
+        Assert.True(b.Insights.Informativo);
+        Assert.Equal("Razona bien los cambios de estado.", Assert.Single(b.Insights.Comentarios.Fortalezas).Texto);
+        Assert.Equal((2, 2, 0, false), (b.Evaluaciones.Total, b.Evaluaciones.Items.Count, b.Evaluaciones.Desde, b.Evaluaciones.HayMas));
+        var calificada = b.Evaluaciones.Items.Single(e => e.Estado == EstadosDeResultado.Definitivo);
+        Assert.Equal(("Publicada", "3,8", true), (BoletinTexto.Estado(calificada), BoletinTexto.Nota(calificada), BoletinTexto.Cumple(calificada)));
+        var reabierta = b.Evaluaciones.Items.Single(e => e.Estado == EstadosDeResultado.Reabierto);
+        Assert.Equal(("En recalificación", "—", null), (BoletinTexto.Estado(reabierta), BoletinTexto.Nota(reabierta), BoletinTexto.Cumple(reabierta)));     // lo que se recalifica no tiene nota ni cero
+    }
+
+    [Fact]
+    public void Boletin_LaNotaSeLeeConLosPuntosElPorcentajeYElSistema_YTraeMateriasYRecomendaciones()
+    {
+        var b = Cargar<BoletinDelEstudiante>("boletin");
+        // los puntos brutos que contó la evaluación, sumados en el resumen y en el curso
+        Assert.Equal((15m, 21m, 71.43m, 1), (b.Resumen.Bruto!.Puntos, b.Resumen.Bruto.PuntosMaximos, b.Resumen.Bruto.Porcentaje, b.Resumen.Bruto.Evaluaciones));
+        var curso = Assert.Single(b.Cursos);
+        Assert.Equal(("science", 15m), (curso.Materia, curso.Bruto!.Puntos));
+        var conNota = b.Evaluaciones.Items.Single(i => i.Bruto is not null);
+        Assert.Equal((15m, 21m, 10, 12, 71.43m), (conNota.Bruto!.Puntos, conNota.Bruto.PuntosMaximos, conNota.Bruto.Aciertos, conNota.Bruto.Preguntas, conNota.Bruto.Porcentaje));
+        Assert.Equal("15 de 21 puntos · 71,43 %", GradebookTexto.Bruto(conNota.Bruto));
+        Assert.Null(b.Evaluaciones.Items.Single(i => i.Estado == EstadosDeResultado.Reabierto).Bruto);        // lo que no cuenta (reabierto, pendiente) no tiene cifras
+        // las materias del grupo (por el identificador del curso) para segmentar, y el filtro aplicado (ninguno)
+        var materia = Assert.Single(b.Materias!);
+        Assert.Equal(("science", "Science", 2), (materia.Codigo, materia.Rotulo, materia.Evaluaciones));
+        Assert.Equal("Estados de la materia y sus cambios", Assert.Single(materia.Cursos).Rotulo);
+        Assert.Null(b.Filtro!.Subject);
+        // las recomendaciones del profesor (la cuarta pregunta) y el catálogo con que se eligen sin teclado
+        var general = Assert.Single(b.Observaciones!);
+        Assert.True(general.EsGeneral);
+        Assert.Equal(new[] { "practicar_ejercicios", "pedir_ayuda" }, general.Recomendaciones.Select(r => r.Codigo).ToArray());
+        Assert.Equal("Va mejorando.", general.Texto);
+        Assert.Equal(1, general.Version);
+        Assert.Equal(14, b.RecomendacionesDisponibles!.Count);
+        Assert.All(b.RecomendacionesDisponibles, r => Assert.False(string.IsNullOrWhiteSpace(r.Texto)));
+        Assert.Contains("Practicar", BoletinTexto.Recomendaciones(general));
+    }
+
+    [Fact]
+    public void Boletin_PorMateria_RecortaYDiceElFiltro()
+    {
+        var b = Cargar<BoletinDelEstudiante>("boletin_por_materia");
+        Assert.Equal("science", b.Filtro!.Subject);
+        Assert.Equal(2, b.Resumen.Evaluaciones);
+        var libro = Cargar<LibroDelGrupo>("libro_sin_materia");
+        Assert.Equal("math", libro.Filtro!.Subject);
+        Assert.Empty(libro.Asignaciones);                                                       // ninguna evaluación de esa materia…
+        Assert.Single(libro.Materias!);                                                         // …pero las fichas siguen ofreciendo las del grupo
+        Assert.Equal("science", Cargar<LibroDelGrupo>("libro_por_materia").Filtro!.Subject);
+    }
+
+    [Fact]
+    public void Observacion_CrearRepetirYLoQueNoVale()
+    {
+        var r = Cargar<RespuestaDeObservacion>("observacion");
+        Assert.True(r.Cambiado);
+        Assert.Equal((1, "", "2026"), (r.Observacion.Version, r.Observacion.CursoRef, r.Observacion.Periodo));
+        Assert.Equal("Practicar más ejercicios del tema con el modo estudio", r.Observacion.Recomendaciones[0].Texto);
+        Assert.False(Cargar<RespuestaDeObservacion>("observacion_repetida").Cambiado);          // repetir lo mismo no deja rastro
+        Assert.Equal("datos_invalidos", Ayudas.Json(Leer("observacion_invalida")).GetProperty("codigo").GetString());
+    }
+
+    [Fact]
+    public void Libro_CadaCeldaConNotaTraeSuBrutoYElLibroSusMaterias()
+    {
+        var l = Cargar<LibroDelGrupo>("libro");
+        var celda = l.Alumnos.SelectMany(a => a.Celdas.Values).Single(c => c.CalificacionId is not null);
+        Assert.Equal((20m, 21m, 11, 12, 95.24m), (celda.Bruto!.Puntos, celda.Bruto.PuntosMaximos, celda.Bruto.Aciertos, celda.Bruto.Preguntas, celda.Bruto.Porcentaje));
+        Assert.Equal("science", l.Asignaciones[0].Materia);
+        Assert.Equal("science", Assert.Single(l.Materias!).Codigo);
+        var cal = Cargar<DetalleDeCalificacion>("calificacion").Calificacion;
+        Assert.Equal((20m, 21m, "science"), (cal.Puntos, cal.PuntosMaximos, cal.Materia));
+        Assert.Equal(cal.PuntajeEfectivo, cal.Bruto!.Porcentaje);
+    }
+
+    [Fact]
+    public void Boletin_UnaPaginaDiceDesdeDondeVieneYCuantasHay()
+    {
+        var p = Cargar<BoletinDelEstudiante>("boletin_pagina").Evaluaciones;
+        Assert.Equal((2, 1, 1, 1), (p.Total, p.Desde, p.Limite, p.Items.Count));
+        Assert.False(p.HayMas);
+    }
+
+    [Fact]
+    public void Boletin_EnModoSimpleNoTieneSistemaNiCifras()
+    {
+        var b = Cargar<BoletinDelEstudiante>("boletin_simple");
+        Assert.False(b.EnModoCalificaciones);
+        Assert.Null(b.Sistema);
+        Assert.Null(b.Resumen.PromedioSimple);
+        Assert.Null(b.Resumen.Presentado);
+        Assert.All(b.Evaluaciones.Items, e => Assert.Null(e.Presentacion));
+        Assert.All(b.Evaluaciones.Items, e => Assert.Null(e.PuntajeEfectivo));
+        Assert.False(b.Insights.Comentarios.HayAlgo);
+    }
+
+    [Fact]
+    public void LibroEnResumen_NoMandaLasCeldasPeroSiLoQueLlevaCadaEstudianteYCadaEvaluacion()
+    {
+        var l = Cargar<LibroDelGrupo>("libro_resumen");
+        Assert.All(l.Alumnos, a => Assert.Empty(a.Celdas));
+        var juan = l.Alumnos.Single(a => a.Rotulo == "Juan P.").Resumen!;
+        Assert.Equal((2, 1), (juan.Evaluaciones, juan.Conteo.ConNota));
+        Assert.NotNull(juan.PromedioSimple);
+        Assert.All(l.Asignaciones, c => Assert.NotNull(c.Conteo));
+    }
+
     [Fact]
     public void RegistrarLoCalificado_DiceCuantasSeRegistraronCuantasYaEstabanYLoQueAunNoSePuede()
     {
@@ -247,10 +370,14 @@ public sealed class ContratoGradebookTests
             Assert.True(item.EsSimple);
             Assert.Null(item.Calificacion);
             Assert.Null(item.Estado);
-            // En lo que ve el alumno no hay un solo número (sólo el reloj del nodo, que la pantalla no muestra).
+            // En lo que ve el alumno no hay un solo número fuera de `nota` (sólo el reloj del nodo, que la pantalla no muestra). `nota` —el porcentaje del examen, sin escala, con sus aciertos—
+            // sólo viaja cuando el profesor liberó el resultado (decisión del 2026-10-19): sin liberar, ni eso.
             using var doc = JsonDocument.Parse(Leer(nombre));
             var item0 = doc.RootElement.GetProperty("items")[0];
-            Assert.Empty(Numeros(item0));
+            var sinNota = item0.EnumerateObject().Where(p => p.Name != "nota").SelectMany(p => Numeros(p.Value));
+            Assert.Empty(sinNota);
+            if (nombre == "mias_simple_sin_empezar") Assert.Null(item.Nota);
+            else Assert.Equal((10, 12), (item.Nota!.Aciertos, item.Nota.Preguntas));
         }
         Assert.Equal(EstadosSimples.NoIniciado, Cargar<MisResultados>("mias_simple_sin_empezar").Items.Single().EstadoSimple);
         var completado = Cargar<MisResultados>("mias_simple").Items.Single();

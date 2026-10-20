@@ -36,6 +36,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
     {
         RutasDeReportes.ElegirGrupo => ("Elegir un grupo", "Los grupos que puedes ver. Elige uno para ver quién necesita atención."),
         RutasDeReportes.ElegirAlumno => ("Elegir un estudiante", "Elige el grupo y, si hace falta, la inicial de su nombre."),
+        RutasDeReportes.ElegirBoletin => ("Boletines académicos", "Elige el grupo: se arma un boletín por estudiante, con sus puntos, su calificación y las recomendaciones del profesor."),
         _ => ("Elegir una clase", "Las clases cerradas de tus grupos, la más reciente primero."),
     };
 
@@ -44,7 +45,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
         if (!_inicializado)
         {
             _inicializado = true;
-            _que = Parametro("que") is { } q && q is RutasDeReportes.ElegirClase or RutasDeReportes.ElegirGrupo or RutasDeReportes.ElegirAlumno ? q : RutasDeReportes.ElegirClase;
+            _que = Parametro("que") is { } q && q is RutasDeReportes.ElegirClase or RutasDeReportes.ElegirGrupo or RutasDeReportes.ElegirAlumno or RutasDeReportes.ElegirBoletin ? q : RutasDeReportes.ElegirClase;
             _nodo = NodoDeLaRuta;
             var (titulo, subtitulo) = Textos(_que);
             Poner(titulo, subtitulo);
@@ -78,6 +79,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
         switch (_que)
         {
             case RutasDeReportes.ElegirGrupo: PintarGrupos(filtros); break;
+            case RutasDeReportes.ElegirBoletin: PintarGrupos(filtros); break;
             case RutasDeReportes.ElegirAlumno: await PintarAlumnosAsync(api); break;
             default: await PintarClasesAsync(api); break;
         }
@@ -87,6 +89,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
     {
         RutasDeReportes.ElegirGrupo => p.Grupo,
         RutasDeReportes.ElegirAlumno => p.Alumno,
+        RutasDeReportes.ElegirBoletin => p.Alumno,            // el boletín es el informe nominal de cada estudiante: mismo permiso
         _ => p.Clase,
     };
 
@@ -105,7 +108,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
                 fila.Add(EstudioUi.Chip(periodo, periodo == _periodo, ReportesUi.Seguro(nameof(ReportesElegirPage), "Periodo", () => ElegirAsync(periodo, _grupoId)), $"reportes-elegir-periodo-{periodo}"));
             _fichasHost.Add(fila);
         }
-        if (_que == RutasDeReportes.ElegirGrupo) return;
+        if (_que is RutasDeReportes.ElegirGrupo or RutasDeReportes.ElegirBoletin) return;
         var grupos = ListasDeReportes.Grupos(filtros.Grupos, _periodo);
         if (_que == RutasDeReportes.ElegirAlumno && grupos.Count <= 1) return;           // el único grupo ya quedó elegido: no hay nada que tocar
         _fichasHost.Add(EstudioUi.Eyebrow("GRUPO"));
@@ -192,7 +195,8 @@ public sealed class ReportesElegirPage : PaginaDeReporte
             ContenidoHost.Add(ReportesUi.Estado("No hay grupos en este periodo", "Elige otro periodo."));
             return;
         }
-        ContenidoHost.Add(ReportesUi.Seccion("Grupos", $"{FormatoDeReportes.Plural(grupos.Count, "grupo", "grupos")}. Tocar uno abre su reporte."));
+        var boletines = _que == RutasDeReportes.ElegirBoletin;
+        ContenidoHost.Add(ReportesUi.Seccion("Grupos", $"{FormatoDeReportes.Plural(grupos.Count, "grupo", "grupos")}. {(boletines ? "Tocar uno arma un boletín por estudiante." : "Tocar uno abre su reporte.")}"));
         foreach (var g in grupos)
         {
             var texto = new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center };
@@ -200,9 +204,10 @@ public sealed class ReportesElegirPage : PaginaDeReporte
             texto.Add(Ds.Secundario(ListasDeReportes.ResumenDeGrupo(g), 15));
             var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 18, MinimumHeightRequest = 52 };
             fila.Add(texto, 0, 0);
-            fila.Add(new Label { Text = "Ver  ›", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Rojo, VerticalOptions = LayoutOptions.Center }, 1, 0);
+            fila.Add(new Label { Text = boletines ? "Boletines  ›" : "Ver  ›", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Rojo, VerticalOptions = LayoutOptions.Center }, 1, 0);
             var id = g.Id;
-            ContenidoHost.Add(ReportesUi.Tocable(fila, ReportesUi.Seguro(nameof(ReportesElegirPage), "AbrirGrupo", () => Shell.Current.GoToAsync(RutasDeReportes.DeGrupo(id))),
+            var ruta = boletines ? RutasDeReportes.DeBoletines(id) : RutasDeReportes.DeGrupo(id);
+            ContenidoHost.Add(ReportesUi.Tocable(fila, ReportesUi.Seguro(nameof(ReportesElegirPage), boletines ? "AbrirBoletines" : "AbrirGrupo", () => Shell.Current.GoToAsync(ruta)),
                 $"Grupo {g.Rotulo}. {ListasDeReportes.ResumenDeGrupo(g)}", $"reportes-grupo-{g.Codigo}", Colors.White, new Thickness(24, 14)));
         }
     }

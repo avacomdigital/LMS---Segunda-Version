@@ -54,6 +54,12 @@ class Libro(Protocol):
     """MOD-011 por `gradebook.servicios`: la calificación YA presentada con la escala del nivel (en modo simple, sin cifras). Reporting no convierte nada."""
 
     def resultados_del_grupo(self, grupo_id: str) -> dict | None: ...
+    def boletin_de_alumno(self, alumno_id: str, grupo_id: str, materia: dict | None = None) -> dict | None:
+        """Lo que el libro sabe de un alumno en un grupo, ya presentado: resumen, cursos (con puntos brutos), insights, observaciones del profesor y todas sus evaluaciones."""
+    def progreso_del_alumno(self, alumno_id: str) -> list[dict]:
+        """Lo que lleva en cada curso de cada periodo en que estuvo (agregados por periodo, presentados), informativo y no oficial."""
+    def politica_institucional(self) -> dict:
+        """`{pais, jurisdiccion, institucion, politica_intentos}` de la política del libro: para elegir la plantilla y el encabezado del boletín."""
     def eventos_desde(self, secuencia: int, limite: int, tipos: tuple[str, ...]) -> tuple[list[dict], int]: ...
     def ultima_secuencia(self) -> int: ...
 

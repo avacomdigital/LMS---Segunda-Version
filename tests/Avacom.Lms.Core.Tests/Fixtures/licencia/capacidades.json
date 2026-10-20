@@ -1,0 +1,11 @@
+{
+  "estado": "sin_licencia",
+  "habilitadas": [
+    "administracion_avanzada",
+    "busqueda",
+    "importacion",
+    "reportes"
+  ],
+  "no_disponibles": [],
+  "restringe": false
+}

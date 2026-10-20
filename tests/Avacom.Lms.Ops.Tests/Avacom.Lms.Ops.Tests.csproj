@@ -53,4 +53,12 @@
     <None Include="..\Avacom.Lms.Core.Tests\Fixtures\reportes\*.json" Link="Fixtures\reportes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- MOD-018 · Licencia: cómo se encuentran los .avlic en las memorias y carpetas, el flujo de tres pasos, la liberación, la copia de custodia y su escritura segura. Lógica pura, sin MAUI:
+       las piezas con interfaz viven en Licencia\Ui y NO entran aquí. Las respuestas y los archivos REALES del backend que ya capturó Core, vinculados y no copiados. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Licencia\*.cs" Exclude="..\..\src\Avacom.Lms.Ops\Licencia\Ui\**" LinkBase="Ops\Licencia" />
+    <None Include="..\Avacom.Lms.Core.Tests\Fixtures\licencia\*.json;..\Avacom.Lms.Core.Tests\Fixtures\licencia\*.avlic;..\Avacom.Lms.Core.Tests\Fixtures\licencia\*.avreq;..\Avacom.Lms.Core.Tests\Fixtures\licencia\*.avrel"
+          Link="Fixtures\licencia\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

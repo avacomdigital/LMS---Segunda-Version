@@ -31,7 +31,7 @@ public sealed class CalificacionesTests
         Assert.Equal("Revisado", c.Estado);
         Assert.Equal(Matiz.Info, c.Matiz);
         Assert.Equal("4,8", c.Principal);
-        Assert.Equal("interno 95,24 de 100", c.Secundario);
+        Assert.Equal("20 de 21 puntos · 95,24 %", c.Secundario);            // la nota se lee con los puntos brutos y el porcentaje junto a la presentada
         Assert.Contains("provisional", c.Marcas);          // la presentación aún no se publicó
         Assert.Contains("sin publicar", c.Marcas);
         Assert.DoesNotContain("publicada", c.Marcas);
@@ -189,15 +189,66 @@ public sealed class CalificacionesTests
         Assert.Equal("0 calificaciones · 1 por completar", VistaDelLibro.DetalleDeAgregado(vacio));
     }
 
+    // ----------------------------------------------------------------------------------- la lista de estudiantes
+
+    private static FilaDelLibro Estudiante(string nombre, decimal? promedio, int porRevisar = 0, int sinPublicar = 0, bool conResumen = true) =>
+        new($"id-{nombre}", nombre, new Dictionary<string, CeldaDelLibro>(), [], conResumen ? new ResumenDeEstudiante(5, new ConteoDeEvaluaciones(0, 0, 0, sinPublicar, porRevisar, 0, 0, 0, 0), promedio) : null);
+
+    [Fact]
+    public void La_lista_se_ordena_de_la_A_a_la_Z_sin_mirar_mayusculas()
+    {
+        var filas = new[] { Estudiante("carlos", 40), Estudiante("Ana", 90), Estudiante("Bea", null) };
+        Assert.Equal(["Ana", "Bea", "carlos"], VistaDelLibro.Ordenar(filas, VistaDelLibro.OrdenNombre).Select(f => f.Rotulo).ToArray());
+        Assert.Equal(["Ana", "Bea", "carlos"], VistaDelLibro.Ordenar(filas, "algo-desconocido").Select(f => f.Rotulo).ToArray());       // un orden que no existe cae al alfabético
+    }
+
+    [Fact]
+    public void Quien_necesita_atencion_va_primero_y_a_igual_atencion_por_nombre()
+    {
+        var filas = new[] { Estudiante("Ana", 90), Estudiante("Bea", 80, porRevisar: 2), Estudiante("Carlos", 70, sinPublicar: 3), Estudiante("Dani", null), Estudiante("Eli", 60, conResumen: false) };
+        Assert.Equal(["Carlos", "Bea", "Ana", "Dani", "Eli"], VistaDelLibro.Ordenar(filas, VistaDelLibro.OrdenAtencion).Select(f => f.Rotulo).ToArray());
+    }
+
+    [Fact]
+    public void Por_promedio_el_mas_bajo_va_primero_y_quien_no_tiene_nada_calificado_va_al_final_no_es_el_mas_bajo()
+    {
+        var filas = new[] { Estudiante("Ana", 90), Estudiante("Bea", null), Estudiante("Carlos", 40), Estudiante("Dani", 70), Estudiante("Eli", 0.5m) };
+        Assert.Equal(["Eli", "Carlos", "Dani", "Ana", "Bea"], VistaDelLibro.Ordenar(filas, VistaDelLibro.OrdenPromedio).Select(f => f.Rotulo).ToArray());
+    }
+
+    [Fact]
+    public void El_libro_en_resumen_trae_lo_que_lleva_cada_estudiante_y_se_dice_en_palabras()
+    {
+        var libro = Cargar<LibroDelGrupo>("libro_resumen");
+        Assert.All(libro.Alumnos, f => Assert.Empty(f.Celdas));
+        var juan = libro.Alumnos.Single(f => f.Rotulo == "Juan P.");
+        Assert.Equal("1 de 2 con nota", BoletinTexto.ConNota(juan.Resumen!));
+        Assert.Equal("1 por revisar", BoletinTexto.PorAtender(juan.Resumen!.Conteo));                                        // la otra ya está publicada
+        Assert.Equal("3,8", BoletinTexto.Promedio(juan.Resumen.Presentado));
+        Assert.Equal(1, VistaDelLibro.Filas(libro, "juan").Count);                                                          // el buscador funciona también sin celdas
+    }
+
+    [Fact]
+    public void Lo_calificado_sin_registrar_se_cuenta_con_lo_que_dijo_el_nodo_aunque_el_libro_venga_sin_celdas()
+    {
+        var libro = Cargar<LibroDelGrupo>("libro_resumen");
+        var columna = libro.Asignaciones[0];
+        Assert.Equal(0, VistaDelLibro.SinRegistrar(libro, columna.Id));
+        var conPendientes = libro with { Asignaciones = [columna with { Conteo = columna.Conteo! with { SinRegistro = 2 } }, .. libro.Asignaciones.Skip(1)] };
+        Assert.Equal(2, VistaDelLibro.SinRegistrar(conPendientes, columna.Id));
+    }
+
     // ----------------------------------------------------------------------------------- registrar lo calificado
 
     [Fact]
     public void Lo_calificado_antes_de_elegir_el_sistema_se_cuenta_por_columna_y_solo_si_el_estudiante_completo()
     {
-        var libro = Cargar<LibroDelGrupo>("libro");
-        var columna = libro.Asignaciones[0].Id;
-        var celda = PrimeraCelda(libro);
-        Assert.Equal(0, VistaDelLibro.SinRegistrar(libro, columna));                            // ya tiene nota registrada
+        var conNodo = Cargar<LibroDelGrupo>("libro");
+        var columna = conNodo.Asignaciones[0].Id;
+        var celda = PrimeraCelda(conNodo);
+        Assert.Equal(0, VistaDelLibro.SinRegistrar(conNodo, columna));                          // ya tiene nota registrada
+        Assert.Equal(3, VistaDelLibro.SinRegistrar(conNodo with { Asignaciones = [conNodo.Asignaciones[0] with { Conteo = conNodo.Asignaciones[0].Conteo! with { SinRegistro = 3 } }] }, columna)); // el conteo del nodo manda cuando viene
+        var libro = conNodo with { Asignaciones = [conNodo.Asignaciones[0] with { Conteo = null }] }; // sin conteo del nodo se cuentan las celdas
         var sinRegistro = libro with { Alumnos = [libro.Alumnos[0] with { Celdas = new() { [columna] = celda with { Estado = EstadosDeResultado.SinRegistro, CalificacionId = null, Presentacion = null } } }] };
         Assert.Equal(1, VistaDelLibro.SinRegistrar(sinRegistro, columna));
         Assert.Equal(0, VistaDelLibro.SinRegistrar(sinRegistro, "otra"));

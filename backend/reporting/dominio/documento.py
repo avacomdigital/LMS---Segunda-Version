@@ -186,3 +186,13 @@ CONSTRUCTORES = {cat.CLASE: de_clase, cat.GRUPO: de_grupo, cat.ALUMNO: de_alumno
 def de_reporte(tipo: str, reporte: dict, ctx: dict) -> Documento:
     """El documento de un reporte ya armado. `ctx`: `titulo`, `generado_por`, `generado_el`, `corte_texto`, `version_nodo` y `fecha` (ms → texto)."""
     return CONSTRUCTORES[tipo](reporte, ctx)
+
+
+def de_reporte_varios(tipo: str, reporte: dict, ctx: dict) -> list[Documento]:
+    """Los documentos de un reporte: uno, salvo el boletín de un grupo, que es UNO POR ESTUDIANTE (lo que el profesor entrega a cada familia)."""
+    if tipo == cat.BOLETIN:
+        from . import boletin as bol
+        if "boletines" in reporte:
+            return [bol.documento_de_boletin(m, ctx) for m in reporte["boletines"]]
+        return [bol.documento_de_boletin(reporte["boletin"], ctx)]
+    return [de_reporte(tipo, reporte, ctx)]

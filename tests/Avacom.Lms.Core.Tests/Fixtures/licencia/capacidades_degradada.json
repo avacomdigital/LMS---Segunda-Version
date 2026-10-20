@@ -1,0 +1,11 @@
+{
+  "estado": "degradada",
+  "habilitadas": [],
+  "no_disponibles": [
+    "administracion_avanzada",
+    "busqueda",
+    "importacion",
+    "reportes"
+  ],
+  "restringe": true
+}

@@ -1,0 +1,57 @@
+{
+  "cambiado": true,
+  "configuracion": {
+    "actualizada_en": 1790000010000,
+    "actualizada_por": "115ea698-bbc7-4243-bb68-afb57c93e63f",
+    "destinos": [
+      "extraible",
+      "carpeta_local",
+      "red"
+    ],
+    "exigir_razon": false,
+    "extraibles_permitidos": true,
+    "formatos": [
+      "xlsx",
+      "csv"
+    ],
+    "leyenda_boletin": "",
+    "minimo_de_alumnos": 5,
+    "periodos_boletin": [
+      "1.er periodo",
+      "2.º periodo",
+      "3.er periodo"
+    ],
+    "plantilla_boletin": "mx",
+    "plantillas_de_boletin": [
+      "auto",
+      "co",
+      "mx",
+      "generica"
+    ],
+    "razones": [
+      {
+        "codigo": "entrega_a_familias",
+        "etiqueta": "Entrega a las familias"
+      },
+      {
+        "codigo": "entrega_a_coordinacion",
+        "etiqueta": "Entrega a coordinación o secretaría"
+      },
+      {
+        "codigo": "reunion_de_equipo",
+        "etiqueta": "Reunión del equipo docente"
+      },
+      {
+        "codigo": "respaldo_del_profesor",
+        "etiqueta": "Respaldo del propio profesor"
+      },
+      {
+        "codigo": "otra_gestion_escolar",
+        "etiqueta": "Otra gestión escolar"
+      }
+    ],
+    "umbral_privacidad": false,
+    "version": 1
+  },
+  "servidor_en": 1790000010000
+}

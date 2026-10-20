@@ -190,6 +190,8 @@ class Calificacion(models.Model):
     puntaje_fuente = models.DecimalField(max_digits=5, decimal_places=2)       # lo que MOD-010 dijo la última vez que se registró o recalculó: si cambia, hay un desfase
     aciertos = models.PositiveSmallIntegerField(null=True, blank=True)         # para el modo simple y la retroalimentación: cuántas respondió bien…
     preguntas = models.PositiveSmallIntegerField(null=True, blank=True)        # …de cuántas
+    puntos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)          # los puntos BRUTOS que MOD-010 contó al calificar (14 de 18)…
+    puntos_maximos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # …sobre cuántos; la nota se lee con los tres: puntos, porcentaje y sistema
     regla_puntuacion = models.CharField(max_length=48)
     origen = models.CharField(max_length=12, choices=_lista(cat.ORIGENES))
     evaluador_id = models.CharField(max_length=64)                             # `sistema` o la persona que calificó
@@ -215,6 +217,10 @@ class Calificacion(models.Model):
             models.CheckConstraint(condition=Q(puntaje_original__gte=0) & Q(puntaje_original__lte=100), name="ck_m11_calificacion_original_rango"),
             models.CheckConstraint(condition=Q(puntaje_efectivo__gte=0) & Q(puntaje_efectivo__lte=100), name="ck_m11_calificacion_efectivo_rango"),
             models.CheckConstraint(condition=Q(puntaje_fuente__gte=0) & Q(puntaje_fuente__lte=100), name="ck_m11_calificacion_fuente_rango"),
+            # Los puntos brutos van juntos: o se conocen los dos (y los obtenidos no superan el máximo) o ninguno.
+            models.CheckConstraint(condition=(Q(puntos__isnull=True) & Q(puntos_maximos__isnull=True))
+                                   | (Q(puntos__isnull=False) & Q(puntos_maximos__isnull=False) & Q(puntos__gte=0) & Q(puntos__lte=F("puntos_maximos"))),
+                                   name="ck_m11_calificacion_puntos"),
             # INV-019: toda calificación apunta a un intento, un evaluador y una regla.
             models.CheckConstraint(condition=~Q(evaluador_id="") & ~Q(regla_puntuacion=""), name="ck_m11_calificacion_evaluador_regla"),
             # Publicada ⇔ definitiva: lo que el alumno ve tiene quién lo publicó y cuándo; lo reabierto o anulado no está publicado.
@@ -289,6 +295,34 @@ class Revision(models.Model):
             models.CheckConstraint(condition=Q(puntaje__gte=0), name="ck_m11_revision_puntaje"),
         ]
         indexes = [models.Index(fields=["intento_id", "pregunta_ref"], name="ix_m11_revision_intento")]
+
+
+# ========================================================================================= observaciones del docente
+
+class Observacion(models.Model):
+    """Lo que el profesor recomienda a UN alumno en UN grupo y UN periodo, en general (`curso_ref` vacío) o sobre un curso: la cuarta pregunta del boletín («¿qué debe
+    mejorar?»). `recomendaciones` son claves del catálogo cerrado (`catalogos.RECOMENDACIONES`, que se toca sin teclado) y `texto` es un extra opcional. Cada cambio
+    sube `version`, deja su asiento en la bitácora (quién, cuándo, de qué a qué) y publica su evento; repetir lo mismo no deja nada."""
+
+    id = models.CharField(max_length=36, primary_key=True)
+    alumno_id = models.CharField(max_length=64)
+    grupo_id = models.CharField(max_length=36)
+    periodo = models.CharField(max_length=16, blank=True, default="")
+    curso_ref = models.CharField(max_length=200, blank=True, default="")
+    recomendaciones = models.JSONField(default=list)
+    texto = models.CharField(max_length=cat.MAX_OBSERVACION, blank=True, default="")
+    version = models.PositiveIntegerField(default=1)
+    actualizada_en = models.BigIntegerField(default=ahora_ms)
+    actualizada_por = models.CharField(max_length=64)
+
+    class Meta:
+        db_table = "m11_observacion"
+        constraints = [
+            models.UniqueConstraint(fields=["alumno_id", "grupo_id", "periodo", "curso_ref"], name="ux_m11_observacion"),
+            models.CheckConstraint(condition=~Q(actualizada_por=""), name="ck_m11_observacion_actor"),
+            models.CheckConstraint(condition=Q(version__gte=1), name="ck_m11_observacion_version"),
+        ]
+        indexes = [models.Index(fields=["grupo_id", "periodo"], name="ix_m11_observacion_grupo")]
 
 
 # ===================================================================================================== lo derivado

@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Licencia;
 using Avacom.Lms.Core.Reporting;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Examen;
@@ -100,6 +101,23 @@ public sealed class ReportesPage : ContentPage
             if (!_visible) return;
             if (filtros is null)
             {
+                // MOD-018 · H-01: Reportes en pausa por la licencia (402 no_disponible_por_licencia). «Visitantes y actividad» (con «Vincular a un alumno», RF-09c) es núcleo y sólo se
+                // alcanza desde aquí: el botón de la cabecera se queda y el aviso lo repite. El texto es el común de la licencia; quien la administra tiene a mano «Ver la licencia».
+                if (api.UltimoError is { EsModuloNoDisponible: true } porLicencia)
+                {
+                    var botones = new List<View>
+                    {
+                        ExamenUi.Accion("Visitantes y actividad", Ds.Rango.Secondary, ReportesUi.Seguro(nameof(ReportesPage), "VisitantesConLicencia", () => Shell.Current.GoToAsync("activity-monitor")),
+                            250, "reportes-licencia-visitantes", margen: false).Vista,
+                    };
+                    if (ReglasDeLicencia.VeLaLicencia(Sesion.Usuario))
+                        botones.Add(ExamenUi.Accion("Ver la licencia", Ds.Rango.Quiet, ReportesUi.Seguro(nameof(ReportesPage), "VerLicencia", () => Shell.Current.GoToAsync("licencia")), 200,
+                            "reportes-licencia-ver", margen: false).Vista);
+                    PonerSoloCentral(ReportesUi.Estado("No disponible con la licencia de este equipo", LicenciaTexto.ParaError(porLicencia) ?? ReportesUi.Error(api), [.. botones]));
+                    _recientesHost.Clear();
+                    _usoHost.Content = null;
+                    return;
+                }
                 var sinConexion = ReportesUi.SinConexion(api);
                 PonerSoloCentral(ReportesUi.Estado(sinConexion ? "Sin conexión con el aula" : "No se pudieron leer los reportes", ReportesUi.Error(api),
                     ExamenUi.Accion("Reintentar", Ds.Rango.Secondary, ReportesUi.Seguro(nameof(ReportesPage), "Reintentar", () => CargarAsync(forzar: true)), 170, "reportes-reintentar", margen: false).Vista));
@@ -184,25 +202,14 @@ public sealed class ReportesPage : ContentPage
     {
         _recientesHost.Clear();
         _usoHost.Content = null;
+        // En el tercio derecho del pie: el boletín académico (un archivo por estudiante, con la plantilla del país) y el uso de equipos, según lo que el nodo deja a esta persona.
+        var secundarias = new VerticalStackLayout { Spacing = 8 };
+        if (filtros.Puede.Alumno)
+            secundarias.Add(TarjetaPequena("reportes_alumno.png", "Boletín académico", "Un boletín por estudiante: puntos, calificación, competencias, progreso y recomendaciones.",
+                RutasDeReportes.DeElegir(RutasDeReportes.ElegirBoletin), "reportes-tarjeta-boletin", "Boletin"));
         if (filtros.Puede.Uso)
-        {
-            var uso = ReportesUi.Tocable(new HorizontalStackLayout
-            {
-                Spacing = 14, Children =
-                {
-                    new Image { Source = "reportes_uso.png", WidthRequest = 40, HeightRequest = 40, VerticalOptions = LayoutOptions.Center },
-                    new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center, Children =
-                    {
-                        new Label { Text = "Uso de equipos", FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta },
-                        Ds.Secundario("Qué tabletas se usaron y cuánto.", 14),
-                    } },
-                },
-            }, ReportesUi.Seguro(nameof(ReportesPage), "Uso", () => Shell.Current.GoToAsync(RutasDeReportes.DeUso())), "Uso de equipos. Qué tabletas se usaron y cuánto.", "reportes-tarjeta-uso", Colors.White, new Thickness(18, 12));
-            uso.StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioTarjeta };
-            uso.Shadow = Ds.SombraTarjeta();
-            uso.Margin = new Thickness(Aire, 0);
-            _usoHost.Content = uso;
-        }
+            secundarias.Add(TarjetaPequena("reportes_uso.png", "Uso de equipos", "Qué tabletas se usaron y cuánto.", RutasDeReportes.DeUso(), "reportes-tarjeta-uso", "Uso"));
+        if (secundarias.Children.Count > 0) _usoHost.Content = secundarias;
 
         var lista = recientes?.Recientes.Where(r => RutasDeReportes.DeReciente(r) is not null).Take(6).ToList() ?? [];
         _recientesHost.Add(EstudioUi.Eyebrow("RECIENTES"));
@@ -222,6 +229,26 @@ public sealed class ReportesPage : ContentPage
     }
 
     private static string Recortar(string texto, int maximo) => texto.Length <= maximo ? texto : texto[..(maximo - 1)].TrimEnd() + "…";
+
+    private static Border TarjetaPequena(string icono, string titulo, string descripcion, string ruta, string id, string donde)
+    {
+        var tarjeta = ReportesUi.Tocable(new HorizontalStackLayout
+        {
+            Spacing = 14, Children =
+            {
+                new Image { Source = icono, WidthRequest = 40, HeightRequest = 40, VerticalOptions = LayoutOptions.Center },
+                new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center, Children =
+                {
+                    new Label { Text = titulo, FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta },
+                    Ds.Secundario(descripcion, 14),
+                } },
+            },
+        }, ReportesUi.Seguro(nameof(ReportesPage), donde, () => Shell.Current.GoToAsync(ruta)), $"{titulo}. {descripcion}", id, Colors.White, new Thickness(18, 12));
+        tarjeta.StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioTarjeta };
+        tarjeta.Shadow = Ds.SombraTarjeta();
+        tarjeta.Margin = new Thickness(Aire, 0);
+        return tarjeta;
+    }
 
     private void PintarAcciones(FiltrosDeReportes filtros)
     {

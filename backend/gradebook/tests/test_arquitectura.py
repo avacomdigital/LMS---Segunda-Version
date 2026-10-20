@@ -21,7 +21,7 @@ from ..dominio import catalogos as cat
 PROHIBIDOS = ("django", "rest_framework", "pydantic", "sqlalchemy", "fastapi")
 RAIZ = Path(__file__).resolve().parent.parent
 TABLAS = {"m11_escala", "m11_escala_version", "m11_escala_tramo", "m11_config_nivel", "m11_politica", "m11_clasificacion", "m11_calificacion", "m11_calificacion_version",
-          "m11_revision", "m11_resultado", "m11_agregado_periodo", "m11_marca_consumidor", "m11_evento_salida"}
+          "m11_revision", "m11_resultado", "m11_agregado_periodo", "m11_marca_consumidor", "m11_evento_salida", "m11_observacion"}
 
 
 def fuentes(*carpetas: str):

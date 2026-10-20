@@ -18,6 +18,7 @@ from datetime import date, datetime, time
 
 from ..dominio import archivo as arch
 from ..dominio import avance as av
+from ..dominio import boletin as bol
 from ..dominio import catalogos as cat
 from ..dominio import clase as clase_dom
 from ..dominio import integracion
@@ -74,7 +75,8 @@ class _Lector(_CasoDeUso):
         el reporte se entrega igual."""
         try:
             ahora = self.s.reloj.ahora_ms()
-            filas = len(reporte.get("filas") or reporte.get("alumnos") or reporte.get("grupos") or reporte.get("equipos") or [])
+            filas = len(reporte.get("filas") or reporte.get("alumnos") or reporte.get("grupos") or reporte.get("equipos") or reporte.get("boletines") or
+                        (reporte.get("boletin") or {}).get("evaluaciones") or [])
             with self.s.uow() as uow:
                 if actor.id:
                     uow.recientes.registrar(actor.id, tipo, parametros, ahora)
@@ -338,6 +340,110 @@ def _pct(puntos, maximos):
     return porcentaje(puntos, maximos) if m is not None and m > 0 else None
 
 
+# =================================================================================================================== el boletín académico individual
+
+def _nombres_de_materias(uow: UnidadDeTrabajo) -> dict[str, str]:
+    """`{código de materia: nombre}` según el árbol de la biblioteca (leído en vivo); vacío si no responde: las materias se muestran por su código en palabras."""
+    disponible, _, nodos = uow.arbol.arbol()
+    nombres: dict[str, str] = {}
+    if not disponible:
+        return nombres
+
+    def recorrer(lista):
+        for n in lista:
+            if not isinstance(n, dict):
+                continue
+            if n.get("kind") == "subject" and n.get("code"):
+                nombres.setdefault(str(n["code"]), str(n.get("name") or n["code"]))
+            recorrer(n.get("children") or [])
+
+    recorrer(nodos)
+    return nombres
+
+
+class ReporteDeBoletin(_Lector):
+    """El boletín académico de UN estudiante (o de todos los de un grupo, uno por estudiante): el modelo de información común armado sobre lo que el libro ya presentó, con la
+    plantilla del país y del nivel. Es nominal por naturaleza (el umbral de privacidad es de los agregados) y exige `reports.student.view` sobre el grupo."""
+
+    def ejecutar(self, actor: Actor, alumno_id: str, consulta: dict | None = None) -> dict:
+        self._al_dia()
+        consulta = consulta or {}
+        reporte = self.armar(actor, alumno_id, consulta)
+        parametros = {"alumno_id": alumno_id, "grupo_id": reporte["grupo"]["id"], **parametros_de_nodo(consulta)}
+        self._dejar_rastro(actor, cat.BOLETIN, parametros, reporte, grupo_id=reporte["grupo"]["id"])
+        return reporte
+
+    def ejecutar_grupo(self, actor: Actor, grupo_id: str, consulta: dict | None = None) -> dict:
+        self._al_dia()
+        consulta = consulta or {}
+        reporte = self.armar_grupo(actor, grupo_id, consulta)
+        self._dejar_rastro(actor, cat.BOLETIN, {"grupo_id": grupo_id, **parametros_de_nodo(consulta)}, reporte, grupo_id=grupo_id)
+        return reporte
+
+    def _grupo_del_alumno(self, uow: UnidadDeTrabajo, actor: Actor, alumno_id: str, pedido: str) -> dict:
+        propios = uow.identidad.grupos_del_alumno(alumno_id) if alumno_id else []
+        if pedido:
+            self.s.autorizacion.exigir(actor, cat.P_STUDENT, grupo_id=pedido)
+            if pedido not in propios:
+                raise NoEncontrado("Ese alumno no está en ese grupo.", alumno_id=alumno_id, grupo_id=pedido)       # el rótulo de cualquier persona no se da
+            grupo_id = pedido
+        else:
+            self.s.autorizacion.exigir(actor, cat.P_STUDENT)
+            if not propios:
+                raise AlumnoSinGrupo("Ese alumno no pertenece a ningún grupo activo: no hay boletín que armar.", alumno_id=alumno_id)
+            visibles = self.s.autorizacion.grupos_visibles(actor, cat.P_STUDENT)
+            grupos = sorted(g for g in propios if visibles is None or g in visibles)
+            if not grupos:
+                raise FueraDeAlcance("Ese alumno no está en ninguno de tus grupos.", alumno_id=alumno_id)
+            grupo_id = grupos[0]
+        grupo = uow.identidad.grupo(grupo_id)
+        if grupo is None:
+            raise NoEncontrado("No existe ese grupo.", grupo_id=grupo_id)
+        return grupo
+
+    def _modelo(self, uow: UnidadDeTrabajo, alumno_id: str, grupo: dict, materia: dict, config: dict, politica: dict, nombres: dict[str, str]) -> dict | None:
+        boletin = uow.libro.boletin_de_alumno(alumno_id, grupo["id"], materia or None)
+        if boletin is None:
+            return None
+        return bol.armar_modelo(boletin, uow.libro.progreso_del_alumno(alumno_id), politica, config, nombres_de_materias=nombres)
+
+    def armar(self, actor: Actor, alumno_id: str, consulta: dict) -> dict:
+        ahora = self.s.reloj.ahora_ms()
+        materia = parametros_de_nodo(consulta)
+        with self.s.uow(lectura=True) as uow:
+            exigir_nodo_instalado(uow)
+            grupo = self._grupo_del_alumno(uow, actor, alumno_id, str(consulta.get("grupo_id") or ""))
+            config = uow.config.get()
+            modelo = self._modelo(uow, alumno_id, grupo, materia, config, uow.libro.politica_institucional(), _nombres_de_materias(uow))
+            if modelo is None:
+                raise NoEncontrado("Ese alumno no está en ese grupo.", alumno_id=alumno_id, grupo_id=grupo["id"])
+            base = self._cabecera(uow, actor, cat.BOLETIN, ahora, senales=[], equipos=0, alumnos=1, nominal=True, umbral_activo=config["umbral_privacidad"], avisos=[])
+            base["privacidad"] = priv.bloque(1, False)             # el boletín de UN estudiante es nominal por definición: el umbral es de los agregados
+            base["titulo"] = f"Boletín académico · {modelo['estudiante']['rotulo']}"
+            return {**base, "alumno": dict(modelo["estudiante"]), "grupo": grupo_resumido(grupo), "plantilla": modelo["plantilla"], "boletin": modelo}
+
+    def armar_grupo(self, actor: Actor, grupo_id: str, consulta: dict) -> dict:
+        ahora = self.s.reloj.ahora_ms()
+        materia = parametros_de_nodo(consulta)
+        with self.s.uow(lectura=True) as uow:
+            exigir_nodo_instalado(uow)
+            grupo = uow.identidad.grupo(grupo_id) if grupo_id else None
+            if grupo is None:
+                raise NoEncontrado("No existe ese grupo.", grupo_id=grupo_id)
+            self.s.autorizacion.exigir(actor, cat.P_STUDENT, grupo_id=grupo_id)
+            alumnos = sorted(uow.identidad.alumnos_del_grupo(grupo_id), key=lambda a: (tx.clave_de_orden(a["rotulo"]), a["id"]))
+            if len(alumnos) > cat.MAX_BOLETINES_POR_ARCHIVO:
+                raise DatosInvalidos(f"Este grupo tiene más de {cat.MAX_BOLETINES_POR_ARCHIVO} estudiantes: genera los boletines por estudiante.", alumnos=len(alumnos))
+            config, politica, nombres = uow.config.get(), uow.libro.politica_institucional(), _nombres_de_materias(uow)
+            boletines = [m for m in (self._modelo(uow, a["id"], grupo, materia, config, politica, nombres) for a in alumnos) if m is not None]
+            base = self._cabecera(uow, actor, cat.BOLETIN, ahora, senales=[], equipos=0, alumnos=len(boletines), nominal=bool(boletines), umbral_activo=config["umbral_privacidad"], avisos=[])
+            base["privacidad"] = priv.bloque(len(boletines), False)   # un boletín por estudiante no compara personas: el umbral no lo recorta
+            base["titulo"] = f"Boletines académicos · grupo {grupo['codigo'] or grupo['nombre']}"
+            plantilla = boletines[0]["plantilla"] if boletines else bol.elegir_plantilla(config.get("plantilla_boletin") or cat.PLANTILLA_AUTO, politica.get("pais") or "", grupo["nivel_clave"] or "")
+            return {**base, "grupo": grupo_resumido(grupo), "plantilla": plantilla, "boletines": boletines,
+                    "totales": {"estudiantes": len(alumnos), "boletines": len(boletines), "con_nota": sum(1 for b in boletines if b["resumen"]["con_nota"] > 0)}}
+
+
 # =================================================================================================================== uso de equipos (FUN-142)
 
 class ReporteDeUso(_Lector):
@@ -571,6 +677,15 @@ class Recientes(_Lector):
             if tipo == cat.USO:
                 self.s.autorizacion.exigir(actor, cat.P_USAGE)
                 return "Uso de equipos"
+            if tipo == cat.BOLETIN:
+                self.s.autorizacion.exigir(actor, cat.P_STUDENT, grupo_id=p.get("grupo_id", ""))
+                g = uow.identidad.grupo(p.get("grupo_id", ""))
+                if g is None:
+                    return None
+                if p.get("alumno_id"):
+                    nombre = uow.identidad.rotulos_personas([p["alumno_id"]]).get(p["alumno_id"])
+                    return None if nombre is None else f"Boletín de {nombre}"
+                return f"Boletines del grupo {g['codigo'] or g['nombre']}"
         except (SinPermiso, FueraDeAlcance):
             return None
         return None

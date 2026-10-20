@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Avacom.Lms.Core.Licencia;
 using Avacom.Lms.Core.Models;
 
 namespace Avacom.Lms.Core.Services;
@@ -318,6 +319,13 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
         };
         UltimoMotivo = detalle;
         UltimoError = new ErrorAula(estado, codigo, detalle, sugerencia, extra);
+        // MOD-018 (P-09): un 402 de licencia (un módulo en pausa, el cupo lleno) se dice con el texto COMÚN en cualquier pantalla que ya muestre el motivo o el detalle, sin parchearlas
+        // una por una. El texto del nodo sigue en Extra («detail»); el código y los extras no cambian.
+        if (UltimoError.PorLicencia && LicenciaTexto.ParaError(UltimoError) is { } comun)
+        {
+            UltimoMotivo = comun;
+            UltimoError = UltimoError with { Detalle = comun };
+        }
         // MOD-019 §2.4: todo 401/403/409/5xx (y cualquier 4xx) con la ruta y el código del backend, sin el cuerpo.
         var ruta = respuesta.RequestMessage?.RequestUri?.AbsolutePath ?? "?";
         var nivel = estado >= 500 ? NivelLog.Error : estado == 404 ? NivelLog.Info : NivelLog.Warning;

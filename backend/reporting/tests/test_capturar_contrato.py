@@ -16,6 +16,7 @@ import json
 import os
 import unittest
 
+from .test_boletin import _ConExamenCalificado
 from .test_exportacion import BaseExportacion
 
 CARPETA = os.environ.get("AVACOM_CAPTURAR_CONTRATO", "")
@@ -113,3 +114,24 @@ class CapturarContratoTests(BaseExportacion):
         self.guardar("error_destino_no_permitido", self.docente.post("/api/reportes/exportaciones/", {"reporte": reporte, "formato": "xlsx", "destino_tipo": "extraible",
                                                                                                     "razon_codigo": "entrega_a_familias"}, format="json").json())
         self.guardar("exportacion_alcance_con_politica", self.alcance(reporte))
+
+
+@unittest.skipUnless(CARPETA, "AVACOM_CAPTURAR_CONTRATO no está definida: no se capturan archivos")
+class CapturarBoletinTests(_ConExamenCalificado):
+    """El boletín académico (un examen calificado con el sistema de Colombia y las recomendaciones del profesor): las respuestas que leen los clientes de C#."""
+
+    def guardar(self, nombre: str, cuerpo) -> None:
+        os.makedirs(CARPETA, exist_ok=True)
+        with open(os.path.join(CARPETA, f"{nombre}.json"), "w", encoding="utf-8", newline="\n") as f:
+            json.dump(cuerpo, f, ensure_ascii=False, indent=2, sort_keys=True)
+            f.write("\n")
+
+    def test_capturar(self):
+        self.politica(pais="CO", institucion="IE San José")
+        self.gb(f"/estudiantes/{self.estudiante_id}/observacion/", {"grupo_id": self.grupo["id"], "recomendaciones": ["practicar_ejercicios", "pedir_ayuda"], "texto": "Va mejorando."}, metodo="put")
+        self.guardar("boletin", self.boletin())
+        self.guardar("boletines", self.rp("/boletines/", grupo_id=self.grupo["id"]))
+        self.guardar("boletin_alcance", self.alcance({"tipo": "boletin", "alumno_id": self.estudiante_id, "grupo_id": self.grupo["id"]}))
+        self.guardar("boletines_alcance", self.alcance({"tipo": "boletin", "grupo_id": self.grupo["id"]}))
+        self.guardar("configuracion_boletin", self.admin.put("/api/reportes/configuracion/", {"plantilla_boletin": "mx", "periodos_boletin": ["1.er periodo", "2.º periodo", "3.er periodo"]}, format="json").json())
+        self.guardar("recientes_boletin", self.rp("/recientes/"))

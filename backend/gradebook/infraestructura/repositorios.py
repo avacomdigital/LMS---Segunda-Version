@@ -19,9 +19,10 @@ from ..dominio.escala import DefinicionEscala, Tramo
 
 CAMPOS_CALIFICACION = (
     "id", "intento_id", "asignacion_id", "alumno_id", "grupo_id", "nivel_clave", "periodo", "curso_ref", "numero_intento", "puntaje_original", "puntaje_efectivo",
-    "puntaje_fuente", "aciertos", "preguntas", "regla_puntuacion", "origen", "evaluador_id", "estado", "version", "escala_version_id", "presentacion",
-    "desempeno_docente", "desempeno_motivo", "retroalimentacion", "adaptacion", "publicada_en", "publicada_por", "registrada_en", "actualizada_en",
+    "puntaje_fuente", "aciertos", "preguntas", "puntos", "puntos_maximos", "regla_puntuacion", "origen", "evaluador_id", "estado", "version", "escala_version_id",
+    "presentacion", "desempeno_docente", "desempeno_motivo", "retroalimentacion", "adaptacion", "publicada_en", "publicada_por", "registrada_en", "actualizada_en",
 )
+CAMPOS_OBSERVACION = ("id", "alumno_id", "grupo_id", "periodo", "curso_ref", "recomendaciones", "texto", "version", "actualizada_en", "actualizada_por")
 CAMPOS_VERSION = ("calificacion_id", "numero", "tipo", "puntaje_anterior", "puntaje_nuevo", "estado_anterior", "estado_nuevo", "motivo", "actor_id", "en", "solicitud_id", "datos")
 CAMPOS_REVISION = ("intento_id", "pregunta_ref", "numero", "tipo", "forma", "puntaje", "puntaje_maximo", "criterios", "comentario", "evidencias", "revisor_id", "revisada_en", "solicitud_id")
 CAMPOS_RESULTADO = ("asignacion_id", "alumno_id", "grupo_id", "periodo", "curso_ref", "estado_simple", "estado_calificacion", "calificacion_aplicable_id", "puntaje_aplicable",
@@ -71,6 +72,30 @@ class CalificacionesDjango:
         """Compara y cambia en UNA sentencia (`UPDATE … WHERE id = ? AND version = ?`): la base decide quién se adelantó, no una lectura previa."""
         cambiados = m.Calificacion.objects.filter(pk=calificacion_id, version=version_esperada).update(version=F("version") + 1, **_filtrado(campos, CAMPOS_CALIFICACION))
         return self.por_id(calificacion_id) if cambiados else None
+
+
+class ObservacionesDjango:
+    """Las observaciones del docente (una por alumno, grupo, periodo y curso). `guardar` crea o cambia comparando la versión en UNA sentencia."""
+
+    def get(self, alumno_id: str, grupo_id: str, periodo: str, curso_ref: str = "") -> dict | None:
+        fila = m.Observacion.objects.filter(alumno_id=alumno_id, grupo_id=grupo_id, periodo=periodo, curso_ref=curso_ref).first()
+        return _d(fila, CAMPOS_OBSERVACION) if fila else None
+
+    def de_alumno(self, alumno_id: str, grupo_id: str) -> list[dict]:
+        return [_d(f, CAMPOS_OBSERVACION) for f in m.Observacion.objects.filter(alumno_id=alumno_id, grupo_id=grupo_id).order_by("curso_ref", "periodo")]
+
+    def de_grupo(self, grupo_id: str) -> list[dict]:
+        return [_d(f, CAMPOS_OBSERVACION) for f in m.Observacion.objects.filter(grupo_id=grupo_id).order_by("alumno_id", "curso_ref", "periodo")]
+
+    def crear(self, datos: dict) -> dict:
+        return _d(m.Observacion.objects.create(**_filtrado(datos, CAMPOS_OBSERVACION)), CAMPOS_OBSERVACION)
+
+    def actualizar_si_version(self, observacion_id: str, version_esperada: int, **campos) -> dict | None:
+        cambiados = m.Observacion.objects.filter(pk=observacion_id, version=version_esperada).update(version=F("version") + 1, **_filtrado(campos, CAMPOS_OBSERVACION))
+        if not cambiados:
+            return None
+        fila = m.Observacion.objects.get(pk=observacion_id)
+        return _d(fila, CAMPOS_OBSERVACION)
 
 
 class VersionesDjango:

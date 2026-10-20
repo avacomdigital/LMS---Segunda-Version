@@ -1,0 +1,75 @@
+{
+  "advertencia": "El archivo incluirá nombres de alumnos. Una vez fuera de este equipo, el colegio ya no controla quién lo abre.",
+  "alumnos": 2,
+  "archivos": 2,
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790000010000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": false,
+    "integracion": {
+      "equipos": 0,
+      "estado": "completa",
+      "motivo_linea": "",
+      "motivos": [],
+      "sin_sincronizar": 0,
+      "texto": "Sin tabletas en este reporte"
+    },
+    "texto": "Datos al 21 sep · 09:13"
+  },
+  "filas": 10,
+  "formato": "xlsx",
+  "formato_de_entrega": "zip",
+  "formatos": [
+    "xlsx",
+    "csv"
+  ],
+  "incluye": [
+    "resultados por área con puntos y calificación",
+    "competencias y logros",
+    "progreso por periodo",
+    "recomendaciones del profesor"
+  ],
+  "nombre_sugerido": "reporte-boletines-8A-2026-09-21-0913.zip",
+  "nominal": true,
+  "plantilla": "Colombia · boletín por áreas y asignaturas",
+  "politica": {
+    "exigir_razon": false,
+    "extraibles_permitidos": true,
+    "razones": [
+      {
+        "codigo": "entrega_a_familias",
+        "etiqueta": "Entrega a las familias"
+      },
+      {
+        "codigo": "entrega_a_coordinacion",
+        "etiqueta": "Entrega a coordinación o secretaría"
+      },
+      {
+        "codigo": "reunion_de_equipo",
+        "etiqueta": "Reunión del equipo docente"
+      },
+      {
+        "codigo": "respaldo_del_profesor",
+        "etiqueta": "Respaldo del propio profesor"
+      },
+      {
+        "codigo": "otra_gestion_escolar",
+        "etiqueta": "Otra gestión escolar"
+      }
+    ]
+  },
+  "privacidad": {
+    "alumnos": 2,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790000010000,
+  "texto_alcance": "Vas a guardar los boletines académicos del grupo 8A (un archivo por estudiante, en un zip) (2 alumnos, resultados por área con puntos y calificación, competencias y logros, progreso por periodo y recomendaciones del profesor, datos al 21 sep · 09:13)",
+  "tipo": "boletin",
+  "titulo": "Boletines académicos · grupo 8A",
+  "umbral_aplicado": false
+}

@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Verificado el **2026-10-15** sobre el código final, sin commit. Lo que **no** se pudo comprobar está en el [§5](#5--lo-que-no-se-probó): léelo antes de dar el módulo por cerrado. |
+| Estado | Verificado el **2026-10-15** sobre el código final, sin commit; el **Boletín Académico Individual** (2026-10-19) está en el [§5, punto 10](#5--lo-que-no-se-probó) y en [04-boletin-academico.md](04-boletin-academico.md). Lo que **no** se pudo comprobar está en el [§5](#5--lo-que-no-se-probó): léelo antes de dar el módulo por cerrado. |
 | Qué dice cada documento | Diseño y decisiones: [01-diseno.md](01-diseno.md) · contrato de la API: [02-api.md](02-api.md) · capturas: [capturas/](capturas/). |
 
 ## 1 · En una mirada
@@ -113,6 +113,7 @@ Queda: **8A** (7 estudiantes, modo calificaciones, escala Colombia 1–5), **P1*
 7. **Exportar ≥ 1000 filas en la pantalla.** Lo cubren las pruebas automáticas (3000 filas escritas por bloques en el backend; archivo grande por bloques con avance en OPS); en vivo los grupos de prueba tienen ≤ 10 filas.
 8. **Android.** MOD-013 no tiene pantallas en Student; sólo se compiló Windows (OPS y Student).
 9. **La instalación real.** OPS se probó compilada en una carpeta de pruebas con el perfil de UI Automation, no desde el instalador. El instalador 2.8.0 está en `installer/latest` (15 de octubre de 2026, SHA-256 `98672194C1CD9EE84B1ED0DE7FDEF34FA4765F23628E17FFBB8B198246A189E5`): salió de la misma compilación que MOD-011 (política de datos `protegidos`), con la suite completa del backend en verde y un ensayo del paquete que comprueba que `/api/reportes/clases/` exista y pida sesión. Pero **nadie ha instalado ese `.exe` en un equipo de aula** ni ha exportado un reporte desde esa instalación: la exportación a archivo sólo se vio con OPS compilado en la carpeta de pruebas.
+10. **El Boletín Académico Individual (2026-10-19, D-32 a D-37).** Backend: `reporting/tests/test_boletin.py` (22 pruebas: elección de plantilla por país, nivel y configuración —México Secundaria en disciplinas, preescolar sin cifras—, desempeño nacional, modelo común con las cuatro preguntas, boletín de un estudiante y del grupo con permisos y alcance, exportación por estudiante en xlsx/csv y del grupo como **zip con un archivo por estudiante**, configuración con plantilla, periodos y leyenda validados) más la arquitectura con el evento `reporte.boletin_generado.v1`; la pasada completa de `gradebook reporting audit`: 510 OK (3 omitidas). C#: contrato con las respuestas reales (`boletin`, `boletines`, `*_alcance`, `configuracion_boletin`, `recientes_boletin`), `ReportesApiTests` (el grupo se pide sin alumno y llega como zip) y las rutas de recientes; Core 1221, OPS 399. **No** se probó: ninguna pantalla en ventana (la tarjeta «Boletín académico», la lista de grupos, las dos páginas del boletín, la hoja de exportar con el zip ni los ajustes de plantilla y periodos), la escritura real del zip en una memoria, el boletín con AVACOM Contenido real (los nombres de materia salen del árbol de la biblioteca), ni ninguna de las plantillas contra las tres del XLSX del CTO, que no llegó.
 
 ## 6 · Revisión independiente
 

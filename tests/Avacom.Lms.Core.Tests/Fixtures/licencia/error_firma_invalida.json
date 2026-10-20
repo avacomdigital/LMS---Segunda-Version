@@ -1,0 +1,5 @@
+{
+  "codigo": "licencia_invalida",
+  "detail": "La firma de la licencia no es válida: el archivo fue modificado o no es de AVACOM.",
+  "motivo": "firma_invalida"
+}

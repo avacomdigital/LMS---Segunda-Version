@@ -59,3 +59,9 @@ class PaqueteSinIntegrar(ErrorDispositivos):
     él, liberarlo lo dejaría a la vista del siguiente alumno. Debe retirarse el paquete antes de liberar el equipo."""
     codigo = "paquete_sin_integrar"
     http = 409
+
+
+class CupoAgotado(ErrorDispositivos):
+    """Se alcanzó el cupo de equipos de la licencia (MOD-018): no se pueden registrar más; los que ya están registrados siguen funcionando. 402, no 403: no es un permiso."""
+    codigo = "cupo_agotado"
+    http = 402

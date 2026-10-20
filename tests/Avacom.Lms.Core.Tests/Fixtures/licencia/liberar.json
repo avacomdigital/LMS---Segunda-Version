@@ -1,0 +1,59 @@
+{
+  "ahora": 1792511663388,
+  "archivo_b64": "QVZSTAABQGFiMTA3MTBjN2JlODE0NDgyZjA5YjNkZmRjZjJlMjYzZjFhMThmOGUwYjA2YTZiNzg5ZjBiY2MwMTQwZjVlOTGAAQAQp6enpwABQACAAAAAAAAAAYACAAQAAAACgAMACAAAAaFaBVsJgAQAEGJagVWlJtNgxr2i8PhvCXaABQAgqxBxDHvoFEgvCbPf3PLiY/Ghj44LBqa3ifC8wBQPXpHJbs2K4GRe5rvAm+FWBKnpIij7hN3tKWdV9588eCP6dQpylqOzlpvnNKhFKNUB+gyx0BorxuItEmnrh97RPIQH",
+  "avisos": [
+    {
+      "codigo": "evaluacion",
+      "dias": 30,
+      "urgente": false
+    }
+  ],
+  "banderas": [],
+  "calculada_en": 1792511662857,
+  "capacidades": {
+    "habilitadas": [
+      "administracion_avanzada",
+      "busqueda",
+      "importacion",
+      "reportes"
+    ],
+    "no_disponibles": []
+  },
+  "consumo": {
+    "equipos": 1,
+    "usuarios": 3
+  },
+  "entorno": "pruebas",
+  "estado": "sin_licencia",
+  "huella": {
+    "coincide": null,
+    "coinciden": null,
+    "factores": null,
+    "k": null,
+    "nivel": "hardware",
+    "parcial": false
+  },
+  "licencia": null,
+  "licencia_id": "a7a7a7a7-0001-4000-8000-000000000001",
+  "limites": {
+    "concurrentes_normal": 50,
+    "concurrentes_pico": 100,
+    "equipos": 100,
+    "usuarios": 3000
+  },
+  "modo": "firmada",
+  "motivo": "evaluacion",
+  "nombre": "liberacion-2026-10-20-1554.avrel",
+  "restringe": false,
+  "serie": 2,
+  "sha256": "325f09c6f03b07acc54743da25adb552fafce1712ca286cabd28d6b555dfea87",
+  "texto": "AVR1.QVZSTAABQGFiMTA3MTBjN2JlODE0NDgyZjA5YjNkZmRjZjJlMjYzZjFhMThmOGUwYjA2YTZiNzg5ZjBiY2MwMTQwZjVlOTGAAQAQp6enpwABQACAAAAAAAAAAYACAAQAAAACgAMACAAAAaFaBVsJgAQAEGJagVWlJtNgxr2i8PhvCXaABQAgqxBxDHvoFEgvCbPf3PLiY_Ghj44LBqa3ifC8wBQPXpHJbs2K4GRe5rvAm-FWBKnpIij7hN3tKWdV9588eCP6dQpylqOzlpvnNKhFKNUB-gyx0BorxuItEmnrh97RPIQH",
+  "tipo": null,
+  "vigencia": {
+    "desde": null,
+    "dias_restantes": 30,
+    "gracia_dias": null,
+    "hasta": 1795103662857,
+    "vence": null
+  }
+}

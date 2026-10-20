@@ -69,6 +69,12 @@ class GuiaDeCalificacion(Protocol):
         """`{rubrica: [{id, criterio, puntos_max: Decimal}], respuesta_modelo, puntos, formato}` o None si la biblioteca no la entrega."""
 
 
+class Arbol(Protocol):
+    """El árbol académico de la biblioteca, sólo para ponerle nombre a una materia (el código sale del `curso_ref`). Leído en vivo; con la biblioteca cerrada, vacío."""
+
+    def nombres_de_materias(self) -> dict[str, str]: ...
+
+
 # ----------------------------------------------------------------------------------- MOD-001/002 · identidad
 
 class Identidad(Protocol):
@@ -193,6 +199,17 @@ class RepositorioResultados(Protocol):
     def borrar_todo(self) -> int: ...
 
 
+class RepositorioObservaciones(Protocol):
+    """Las observaciones del docente: una por alumno, grupo, periodo y curso (vacío = general)."""
+
+    def get(self, alumno_id: str, grupo_id: str, periodo: str, curso_ref: str = "") -> dict | None: ...
+    def de_alumno(self, alumno_id: str, grupo_id: str) -> list[dict]: ...
+    def de_grupo(self, grupo_id: str) -> list[dict]: ...
+    def crear(self, datos: dict) -> dict: ...
+    def actualizar_si_version(self, observacion_id: str, version_esperada: int, **campos) -> dict | None:
+        """Compara y cambia en UNA sentencia; None = alguien se adelantó."""
+
+
 class RepositorioAgregados(Protocol):
     def get(self, alumno_id: str, grupo_id: str, periodo: str, curso_ref: str) -> dict | None: ...
     def guardar(self, datos: dict) -> dict: ...
@@ -221,12 +238,14 @@ class UnidadDeTrabajo(Protocol):
     clasificaciones: RepositorioClasificaciones
     resultados: RepositorioResultados
     agregados: RepositorioAgregados
+    observaciones: RepositorioObservaciones
     marcas: RepositorioMarcas
     outbox: Outbox
     auditoria: Auditoria
     identidad: Identidad
     evaluacion: Evaluacion
     guia: GuiaDeCalificacion
+    arbol: Arbol
 
     def __enter__(self) -> "UnidadDeTrabajo": ...
     def __exit__(self, tipo, valor, traza) -> None: ...

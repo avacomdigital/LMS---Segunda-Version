@@ -6,6 +6,8 @@ urlpatterns = [
     # ---- el profesor: leer el libro
     path("libro/", v.LibroView.as_view(), name="gradebook-libro"),
     path("resumen/", v.ResumenView.as_view(), name="gradebook-resumen"),
+    path("estudiantes/<str:alumno_id>/boletin/", v.BoletinView.as_view(), name="gradebook-boletin"),
+    path("estudiantes/<str:alumno_id>/observacion/", v.ObservacionView.as_view(), name="gradebook-observacion"),
     path("estudiantes/<str:alumno_id>/", v.EstudianteView.as_view(), name="gradebook-estudiante"),
     path("asignaciones/<str:asignacion_id>/", v.AsignacionView.as_view(), name="gradebook-asignacion"),
     path("asignaciones/<str:asignacion_id>/clasificacion/", v.ClasificacionView.as_view(), name="gradebook-clasificacion"),

@@ -1,0 +1,17 @@
+{
+  "calculado_en": 1792511662857,
+  "concurrentes": {
+    "normal": 50,
+    "pico": 100
+  },
+  "equipos": {
+    "en_uso": 1,
+    "limite": 100,
+    "porcentaje": 1
+  },
+  "usuarios": {
+    "en_uso": 3,
+    "limite": 3000,
+    "porcentaje": 0
+  }
+}

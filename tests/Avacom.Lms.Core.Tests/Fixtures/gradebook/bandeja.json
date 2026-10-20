@@ -1,16 +1,16 @@
 {
   "items": [
     {
-      "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
+      "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
       "alumno_rotulo": "Juan P.",
-      "asignacion_id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
+      "asignacion_id": "69efcd34-87ce-49cf-a39e-18db850dc68a",
       "calificacion_id": null,
       "curso_rotulo": "Estados de la materia y sus cambios",
       "entregado_en": 1790000000000,
       "estado_intento": "en_revision_docente",
-      "grupo_id": "aaa24399-46b8-4f25-802b-de7fa5fb2cdf",
+      "grupo_id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
       "grupo_rotulo": "Octavo A",
-      "intento_id": "0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
+      "intento_id": "7b14aa68-7a7f-46a3-a0ea-097647e66408",
       "motivo": "pendiente",
       "n_pendientes": 2,
       "pendientes": [

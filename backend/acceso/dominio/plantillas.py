@@ -113,6 +113,12 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("reports.export", "reportes", "Exportar un reporte a archivo para entregarlo sin internet (FUN-146)", O, True),
     ("reports.rebuild", "reportes", "Reconstruir los agregados de reportes desde la cola de los módulos (FUN-147)", O, False),
     ("reports.settings.manage", "reportes", "Configurar el umbral de privacidad y la política de exportación de reportes (extensión técnica propuesta)", O, True),
+    # --- MOD-018 · Licensing (sección J de su ficha: `license.activate` y `license.renew`). `license.read` es una EXTENSIÓN TÉCNICA PROPUESTA: ver el estado y el consumo, sin datos de
+    # personas. La licencia y el permiso son cosas distintas (Maestro, «Roles y permisos»): si un módulo se apaga por licencia el rol CONSERVA el permiso y la persona ve «no disponible por
+    # licencia», no «acceso denegado». Los evalúa `licenciamiento.infraestructura.autorizacion.AutorizacionLicencia`; el profesor, Reportes y el alumno no reciben ninguno.
+    ("license.activate", "licencia", "Pedir la solicitud, activar, reactivar o liberar la licencia del nodo sin internet, y confirmar la fecha del equipo (FUN-188, FUN-194, JRN-020)", O, False),
+    ("license.renew", "licencia", "Renovar o ampliar la licencia con un archivo posterior (FUN-191)", O, False),
+    ("license.read", "licencia", "Ver el estado, los límites y el consumo de la licencia, sin datos de personas (CAP-112; extensión técnica propuesta)", O, False),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
@@ -220,6 +226,8 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "search.reindex": O,
         # Ve cuánto se usan los equipos (sin personas) y reconstruye los agregados de reportes tras restaurar un respaldo; NO lee reportes de clases, grupos ni alumnos (BR-097).
         "reports.usage.view": O, "reports.rebuild": O,
+        # Activa la licencia del nodo (con el archivo que entrega AVACOM), la libera y la consulta; NO la renueva (eso es de la administración).
+        "license.activate": O, "license.read": O,
         "identity.password.change_own": S, "identity.session.revoke_own": S,
     }),
 }

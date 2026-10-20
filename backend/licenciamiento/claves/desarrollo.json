@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "nota": "Llaves PUBLICAS de DESARROLLO (kid reservado). Se aceptan solo si el entorno es desarrollo o pruebas por construccion (P-12). El instalador NO copia este archivo.",
+  "claves": [
+    {
+      "kid": "dev-1",
+      "publica": "74b5a15a4638974040885431c9c415b7b1c4e6d3dd6e911e2e742a441a9f71da",
+      "estado": "vigente"
+    },
+    {
+      "kid": "dev-2",
+      "publica": "5bbb059f31ccf2f135727f74043b38b386654b369e89a9a98f1859cdfb0fc80f",
+      "estado": "vigente"
+    }
+  ]
+}

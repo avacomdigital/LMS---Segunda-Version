@@ -12,7 +12,8 @@ namespace Avacom.Lms.Ops.Pages;
 public partial class CalificacionesPage
 {
     private const double AnchoAlumno = 210, AnchoCelda = 224, AltoCabecera = 236, Separacion = 8;
-    private const double AltoFilaCalificaciones = 132, AltoFilaSimple = 92;
+    private const double AltoFilaCalificaciones = 148, AltoFilaSimple = 92, AltoFilaEdicion = 190;
+    private const int MaximoDeColumnasDeLaTabla = 10;          // más columnas que esto no se pueden leer (y WinUI no completa el diseño de una rejilla tan ancha): ver la lista de estudiantes
 
     private void Pintar()
     {
@@ -24,12 +25,14 @@ public partial class CalificacionesPage
         {
             $"Grupo {libro.Grupo.Codigo}", SelectorDeGrupo.RotuloDeNivel(libro.Grupo.NivelClave), string.IsNullOrWhiteSpace(libro.Grupo.Periodo) ? null : $"periodo {libro.Grupo.Periodo}",
         }.Where(p => p is not null));
-        Buscador.IsVisible = true;
+        Buscador.IsVisible = _vista != VistaEvaluaciones;
         ContenidoHost.Clear();
         _horizontal = null;
         if (AsignarNivel(libro) is { } sinNivel) ContenidoHost.Add(sinNivel);
         ContenidoHost.Add(Resumen(libro));
-        ContenidoHost.Add(Cuadricula(libro));
+        if (FiltroDeMaterias(libro) is { } filtro) ContenidoHost.Add(filtro);
+        ContenidoHost.Add(SelectorDeVista(libro));
+        ContenidoHost.Add(_vista switch { VistaEvaluaciones => ListaDeEvaluaciones(libro), VistaTabla => Cuadricula(libro), _ => ListaDeEstudiantes(libro) });
         if (y > 1 || x > 1)
             Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(40), async () =>
             {
@@ -88,13 +91,13 @@ public partial class CalificacionesPage
         pila.Add(fila);
         pila.Add(Ds.Secundario(calif
             ? "El promedio simple de cada estudiante es informativo: no es una nota oficial ni está ponderado. Una calificación provisional puede cambiar hasta que se publique."
-            : "Cada celda dice en qué va cada estudiante: ○ no ha empezado · ◐ va en progreso · ● completó. No hay notas ni números.", 14));
+            : "De cada evaluación se ve si el estudiante la completó (●), va en progreso (◐) o no ha empezado (○). No hay notas ni números.", 14));
 
         // Lo calificado antes de elegir el sistema no tiene nota hasta registrarlo: se dice aquí, donde se mira, y se arregla en la columna de cada evaluación.
         var sinRegistrar = calif ? libro.Asignaciones.Sum(a => VistaDelLibro.SinRegistrar(libro, a.Id)) : 0;
         if (sinRegistrar > 0)
             pila.Add(ExamenUi.Aviso(sinRegistrar == 1 ? "Hay 1 evaluación calificada sin nota registrada" : $"Hay {sinRegistrar} evaluaciones calificadas sin nota registrada",
-                "Se calificaron cuando este nivel aún estaba en modo simple, y pasar de modo no registra nada solo. Toca «Registrar lo calificado» en la columna de cada evaluación: la nota aparece con el sistema de calificación, sin publicar.", Tono.Info));
+                "Se calificaron cuando este nivel aún estaba en modo simple, y pasar de modo no registra nada solo. Toca «Registrar lo calificado» en la evaluación (vista «Evaluaciones»): la nota aparece con el sistema de calificación, sin publicar.", Tono.Info));
 
         var acciones = ExamenUi.Fila();
         if (calif && CalificacionesUi.PuedeCalificar)
@@ -102,11 +105,59 @@ public partial class CalificacionesPage
             var pendientes = VistaDelLibro.RevisionesPendientes(libro);
             acciones.Add(ExamenUi.Accion($"Revisiones pendientes ({pendientes})", pendientes > 0 ? Ds.Rango.Primary : Ds.Rango.Secondary,
                 CalificacionesUi.Seguro(nameof(CalificacionesPage), "Revisiones", () => AbrirBandejaAsync(null)), null, "calificaciones-revisiones").Vista);
+            // «Activar la edición» es de las CALIFICACIONES, no del curso: editar aquí no cambia nada de la página del curso ni de su contenido (son capacidades distintas).
+            acciones.Add(ExamenUi.Accion(_edicion ? "Desactivar la edición" : "Activar la edición", _edicion ? Ds.Rango.Secondary : Ds.Rango.Quiet,
+                CalificacionesUi.Seguro(nameof(CalificacionesPage), "Edicion", AlternarEdicionAsync), null, "calificaciones-edicion").Vista);
         }
+        if (_edicion && calif)
+            pila.Add(ExamenUi.Aviso("Edición activada", "Toca «Editar» en una calificación para ajustarla con un motivo. Cada cambio queda en el historial de la calificación y en la bitácora del aula, con quién lo hizo y cuándo.", Tono.Info));
         if (CalificacionesUi.PuedeConfigurar)
             acciones.Add(ExamenUi.Accion("Sistema de calificación", calif ? Ds.Rango.Secondary : Ds.Rango.Primary,
                 CalificacionesUi.Seguro(nameof(CalificacionesPage), "Configuracion", () => Shell.Current.GoToAsync("calificaciones-config")), null, "calificaciones-configuracion").Vista);
         if (acciones.Children.Count > 0) pila.Add(acciones);
+        return ExamenUi.Tarjeta(pila);
+    }
+
+    // ------------------------------------------------------------------------------------- materia y curso
+
+    /// <summary>
+    /// Las fichas para segmentar el libro: la MATERIA (un profesor de matemáticas dicta varios cursos: polinomios, ecuaciones…) y, dentro de ella, el curso. Sólo aparecen cuando hay algo que
+    /// segmentar (más de una materia, o una con más de un curso). Las materias salen del identificador de cada curso; el nombre, de la biblioteca cuando responde.
+    /// </summary>
+    private View? FiltroDeMaterias(LibroDelGrupo libro)
+    {
+        var materias = libro.Materias ?? [];
+        var cursos = materias.SelectMany(m => m.Cursos).ToList();
+        if (materias.Count <= 1 && cursos.Count <= 1 && _materia is null && _curso is null) return null;
+        var pila = new VerticalStackLayout { Spacing = 8 };
+        if (materias.Count > 1 || _materia is not null)
+        {
+            pila.Add(EstudioUi.Eyebrow("MATERIA"));
+            var fila = EstudioUi.Envolver();
+            fila.Add(EstudioUi.Chip($"Todas ({materias.Sum(m => m.Evaluaciones)})", _materia is null, CalificacionesUi.Seguro(nameof(CalificacionesPage), "MateriaTodas", () => FiltrarAsync(null, null)), "calificaciones-materia-todas", 44));
+            foreach (var m in materias)
+            {
+                var codigo = m.Codigo;
+                fila.Add(EstudioUi.Chip($"{m.Rotulo} ({m.Evaluaciones})", _materia == codigo, CalificacionesUi.Seguro(nameof(CalificacionesPage), "Materia", () => FiltrarAsync(codigo, null)),
+                    $"calificaciones-materia-{(codigo.Length == 0 ? "sin" : codigo)}", 44));
+            }
+            pila.Add(fila);
+        }
+        var deLaMateria = _materia is null ? cursos : materias.Where(m => m.Codigo == _materia).SelectMany(m => m.Cursos).ToList();
+        if (deLaMateria.Count > 1 || _curso is not null)
+        {
+            pila.Add(EstudioUi.Eyebrow("CURSO"));
+            var fila = EstudioUi.Envolver();
+            fila.Add(EstudioUi.Chip(_materia is null ? "Todos los cursos" : "Todos los de la materia", _curso is null, CalificacionesUi.Seguro(nameof(CalificacionesPage), "CursoTodos", () => FiltrarAsync(_materia, null)), "calificaciones-curso-todos", 44));
+            foreach (var c in deLaMateria)
+            {
+                var referencia = c.CursoRef;
+                fila.Add(EstudioUi.Chip($"{c.Rotulo} ({c.Evaluaciones})", _curso == referencia, CalificacionesUi.Seguro(nameof(CalificacionesPage), "Curso", () => FiltrarAsync(_materia, referencia)), $"calificaciones-curso-{referencia}", 44));
+            }
+            pila.Add(fila);
+        }
+        if (_materia is not null || _curso is not null)
+            pila.Add(Ds.Secundario($"Se ven {libro.Asignaciones.Count} {(libro.Asignaciones.Count == 1 ? "evaluación" : "evaluaciones")} de {(_curso is not null ? "este curso" : "esta materia")}. Los promedios de abajo son de lo que se ve.", 13));
         return ExamenUi.Tarjeta(pila);
     }
 
@@ -116,9 +167,14 @@ public partial class CalificacionesPage
     {
         var calif = libro.EnModoCalificaciones;
         var filas = VistaDelLibro.Filas(libro, Buscador.Text);
-        var columnas = VistaDelLibro.Columnas(libro, EvaluacionElegida);
+        var todasLasColumnas = VistaDelLibro.Columnas(libro, EvaluacionElegida);
+        var recortada = todasLasColumnas.Count > MaximoDeColumnasDeLaTabla;
+        var columnas = recortada ? todasLasColumnas.Skip(todasLasColumnas.Count - MaximoDeColumnasDeLaTabla).ToList() : todasLasColumnas;      // las más recientes
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(ExamenUi.Seccion("Estudiantes y evaluaciones"));
+        if (recortada)
+            pila.Add(ExamenUi.Aviso($"La tabla muestra las {MaximoDeColumnasDeLaTabla} evaluaciones más recientes de {todasLasColumnas.Count}",
+                "Con tantas evaluaciones una tabla no se puede leer. Usa la lista de estudiantes (cada uno abre su boletín con todas sus notas) o la de evaluaciones, o elige una evaluación en el filtro.", Tono.Info));
 
         // ---- sin resultados: cada vacío dice por qué
         if (libro.Alumnos.Count == 0)
@@ -145,7 +201,7 @@ public partial class CalificacionesPage
             return ExamenUi.Tarjeta(pila);
         }
 
-        var alto = calif ? AltoFilaCalificaciones : AltoFilaSimple;
+        var alto = calif ? (_edicion ? AltoFilaEdicion : AltoFilaCalificaciones) : AltoFilaSimple;
         IReadOnlyList<(string CursoRef, string Rotulo)> cursos = calif ? VistaDelLibro.Cursos(columnas) : [];
         var rotulos = new Dictionary<string, string>();
 
@@ -213,6 +269,13 @@ public partial class CalificacionesPage
         pastillas.Add(ExamenUi.PildoraEnFila(GradebookTexto.TipoDeEvaluacion(col.TipoEvaluacion), Tono.Neutro, 12));
         if (calif && col.PorRevisar > 0) pastillas.Add(ExamenUi.PildoraEnFila($"{col.PorRevisar} por revisar", Tono.Violeta, 12));
         pila.Add(pastillas);
+        // Modo simple: si los resultados de esta evaluación ya se publicaron (y cuándo) o siguen sin publicar; se publican desde el panel del examen.
+        if (!calif && col.Resultados != "nunca")
+        {
+            var publicadas = col.LiberadosEn is not null || col.Resultados == "al_entregar";
+            pila.Add(ExamenUi.PildoraEnFila(publicadas ? "Notas publicadas" : "Notas sin publicar", publicadas ? Tono.Exito : Tono.Info, 12));
+        }
+        if (!calif && col.LiberadosEn is { } liberadosEn) pila.Add(Ds.Secundario(GradebookTexto.Hora(liberadosEn), 12));
 
         // «Publicar lo revisado»: un toque y un aviso con el resultado; no se pregunta dos veces. Sólo si hay algo revisado sin publicar y quien está al frente califica.
         if (calif && CalificacionesUi.PuedeCalificar)
@@ -284,9 +347,18 @@ public partial class CalificacionesPage
         var pila = new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center };
         if (!calif)
         {
-            // Modo simple: sólo el estado y su símbolo. Ni un número, ni una letra.
-            pila.Add(new Label { Text = c.Simbolo, FontFamily = Ds.FuenteMedia, FontSize = 28, TextColor = Ds.Tinta });
-            pila.Add(new Label { Text = c.Estado, FontFamily = Ds.FuenteRegular, FontSize = 15, TextColor = Ds.TintaMedia });
+            // Modo simple: el estado y, si el examen está calificado, su nota (porcentaje) con si el estudiante ya la ve. El profesor la ve siempre.
+            if (celda?.NotaSimple is { } nota)
+            {
+                pila.Add(new Label { Text = GradebookTexto.NotaSimple(nota), FontFamily = Ds.FuenteMedia, FontSize = 24, TextColor = Ds.Tinta, AutomationId = $"calificaciones-nota-{fila.AlumnoId}-{col.Id}" });
+                pila.Add(ExamenUi.PildoraEnFila(nota.Publicada ? "Publicada" : "Sin publicar", nota.Publicada ? Tono.Exito : Tono.Info, 12));
+                if (nota.Publicada && nota.PublicadaEn is { } cuando) pila.Add(Ds.Secundario(GradebookTexto.Hora(cuando), 12));
+            }
+            else
+            {
+                pila.Add(new Label { Text = c.Simbolo, FontFamily = Ds.FuenteMedia, FontSize = 28, TextColor = Ds.Tinta });
+                pila.Add(new Label { Text = c.Estado, FontFamily = Ds.FuenteRegular, FontSize = 15, TextColor = Ds.TintaMedia });
+            }
         }
         else
         {
@@ -295,11 +367,22 @@ public partial class CalificacionesPage
             if (c.Secundario is not null) pila.Add(Ds.Secundario(c.Secundario, 12));
             if (c.Marcas.Count > 0)
                 pila.Add(new Label { Text = string.Join(" · ", c.Marcas), FontFamily = Ds.FuenteRegular, FontSize = 12, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap, MaxLines = 2 });
+            // Con la edición activa, «Editar» abre la hoja de ajuste aquí mismo (motivo obligatorio; queda en el historial y en la bitácora).
+            if (_edicion && c.CalificacionId is { } editable && CalificacionesUi.PuedeCalificar)
+            {
+                var editar = ExamenUi.Accion("✎  Editar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesPage), "Editar", () => EditarAsync(editable, fila.Rotulo, col.Titulo)),
+                    null, $"calificaciones-editar-{fila.AlumnoId}-{col.Id}", 36, margen: false);
+                editar.Boton.FontSize = 13;
+                editar.Boton.Padding = new Thickness(10, 0);
+                editar.Vista.HorizontalOptions = LayoutOptions.Start;
+                pila.Add(editar.Vista);
+            }
         }
 
-        // Qué pasa al tocarla: una calificación abre su detalle; lo que espera revisión abre la bandeja de este grupo (con esta evaluación); lo demás no es tocable.
+        // Qué pasa al tocarla: una calificación abre su detalle (con la edición activa, la celda lleva su propio botón «Editar»); lo que espera revisión abre la bandeja de este grupo
+        // (con esta evaluación); lo demás no es tocable.
         Func<Task>? accion = null;
-        if (calif && c.CalificacionId is { } calificacionId) accion = () => AbrirDetalleAsync(calificacionId, fila.Rotulo, col.Titulo);
+        if (calif && c.CalificacionId is { } calificacionId && !_edicion) accion = () => AbrirDetalleAsync(calificacionId, fila.Rotulo, col.Titulo);
         else if (calif && celda is { Estado: EstadosDeResultado.Provisional or EstadosDeResultado.Reabierto }) accion = () => AbrirBandejaAsync(col.Id);
 
         var contenido = new Grid();

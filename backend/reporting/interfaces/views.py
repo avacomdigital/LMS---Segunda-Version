@@ -125,6 +125,21 @@ class UsoView(VistaReportes):
         return Response(reportes_cu.ReporteDeUso(servicios()).ejecutar(self._actor(request), self._consulta(request)))
 
 
+class BoletinView(VistaReportes):
+    """El boletín académico de un estudiante (`grupo_id` opcional: sin él, el primero de sus grupos que se puede ver)."""
+
+    def get(self, request, alumno_id: str):
+        return Response(reportes_cu.ReporteDeBoletin(servicios()).ejecutar(self._actor(request), alumno_id, self._consulta(request)))
+
+
+class BoletinesView(VistaReportes):
+    """Los boletines de todos los estudiantes de un grupo (`grupo_id` obligatorio): lo que se exporta como un archivo por estudiante."""
+
+    def get(self, request):
+        c = self._consulta(request)
+        return Response(reportes_cu.ReporteDeBoletin(servicios()).ejecutar_grupo(self._actor(request), c.get("grupo_id", ""), c))
+
+
 class FiltrosView(VistaReportes):
     def get(self, request):
         return Response(reportes_cu.Filtros(servicios()).ejecutar(self._actor(request)))

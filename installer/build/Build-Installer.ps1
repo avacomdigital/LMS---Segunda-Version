@@ -39,6 +39,11 @@
     Salta el ensayo del paquete (Ensayar-Paquete.ps1), que levanta el backend
     empaquetado en un puerto libre y lo valida como lo haria el aula.
 
+.PARAMETER ExigirLlaveDeProduccion
+    MOD-018: la puerta de liberacion. Falla la compilacion si backend\licenciamiento\claves\produccion.json no trae ninguna llave publica de produccion (el instalador no
+    podria activar ninguna licencia: el nodo operaria siempre en su ventana de evaluacion). Mientras el CTO no haga la ceremonia de llaves (Q-L3) la lista esta vacia y la
+    compilacion avisa a gritos y lo deja anotado en el manifiesto; el proceso de entrega a clientes DEBE pasar este parametro.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File installer\build\Build-Installer.ps1
 #>
@@ -62,7 +67,9 @@ param(
     [string] $VersionAnterior = '',
     # Por defecto, si el codigo cambia mientras se compila, la compilacion se aborta: lo que se
     # empaqueto ya no seria lo que hay en el repositorio.
-    [switch] $PermitirCambiosDuranteLaCompilacion
+    [switch] $PermitirCambiosDuranteLaCompilacion,
+    # MOD-018 (ver .PARAMETER ExigirLlaveDeProduccion): sin llave publica de produccion, falla en vez de avisar.
+    [switch] $ExigirLlaveDeProduccion
 )
 
 $ErrorActionPreference = 'Stop'
@@ -142,9 +149,11 @@ function Huella-Carpetas {
 # seria un agujero, y la configuracion del nodo instalado es solo Config\backend.env.
 # Tambien cualquier base SQLite suelta (el desarrollador prueba con otras, p. ej. primer-arranque.sqlite3, y puede tenerlas
 # abiertas): ni se empaquetan ni cuentan en la huella (leerlas, ademas, falla si otro proceso las tiene abiertas).
-$ArchivosDeLog = @('*.log', '*.log.*', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.pyc', '.escritura', '.env', '.env.*')
+# MOD-018 (P-03): 'desarrollo.json' (la llave PUBLICA de desarrollo) y backend\licenciamiento\tests (el emisor de PRUEBAS, que firma licencias con una llave de desarrollo derivada de una semilla
+# publica) existen solo en el repositorio: no viajan al paquete ni cuentan en su huella.
+$ArchivosDeLog = @('*.log', '*.log.*', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.pyc', '.escritura', '.env', '.env.*', 'desarrollo.json')
 function Huella-Backend([string] $carpeta) {
-    Huella-Carpetas -Raices @($carpeta) -ExcluirArchivos $ArchivosDeLog -ExcluirRutas @((Join-Path $carpeta 'logs'))
+    Huella-Carpetas -Raices @($carpeta) -ExcluirArchivos $ArchivosDeLog -ExcluirRutas @((Join-Path $carpeta 'logs'), (Join-Path $carpeta 'licenciamiento\tests'))
 }
 function Huella-App {
     Huella-Carpetas -Raices @(
@@ -407,11 +416,14 @@ New-Item -ItemType Directory -Force $destinoBackend | Out-Null
 #   logs         los registros del desarrollador (backend-app.log, ...): el nodo
 #                escribe los suyos en ProgramData, y los de otro equipo no se
 #                reparten por las aulas
+#   licenciamiento\tests y licenciamiento\claves\desarrollo.json
+#                el emisor de PRUEBAS de licencias y la llave publica de desarrollo
+#                (MOD-018, P-03): un nodo de produccion no los trae
 # robocopy usa 0-7 para exitos (1 = se copiaron archivos) y 8+ para fallos.
 $codigo = Nativo -Ejecutable 'robocopy' -Argumentos @(
     (Join-Path $raiz 'backend'), $destinoBackend, '/E'
-    '/XD', '.venv', '__pycache__', (Join-Path $raiz 'backend\logs')
-    '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.log', '*.log.*', '*.pyc', '.escritura', '.env', '.env.*'
+    '/XD', '.venv', '__pycache__', (Join-Path $raiz 'backend\logs'), (Join-Path $raiz 'backend\licenciamiento\tests')
+    '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.log', '*.log.*', '*.pyc', '.escritura', '.env', '.env.*', 'desarrollo.json'
     '/NFL', '/NDL', '/NJH', '/NJS', '/NP'
 ) -Silencioso
 if ($codigo -ge 8) { Fallar "robocopy fallo al copiar el backend (codigo $codigo)." }
@@ -447,6 +459,36 @@ if ($huellaBackendPaquete -ne $huellaBackendInicial) {
             "repositorio $huellaBackendInicial). O la copia fallo, o el codigo cambio mientras se copiaba.")
 }
 Write-Host "  El backend empaquetado es el del repositorio (huella $($huellaBackendPaquete.Substring(0, 12)))."
+
+# MOD-018 (P-12): el marcador de canal. Es lo que le dice al nodo que es de PRODUCCION sin depender de ninguna variable de backend.env (un texto editable): `licenciamiento` lo busca
+# junto al codigo, y sin el marcador (y sin `Program Files`, y sin un repositorio .git) tambien asume produccion. Se escribe DESPUES de comprobar la integridad (no existe en el repositorio)
+# y ANTES de calcular la huella que va al manifiesto: forma parte del paquete.
+$marcadorDeCanal = Join-Path $destinoBackend '.avacom-canal'
+[IO.File]::WriteAllText($marcadorDeCanal, "canal=produccion`r`nversion=$Version`r`n", (New-Object System.Text.UTF8Encoding($false)))
+$huellaBackendPaquete = Huella-Backend $destinoBackend
+
+# MOD-018 (P-03): prueba sobre el CONTENIDO del paquete. Nada de claves privadas, de la llave de desarrollo, del emisor de pruebas ni de licencias sueltas dentro del backend.
+$sospechosos = @()
+if (Test-Path (Join-Path $destinoBackend 'licenciamiento\tests')) { $sospechosos += 'licenciamiento\tests (el emisor de pruebas)' }
+if (Test-Path (Join-Path $destinoBackend 'licenciamiento\claves\desarrollo.json')) { $sospechosos += 'licenciamiento\claves\desarrollo.json (la llave de desarrollo)' }
+$sospechosos += @(Get-ChildItem $destinoBackend -Recurse -File -Include '*.avlic', '*.avreq', '*.avrel', '*.pem', '*.key' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($destinoBackend.Length + 1) })
+foreach ($archivo in (Get-ChildItem $destinoBackend -Recurse -File -Include '*.py', '*.json', '*.txt', '*.md' -ErrorAction SilentlyContinue)) {
+    if (Select-String -Path $archivo.FullName -Pattern 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY', 'avacom-licencia-desarrollo' -Quiet -ErrorAction SilentlyContinue) { $sospechosos += $archivo.FullName.Substring($destinoBackend.Length + 1) }
+}
+if (-not (Test-Path (Join-Path $destinoBackend 'licenciamiento\claves\produccion.json'))) { Fallar 'El backend no trae licenciamiento\claves\produccion.json (las llaves publicas de produccion).' }
+if (@($sospechosos).Count -gt 0) { Fallar ("El paquete trae algo que NUNCA debe viajar con el nodo (licencias, claves o el emisor de pruebas): " + ($sospechosos -join '; ')) }
+Write-Host '  El paquete no trae claves privadas, ni la llave de desarrollo, ni el emisor de pruebas; trae el marcador de canal de produccion.'
+$llavesDeProduccion = 0
+try {
+    $llavesDeProduccion = @((Get-Content (Join-Path $destinoBackend 'licenciamiento\claves\produccion.json') -Raw -Encoding UTF8 | ConvertFrom-Json).claves |
+        Where-Object { $_.estado -in @('vigente', 'siguiente') -and "$($_.publica)".Length -eq 64 }).Count
+} catch { $llavesDeProduccion = 0 }
+if ($llavesDeProduccion -eq 0) {
+    if ($ExigirLlaveDeProduccion) { Fallar 'No hay ninguna llave publica de PRODUCCION en backend\licenciamiento\claves\produccion.json: este instalador no podria activar ninguna licencia.' }
+    Write-Warning 'ATENCION: backend\licenciamiento\claves\produccion.json NO trae ninguna llave publica de produccion (falta la ceremonia de llaves, Q-L3). Este instalador NO podra activar licencias: el nodo operara en su ventana de evaluacion de 30 dias y despues degradara los modulos licenciables (la clase nunca se detiene). No lo entregues a un cliente asi (usa -ExigirLlaveDeProduccion).'
+} else {
+    Write-Host "  Llaves publicas de produccion en el paquete: $llavesDeProduccion."
+}
 
 # Toda app de Django que settings.py instala viaja completa, con sus migraciones: una app
 # nueva (auditoria, evaluacion, modo de estudio...) que no llegara al paquete daria un nodo
@@ -488,6 +530,8 @@ $manifiesto = [ordered]@{
     paquetes_python     = @($paquetes)
     runtime_dotnet      = 'incluido en la aplicacion (autocontenido)'
     modulos_backend     = @($modulosBackend)
+    licencias_activables = ($llavesDeProduccion -gt 0)
+    llaves_publicas_de_produccion = $llavesDeProduccion
     carpeta_registros   = '%ProgramData%\AVACOM\OPS Master\Logs'
     fuente_de_cursos    = 'AVACOM Contenido (biblioteca); el curso de ejemplo esta apagado'
     administra_cursos   = $false

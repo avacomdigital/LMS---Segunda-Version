@@ -1,11 +1,18 @@
 {
-  "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
+  "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
   "items": [
     {
-      "asignacion_id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
+      "asignacion_id": "69efcd34-87ce-49cf-a39e-18db850dc68a",
       "calificacion": {
         "aprobacion": {
           "cumple_criterio": true
+        },
+        "bruto": {
+          "aciertos": 11,
+          "porcentaje": 85.0,
+          "preguntas": 12,
+          "puntos": 20.0,
+          "puntos_maximos": 21.0
         },
         "desempeno": {
           "clave": "alto",
@@ -17,7 +24,7 @@
           "aprobacion_minima": 3.0,
           "aprueba_desde": "Básico",
           "codigo": "co-1-5",
-          "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
+          "escala_id": "0710daa6-a95d-4fa9-ab10-f168532251c5",
           "jurisdiccion": "Antioquia",
           "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
           "numero": 1,
@@ -47,7 +54,7 @@
           ],
           "valor_max": 5.0,
           "valor_min": 1.0,
-          "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
+          "version_id": "4e71c874-d5f4-4d43-95f2-fa1ba0a0083d"
         },
         "numero_intento": 1,
         "presentada": {

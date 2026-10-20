@@ -1,5 +1,5 @@
 {
-  "alumno_id": "6baf2a9d-87bb-45e0-98a1-cf50394d582d",
+  "alumno_id": "492e98a4-48f9-4581-843c-6f134dabbe51",
   "items": [
     {
       "aciertos": {
@@ -18,10 +18,17 @@
           "fallo"
         ]
       },
-      "asignacion_id": "f958712c-1cf7-47d3-b91b-a6083b94be68",
+      "asignacion_id": "4ae9ec87-77fc-4100-a888-70d6100723a8",
       "curso_rotulo": "Estados de la materia y sus cambios",
       "estado_simple": "completado",
       "modo": "simple",
+      "nota": {
+        "aciertos": 10,
+        "numero_intento": 1,
+        "porcentaje": 71.4,
+        "preguntas": 12,
+        "publicada_en": null
+      },
       "retroalimentacion": null,
       "simbolo": "lleno",
       "titulo": "Examen de estados de la materia"

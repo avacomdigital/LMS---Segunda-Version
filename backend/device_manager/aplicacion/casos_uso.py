@@ -29,7 +29,7 @@ from ..dominio.errores import (
     NodoNoInstalado,
     PaqueteSinIntegrar,
 )
-from .puertos import Actor, Autorizacion, Reloj, UnidadDeTrabajo
+from .puertos import Actor, Autorizacion, CupoDeEquipos, Reloj, UnidadDeTrabajo
 
 
 @dataclass
@@ -37,6 +37,8 @@ class Servicios:
     uow: Callable[[], UnidadDeTrabajo]
     reloj: Reloj
     autorizacion: Autorizacion
+    # MOD-018 (FUN-091): el cupo de equipos de la licencia. None = sin cupo. Sólo lo consultan RegistrarDispositivo y RegistrarLatido, cuando el equipo NO existía.
+    cupo: CupoDeEquipos | None = None
 
 
 def _id() -> str:
@@ -84,10 +86,14 @@ def _campos_de_capacidad(actual: dict | None, capacidad_control, capacidad_detal
 
 
 def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: str = "", tipo: str = dom.TABLETA,
-             plataforma: str = "", version_app: str = "", actor: str = "", capacidad_control=None, capacidad_detalle=None) -> tuple[dict, bool]:
+             plataforma: str = "", version_app: str = "", actor: str = "", capacidad_control=None, capacidad_detalle=None,
+             cupo: CupoDeEquipos | None = None) -> tuple[dict, bool]:
     """CAP-052/053: registra la tableta la primera vez que se presenta y, después, sólo la reconoce
     (idempotente por organización + huella). Devuelve (dispositivo, creado). Nunca la bloquea ni la
-    activa: eso lo decide el aula o el administrador."""
+    activa: eso lo decide el aula o el administrador.
+
+    `cupo` (MOD-018, FUN-091): sólo lo pasan los dos puntos de REGISTRO público (`RegistrarDispositivo` y `RegistrarLatido`); un equipo NUEVO cuenta contra el cupo de equipos de la
+    licencia (el equipo maestro no: es el que corre OPS). Un equipo que ya existe, su latido, la clase y el examen NUNCA consultan el cupo: bloquear lo nuevo, jamás lo existente."""
     org = organizacion_de(uow)
     identificador_hw = dom.normalizar_identificador(identificador_hw)
     plataforma = dom.validar_plataforma(plataforma)
@@ -106,6 +112,8 @@ def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: st
             uow.outbox.publicar("Dispositivo", existente["id"], dom.EV_RECONECTADO,
                                 {"dispositivo_id": existente["id"], "silencio_ms": ahora - existente["ultimo_latido_en"], "instante": ahora})
         return uow.dispositivos.actualizar(existente["id"], **campos), False
+    if cupo is not None and dom.validar_tipo(tipo) != dom.MASTER:
+        cupo.exigir_equipo_nuevo(sum(1 for d in uow.dispositivos.listar(org, True) if d.get("tipo") != dom.MASTER))
     dispositivo = uow.dispositivos.crear({
         "id": _id(), "organizacion_id": org, "identificador_hw": identificador_hw,
         "nombre": dom.normalizar_nombre(nombre, por_defecto=identificador_hw), "tipo": dom.validar_tipo(tipo),
@@ -230,7 +238,7 @@ class RegistrarDispositivo(_CasoDeUso):
             dispositivo, creado = resolver(
                 uow, ahora, datos.get("identificador_hw") or datos.get("identificador"), nombre=datos.get("nombre"),
                 tipo=datos.get("tipo") or dom.TABLETA, plataforma=datos.get("plataforma"), version_app=datos.get("version_app"),
-                actor=actor, capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"))
+                actor=actor, capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"), cupo=self.s.cupo)
             return self._dto(uow, dispositivo, ahora), creado
 
 
@@ -244,7 +252,7 @@ class RegistrarLatido(_CasoDeUso):
             dispositivo, _ = resolver(
                 uow, ahora, datos.get("identificador_hw") or datos.get("identificador"), nombre=datos.get("nombre"),
                 tipo=datos.get("tipo") or dom.TABLETA, plataforma=datos.get("plataforma"), version_app=datos.get("version_app"),
-                capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"))
+                capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"), cupo=self.s.cupo)
             return {**self._dto(uow, dispositivo, ahora), "servidor_en": ahora}
 
 

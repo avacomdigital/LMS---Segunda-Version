@@ -81,7 +81,7 @@ from ..dominio.valores import (
     UserId,
 )
 from . import cache_pases
-from .puertos import Azar, Cifrador, EmisorTokens, FabricaUoW, Hasher, Reloj, UnidadDeTrabajo
+from .puertos import Azar, Cifrador, CupoDeUsuarios, EmisorTokens, FabricaUoW, Hasher, Reloj, UnidadDeTrabajo
 
 MINUTO_MS = 60_000
 HORA_MS = 60 * MINUTO_MS
@@ -103,6 +103,8 @@ class Servicios:
     uow_lectura: FabricaUoW | None = None
     # Segundos que se guarda la persona de un pase de medios (ver `cache_pases`). 0 = se comprueba entera en cada petición, como antes.
     cache_pases_seg: float = 0.0
+    # MOD-018 (BR-027): el cupo de identidades de la licencia. None = sin cupo. Sólo lo consulta `CrearUsuario._crear`, el único sitio donde nace una identidad.
+    cupo: CupoDeUsuarios | None = None
 
 
 def _nuevo_id() -> str:
@@ -1229,6 +1231,9 @@ class CrearUsuario(Base):
                confirmado: bool = True, pin_pendiente: bool = False) -> dict:
         """`confirmado`: quien la creó (o la instalación) respalda que es quien dice ser; las altas propias nacen «sin confirmar» (RB-03).
         `pin_pendiente` (RN-35): la cuenta nace SIN credencial: la persona elige su PIN la primera vez que toca su nombre."""
+        if self.s.cupo is not None:
+            # MOD-018 (BR-027): una identidad NUEVA cuenta contra el cupo de la licencia (las existentes no se tocan). Va ANTES de escribir nada: si no cabe, no queda a medias.
+            self.s.cupo.exigir_usuario_nuevo(uow.usuarios.contar_activos(org.id))
         ahora = self.ahora()
         persona_datos = datos.get("persona") or {}
         nominal = bool(datos.get("provisional"))

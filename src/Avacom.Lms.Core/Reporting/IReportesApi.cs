@@ -24,6 +24,10 @@ public interface IReportesApi
     Task<AlumnosParaElegir?> AlumnosAsync(string actor, string grupoId, CancellationToken ct = default);
     Task<ReporteDeAlumno?> AlumnoAsync(string actor, string alumnoId, string? grupoId = null, NodoAcademico? nodo = null, CancellationToken ct = default);
     Task<ReporteDeUso?> UsoAsync(string actor, PeriodoPedido? periodo = null, string? grupoId = null, NodoAcademico? nodo = null, CancellationToken ct = default);
+    /// <summary>El boletín académico de un estudiante (sin <paramref name="grupoId"/>, el primero de sus grupos que se puede ver).</summary>
+    Task<ReporteDeBoletin?> BoletinAsync(string actor, string alumnoId, string? grupoId = null, NodoAcademico? nodo = null, CancellationToken ct = default);
+    /// <summary>Los boletines de todos los estudiantes de un grupo (uno por estudiante): lo que se exporta como un zip.</summary>
+    Task<ReporteDeBoletines?> BoletinesAsync(string actor, string grupoId, NodoAcademico? nodo = null, CancellationToken ct = default);
     Task<FiltrosDeReportes?> FiltrosAsync(string actor, CancellationToken ct = default);
     Task<RecientesDeReportes?> RecientesAsync(string actor, CancellationToken ct = default);
 
@@ -85,6 +89,8 @@ public sealed record ReporteSolicitado(string Tipo, string? SesionId = null, str
     public static ReporteSolicitado DeGrupo(string grupoId, NodoAcademico? nodo = null) => new(TiposDeReporte.Grupo, GrupoId: grupoId, Nodo: nodo);
     public static ReporteSolicitado DeAlumno(string alumnoId, string? grupoId = null, NodoAcademico? nodo = null) => new(TiposDeReporte.Alumno, AlumnoId: alumnoId, GrupoId: grupoId, Nodo: nodo);
     public static ReporteSolicitado DeUso(PeriodoPedido? periodo = null, string? grupoId = null) => new(TiposDeReporte.Uso, GrupoId: grupoId, Desde: periodo?.Desde, Hasta: periodo?.Hasta);
+    /// <summary>El boletín de UN estudiante (con <paramref name="alumnoId"/>) o los de todo un grupo (sin él): entonces el nodo entrega un zip con un archivo por estudiante.</summary>
+    public static ReporteSolicitado DeBoletin(string grupoId, string? alumnoId = null, NodoAcademico? nodo = null) => new(TiposDeReporte.Boletin, GrupoId: grupoId, AlumnoId: alumnoId, Nodo: nodo);
 
     /// <summary>El cuerpo del descriptor tal como lo espera el nodo (<c>reporte</c> de <c>exportaciones/</c>).</summary>
     public Dictionary<string, object> ACuerpo()

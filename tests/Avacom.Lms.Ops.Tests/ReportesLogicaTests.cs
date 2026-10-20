@@ -144,6 +144,11 @@ public sealed class ReportesLogicaTests
         Assert.Null(RutasDeReportes.DeReciente(De("cobertura", "{}")));
         Assert.Equal("reporte-uso?desde=1000&hasta=2000&grupo=g-1&country=CO", RutasDeReportes.DeReciente(De("uso", """{"desde":1000,"hasta":2000,"grupo_id":"g-1","country":"CO"}""")));
         Assert.Equal("reporte-uso", RutasDeReportes.DeReciente(De("uso", "{}")));
+        // el boletín: de un estudiante (con alumno) o de todo el grupo (sin él); sin grupo no hay boletín que reabrir
+        Assert.Equal("reporte-boletin?alumno=al-1&grupo=g-1", RutasDeReportes.DeReciente(De("boletin", """{"alumno_id":"al-1","grupo_id":"g-1"}""")));
+        Assert.Equal("reporte-boletines?grupo=g-1&subject=math", RutasDeReportes.DeReciente(De("boletin", """{"grupo_id":"g-1","subject":"math"}""")));
+        Assert.Null(RutasDeReportes.DeReciente(De("boletin", """{"alumno_id":"al-1"}""")));
+        Assert.Equal("reportes-elegir?que=boletin", RutasDeReportes.DeElegir(RutasDeReportes.ElegirBoletin));
         Assert.Equal("reporte-alumno?alumno=a&grupo=g&level=SEC", RutasDeReportes.DeReciente(De("alumno", """{"alumno_id":"a","grupo_id":"g","level":"SEC"}""")));
     }
 

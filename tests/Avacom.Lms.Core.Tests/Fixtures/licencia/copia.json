@@ -1,0 +1,29 @@
+{
+  "archivo_b64": "QVZMQwABBWRldi0xgAEAEKenp6cAAUAAgAAAAAAAAAGAAgAEAAAAAQADAA9BdWxhIGRlIHBydWViYXOABAAIAAABoLpgNwmABQAIAAABoL+GkwmABgAIAAABqBc3vwmABwACAB6ACAAQAAAANwAABLAAAAAyAAAAZIAJAAIBKoAKAIYDBAGTfqt0/mQoGz7Iv+GwQw5lGGgNt7gLXMOha7SNHim19gL4DwvwoVBh0IoyBJtjCbVjo2pH6eGwkhWYOscbiRaGPAP9KkfmnJKi4XprkVvg5hbVIerZ+U8/dHaHvBqF61GRmAQZkDZVpEQhO9hNEGgro8ILK3Ul67msokN8KYqYEunkN4ALAAEBoMs5u46C/QGd10hDTLCPVhNRn3WIaPYWCK82asIPGYfe+B+yWUjG4KCfItc0ATg1AkyLP0ppxIJUU/mVP/QBCA==",
+  "licencia": {
+    "archivo": "494b280e4bd8",
+    "aula": "Aula de pruebas",
+    "capacidades": [
+      "*"
+    ],
+    "desde": 1789919662857,
+    "emitida": 1789833262857,
+    "gracia_dias": 30,
+    "id": "a7a7a7a7-0001-4000-8000-000000000001",
+    "kid": "dev-1",
+    "liberacion_dias": 0,
+    "liberacion_pendiente": false,
+    "limites": {
+      "concurrentes_normal": 50,
+      "concurrentes_pico": 100,
+      "equipos": 55,
+      "usuarios": 1200
+    },
+    "serie": 1,
+    "tipo": "produccion",
+    "vence": 1821455662857
+  },
+  "nombre": "licencia-a7a7a7a7-serie1.avlic",
+  "sha256": "494b280e4bd85e3f20f3f88bbbf66f7a016ce44abd315bec62c565fce829cb94",
+  "texto": "AVL1.QVZMQwABBWRldi0xgAEAEKenp6cAAUAAgAAAAAAAAAGAAgAEAAAAAQADAA9BdWxhIGRlIHBydWViYXOABAAIAAABoLpgNwmABQAIAAABoL-GkwmABgAIAAABqBc3vwmABwACAB6ACAAQAAAANwAABLAAAAAyAAAAZIAJAAIBKoAKAIYDBAGTfqt0_mQoGz7Iv-GwQw5lGGgNt7gLXMOha7SNHim19gL4DwvwoVBh0IoyBJtjCbVjo2pH6eGwkhWYOscbiRaGPAP9KkfmnJKi4XprkVvg5hbVIerZ-U8_dHaHvBqF61GRmAQZkDZVpEQhO9hNEGgro8ILK3Ul67msokN8KYqYEunkN4ALAAEBoMs5u46C_QGd10hDTLCPVhNRn3WIaPYWCK82asIPGYfe-B-yWUjG4KCfItc0ATg1AkyLP0ppxIJUU_mVP_QBCA"
+}

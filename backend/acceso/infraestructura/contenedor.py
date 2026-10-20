@@ -7,6 +7,7 @@ from __future__ import annotations
 from django.conf import settings
 
 from ..aplicacion.casos_uso import Servicios
+from .cupo import CupoDeLicencia
 from .seguridad import AzarSeguro, CifradorAesGcm, Claves, EmisorJwt, HasherArgon2, RelojSistema
 from .unidad_trabajo import FabricaUoWDjango
 
@@ -41,5 +42,6 @@ def servicios() -> Servicios:
             tokens=EmisorJwt(claves),
             reloj=RelojSistema(),
             azar=AzarSeguro(),
+            cupo=CupoDeLicencia(),         # MOD-018 (BR-027): el cupo de identidades; sin licencia (desarrollo y pruebas) no restringe
         )
     return _cache[huella]

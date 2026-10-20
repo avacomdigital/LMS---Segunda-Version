@@ -76,13 +76,16 @@ def url_medio(nombre_fuente: str, curso_ref: str, media_ref: str, ruta: str | No
 
 
 def configuracion() -> ConfigAula:
-    """Los tiempos y la capacidad del aula salen de `settings` (variables AVACOM_AULA_*)."""
+    """Los tiempos y la capacidad del aula salen de `settings` (variables AVACOM_AULA_*). La capacidad (BR-063: 50 en operación normal y 100 en pico) la fija la LICENCIA (MOD-018) cuando
+    hay una vigente; sin licencia (desarrollo, pruebas, o un nodo que aún no la evaluó) valen los de `settings`. Se lee de memoria, sin consultas."""
+    from licenciamiento import servicios as licencia
+    normal, pico = licencia.concurrencia(int(settings.AVACOM_AULA_DISPOSITIVOS_NORMAL), int(settings.AVACOM_AULA_DISPOSITIVOS_PICO))
     return ConfigAula(
         latido_vencido_ms=int(settings.AVACOM_AULA_LATIDO_VENCIDO_MS),
         ausencia_ms=int(settings.AVACOM_AULA_AUSENCIA_MS),
         inactividad_ms=int(settings.AVACOM_AULA_INACTIVIDAD_MS),
-        dispositivos_normal=int(settings.AVACOM_AULA_DISPOSITIVOS_NORMAL),
-        dispositivos_pico=int(settings.AVACOM_AULA_DISPOSITIVOS_PICO),
+        dispositivos_normal=normal,
+        dispositivos_pico=pico,
         unirse_intentos=int(settings.AVACOM_AULA_UNIRSE_INTENTOS),
         unirse_ventana_ms=int(settings.AVACOM_AULA_UNIRSE_VENTANA_MS),
     )

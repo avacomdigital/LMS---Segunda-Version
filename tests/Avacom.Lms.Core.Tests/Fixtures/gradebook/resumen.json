@@ -4,7 +4,7 @@
     {
       "alumnos": [
         {
-          "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
+          "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
           "calificaciones": 0,
           "pendientes": 0,
           "periodo": "2026",
@@ -22,7 +22,7 @@
   ],
   "grupo": {
     "codigo": "8A",
-    "id": "aaa24399-46b8-4f25-802b-de7fa5fb2cdf",
+    "id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
     "nivel_clave": "secundaria",
     "nombre": "Octavo A",
     "periodo": "2026"

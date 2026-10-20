@@ -1,5 +1,7 @@
+using Avacom.Lms.Core.Licencia;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Acceso;
+using Avacom.Lms.Ops.Licencia.Ui;
 using Avacom.Lms.Ops.Busqueda;
 using Avacom.Lms.Ops.Calificaciones;
 using Avacom.Lms.Ops.Reportes;
@@ -10,6 +12,7 @@ namespace Avacom.Lms.Ops.Pages;
 public partial class DashboardPage : ContentPage
 {
     private int _versionAviso;
+    private int _versionLicencia;
 
     public DashboardPage() => InitializeComponent();
 
@@ -36,6 +39,9 @@ public partial class DashboardPage : ContentPage
         // RF-08: «Seguridad del aula» sólo para la administración.
         SeguridadButton.IsVisible = Sesion.Usuario?.EsAdministracion == true;
         _ = PintarAvisoDelPinAsync();
+        // MOD-018: «Licencia» para la administración y el soporte técnico (sin sesión, se deja ver y el nodo decide), y su banda, nunca con una clase abierta en este equipo.
+        LicenciaButton.IsVisible = ReglasDeLicencia.VeLaLicencia(Sesion.Usuario);
+        _ = PintarAvisoDeLicenciaAsync();
         // Sólo con el perfil de pruebas de tests/Avacom.Lms.Ops.Uia (las teselas no se pueden tocar por UI Automation); sin él, nada.
         if (Ajustes.TomarRutaDePrueba() is { } ruta) Dispatcher.Dispatch(async () => await Shell.Current.GoToAsync(ruta));
     }
@@ -61,6 +67,43 @@ public partial class DashboardPage : ContentPage
     }
 
     private async void OnSeguridadClicked(object? sender, EventArgs e) => await Shell.Current.GoToAsync("seguridad-aula");
+
+    /// <summary>
+    /// MOD-018 · R-01: la banda de la licencia, molde de la del PIN. Sólo para quien ve la licencia y NUNCA con una clase abierta en este equipo (<see cref="Sesion.ClaseAbiertaId"/>:
+    /// lo que «Clase de hoy» ofrece continuar): ninguna alerta administrativa interrumpe una sesión activa. Se calcula sólo al aparecer el menú y muestra el aviso más importante de los
+    /// que dio el nodo, con cuántos más hay. Si el nodo no contesta, no se pinta nada: no se inventa un aviso.
+    /// </summary>
+    private async Task PintarAvisoDeLicenciaAsync()
+    {
+        var version = ++_versionLicencia;
+        try
+        {
+            if (!ReglasDeLicencia.MostrarBanner(Sesion.Usuario, Sesion.ClaseAbiertaId is not null)) { LicenciaBanner.IsVisible = false; return; }
+            using var limite = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            var estado = await Sesion.Licencia.EstadoAsync(Sesion.ProfesorId, limite.Token);
+            // Al llegar la respuesta se vuelve a mirar: si mientras tanto se abrió una clase (o se salió del menú y se volvió), no se pinta esta.
+            if (version != _versionLicencia) return;
+            if (Sesion.ClaseAbiertaId is not null || ReglasDeLicencia.Banner(estado) is not { } banda) { LicenciaBanner.IsVisible = false; return; }
+            var (fondo, tinta, filo) = LicenciaUi.ColoresDelBanner(banda.Tono);
+            LicenciaBanner.BackgroundColor = fondo;
+            LicenciaBanner.Stroke = new SolidColorBrush(filo);
+            LicenciaBannerLabel.Text = banda.Completo;
+            LicenciaBannerLabel.TextColor = tinta;
+            LicenciaBannerButton.TextColor = tinta;
+            LicenciaBanner.IsVisible = true;
+        }
+        catch (Exception ex)
+        {
+            LicenciaBanner.IsVisible = false;
+            RegistroDeFallos.Escribir("ops", "DashboardPage.AvisoDeLicencia", ex);
+        }
+    }
+
+    private async void OnLicenciaClicked(object? sender, EventArgs e)
+    {
+        try { await Shell.Current.GoToAsync("licencia"); }
+        catch (Exception ex) { RegistroDeFallos.Escribir("ops", "DashboardPage.Licencia", ex); }
+    }
 
     /// <summary>Con sesión de usuario (007-10) la cabecera muestra a quien entró; sin ella, la profesora de siempre del prototipo.</summary>
     private void PintarPersona()

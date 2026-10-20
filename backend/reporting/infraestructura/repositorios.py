@@ -199,7 +199,8 @@ class ProyeccionesDjango:
 
 class ConfigDjango:
     ID = "nodo"
-    DE_FABRICA = {"umbral_privacidad": False, "extraibles_permitidos": True, "exigir_razon": False, "version": 0, "actualizada_en": None, "actualizada_por": ""}
+    DE_FABRICA = {"umbral_privacidad": False, "extraibles_permitidos": True, "exigir_razon": False, "plantilla_boletin": cat.PLANTILLA_AUTO, "periodos_boletin": [],
+                  "leyenda_boletin": "", "version": 0, "actualizada_en": None, "actualizada_por": ""}
 
     def get(self) -> dict:
         fila = m.Config.objects.filter(pk=self.ID).first()
@@ -210,7 +211,8 @@ class ConfigDjango:
         if version_esperada is not None and version_esperada != actual["version"]:
             return None
         valores = {"umbral_privacidad": bool(datos["umbral_privacidad"]), "extraibles_permitidos": bool(datos["extraibles_permitidos"]), "exigir_razon": bool(datos["exigir_razon"]),
-                   "actualizada_en": ahora, "actualizada_por": por}
+                   "plantilla_boletin": str(datos.get("plantilla_boletin") or cat.PLANTILLA_AUTO), "periodos_boletin": list(datos.get("periodos_boletin") or []),
+                   "leyenda_boletin": str(datos.get("leyenda_boletin") or ""), "actualizada_en": ahora, "actualizada_por": por}
         if actual["version"] == 0:
             m.Config.objects.create(id=self.ID, version=1, **valores)
         elif not m.Config.objects.filter(pk=self.ID, version=actual["version"]).update(version=F("version") + 1, **valores):

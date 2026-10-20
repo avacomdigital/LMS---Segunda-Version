@@ -234,6 +234,8 @@ public partial class CalificacionDetallePage : ContentPage
         pila.Add(ExamenUi.Dato("Calificada por", TextoDeCalificaciones.EsDelSistema(c.EvaluadorId) ? "El sistema" : ExamenTexto.Persona(c.EvaluadorId)));
         pila.Add(ExamenUi.Dato("Cómo se calificó", $"{GradebookTexto.Origen(c.Origen)} · {TextoDeCalificaciones.Regla(c.ReglaPuntuacion)}"));
         pila.Add(ExamenUi.Dato("Intento", c.Aciertos is { } a && c.Preguntas is { } n ? $"Número {c.NumeroIntento} · {a} de {n} aciertos" : $"Número {c.NumeroIntento}"));
+        // La nota en bruto, tal como la contó la evaluación: los puntos sobre el máximo y el porcentaje. Se lee junto a la presentada (los tres a la vez).
+        if (GradebookTexto.Bruto(c.Bruto) is { Length: > 0 } bruto) pila.Add(ExamenUi.Dato("Puntos", bruto));
         pila.Add(ExamenUi.Dato("Registrada", GradebookTexto.Hora(c.RegistradaEn)));
         pila.Add(ExamenUi.Dato("Última vez que cambió", GradebookTexto.Hora(c.ActualizadaEn)));
         if (c.PublicadaEn is { } en) pila.Add(ExamenUi.Dato("Publicada", $"{GradebookTexto.Hora(en)}{(string.IsNullOrWhiteSpace(c.PublicadaPor) ? string.Empty : " por " + ExamenTexto.Persona(c.PublicadaPor))}"));

@@ -28,7 +28,7 @@ internal static class Salud
     /// si el modulo de acceso no pudo leer su base de datos, el error (permisos de Data, base
     /// bloqueada o corrupta). <c>Error</c> es null cuando todo va bien.
     /// </summary>
-    public sealed record EstadoDelNodo(bool? Instalado, bool? ClavesDerivadas, string? Error = null, string? PinMaestro = null);
+    public sealed record EstadoDelNodo(bool? Instalado, bool? ClavesDerivadas, string? Error = null, string? PinMaestro = null, string? Licencia = null);
 
     /// <summary>
     /// Pregunta a /health/ por el estado del modulo de acceso. Sin organizacion
@@ -51,7 +51,11 @@ internal static class Salud
             // profesor ni restablecer su contrasena: el primer arranque de OPS lo crea; en un nodo ya instalado, lo
             // configura la administracion en OPS (Seguridad del aula).
             var pin = acceso.TryGetProperty("pin_maestro", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
-            return new EstadoDelNodo(Booleano(acceso, "instalado"), Booleano(acceso, "claves_derivadas"), error, pin);
+            // MOD-018: el estado de la licencia (sin_licencia = ventana de evaluacion · activa · reactivada · en_gracia · liberacion_pendiente · degradada). La clase nunca se detiene por
+            // ninguno de ellos: el asistente lo dice para que, en los treinta dias de evaluacion, la administracion se entere de que hay que activarla.
+            var licencia = documento.RootElement.TryGetProperty("licencia", out var l) && l.ValueKind == JsonValueKind.Object && l.TryGetProperty("estado", out var e) && e.ValueKind == JsonValueKind.String
+                ? e.GetString() : null;
+            return new EstadoDelNodo(Booleano(acceso, "instalado"), Booleano(acceso, "claves_derivadas"), error, pin, licencia);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or JsonException)
         {

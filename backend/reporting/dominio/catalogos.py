@@ -22,12 +22,21 @@ PERMISOS_DE_LECTURA_ACADEMICA = (P_VIEW, P_GROUP, P_STUDENT)    # los que dan ac
 
 # ------------------------------------------------------------------------------------------------ tipos de reporte
 
-CLASE, ALUMNO, GRUPO, USO = "clase", "alumno", "grupo", "uso"
-TIPOS = (CLASE, ALUMNO, GRUPO, USO)
+CLASE, ALUMNO, GRUPO, USO, BOLETIN = "clase", "alumno", "grupo", "uso", "boletin"
+TIPOS = (CLASE, ALUMNO, GRUPO, USO, BOLETIN)
 COMPARACION, COBERTURA = "comparacion", "cobertura"          # reservados (V1): la ruta existe y responde 501
 TIPOS_RESERVADOS = (COMPARACION, COBERTURA)
-PERMISO_DE_TIPO = {CLASE: P_VIEW, ALUMNO: P_STUDENT, GRUPO: P_GROUP, USO: P_USAGE}
-NOMBRE_DE_TIPO = {CLASE: "de la clase", ALUMNO: "del alumno", GRUPO: "del grupo", USO: "de uso de equipos"}
+PERMISO_DE_TIPO = {CLASE: P_VIEW, ALUMNO: P_STUDENT, GRUPO: P_GROUP, USO: P_USAGE, BOLETIN: P_STUDENT}
+NOMBRE_DE_TIPO = {CLASE: "de la clase", ALUMNO: "del alumno", GRUPO: "del grupo", USO: "de uso de equipos", BOLETIN: "académico del estudiante"}
+
+# ------------------------------------------------------------------------------------------------ el boletín académico individual
+# Un modelo de información común (qué aprendió · qué competencias alcanzó · cómo ha progresado · qué debe mejorar) con PLANTILLAS por país y nivel. `auto` elige por el país de
+# la política del libro y el nivel del grupo; la administración puede fijar una. Ninguna plantilla es un documento oficial: es la base para que el profesor arme el suyo.
+PLANTILLA_AUTO, PLANTILLA_CO, PLANTILLA_MX, PLANTILLA_GENERICA = "auto", "co", "mx", "generica"
+PLANTILLAS_DE_BOLETIN = (PLANTILLA_AUTO, PLANTILLA_CO, PLANTILLA_MX, PLANTILLA_GENERICA)
+MAX_PERIODOS_DE_BOLETIN = 6
+MAX_LEYENDA_DE_BOLETIN = 400
+MAX_BOLETINES_POR_ARCHIVO = 80        # un grupo nunca tiene tantos alumnos; evita una petición absurda
 
 # ------------------------------------------------------------------------------------------------ fuentes y eventos que consume
 
@@ -93,10 +102,11 @@ MINIMO_DE_ALUMNOS = 5
 
 # ------------------------------------------------------------------------------------------------ exportación (FUN-146)
 
-XLSX, CSV = "xlsx", "csv"
-FORMATOS = (XLSX, CSV)
-EXTENSION_DE = {XLSX: "xlsx", CSV: "csv"}
-TIPO_MIME = {XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", CSV: "text/csv; charset=utf-8"}
+XLSX, CSV, ZIP = "xlsx", "csv", "zip"
+FORMATOS = (XLSX, CSV)                        # lo que se PIDE; un boletín de grupo sale empaquetado (un archivo por estudiante) en un `zip` del formato pedido
+FORMATOS_DE_ARCHIVO = (XLSX, CSV, ZIP)        # lo que se ENTREGA
+EXTENSION_DE = {XLSX: "xlsx", CSV: "csv", ZIP: "zip"}
+TIPO_MIME = {XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", CSV: "text/csv; charset=utf-8", ZIP: "application/zip"}
 
 EXTRAIBLE, CARPETA_LOCAL, RED = "extraible", "carpeta_local", "red"
 DESTINOS = (EXTRAIBLE, CARPETA_LOCAL, RED)
@@ -126,15 +136,16 @@ RAZONES_DE_EXPORTACION = {
 EV_GRUPO_GENERADO = "reporte.grupo_generado.v1"
 EV_ALUMNO_GENERADO = "reporte.alumno_generado.v1"
 EV_USO_GENERADO = "reporte.uso_generado.v1"
+EV_BOLETIN_GENERADO = "reporte.boletin_generado.v1"
 EV_COBERTURA_GENERADO = "reporte.cobertura_generado.v1"      # RESERVADO: se declara y no se emite (V1)
 EV_AGREGADOS_ACTUALIZADOS = "reporte.agregados_actualizados.v1"
 EV_AGREGADOS_RECONSTRUIDOS = "reporte.agregados_reconstruidos.v1"
 EV_MARCADO_INCOMPLETO = "reporte.marcado_incompleto.v1"
 EV_EXPORTADO = "reporte.exportado.v1"
-EVENTOS = (EV_GRUPO_GENERADO, EV_ALUMNO_GENERADO, EV_USO_GENERADO, EV_COBERTURA_GENERADO, EV_AGREGADOS_ACTUALIZADOS, EV_AGREGADOS_RECONSTRUIDOS,
+EVENTOS = (EV_GRUPO_GENERADO, EV_ALUMNO_GENERADO, EV_USO_GENERADO, EV_BOLETIN_GENERADO, EV_COBERTURA_GENERADO, EV_AGREGADOS_ACTUALIZADOS, EV_AGREGADOS_RECONSTRUIDOS,
            EV_MARCADO_INCOMPLETO, EV_EXPORTADO)
 EVENTOS_RESERVADOS = (EV_COBERTURA_GENERADO,)
-EVENTO_DE_TIPO = {GRUPO: EV_GRUPO_GENERADO, ALUMNO: EV_ALUMNO_GENERADO, USO: EV_USO_GENERADO}      # la clase no tiene función propia en el Maestro: no emite
+EVENTO_DE_TIPO = {GRUPO: EV_GRUPO_GENERADO, ALUMNO: EV_ALUMNO_GENERADO, USO: EV_USO_GENERADO, BOLETIN: EV_BOLETIN_GENERADO}      # la clase no tiene función propia en el Maestro: no emite
 
 # ------------------------------------------------------------------------------------------------ acciones de auditoría (catálogo de MOD-019)
 

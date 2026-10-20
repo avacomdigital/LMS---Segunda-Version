@@ -116,7 +116,9 @@ EV_ESCALA_ADOPTADA = "calificacion.escala_adoptada.v1"
 EV_POLITICA = "calificacion.politica_configurada.v1"
 EV_CLASIFICACION = "calificacion.clasificacion_definida.v1"
 EV_RETROALIMENTADA = "calificacion.retroalimentada.v1"
-EVENTOS_PROPUESTOS = (EV_PUBLICADA, EV_PUBLICACION_RETIRADA, EV_VALORACION, EV_ANULADA, EV_ESCALA_ADOPTADA, EV_POLITICA, EV_CLASIFICACION, EV_RETROALIMENTADA)
+EV_OBSERVACION = "calificacion.observacion_registrada.v1"
+EVENTOS_PROPUESTOS = (EV_PUBLICADA, EV_PUBLICACION_RETIRADA, EV_VALORACION, EV_ANULADA, EV_ESCALA_ADOPTADA, EV_POLITICA, EV_CLASIFICACION, EV_RETROALIMENTADA,
+                      EV_OBSERVACION)
 EVENTOS = EVENTOS_DEL_MAESTRO + EVENTOS_PROPUESTOS
 
 # Los eventos de MOD-010 (`m10_evento_salida`) que este módulo consume. Todos llevan `asignacion_id`, `alumno_id` e `intento_id`.
@@ -152,8 +154,32 @@ A_DENEGADA = "calificacion.modificacion_denegada"
 A_DERIVADAS = "calificacion.derivadas_reconstruidas"
 A_RETROALIMENTADA = "calificacion.retroalimentada"
 A_EVENTO_OMITIDO = "calificacion.evento_omitido"
+A_OBSERVACION = "calificacion.observacion_registrada"
 ACCIONES_NUEVAS = (A_REGISTRADA, A_MANUAL, A_RUBRICA, A_PUBLICADA, A_PUBLICACION_RETIRADA, A_VALORACION, A_ANULADA, A_MODO_CAMBIADO,
-                   A_ESCALA_ADOPTADA, A_POLITICA, A_CLASIFICACION, A_DENEGADA, A_DERIVADAS, A_RETROALIMENTADA, A_EVENTO_OMITIDO)
+                   A_ESCALA_ADOPTADA, A_POLITICA, A_CLASIFICACION, A_DENEGADA, A_DERIVADAS, A_RETROALIMENTADA, A_EVENTO_OMITIDO, A_OBSERVACION)
+
+# ------------------------------------------------------------------------------ observaciones del docente (boletín)
+# Lo que el profesor recomienda a un estudiante en un periodo (la cuarta pregunta del boletín: «¿qué debe mejorar?»). El nodo principal no tiene teclado: las
+# recomendaciones son frases de un catálogo cerrado que se tocan; el texto libre es un extra opcional. Una observación es de un alumno en un grupo y un periodo,
+# general (`curso_ref` vacío) o de un curso.
+RECOMENDACIONES: dict[str, str] = {
+    "repasar_conceptos": "Repasar los conceptos básicos de la materia antes de la próxima evaluación",
+    "practicar_ejercicios": "Practicar más ejercicios del tema con el modo estudio",
+    "leer_con_atencion": "Leer con atención el enunciado completo antes de responder",
+    "justificar_respuestas": "Justificar las respuestas con el procedimiento o un ejemplo",
+    "revisar_antes_de_entregar": "Revisar las respuestas antes de entregar",
+    "participar_en_clase": "Participar más en las actividades de clase",
+    "entregar_a_tiempo": "Entregar las evaluaciones y tareas dentro del plazo",
+    "pedir_ayuda": "Pedir ayuda al profesor cuando algo no quede claro",
+    "organizar_el_tiempo": "Organizar el tiempo de estudio en casa",
+    "trabajo_en_equipo": "Colaborar con los compañeros en el trabajo en equipo",
+    "mantener_el_ritmo": "Mantener el ritmo de trabajo: va bien",
+    "ampliar_lecturas": "Ampliar con lecturas y retos adicionales: puede ir más allá",
+    "acompanamiento_familiar": "Conviene el acompañamiento de la familia en las tareas",
+    "apoyo_especializado": "Conviene valorar un apoyo pedagógico especializado",
+}
+MAX_RECOMENDACIONES = 6
+MAX_OBSERVACION = 600
 
 # Cuántas veces seguidas puede fallar la aplicación de UN evento de MOD-010 antes de que el libro lo deje atrás (con su asiento en la bitácora): un fallo pasajero
 # se reintenta en el siguiente ciclo y un evento que nunca se puede aplicar no detiene la cola para siempre.

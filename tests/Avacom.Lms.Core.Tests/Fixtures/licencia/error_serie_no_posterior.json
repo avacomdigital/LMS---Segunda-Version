@@ -1,0 +1,5 @@
+{
+  "codigo": "licencia_invalida",
+  "detail": "La licencia no es más reciente que la que ya está instalada.",
+  "motivo": "serie_no_posterior"
+}

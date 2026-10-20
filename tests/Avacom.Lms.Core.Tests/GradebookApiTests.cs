@@ -153,6 +153,35 @@ public sealed class GradebookApiTests : IDisposable
         Assert.Equal(new[] { "actor", "solicitud_id", "version_esperada" }, capturas[4].Claves);
     }
 
+    [Fact]
+    public async Task Observar_EsUnPutConLasRecomendacionesElGrupoYLoOpcionalSoloSiViene()
+    {
+        var (api, capturas) = Api(HttpStatusCode.OK, """{"observacion":{"id":"o-1","alumno_id":"al-1","grupo_id":"g-1","periodo":"2026","curso_ref":"","recomendaciones":[{"codigo":"pedir_ayuda","texto":"Pedir ayuda"}],"texto":"","version":1,"actualizada_en":1,"actualizada_por":"prof-1"},"cambiado":true,"servidor_en":1}""");
+        var r = await api.ObservarAsync("prof-1", "al-1", "g-1", ["pedir_ayuda"]);
+        Assert.True(r!.Cambiado);
+        Assert.True(r.Observacion.EsGeneral);
+        await api.ObservarAsync("prof-1", "al-1", "g-1", ["pedir_ayuda", "entregar_a_tiempo"], "Va mejorando", "curso-1", 2);
+        Assert.Equal((HttpMethod.Put, Base + "estudiantes/al-1/observacion/"), (capturas[0].Metodo, capturas[0].Url));
+        Assert.Equal(new[] { "actor", "grupo_id", "recomendaciones" }, capturas[0].Claves);
+        Assert.Equal(new[] { "actor", "curso_ref", "grupo_id", "recomendaciones", "texto", "version_esperada" }, capturas[1].Claves);
+        Assert.Equal(2, capturas[1].Json.GetProperty("recomendaciones").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task ElLibroYElBoletin_SeSegmentanPorMateriaConElCodigoDelArbol()
+    {
+        var (api, capturas) = Api();
+        await api.LibroAsync("prof-1", "g-1", materia: "math");
+        await api.LibroAsync("prof-1", "g-1", cursoRef: "curso-1", soloResumen: true);
+        await api.BoletinAsync("prof-1", "al-1", "g-1", materia: "science");
+        Assert.Equal(new[]
+        {
+            Base + "libro/?grupo_id=g-1&subject=math&actor=prof-1",
+            Base + "libro/?grupo_id=g-1&curso_ref=curso-1&vista=resumen&actor=prof-1",
+            Base + "estudiantes/al-1/boletin/?grupo_id=g-1&subject=science&limite=20&actor=prof-1",
+        }, capturas.Select(c => c.Url).ToArray());
+    }
+
     // ============================================================================================= configuración
 
     [Fact]

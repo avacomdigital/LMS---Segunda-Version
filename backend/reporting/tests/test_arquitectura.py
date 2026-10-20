@@ -187,10 +187,10 @@ class PermisosYCatalogosTests(TestCase):
             self.assertTrue(catalogo_audit.resolver(sensible).sensible, sensible)           # su detalle se enmascara sin escalada (BR-131)
         self.assertEqual(catalogo_audit.resolver(cat.A_EXPORTADO).evento_origen, cat.EV_EXPORTADO)
 
-    def test_los_eventos_son_los_ocho_del_maestro_versionados(self):
+    def test_los_eventos_son_los_ocho_del_maestro_versionados_mas_el_del_boletin(self):
         self.assertEqual(sorted(cat.EVENTOS), sorted([
             "reporte.agregados_actualizados.v1", "reporte.agregados_reconstruidos.v1", "reporte.alumno_generado.v1", "reporte.cobertura_generado.v1", "reporte.exportado.v1",
-            "reporte.grupo_generado.v1", "reporte.marcado_incompleto.v1", "reporte.uso_generado.v1"]))
+            "reporte.grupo_generado.v1", "reporte.marcado_incompleto.v1", "reporte.uso_generado.v1", "reporte.boletin_generado.v1"]))      # el boletín académico (2026-10-19)
         self.assertEqual(cat.EVENTOS_RESERVADOS, (cat.EV_COBERTURA_GENERADO,))
 
     def test_los_eventos_que_consume_pertenecen_a_su_fuente_y_estan_versionados(self):

@@ -63,6 +63,13 @@ def anexar(actor: str | None, accion: str, tabla: str = "", objeto_id: str = "",
 registrar = anexar
 
 
+def ultima_marca() -> int | None:
+    """La fecha (reloj del NODO) del asiento más reciente de la bitácora encadenada, o None si aún está vacía. Sólo lectura, por el índice único de la secuencia: la usa
+    MOD-018 como una de las anclas del reloj (un respaldo de la tabla de licencias no rebobina lo que ya quedó asentado aquí)."""
+    from .models import Bitacora
+    return Bitacora.objects.order_by("-secuencia").values_list("ocurrido_en", flat=True).first()
+
+
 def registrar_denegacion(codigo: str, permiso: str | None, metodo: str, ruta: str, objeto=None) -> None:
     """019-08 / VER-01: toda denegación (403) con la lista completa de roles activos, el permiso solicitado y la ruta."""
     ctx = contexto.actual()

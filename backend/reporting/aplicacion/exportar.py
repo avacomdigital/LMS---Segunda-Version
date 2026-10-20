@@ -37,7 +37,7 @@ from ..dominio.errores import (
 from .base import _CasoDeUso, exigir_nodo_instalado, nuevo_id
 from .consumidor import ConsumirEventos
 from .puertos import Actor, ArchivoGenerado
-from .reportes import ReporteDeAlumno, ReporteDeClase, ReporteDeGrupo, ReporteDeUso
+from .reportes import ReporteDeAlumno, ReporteDeBoletin, ReporteDeClase, ReporteDeGrupo, ReporteDeUso
 
 log = logging.getLogger("avacom.reporting.exportar")
 
@@ -47,6 +47,7 @@ _INCLUYE = {
     cat.GRUPO: ["asistencia", "participación", "aciertos", "evaluaciones", "estudio"],
     cat.ALUMNO: ["asistencia", "participación", "aciertos", "evaluaciones y calificaciones", "estudio"],
     cat.USO: ["uso de equipos"],
+    cat.BOLETIN: ["resultados por área con puntos y calificación", "competencias y logros", "progreso por periodo", "recomendaciones del profesor"],
 }
 ADVERTENCIA_NOMINAL = "El archivo incluirá nombres de alumnos. Una vez fuera de este equipo, el colegio ya no controla quién lo abre."
 ADVERTENCIA_AGREGADA = "Sin datos de personas."
@@ -95,6 +96,12 @@ class _Exportador(_CasoDeUso):
         if tipo == cat.ALUMNO:
             alumno_id = str(consulta.get("alumno_id") or "")
             return tipo, {"alumno_id": alumno_id, **({"grupo_id": consulta["grupo_id"]} if consulta.get("grupo_id") else {}), **nodo}, ReporteDeAlumno(self.s).armar(actor, alumno_id, consulta)
+        if tipo == cat.BOLETIN:
+            alumno_id, grupo_id = str(consulta.get("alumno_id") or ""), str(consulta.get("grupo_id") or "")
+            if alumno_id:
+                reporte = ReporteDeBoletin(self.s).armar(actor, alumno_id, consulta)
+                return tipo, {"alumno_id": alumno_id, "grupo_id": reporte["grupo"]["id"], **nodo}, reporte
+            return tipo, {"grupo_id": grupo_id, **nodo}, ReporteDeBoletin(self.s).armar_grupo(actor, grupo_id, consulta)
         reporte = ReporteDeUso(self.s).armar(actor, consulta)
         return tipo, {"desde": reporte["periodo"]["desde"], "hasta": reporte["periodo"]["hasta"], **({"grupo_id": consulta["grupo_id"]} if consulta.get("grupo_id") else {})}, reporte
 
@@ -106,6 +113,8 @@ class _Exportador(_CasoDeUso):
             grupos = [reporte["grupo"]["id"]]
         elif tipo == cat.ALUMNO:
             grupos = [g["grupo"]["id"] for g in reporte["grupos"]]
+        elif tipo == cat.BOLETIN:
+            grupos = [reporte["grupo"]["id"]]
         else:
             grupos = []
         if not grupos:
@@ -114,16 +123,33 @@ class _Exportador(_CasoDeUso):
             self.s.autorizacion.exigir(actor, cat.P_EXPORT, grupo_id=g)
 
     # ----------------------------------------------------------------------------------------------------------------- el documento
-    def _documento(self, tipo: str, reporte: dict, ahora: int) -> tuple[doc.Documento, dict]:
+    def _documentos(self, tipo: str, reporte: dict, ahora: int) -> tuple[list[doc.Documento], dict]:
+        """Los documentos de un reporte (uno, salvo los boletines de un grupo: uno por estudiante) y el contexto con que se escribieron."""
         local = self.s.reloj.a_local
         ctx = {"titulo": reporte["titulo"], "generado_por": reporte["generado_por"]["rotulo"] or reporte["generado_por"]["id"] or "—",
                "generado_el": tx.fecha_larga(local(ahora)), "corte_texto": tx.fecha_larga(local(reporte["corte"]["en"])) + " (hora del nodo)",
                "version_nodo": self.s.config.version_del_nodo, "fecha": lambda ms: tx.fecha_larga(local(ms))}
-        documento = doc.de_reporte(tipo, reporte, ctx)
-        return documento, ctx
+        return doc.de_reporte_varios(tipo, reporte, ctx), ctx
 
-    def _nombre(self, tipo: str, documento: doc.Documento, reporte: dict, formato: str) -> str:
-        return arch.nombre_del_reporte(tipo, documento.sujeto, self.s.reloj.a_local(reporte["corte"]["en"]), cat.EXTENSION_DE[formato])
+    @staticmethod
+    def _empaquetado(tipo: str, reporte: dict) -> bool:
+        """Los boletines de un GRUPO se entregan como un `zip` con un archivo por estudiante; todo lo demás es un solo archivo."""
+        return tipo == cat.BOLETIN and "boletines" in reporte
+
+    def _formato_de_entrega(self, tipo: str, reporte: dict, formato: str) -> str:
+        return cat.ZIP if self._empaquetado(tipo, reporte) else formato
+
+    def _nombre(self, tipo: str, documentos: list[doc.Documento], reporte: dict, formato: str) -> str:
+        """El nombre del archivo que se entrega: el tipo, el código del grupo (nunca una persona) y el corte. Los boletines de un grupo van en `boletines-<grupo>-<corte>.zip`."""
+        sujeto = documentos[0].sujeto if documentos else (reporte.get("grupo") or {}).get("codigo") or ""
+        if self._empaquetado(tipo, reporte):
+            return arch.nombre_del_reporte("boletines", sujeto, self.s.reloj.a_local(reporte["corte"]["en"]), cat.EXTENSION_DE[cat.ZIP])
+        return arch.nombre_del_reporte(tipo, sujeto, self.s.reloj.a_local(reporte["corte"]["en"]), cat.EXTENSION_DE[formato])
+
+    @staticmethod
+    def _nombres_internos(reporte: dict) -> list[str]:
+        """Dentro del zip, cada boletín lleva el nombre del estudiante (es lo que el profesor entrega a cada familia; el archivo es nominal de por sí) con un número que fija el orden."""
+        return [f"boletin-{i:02d}-{m['estudiante']['rotulo']}" for i, m in enumerate(reporte.get("boletines") or [], start=1)]
 
     @staticmethod
     def _salida(e: dict) -> dict:
@@ -144,7 +170,7 @@ class AlcanceDeExportacion(_Exportador):
         tipo, params, reporte = self._armar(actor, cuerpo.get("reporte"))
         self._exigir_exportar(actor, tipo, reporte)
         ahora = self.s.reloj.ahora_ms()
-        documento, _ = self._documento(tipo, reporte, ahora)
+        documentos, _ = self._documentos(tipo, reporte, ahora)
         with self.s.uow(lectura=True) as uow:
             config = uow.config.get()
         nominal = bool(reporte["nominal"])
@@ -156,6 +182,11 @@ class AlcanceDeExportacion(_Exportador):
         elif tipo == cat.ALUMNO:
             alumnos = 1
             que = "el reporte de un alumno del grupo " + " y ".join(g["grupo"]["codigo"] or g["grupo"]["nombre"] for g in reporte["grupos"])
+        elif tipo == cat.BOLETIN and "boletines" in reporte:
+            alumnos = len(reporte["boletines"])
+            que = f"los boletines académicos del grupo {reporte['grupo']['codigo'] or reporte['grupo']['nombre']} (un archivo por estudiante, en un zip)"
+        elif tipo == cat.BOLETIN:
+            alumnos, que = 1, f"el boletín académico de un estudiante del grupo {reporte['grupo']['codigo'] or reporte['grupo']['nombre']}"
         else:
             alumnos, que = 0, "el reporte de uso de equipos"
         detalle = []
@@ -163,11 +194,14 @@ class AlcanceDeExportacion(_Exportador):
             detalle.append(f"{alumnos} {'alumno' if alumnos == 1 else 'alumnos'}")
         detalle.append(_frase(_INCLUYE[tipo]))
         detalle.append(reporte["corte"]["texto"].replace("Datos al", "datos al"))
+        filas = sum(d.filas for d in documentos)
         return {
-            "tipo": tipo, "formato": formato, "titulo": reporte["titulo"], "alumnos": alumnos, "filas": documento.filas, "incluye": _INCLUYE[tipo], "nominal": nominal,
+            "tipo": tipo, "formato": formato, "formato_de_entrega": self._formato_de_entrega(tipo, reporte, formato), "archivos": len(documentos),
+            "plantilla": (reporte.get("plantilla") or {}).get("nombre") if tipo == cat.BOLETIN else None,
+            "titulo": reporte["titulo"], "alumnos": alumnos, "filas": filas, "incluye": _INCLUYE[tipo], "nominal": nominal,
             "umbral_aplicado": bool(reporte["privacidad"]["aplicada"]), "texto_alcance": f"Vas a guardar {que} ({', '.join(detalle)})",
             "advertencia": ADVERTENCIA_NOMINAL if nominal else ADVERTENCIA_AGREGADA, "corte": reporte["corte"], "privacidad": reporte["privacidad"],
-            "nombre_sugerido": self._nombre(tipo, documento, reporte, formato), "formatos": list(cat.FORMATOS),
+            "nombre_sugerido": self._nombre(tipo, documentos, reporte, formato), "formatos": list(cat.FORMATOS),
             "politica": {"extraibles_permitidos": config["extraibles_permitidos"], "exigir_razon": config["exigir_razon"],
                          "razones": [{"codigo": c, "etiqueta": e} for c, e in cat.RAZONES_DE_EXPORTACION.items()]}, "servidor_en": ahora}
 
@@ -196,22 +230,27 @@ class AutorizarExportacion(_Exportador):
         if config["exigir_razon"] and not razon:
             raise MotivoRequerido("Elige para qué vas a guardar este reporte.", razones=[{"codigo": c, "etiqueta": e} for c, e in cat.RAZONES_DE_EXPORTACION.items()])
         ahora = self.s.reloj.ahora_ms()
-        documento, _ = self._documento(tipo, reporte, ahora)
-        if documento.filas > cat.MAX_FILAS_EXPORTABLES:
-            raise DatosInvalidos("Este reporte es demasiado grande para exportarlo de una vez: acota el periodo o el grupo.", filas=documento.filas)
-        archivo: ArchivoGenerado = self.s.escritor.escribir(documento, formato)
+        documentos, _ = self._documentos(tipo, reporte, ahora)
+        filas = sum(d.filas for d in documentos)
+        if filas > cat.MAX_FILAS_EXPORTABLES:
+            raise DatosInvalidos("Este reporte es demasiado grande para exportarlo de una vez: acota el periodo o el grupo.", filas=filas)
+        if self._empaquetado(tipo, reporte):
+            archivo: ArchivoGenerado = self.s.escritor.escribir_varios(documentos, formato, self._nombres_internos(reporte))
+        else:
+            archivo = self.s.escritor.escribir(documentos[0], formato)
+        entregado = self._formato_de_entrega(tipo, reporte, formato)
         try:
-            nombre = self._nombre(tipo, documento, reporte, formato)
+            nombre = self._nombre(tipo, documentos, reporte, formato)
             with self.s.uow() as uow:
                 fila = uow.exportaciones.crear({
-                    "id": nuevo_id(), "tipo": tipo, "parametros": params, "formato": formato, "actor_id": actor.id, "actor_rol": actor.rol, "nominal": bool(reporte["nominal"]),
-                    "umbral_aplicado": bool(reporte["privacidad"]["aplicada"]), "filas": documento.filas, "bytes_total": archivo.bytes_total, "huella": archivo.huella,
+                    "id": nuevo_id(), "tipo": tipo, "parametros": params, "formato": entregado, "actor_id": actor.id, "actor_rol": actor.rol, "nominal": bool(reporte["nominal"]),
+                    "umbral_aplicado": bool(reporte["privacidad"]["aplicada"]), "filas": filas, "bytes_total": archivo.bytes_total, "huella": archivo.huella,
                     "nombre_archivo": nombre, "corte_en": reporte["corte"]["en"], "integracion": reporte["corte"]["integracion"], "destino_autorizado": destino,
                     "razon_codigo": razon, "estado": cat.EXP_AUTORIZADA, "intentos": [], "autorizada_en": ahora, "expira_en": ahora + self.s.config.ttl_exportacion_ms})
                 if actor.id:
                     uow.recientes.registrar(actor.id, tipo, params, ahora)              # lo que se exporta también es «reciente»: se vuelve a abrir y a exportar sin repetir filtros
                 uow.auditoria.registrar(actor.id or cat.SISTEMA, cat.A_EXPORT_AUTORIZADA, "m13_exportacion", fila["id"], nuevo={
-                    "reporte": tipo, "alcance": params, "formato": formato, "filas": documento.filas, "huella": archivo.huella, "nominal": bool(reporte["nominal"]),
+                    "reporte": tipo, "alcance": params, "formato": entregado, "archivos": len(documentos), "filas": filas, "huella": archivo.huella, "nominal": bool(reporte["nominal"]),
                     "destino_tipo": destino, "razon": razon or None, "resultado": "autorizada", "rol": actor.rol or None})
         except Exception:
             archivo.cerrar()

@@ -4,6 +4,7 @@ from __future__ import annotations
 import time
 
 from ..aplicacion.casos_uso import Servicios
+from .cupo import CupoDeLicencia
 from .repositorios import AutorizacionAcceso
 from .unidad_trabajo import FabricaUoWDispositivos
 
@@ -16,4 +17,4 @@ class RelojNodo:
 
 
 def servicios() -> Servicios:
-    return Servicios(uow=FabricaUoWDispositivos(), reloj=RelojNodo(), autorizacion=AutorizacionAcceso())
+    return Servicios(uow=FabricaUoWDispositivos(), reloj=RelojNodo(), autorizacion=AutorizacionAcceso(), cupo=CupoDeLicencia())    # MOD-018 (FUN-091): el cupo de equipos al registrar uno nuevo

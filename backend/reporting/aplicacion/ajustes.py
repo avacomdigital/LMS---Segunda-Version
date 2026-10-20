@@ -13,12 +13,40 @@ from .base import _CasoDeUso, estado_y_corte
 from .puertos import Actor
 
 CAMPOS_DE_CONFIGURACION = ("umbral_privacidad", "extraibles_permitidos", "exigir_razon")
+CAMPOS_DEL_BOLETIN = ("plantilla_boletin", "periodos_boletin", "leyenda_boletin")
+TODOS_LOS_CAMPOS = CAMPOS_DE_CONFIGURACION + CAMPOS_DEL_BOLETIN
 
 
 def _salida(c: dict) -> dict:
     return {"umbral_privacidad": c["umbral_privacidad"], "extraibles_permitidos": c["extraibles_permitidos"], "exigir_razon": c["exigir_razon"], "version": c["version"],
+            "plantilla_boletin": c.get("plantilla_boletin") or cat.PLANTILLA_AUTO, "periodos_boletin": list(c.get("periodos_boletin") or []), "leyenda_boletin": c.get("leyenda_boletin") or "",
+            "plantillas_de_boletin": list(cat.PLANTILLAS_DE_BOLETIN),
             "actualizada_en": c["actualizada_en"], "actualizada_por": c["actualizada_por"] or None, "minimo_de_alumnos": cat.MINIMO_DE_ALUMNOS,
             "razones": [{"codigo": k, "etiqueta": v} for k, v in cat.RAZONES_DE_EXPORTACION.items()], "formatos": list(cat.FORMATOS), "destinos": list(cat.DESTINOS)}
+
+
+def _validar_boletin(cuerpo: dict) -> dict:
+    """Los ajustes del boletín que trae un cuerpo, validados: la plantilla del catálogo, hasta seis nombres de periodo (textos cortos) y una leyenda acotada."""
+    cambios: dict = {}
+    if "plantilla_boletin" in cuerpo:
+        plantilla = str(cuerpo["plantilla_boletin"] or "")
+        if plantilla not in cat.PLANTILLAS_DE_BOLETIN:
+            raise DatosInvalidos("La plantilla del boletín debe ser una de: " + ", ".join(cat.PLANTILLAS_DE_BOLETIN) + ".", campo="plantilla_boletin")
+        cambios["plantilla_boletin"] = plantilla
+    if "periodos_boletin" in cuerpo:
+        periodos = cuerpo["periodos_boletin"]
+        if not isinstance(periodos, list) or any(not isinstance(p, str) or not p.strip() or len(p.strip()) > 40 for p in periodos):
+            raise DatosInvalidos("`periodos_boletin` debe ser una lista de nombres cortos de periodo.", campo="periodos_boletin")
+        limpios = [" ".join(p.split()) for p in periodos]
+        if len(limpios) > cat.MAX_PERIODOS_DE_BOLETIN or len(set(limpios)) != len(limpios):
+            raise DatosInvalidos(f"Hasta {cat.MAX_PERIODOS_DE_BOLETIN} periodos, sin repetir.", campo="periodos_boletin")
+        cambios["periodos_boletin"] = limpios
+    if "leyenda_boletin" in cuerpo:
+        leyenda = cuerpo["leyenda_boletin"]
+        if leyenda is not None and not isinstance(leyenda, str):
+            raise DatosInvalidos("`leyenda_boletin` debe ser un texto.", campo="leyenda_boletin")
+        cambios["leyenda_boletin"] = " ".join(str(leyenda or "").split())[:cat.MAX_LEYENDA_DE_BOLETIN]
+    return cambios
 
 
 class VerConfiguracion(_CasoDeUso):
@@ -31,28 +59,29 @@ class VerConfiguracion(_CasoDeUso):
 class CambiarConfiguracion(_CasoDeUso):
     def ejecutar(self, actor: Actor, cuerpo: dict) -> dict:
         self.s.autorizacion.exigir(actor, cat.P_SETTINGS)
-        cambios = {}
+        cambios: dict = {}
         for campo in CAMPOS_DE_CONFIGURACION:
             if campo in cuerpo:
                 if not isinstance(cuerpo[campo], bool):
                     raise DatosInvalidos(f"`{campo}` debe ser verdadero o falso.", campo=campo)
                 cambios[campo] = cuerpo[campo]
+        cambios = {**cambios, **_validar_boletin(cuerpo)}
         if not cambios:
-            raise DatosInvalidos("No hay nada que cambiar: manda al menos uno de " + ", ".join(CAMPOS_DE_CONFIGURACION) + ".")
+            raise DatosInvalidos("No hay nada que cambiar: manda al menos uno de " + ", ".join(TODOS_LOS_CAMPOS) + ".")
         esperada = cuerpo.get("version_esperada")
         if esperada is not None and (isinstance(esperada, bool) or not isinstance(esperada, int)):
             raise DatosInvalidos("`version_esperada` debe ser un entero.", valor=str(esperada)[:20])
         ahora = self.s.reloj.ahora_ms()
         with self.s.uow() as uow:
             actual = uow.config.get()
-            nuevos = {**{c: actual[c] for c in CAMPOS_DE_CONFIGURACION}, **cambios}
-            if all(nuevos[c] == actual[c] for c in CAMPOS_DE_CONFIGURACION):
+            nuevos = {**{c: actual.get(c) for c in TODOS_LOS_CAMPOS}, **cambios}
+            if all(nuevos[c] == actual.get(c) for c in TODOS_LOS_CAMPOS):
                 return {"configuracion": _salida(actual), "cambiado": False, "servidor_en": ahora}        # repetir lo mismo no deja asiento ni sube la versión
             guardada = uow.config.guardar(nuevos, actor.id or cat.SISTEMA, ahora, esperada)
             if guardada is None:
                 raise ConflictoDeVersion("Otra persona cambió esta configuración mientras la editabas: vuelve a leerla.", version_actual=actual["version"])
             uow.auditoria.registrar(actor.id or cat.SISTEMA, cat.A_CONFIGURACION, "m13_config", "nodo",
-                                    anterior={c: actual[c] for c in CAMPOS_DE_CONFIGURACION}, nuevo={c: guardada[c] for c in CAMPOS_DE_CONFIGURACION})
+                                    anterior={c: actual.get(c) for c in TODOS_LOS_CAMPOS}, nuevo={c: guardada[c] for c in TODOS_LOS_CAMPOS})
             return {"configuracion": _salida(guardada), "cambiado": True, "servidor_en": ahora}
 
 

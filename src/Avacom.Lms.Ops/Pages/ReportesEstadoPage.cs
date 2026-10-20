@@ -155,7 +155,56 @@ public sealed class ReportesEstadoPage : PaginaDeReporte
         pila.Add(Ajuste($"Privacidad en grupos de menos de {c.MinimoDeAlumnos} estudiantes", "Con la privacidad activa, esos reportes (y sus archivos) muestran sólo los totales, sin comparar a las personas.",
             ("Apagada", !c.UmbralPrivacidad, new CambioDeConfiguracion(UmbralPrivacidad: false)), ("Activa", c.UmbralPrivacidad, new CambioDeConfiguracion(UmbralPrivacidad: true)), "ajuste-privacidad"));
         ContenidoHost.Add(ReportesUi.Tarjeta(pila));
+        PintarAjustesDelBoletin(c);
     }
+
+    /// <summary>
+    /// El boletín académico: con qué plantilla se arma (automática por el país del colegio, Colombia, México o genérica) y cómo se llaman los periodos de la institución (su propio sistema de
+    /// evaluación los define: ni tres ni cuatro son universales). Todo son fichas: nada exige escribir.
+    /// </summary>
+    private void PintarAjustesDelBoletin(ConfiguracionDeReportes c)
+    {
+        ContenidoHost.Add(ReportesUi.Seccion("Boletín académico", "Cómo se arma el boletín de cada estudiante. No es un documento oficial: es la base para el que la institución expide."));
+        var pila = new VerticalStackLayout { Spacing = 18 };
+
+        var plantilla = new VerticalStackLayout { Spacing = 6 };
+        plantilla.Add(new Label { Text = "Plantilla", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Tinta });
+        plantilla.Add(Ds.Secundario("Colombia organiza por áreas y asignaturas con los desempeños nacionales (Superior, Alto, Básico, Bajo); México por campos formativos en primaria y por disciplinas en secundaria, sin cifras en preescolar.", 14));
+        var fichas = EstudioUi.Envolver();
+        foreach (var codigo in c.PlantillasDeBoletin ?? [PlantillasDeBoletin.Auto, PlantillasDeBoletin.Colombia, PlantillasDeBoletin.Mexico, PlantillasDeBoletin.Generica])
+        {
+            var elegido = codigo;
+            fichas.Add(EstudioUi.Chip(PlantillasDeBoletin.Rotulo(codigo), (c.PlantillaBoletin ?? PlantillasDeBoletin.Auto) == codigo,
+                ReportesUi.Seguro(nameof(ReportesEstadoPage), "PlantillaBoletin", () => CambiarAsync(new CambioDeConfiguracion(PlantillaBoletin: elegido))), $"ajuste-plantilla-{codigo}"));
+        }
+        plantilla.Add(fichas);
+        pila.Add(plantilla);
+
+        var periodos = new VerticalStackLayout { Spacing = 6 };
+        periodos.Add(new Label { Text = "Periodos de la institución", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Tinta });
+        periodos.Add(Ds.Secundario("Los que define el sistema de evaluación del colegio (en Colombia, el SIEE). Sin fijarlos, el boletín usa los de la plantilla o el periodo del grupo.", 14));
+        var opciones = EstudioUi.Envolver();
+        var actuales = c.PeriodosBoletin ?? [];
+        foreach (var (rotulo, lista) in PeriodosPredefinidos)
+        {
+            var elegida = lista;
+            opciones.Add(EstudioUi.Chip(rotulo, actuales.SequenceEqual(lista), ReportesUi.Seguro(nameof(ReportesEstadoPage), "PeriodosBoletin", () => CambiarAsync(new CambioDeConfiguracion(PeriodosBoletin: elegida))),
+                $"ajuste-periodos-{lista.Count}"));
+        }
+        periodos.Add(opciones);
+        if (actuales.Count > 0) periodos.Add(Ds.Secundario("Ahora: " + string.Join(" · ", actuales), 13));
+        pila.Add(periodos);
+        ContenidoHost.Add(ReportesUi.Tarjeta(pila));
+    }
+
+    private static readonly (string Rotulo, IReadOnlyList<string> Lista)[] PeriodosPredefinidos =
+    [
+        ("Sin fijar", []),
+        ("Dos semestres", ["Primer semestre", "Segundo semestre"]),
+        ("Tres periodos", ["1.er periodo", "2.º periodo", "3.er periodo"]),
+        ("Cuatro periodos", ["1.er periodo", "2.º periodo", "3.er periodo", "4.º periodo"]),
+        ("Tres trimestres", ["1.er trimestre", "2.º trimestre", "3.er trimestre"]),
+    ];
 
     private View Ajuste(string titulo, string ayuda, (string Rotulo, bool Activo, CambioDeConfiguracion Cambio) a, (string Rotulo, bool Activo, CambioDeConfiguracion Cambio) b, string id)
     {

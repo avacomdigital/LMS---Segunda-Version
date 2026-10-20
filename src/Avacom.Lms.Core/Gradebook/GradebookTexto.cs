@@ -128,7 +128,33 @@ public static class GradebookTexto
     // ------------------------------------------------------------------------------------------ números
 
     /// <summary>Una puntuación interna sin ceros que sobren: 70 · 70,5 · 85,25. Nunca un cero para lo que no existe: lo pendiente es «—».</summary>
+    /// <summary>La nota de un examen en modo simple: el porcentaje, sin escala («71,4 %»).</summary>
+    public static string NotaSimple(NotaSimple n) => $"{Puntaje(n.Porcentaje)} %";
+
+    /// <summary>Cuándo se publicó una nota o los resultados de una evaluación: «Publicada el 19/10/2026 12:30», o que aún no.</summary>
+    public static string Publicacion(long? publicadaEn, bool publicada) =>
+        !publicada ? "Sin publicar: el estudiante aún no la ve" : publicadaEn is { } ms ? $"Publicada el {Hora(ms)}" : "Publicada";
+
     public static string Puntaje(decimal? valor) => valor is { } v ? v.ToString("0.##", Cultura) : "—";
+
+    /// <summary>Los puntos brutos de una calificación: «14 de 18 puntos». Vacío si la nota no tiene puntos (se registró a mano): no se inventan.</summary>
+    public static string Puntos(NotaEnBruto? b) => b is { TienePuntos: true } ? $"{Puntaje(b.Puntos)} de {Puntaje(b.PuntosMaximos)} puntos" : string.Empty;
+
+    /// <summary>El porcentaje de una calificación (el resultado interno 0–100, como lo contó la evaluación): «77,8 %». «—» si no hay.</summary>
+    public static string Porcentaje(NotaEnBruto? b) => b?.Porcentaje is { } p ? $"{Puntaje(p)} %" : "—";
+
+    /// <summary>
+    /// La nota en bruto en una línea, para leerla junto a la presentada: «14 de 18 puntos · 77,8 %». Sin puntos, sólo el porcentaje; sin nada, vacío. Así la calificación se lee con los
+    /// tres: puntos, porcentaje y el valor en el sistema configurado (el CTO, 2026-10-19).
+    /// </summary>
+    public static string Bruto(NotaEnBruto? b)
+    {
+        if (b is null) return string.Empty;
+        var partes = new List<string>();
+        if (b.TienePuntos) partes.Add(Puntos(b));
+        if (b.Porcentaje is not null) partes.Add(Porcentaje(b));
+        return string.Join(" · ", partes);
+    }
 
     /// <summary>Lo presentado por la escala: el valor de una escala numérica o la etiqueta (letra, concepto, nivel).</summary>
     public static string Presentada(Presentacion? p) => p is null ? "—" : Valor(p.Presentada);

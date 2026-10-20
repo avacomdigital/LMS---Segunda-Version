@@ -10,6 +10,8 @@ urlpatterns = [
     path("alumnos/", views.AlumnosView.as_view()),
     path("alumnos/<str:alumno_id>/", views.AlumnoView.as_view()),
     path("uso/", views.UsoView.as_view()),
+    path("boletines/", views.BoletinesView.as_view()),
+    path("boletines/<str:alumno_id>/", views.BoletinView.as_view()),
     path("filtros/", views.FiltrosView.as_view()),
     path("recientes/", views.RecientesView.as_view()),
     # Reservadas para V1 (responden 501 capacidad_reservada)

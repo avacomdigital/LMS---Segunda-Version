@@ -1,6 +1,7 @@
 using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Gradebook;
+using Avacom.Lms.Core.Licencia;
 using Avacom.Lms.Core.Reporting;
 using Avacom.Lms.Core.Search;
 using Avacom.Lms.Core.Models;
@@ -208,6 +209,27 @@ public static class Sesion
                 _baseReportes = actual;
             }
             return _reportes;
+        }
+    }
+
+    private static LicenciaApi? _licencia;
+    private static Uri? _baseLicencia;
+
+    /// <summary>
+    /// El cliente de <c>/api/licencia/</c> (MOD-018 · Licensing), una instancia por dirección: el estado y el consumo de la licencia del nodo, la solicitud, la activación y la renovación
+    /// mediante archivo, la copia de custodia, la liberación y la confirmación de la fecha. Sólo lo usan la pantalla «Licencia» y el banner del menú principal (administración y técnico).
+    /// </summary>
+    public static LicenciaApi Licencia
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_licencia is null || _baseLicencia != actual)
+            {
+                _licencia = new LicenciaApi(Http, actual);
+                _baseLicencia = actual;
+            }
+            return _licencia;
         }
     }
 

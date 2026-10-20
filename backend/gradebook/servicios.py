@@ -31,6 +31,57 @@ def eventos_desde(secuencia: int, limite: int, tipos: tuple[str, ...]) -> tuple[
             for f in filas], hasta
 
 
+def boletin_de_alumno(alumno_id: str, grupo_id: str, materia: dict | None = None) -> dict | None:
+    """Lo que el libro sabe de UN alumno en UN grupo, ya presentado: su resumen, sus cursos (con los puntos brutos sumados y el promedio simple presentado con el sistema del
+    nivel), sus insights, lo que el profesor le recomendó y TODAS sus evaluaciones con su nota en bruto y presentada. Es la base del boletín académico de Reportes (MOD-013), que
+    autoriza por su cuenta y no convierte nada. `materia` recorta a un nodo académico (`{subject: …}`). None si el grupo no existe o el alumno no está en él."""
+    from .aplicacion.boletin import MAXIMO_POR_PAGINA, armar_boletin
+    from .infraestructura.contenedor import servicios as servicios_del_libro
+
+    s = servicios_del_libro()
+    with s.uow(lectura=True) as uow:
+        grupo = uow.identidad.grupo(grupo_id) if grupo_id else None
+        if grupo is None:
+            return None
+        if grupo_id not in uow.identidad.grupos_del_alumno(alumno_id) and not uow.calificaciones.de_alumno(alumno_id, grupo_id):
+            return None
+        return armar_boletin(uow, alumno_id, grupo, limite=MAXIMO_POR_PAGINA * 10, materia=materia or None, ahora=s.reloj.ahora_ms())
+
+
+def progreso_del_alumno(alumno_id: str) -> list[dict]:
+    """Lo que lleva un alumno en cada curso de cada periodo en que estuvo (los agregados por periodo del libro, de todos sus grupos), con el promedio simple presentado con el
+    sistema vigente del nivel de ese grupo: la tercera pregunta del boletín («¿cómo ha progresado?»). Informativo, no ponderado, no oficial."""
+    from .aplicacion import base as b
+    from .aplicacion.consultas import _presentado
+    from .dominio import puntaje as pj
+    from .infraestructura.contenedor import servicios as servicios_del_libro
+
+    s = servicios_del_libro()
+    with s.uow(lectura=True) as uow:
+        salida = []
+        grupos: dict[str, dict | None] = {}
+        for a in uow.agregados.de_alumno(alumno_id):
+            if a["grupo_id"] not in grupos:
+                grupos[a["grupo_id"]] = uow.identidad.grupo(a["grupo_id"])
+            grupo = grupos[a["grupo_id"]] or {"codigo": "", "nombre": "", "periodo": a["periodo"], "nivel_clave": ""}
+            modo, version = b.modo_del_nivel(uow, grupo.get("nivel_clave") or "")
+            salida.append({"grupo_id": a["grupo_id"], "grupo_codigo": grupo.get("codigo") or "", "grupo_nombre": grupo.get("nombre") or "", "periodo": a["periodo"],
+                           "curso_ref": a["curso_ref"], "calificaciones": a["calificaciones"], "promedio_simple": pj.como_numero(a["promedio_simple"]),
+                           "presentado": _presentado(version, modo, pj.como_numero(a["promedio_simple"])), "pendientes": a["pendientes"], "publicadas": a["publicadas"],
+                           "modo": modo, "oficial": False, "ponderado": False})
+        return sorted(salida, key=lambda x: (x["periodo"], x["grupo_codigo"], x["curso_ref"]))
+
+
+def politica_institucional() -> dict:
+    """La política de evaluación de la institución (país, jurisdicción, institución, política de intentos): lo que el boletín necesita para elegir su plantilla y su encabezado."""
+    from .infraestructura.contenedor import servicios as servicios_del_libro
+
+    s = servicios_del_libro()
+    with s.uow(lectura=True) as uow:
+        p = uow.politica.get()
+        return {"pais": p.get("pais") or "", "jurisdiccion": p.get("jurisdiccion") or "", "institucion": p.get("institucion") or "", "politica_intentos": p.get("politica_intentos")}
+
+
 def resultados_del_grupo(grupo_id: str) -> dict | None:
     """Lo que el libro dice de un grupo, listo para mostrar: el modo de su nivel (`simple` o `calificaciones`), la escala (si la hay) y, por cada `(asignación, alumno)` con
     resultado, su estado simple, el estado de la calificación, si está publicada y su PRESENTACIÓN ya resuelta (la estampada si se publicó; si no, la provisional con la

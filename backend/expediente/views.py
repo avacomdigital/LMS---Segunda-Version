@@ -58,7 +58,17 @@ class HealthView(VistaExpediente):
             "dueno_de_los_cursos": "AVACOM Biblioteca",
             "biblioteca": cliente.estado(),
             "acceso": self._estado_acceso(),
+            # MOD-018 · campo ADITIVO: sólo el estado de la licencia (sin detalles). Nunca falla: `estado_resumido` no lanza.
+            "licencia": self._estado_licencia(),
         })
+
+    @staticmethod
+    def _estado_licencia() -> dict:
+        try:
+            from licenciamiento import servicios as licencia
+            return licencia.estado_resumido()
+        except Exception as error:  # el health nunca falla por la licencia (R-04)
+            return {"estado": "desconocido", "modo": "desconocido", "restringe": False, "dias_restantes": None, "error": str(error)}
 
     @staticmethod
     def _estado_acceso() -> dict:

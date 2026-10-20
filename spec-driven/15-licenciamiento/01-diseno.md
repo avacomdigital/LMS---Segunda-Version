@@ -1,0 +1,245 @@
+# 15 · Licenciamiento (MOD-018) · Diseño, decisiones y alcance
+
+| Campo | Valor |
+|---|---|
+| Estado | **Fases 0 a 3 implementadas** (2026-10-20): reconocimiento y mediciones, núcleo puro, app `licenciamiento` del backend y cliente (Core + OPS). **Pendiente:** biblioteca nativa y despliegue firmado (Fase 4), identidad de dispositivo y endurecimiento (Fase 5), prueba adversarial (Fase 6) → `04-proteccion.md`, que todavía no existe. |
+| Módulo | **MOD-018 · Licensing** (CAP-110…114; FUN-188…194; eventos `licencia.*.v1`; permisos `license.*`). Backend `backend/licenciamiento/` (tablas `m18_*`). |
+| Contrato | [02-api.md](02-api.md) — rutas, cuerpos y errores reales capturados. |
+| Pruebas | [03-pruebas.md](03-pruebas.md) — qué se probó y qué **no** se pudo comprobar. |
+| Quién emite las licencias | `tools/licencias/`, fuera del nodo y del instalador: [05-emision.md](05-emision.md). Guías: [interna](guia-usuario-interno.md) y [del colegio](guia-usuario-cliente.md). |
+| Mediciones de la Fase 0 | [anexo-fase0-mediciones.md](anexo-fase0-mediciones.md) · [anexo-fase0-keystore-avd.md](anexo-fase0-keystore-avd.md). |
+| Qué funciones se podrían perder | [impacto-funciones.md](impacto-funciones.md) (la lista de rutas, los hallazgos H-nn y las fallas F-nn). |
+| Se apoya en | MOD-001 (permisos y conteo de usuarios), MOD-009 (conteo de equipos), MOD-019 (bitácora encadenada). No lee ni escribe `m01_*` ni `m09_*` (R-08): lo ajeno le llega como números por el `servicios.py` de cada dueño. |
+
+> **Principio fundamental:** una licencia **nunca detiene una clase**. Avisa antes, degrada después y siempre deja un periodo de gracia por delante. Lo único que se apaga es una lista corta y cerrada de módulos de administración (§7); el aula, el examen, el estudio, el acceso y los datos del colegio no dependen de ella. Y ningún dato del colegio ni ninguna clave de datos se ata a la licencia ni al hardware (R-03): atar los datos de un menor a un archivo sería tomar de rehén al colegio.
+
+---
+
+## 1 · Qué entra y qué no
+
+| Entra (hecho) | Notas |
+|---|---|
+| CAP-110 · activar **sin internet, mediante archivo** (FUN-188) | El Maestro se contradice (la tabla dice «en línea», la ficha y FUN-188 dicen «mediante archivo»): manda la ficha, porque el aula puede no tener internet. |
+| CAP-111 · copia de la licencia bajo custodia de la institución | `GET copia/` entrega el `.avlic` vigente; OPS lo guarda en un USB junto con una hoja de texto. **No** son claves de datos. |
+| CAP-112 · estado, límites y consumo (FUN-189, FUN-190) | `estado/`, `consumo/`, `capacidades/`; el campo `licencia` de `/health/` (sólo el estado). |
+| CAP-113 · renovar (FUN-191) y CAP-114 · gracia sin cortar la clase (FUN-192, FUN-193, FUN-194) | La máquina de estados completa (§4); reactivar tras una restauración sale de una copia en la carpeta de estado. |
+| BR-027 (cupo de identidades) y BR-063 (50/100 concurrentes) **tomados de la licencia** | Con respaldo a `settings.py` cuando no hay licencia (desarrollo y pruebas). |
+| Permisos, auditoría, eventos, programador, middleware con lista blanca, pantalla **Licencia** y banner en OPS | Fases 1 a 3. |
+
+| No entra | Por qué |
+|---|---|
+| Biblioteca nativa `avacom_lic`, despliegue firmado, identidad de dispositivo con clave en hardware, endurecimiento de Student/OPS, prueba adversarial | Fases 4 a 6 (`04-proteccion.md`). |
+| Activación en línea, revocación remota, paquetes cifrados con clave de licencia | V1 (P-27): se documenta el contrato, no se construye. |
+| Medición de consumo comercial | El Maestro la deja fuera de MOD-018. |
+| MOD-020 Notificaciones | No existe en `backend/`: el aviso es banner + bitácora + `/health/`. |
+| Cualquier cambio dentro de `backend/biblioteca/` o de la capa de fuentes de cursos | Frontera LMS ↔ Biblioteca (R-12). |
+
+## 2 · Arquitectura
+
+Hexagonal, igual que `acceso/`, `gradebook/`, `reporting/` y `audit/`:
+
+```
+backend/licenciamiento/
+├── models.py                       m18_* (§9)
+├── dominio/                        reglas puras: NO importan Django ni DRF
+│   ├── tlv.py · firma.py           la envoltura binaria y la firma Ed25519 (§3)
+│   ├── licencia.py · solicitud.py  los campos de la licencia, de la solicitud (.avreq) y de la liberación (.avrel)
+│   ├── huella.py · smbios.py       factores del equipo, filtro de valores basura, k de n, tabla SMBIOS (§6)
+│   ├── reloj.py                    reloj confiable: max(reloj del nodo, marca alta) (§5)
+│   ├── estado.py · politica.py     la función pura estado(licencia, ahora, huella, política) y la política como dato (§4)
+│   ├── cupo.py · rutas.py          cupo y concurrencia; tabla método + ruta → capacidad y lista blanca (§7, §8)
+│   ├── entorno.py                  ¿este nodo es de producción? (§11)
+│   └── catalogos.py · errores.py   catálogos cerrados (estados, permisos, acciones, eventos) y errores con su código HTTP
+├── aplicacion/                     casos de uso: tampoco importan Django
+│   ├── puertos.py                  Reloj · FuenteDeHuella · Nodo · Almacen · Anclas · Claves · Conteos · Auditoría · Outbox · Autorización
+│   ├── evaluar.py                  FUN-189…194: leer → planear (puro) → aplicar en UNA transacción corta
+│   └── acciones.py                 solicitud, activar, renovar, liberar, copia, confirmar reloj, y las consultas
+├── infraestructura/                adaptadores: ORM, carpeta de estado, DPAPI, registro de Windows, huella de Windows, programador
+├── interfaces/                     vistas DRF (`/api/licencia/`) y el middleware de licencia
+├── servicios.py                    fachada para los demás módulos (capacidad, cupo, concurrencia, estado resumido)
+└── claves/                         llaves PÚBLICAS: produccion.json (vacío hasta la ceremonia) y desarrollo.json
+```
+
+- **Un puerto, dos adaptadores** (R-05). En desarrollo y pruebas el nodo es «ilimitado» (`LicenciaIlimitada`) y las ≈2100 pruebas existentes corren sin licencia; en producción verifica licencias firmadas (`LicenciaFirmada`). Qué adaptador usa lo decide §11, no una variable de `backend.env`.
+- **El reloj es el del nodo** (`RelojNodo` de MOD-010: el mismo que usan el libro, los reportes y el aula) más un reloj monótono propio; no hay una sexta copia (R-06). Las pruebas inyectan uno falso.
+- **El camino caliente no toca la base** (R-07). El middleware lee el estado de **memoria**; las escrituras ocurren sólo en el programador, en los eventos y en las acciones del administrador. Se prueba con `assertNumQueries(0)`.
+- **Fallar es operar, nunca cerrar** (R-04). Cualquier excepción de licenciamiento —al evaluar, al contar, en el middleware— deja pasar la petición, conserva el último estado bueno (o el de la política) y se registra.
+- **Cambios en módulos ajenos** (mínimos y declarados): `audit` (módulo `licencia`, 13 acciones, `ultima_marca()`), `acceso` (permisos `license.*` + migración `0018`, gancho de cupo de usuarios en `CrearUsuario._crear`, `contar_usuarios_activos`, error `CupoAgotado`), `device_manager` (gancho de cupo de equipos opt-in), `classroom_engine` (la concurrencia 50/100 sale de la licencia), `expediente/views.py` (campo `licencia` en `/health/`), `avacom_lms/` (app, middleware, rutas, programador en `asgi.py`).
+
+## 3 · El archivo de licencia (`.avlic`)
+
+Envoltura **binaria** versionada, en orden de red: `magic(4) · versión(u16) · largo del kid(u8) · kid · [etiqueta(u16) · largo(u16) · valor]… · firma(64)`.
+
+- **Firma Ed25519 sobre todo lo anterior** (magic, versión y `kid` incluidos: nadie degrada un archivo cambiando su versión). El algoritmo está **fijado**; no hay un campo `alg` que negociar. Se verifica **antes** de interpretar ningún campo. El `kid` elige entre varias llaves públicas (rotación).
+- Etiquetas en orden estrictamente ascendente (cada archivo se escribe de **una** sola manera). El bit 15 marca una etiqueta **crítica**: quien no la entiende rechaza el archivo; una no crítica desconocida se ignora. Topes: 16 KiB el archivo, 4 KiB cada valor, 32 etiquetas. Una licencia real mide menos de 600 bytes.
+- Campos: id de la licencia, `serie` (sube con cada archivo nuevo de la misma licencia), nombre del aula (sólo informativo), `emitida`, `desde`, `vence`, `gracia_dias`, límites (equipos, usuarios, concurrentes normal y pico; `0xFFFFFFFF` = sin tope), `capacidades` (`*` = todas las licenciables), `huella` (k y hashes de factores), `tipo` (`produccion` · `evaluacion` · `desarrollo`), banderas (`LIBERACION_PENDIENTE` + días) y el hash de la llave del nodo para el que se emitió (opcional).
+- Variante **texto** para copiar y pegar: `AVL1.` + base64url canónico y estricto (sólo se recortan los extremos). La **solicitud** (`.avreq`, `AVQ1.`) y la **prueba de liberación** (`.avrel`, `AVR1.`) usan la misma envoltura, con otra firma: la de la **llave Ed25519 del propio nodo**, cuyo `kid` es su clave pública en hexadecimal.
+- La licencia **no lleva** datos de personas ni identificadores crudos: la huella son hashes con clave de producto.
+
+## 4 · Estados
+
+El estado **no se guarda**: sale de una función pura (`estado.calcular`) que recibe el instante confiable, la licencia y los hechos del historial. Las transiciones son consecuencia del tiempo y de las acciones del administrador.
+
+| Estado | Cuándo | Qué se apaga |
+|---|---|---|
+| `sin_licencia` | Ventana de **evaluación** (30 días desde el primer arranque con licenciamiento; también tras liberar el equipo) | Nada |
+| `activa` | Dentro de la vigencia y con la huella de este equipo | Nada |
+| `reactivada` | Igual que activa, 72 h tras recuperar la licencia después de una restauración (FUN-194) | Nada |
+| `en_gracia` | Venció, o esta licencia no es de este equipo; quedan los días de gracia (30 por omisión, los trae la licencia) | Nada |
+| `liberacion_pendiente` | Licencia emitida mientras el equipo anterior se libera (JRN-020, MSG-063): opera con el plazo que trae, nunca más allá del vencimiento | Nada |
+| `degradada` | Se acabó la evaluación, la gracia o el plazo de liberación | Las cuatro capacidades licenciables (§7); **el núcleo y la clase siguen igual** |
+
+Banderas **ortogonales** (se suman al estado, no lo reemplazan): `reloj_sospechoso`, `huella_parcial`, `integridad_alterada`.
+
+**Para degradar** la condición debe sostenerse **24 h** (histéresis) y no puede haber un salto del reloj hacia adelante pendiente de confirmar (se aplaza como máximo 72 h: una sospecha no es una palanca para no degradar nunca). **Retroceder el reloj no aplaza nada.** Todos los valores salen de `politica.py` y son **provisionales** hasta que el CTO fije el modelo comercial (Q-L1): evaluación 30 días, avisos a 30/14/7/3/1 días, tolerancia de retroceso 5 min, salto adelante sospechoso 7 días, histéresis 24 h, cupo con aviso a partir del 90 %, límites de evaluación 100 equipos y 3000 usuarios.
+
+**Avisos** (códigos con sus cifras; el texto lo pone el cliente): `degradada`, `gracia`, `liberacion_pendiente`, `evaluacion` (existe **desde el primer día**, con `urgente` a 7 días o menos: D-4), `por_vencer` (al cruzar cada umbral) y `cupo`, más una por bandera. Ninguno interrumpe una clase: OPS decide cuándo mostrarlos.
+
+## 5 · El reloj
+
+`ahora_confiable = max(reloj del nodo, marca alta)`.
+
+- La **marca alta** es el instante más alto que el nodo ha visto: sólo sube (un trigger de SQLite lo garantiza) y se guarda además en **anclas fuera de la base** que una copia de seguridad restaurada no rebobina: la fecha del último asiento de la bitácora encadenada, un archivo con HMAC en la carpeta de estado y, en producción, una clave del registro de Windows.
+- **Retroceder el reloj no alarga una licencia**: el vencimiento se mide contra la marca alta; se deja constancia (`reloj_sospechoso` + asiento, una vez por hora). **Restaurar un respaldo viejo** tampoco la alarga: las anclas externas conservan la marca de antes.
+- **Un salto hacia adelante** mayor de 7 días **dentro de un proceso en marcha** (comparado con el reloj monótono, que no se cambia desde el reloj del sistema) no degrada a nadie: avisa y espera confirmación del administrador (`reloj/confirmar/`) o 72 h. Entre un arranque y otro no hay referencia: un nodo apagado diez días en vacaciones **no** es un salto.
+- **Lo que esto no resuelve** (H-09): un salto **accidental** al futuro (fecha 2038 de BIOS, una fecha mal tecleada) deja la marca alta para siempre; «confirmar» sólo levanta el aplazamiento y no la baja. Hoy la salida es una licencia de recuperación emitida por AVACOM; qué hacer es una pregunta para el CTO (Q-L13).
+- El hardware seguro no tiene reloj propio: nada de esto puede apoyarse en el Keystore ni en el TPM.
+
+## 6 · La huella del equipo
+
+La huella son **hashes con clave de producto** (HMAC-SHA-256; nunca viaja un identificador crudo) de los **factores de unidad** de este equipo: `MachineGuid`, UUID de SMBIOS, serie de placa y serie de chasis. Se leen directo (registro y `GetSystemFirmwareTable('RSMB')`), sin elevar privilegios, en ≈ 0,1 ms.
+
+- **Filtro de basura**: vacío, ceros, `FFFF…`, «To be filled by O.E.M.», «Default string», «None», «System Serial Number», UUID de relleno, longitud < 4 o un solo carácter repetido. Son muy comunes en las placas OEM de los paneles interactivos; un factor basura se descarta y no llega al hash.
+- **Coincidencia k de n**: 2 de 2, 2 de 3 o 3 de 4 factores. Sobrevive al cambio de un disco o de una tarjeta (y lo avisa como `huella_parcial`); un disco clonado a otra placa no pasa.
+- **Nivel**: `hardware` si hay al menos dos factores válidos y alguno ligado a la placa; si no, **huella de instalación**: un secreto aleatorio del primer arranque protegido con DPAPI de máquina, nivel `instalacion`, que se muestra como el más débil. **Nunca se impide activar por tener hardware pobre.**
+- La deriva de huella es un modo de fallo **esperado**: se resuelve reactivando o liberando, no con un bloqueo, y empieza por la gracia.
+- El `ProcessorId` **no sella** (D-3): identifica el modelo de CPU, no la unidad.
+
+## 7 · Qué se apaga y qué nunca
+
+Sólo cuatro **capacidades licenciables** (el Maestro deja «qué módulos» al modelo comercial; esto es una propuesta pendiente de Q-L1):
+
+| Capacidad | Rutas | Se apaga en pantalla |
+|---|---|---|
+| `reportes` | `/api/reportes/…` **menos** `boletines/` y `exportaciones/` (D-6) | Tesela y pantallas de Reportes |
+| `busqueda` | `/api/search/…` | Buscar |
+| `importacion` | `POST /api/acceso/usuarios/importar/` | Importar padrón |
+| `administracion_avanzada` | `POST /api/acceso/roles/`, `POST /api/gradebook/escalas/…`, `POST /api/gradebook/derivados/reconstruir/` | Escalas de calificación y roles nuevos |
+
+**Núcleo** (ninguna licencia ni ningún fallo lo toca; R-01): `/health/`, la propia licencia, el inicio de sesión, la instalación y el registro propio, el latido de los equipos, el aula para quien ya fue admitido y su WebSocket, la evaluación mientras se presenta (abrir, responder, latido, incidentes, entregar), el modo estudio completo (incluido `sync`), los logs de los clientes, la lectura de las calificaciones y la **exportación de calificaciones** (boletines), y lo que **cierra puertas** (los interruptores de registro de profesores, autorregistro de alumnos y visitantes). La lista blanca **no es una enumeración a mano**: sale de los `urls.py` reales (`dominio/rutas.py`) y una prueba recorre el resolvedor de rutas del proyecto y comprueba que **cada ruta intocable responde igual con la licencia degradada**.
+
+- **El módulo apagado responde `402 no_disponible_por_licencia`, nunca 403** (P-09): el middleware de auditoría asentaría un 403 como `acceso.denegado`, y el Maestro (VER-10) pide «no disponible por licencia», conservar el permiso del rol y registrar un bloqueo. El permiso no se toca: al renovar, el mismo rol vuelve a funcionar sin reasignar nada. El asiento `licencia.bloqueo_aplicado` lo escribe el programador, **agregado**: uno por actor, módulo y hora.
+- **Nunca un 4xx de licencia en una ruta que cargue colas del cliente** (R-02): el cliente descarta lo que recibe un 4xx, y borraría respuestas de alumnos. Esas rutas son intocables.
+- `HEAD` se trata como `GET` y sólo `OPTIONS` pasa (D-11).
+
+## 8 · Cupo
+
+Sólo al **crear**: un equipo nuevo y una identidad nueva. **Nunca** a lo que ya existe, a las readmisiones ni a los latidos de equipos ya registrados (BR-027, BR-063): el patrón «bloquear lo nuevo, nunca lo existente» ya existía en `UnirseASesion` (409 `aula_llena`) y se imita.
+
+- **Equipos**: en el alta manual (`POST /api/dispositivos/`) y en el primer latido de una tableta nueva. **No** en `device_manager.resolver`, que usan el inicio de sesión, el aula, el examen y el estudio: poner el cupo ahí impediría abrir un examen en una tableta nueva (R-02). El equipo `MASTER` (el que corre OPS) no cuenta. Responde `402 cupo_agotado` con `tipo: equipos`; la tableta no queda registrada y no reintenta en bucle.
+- **Usuarios**: un solo punto, `CrearUsuario._crear` (lo usan crear, importar, padrón, autoalta del alumno y registro de profesor). Las identidades activas excluyen a los visitantes (RN-33: entrar como visitante nunca se bloquea) y a los retirados. `CupoAgotado` hereda de `ErrorAcceso`: una importación al tope crea hasta el cupo y rechaza **el resto fila por fila**, sin perder el lote.
+- **Concurrencia 50/100** (BR-063): los trae la licencia; sin licencia, `settings.py`.
+
+## 9 · Modelo de datos (`m18_*`, 6 tablas, sin claves foráneas fuera del módulo)
+
+| Tabla | Qué es | Notas |
+|---|---|---|
+| `m18_licencia` | **Historial** de sólo inserción: cada activación, renovación, reactivación y liberación | Guarda el `.avlic` tal cual (nulo en una liberación). Un trigger impide actualizar. El estado **se deriva** de aquí. |
+| `m18_observacion` | Hechos observados que explican el estado: huella distinta (inicio y fin), reloj (retroceso, salto, confirmación), integridad alterada, firma inválida | Sólo inserción (trigger), con cifras y sin contenido. |
+| `m18_marca_alta` | El instante más alto visto | Un trigger impide bajarla (§5). |
+| `m18_instalacion` | Cuándo empezó la ventana de evaluación | Una fila. |
+| `m18_consumo` | El último conteo de equipos y usuarios (FUN-190) | **Derivado**: se puede borrar. Una vez por hora, con su evento. |
+| `m18_evento_salida` | Cola de salida `licencia.*.v1` (Transactional Outbox) | `clave` única: escribir el mismo evento dos veces no hace nada. |
+
+Lo que **no hay**, y no es un olvido: claves de datos, datos académicos, personas (R-03). **Eventos** (`.v1`): los siete del Maestro (`activada`, `validada`, `consumo_calculado`, `renovada`, `periodo_gracia_iniciado`, `funciones_degradadas`, `reactivada`) y cinco **extensiones** marcadas como tales (`liberada`, `reloj_sospechoso`, `integridad_alterada`, `evaluacion_iniciada`, `aviso_emitido`). **Asientos** de la bitácora encadenada: módulo `licencia`, 13 acciones (11 de P-16 y las extensiones `evaluacion_iniciada` y `reloj_confirmado`), **sin contenido de licencia ni huellas crudas**: ids, serie, resultado y hash corto.
+
+La **carpeta de estado** (`%ProgramData%\AVACOM\OPS Master\Config\licencia\`; no `SecureStorage`, que es por usuario mientras el servicio corre como SYSTEM) guarda lo que **no se pierde al restaurar la base**: `actual.avlic` (copia para reactivar, FUN-194), `liberadas.json` (las licencias que este nodo liberó: una base restaurada no las resucita), `ancla-reloj.json`, `instalacion.bin` y `nodo.key` (el secreto de instalación y la llave del nodo, con DPAPI de máquina). Se conserva al actualizar y al desinstalar: el instalador marca `Config` como «nunca desinstalar» y `%ProgramData%\AVACOM` no se borra.
+
+## 10 · Un nodo sin organización instalada
+
+Un nodo recién instalado, antes de que OPS haga la instalación de la organización, responde 409 `no_instalado` en casi todo, pero **la licencia no necesita organización**:
+
+- **El estado se calcula igual**: `sin_licencia`, motivo `evaluacion`, con la ventana de 30 días **desde el primer arranque** (no desde la instalación de la organización) y todas las capacidades habilitadas. El aviso `evaluacion` existe desde ese momento.
+- **El consumo se cuenta con el dueño del dato**: sin organización no hay equipos ni usuarios que contar, así que `consumo/` responde `en_uso: null` y `porcentaje: null`, y el cupo de la evaluación rige con la cifra que trae quien da de alta.
+- **Los 409 `no_instalado` siguen siendo de cada módulo dueño de su dato** (acceso, dispositivos…): la licencia nunca los produce ni los esconde. Como no existe sesión sin organización, la rama «con sesión» de los permisos `license.*` no se alcanza; sin sesión se permite, como en el resto del prototipo (Q-34), y con `AVACOM_LMS_EXIGIR_SESION=1` esa rama no existe.
+- Cuando se instala la organización no cambia nada de la licencia: la evaluación ya venía corriendo desde el primer arranque. Se prueba en `test_sin_organizacion.py`.
+
+## 11 · Producción, desarrollo y el instalador
+
+**Un nodo no puede apagarse la licencia con una variable de entorno** (P-12). `AVACOM_LMS_ENTORNO` se lee de `backend.env`, un texto editable; sirve para elegir la carpeta de logs y **no** decide si hay licencia. Un nodo es de **producción** si se cumple **cualquiera** de: existe el marcador `.avacom-canal` que escribe el instalador junto al código (dentro de la huella del paquete); el código corre bajo `Program Files`; o `AVACOM_LMS_ENTORNO=instalado`. Sólo si **ninguna** se cumple **y** hay un `.git` en un ancestro del código (un repositorio de desarrollo: el paquete instalado no lo trae, pero sí `manage.py`, así que éste no basta) es desarrollo, y `manage.py test` es pruebas. Ante la duda, se licencia. Se prueba con un layout de producción en el que `AVACOM_LMS_ENTORNO=pruebas` **no** apaga la evaluación (`test_entorno_produccion.py`).
+
+| Variable | Qué hace | Dónde |
+|---|---|---|
+| `AVACOM_LICENCIA_MODO` | `auto` (por omisión) o `firmada`. En producción siempre es firmada; en desarrollo `firmada` fuerza la verificación real | `backend/README.md` |
+| `AVACOM_LICENCIA_DIR` | Carpeta de estado, **sólo** en desarrollo y pruebas (D-5) | idem |
+| `AVACOM_LICENCIA_PROGRAMADOR` · `AVACOM_LICENCIA_INTERVALO_S` | Apaga el programador · su cadencia (300 s) | idem |
+
+**El instalador** (`installer/build/Build-Installer.ps1`): escribe el marcador `.avacom-canal` tras la comprobación de integridad y recalcula la huella del backend; **excluye** `backend\licenciamiento\tests` y `claves\desarrollo.json` (el emisor de pruebas y la llave de desarrollo nunca viajan); exige `claves\produccion.json`; y hace una **prueba de contenido del paquete** (sin tests, sin la llave de desarrollo, sin `*.avlic`/`*.avreq`/`*.avrel`/`*.pem`/`*.key`, sin «BEGIN … PRIVATE KEY»). El `Host` escribe `licencia=…` en `resumen-nodo.txt`; el verificador `Verificar-Instalador.ps1` y la última pantalla del asistente muestran el estado de la licencia (H-10).
+
+**La llave pública de producción todavía no existe** (ceremonia pendiente del CTO, Q-L3): `claves/produccion.json` está vacío. Mientras tanto **un nodo de producción no acepta ninguna licencia**: todos los clientes caen a la evaluación y a los 30 días a `degradada` (los cuatro módulos se apagan; la clase sigue). Es el hueco más importante de esta entrega (H-12, D-14).
+
+## 12 · Decisiones (`D-n`)
+
+Las que no estaban escritas en el encargo (`P-n`) o que lo medido o la revisión independiente cambiaron.
+
+| # | Decisión | Por qué |
+|---|---|---|
+| **D-1** | La huella se lee **directo** (`GetSystemFirmwareTable('RSMB')` y el registro), sin CIM ni PowerShell | Mismos valores, ≈ 0,11 ms frente a 2,4–3,2 s (Fase 0, D.2 y D.4); el nodo es un servicio y no debe lanzar un proceso para saber quién es |
+| **D-2** | El UUID de SMBIOS se decodifica *mixed-endian* (`uuid.UUID(bytes_le=…)`) | Es la forma que coincide con CIM y da una versión definida; con el orden directo sale «versión 15» (Fase 0, D.2) |
+| **D-3** | El `ProcessorId` **no sella**; los factores de unidad son MachineGuid, UUID, placa y chasis; k = 2/2, 2/3 o 3/4 | Es la firma CPUID del **modelo** (Fase 0, D.3). Con el «3 de 5» de P-04 esta máquina habría llamado «hardware» a una huella con sólo 2 factores buenos |
+| **D-4** | El aviso de evaluación existe **desde el primer día** (`urgente` a 7 días o menos) | H-10: si no, en 30 días de evaluación nadie con rol de administración se entera y el colegio lo sabe cuando ya está degradado |
+| **D-5** | En producción la carpeta de estado es **fija**; ninguna variable la mueve | Si `AVACOM_LICENCIA_DIR` valiera en producción bastaría apuntarla a una carpeta vacía para reiniciar la ventana de evaluación |
+| **D-6** | Lo que **cierra puertas** (`PUT /api/acceso/politicas/…`) y la **salida de calificaciones** (`boletines/`, `exportaciones/`) **no** se licencian | H-02 y H-03: con la licencia degradada nadie podría cerrar el registro propio ni los visitantes, y el vencimiento tomaría de rehén las notas del colegio (R-03, Q-L12: por omisión no limitar) |
+| **D-7** | Una licencia que empieza en el futuro (más de un día) **se rechaza al instalar** (400 `aun_no_vigente`) | Reemplazaría a la vigente y dejaría al nodo en evaluación hasta ese día. El emisor entrega `desde` ≤ el día de la entrega y expresa la vigencia extendida en `vence` |
+| **D-8** | **Una sola tolerancia de inicio** (`Politica.tolerancia_inicio_ms`, un día) para aceptar el archivo y para decidir que ya rige | Revisión independiente (BUG-1, H-08): antes sólo la tenía `Instalar`, y una licencia aceptada con `desde` a 12 h dejaba al nodo sin licencia —y degradado, si la evaluación había vencido— hasta que llegara su `desde`, también en una renovación |
+| **D-9** | Un secreto propio que **no se puede abrir** se aparta (`<nombre>.ilegible-<n>-<fecha>`, sin borrar; se conservan 5), se guarda uno nuevo y se asienta **una vez** como integridad alterada | Revisión independiente (BUG-2, F-08): antes el nodo devolvía un valor en memoria y no guardaba nada, y cada arranque tenía otra identidad (una licencia de nivel «instalación» no volvía a coincidir ni pidiendo otra solicitud, las anclas del reloj fallaban su verificación y una liberación legítima no se podía cotejar). **Excepción:** si DPAPI no responde *ahora*, o el disco no dejó leer el archivo, **no se toca** (el archivo puede estar bien) |
+| **D-10** | **Traslado frente a renovación:** la serie siguiente de la misma licencia emitida para **otra huella** es un traslado (`activada`, `license.activate`: lo hace el técnico, JRN-020); con la **misma** huella es una renovación (`license.renew`), también si llega por «activar» | Revisión independiente (DECISIÓN-A): el equipo nuevo que restauró la base del viejo trae la licencia vigente del equipo anterior, y el técnico —que no renueva— recibía un 403 en el paso que el Maestro le da a él |
+| **D-11** | `HEAD` se trata como `GET` en el middleware; sólo `OPTIONS` pasa | Revisión independiente: DRF atiende un `HEAD` con la vista `GET`, que se saltaba el 402 |
+| **D-12** | El cupo se cuenta sólo al crear; `resolver` **nunca** rechaza; `MASTER` y visitantes no cuentan | H-04…H-07 (§8) |
+| **D-13** | Extensiones que P-17 no trae: `GET copia/` (CAP-111) y `POST reloj/confirmar/` (P-06), y cinco eventos y dos acciones de auditoría extra | La ficha del Maestro pide la copia, y «esperar confirmación» exige un modo de confirmar; todas se marcan como extensiones |
+| **D-14** | La puerta H-12 existe (`-ExigirLlaveDeProduccion`) pero **no** es obligatoria por omisión | La ceremonia de llaves está pendiente (Q-L3): hoy ningún instalador de producción puede traer una llave real. El build lo dice a gritos y anota `llaves_publicas_de_produccion` y `licencias_activables` en el manifiesto; cuando la llave exista se vuelve obligatoria |
+| **D-15** | El plan por omisión del emisor es `*`; una licencia con lista **explícita** de capacidades **no** habilita capacidades licenciables añadidas después | H-11: una actualización no «apaga» un módulo nuevo a quien tiene `*`; quien tiene una lista se queda con ella y el emisor decide qué hacer con las licencias vivas (Q-L14) |
+
+## 13 · Línea base y mediciones
+
+**Antes de tocar nada** (R-14, 2026-10-20 09:36–09:52; en verde, sin arreglar nada): backend `manage.py test` **1945 pruebas, 8 omitidas, 870 s**; Core **1221**, OPS **399**, Student **102** (todas correctas; 32 s, 7 s y 6 s). **No hay línea base de UI Automation**: los recorridos de acceso no se corrieron en esta sesión (ver [03-pruebas.md](03-pruebas.md) §5). **Hoy** (con las Fases 0 a 3 y la revisión independiente) las cifras están en [03-pruebas.md](03-pruebas.md) §1.
+
+**Mediciones de la Fase 0** (Windows 11, sin elevar, sin escribir en el repositorio; detalle en el [anexo](anexo-fase0-mediciones.md)):
+
+| Medición | Resultado |
+|---|---|
+| Compilador de C | Sólo **VS 18** (`cl` por `vcvarsall`): compila con todas las banderas sin un aviso; **VS 2022 no sirve** (le faltan `vcvarsall.bat`, cabeceras y bibliotecas). El CRT es estático por omisión |
+| NDK de Android | **30.0.14904198 = r30-beta1** (preliminar): compila y enlaza con las banderas pedidas (aarch64 y x86_64); `llvm-readelf` las lee |
+| Huella de esta máquina | 3 de 5 factores válidos, pero sólo **2** distinguen la máquina (MachineGuid y UUID); las series de placa, chasis y BIOS son «Default string» (D-3) |
+| Lectura de la huella | Directa ≈ **0,11 ms**; CIM por PowerShell 2,4–3,2 s con los mismos valores (D-1) |
+| DPAPI de máquina | Ida y vuelta de 32 bytes sin elevar, ≈ 0,28 ms; un blob alterado o una entropía distinta fallan (`ERROR_INVALID_DATA`) |
+| TPM | `Get-Tpm` exige administrador; `tpmtool getdeviceinformation` sí funciona sin elevar (TPM 2.0 presente) y el proveedor CNG de plataforma se abre sin elevar. **No se crearon claves** |
+| Ed25519 en Python | Verificar ≈ 0,1 ms; el coste dominante es importar `cryptography` en frío (≈ 45–50 ms), que no se paga de nuevo si el backend ya lo importa |
+| Keystore del AVD | Reporta `software` (como se esperaba): [anexo](anexo-fase0-keystore-avd.md). **No es una tableta Android 14** |
+
+## 14 · Lo que esto NO impide (límites honestos)
+
+- **El cupo de equipos es blando hasta la Fase 5.** La «huella» de una tableta (`identificador_hw`) la **declara el cliente**; un equipo que aparece por el aula, el examen o el inicio de sesión (que pasan por `resolver`) no consume cupo hasta que se registra por el latido o el alta manual.
+- **A4 (administrador local con conocimientos)**, **A5 (dispositivo hostil)** y **A6 (atacante asistido por IA)** no se impiden: se encarecen, se detectan y se limita el daño. Hoy el backend se copia en claro a `Program Files`; el marcador `.avacom-canal` y el estado de la carpeta de estado se pueden borrar o forjar con conocimientos (§11) y la protección se mueve a la biblioteca nativa y al despliegue firmado en la Fase 4. **«Ni la propia IA puede romper la licencia» no es demostrable como imposibilidad y este diseño no lo afirma.** Lo que sí se mide: ningún binario ni el instalador contiene una clave privada ni el emisor, y ninguna mutación de una licencia válida es aceptada (100 000 con semilla fija, 0 aceptadas).
+- **El reloj es evidencia, no prevención**: un adelanto accidental deja la marca alta alta (§5, Q-L13).
+- **Ninguna licencia real valida todavía** en un nodo de producción (§11, D-14).
+- **Liberar este equipo** lo devuelve a `sin_licencia` con la ventana de evaluación contada desde el **primer arranque** (no se reinicia): en un colegio con meses de uso el equipo liberado queda degradado tras la histéresis (la clase sigue). Se puede deshacer volviendo a activar el mismo archivo (Q-L15).
+- **Sin internet el nodo no puede saber** que su licencia está activa en otro equipo: lo sabe el emisor y lo escribe en el archivo (`liberacion_pendiente`).
+- **Student no tiene pantalla ni lógica de licencia** (P-19, SEC-001): sólo recibe textos para `cupo_agotado` y `no_disponible_por_licencia`, y una tableta ya registrada nunca se bloquea.
+
+## 15 · Preguntas para el CTO
+
+Con las de la hoja de ruta (Q-L1…Q-L12) y las que salieron de construirlo. Ninguna bloquea lo construido: todo es dato (`politica.py`, `rutas.py`, la licencia) y cambiarlo no toca el diseño.
+
+| # | Pregunta | Opción tomada mientras tanto |
+|---|---|---|
+| Q-L1 | Modelo comercial: días de evaluación y de gracia, límites, **qué módulos son núcleo y cuáles licenciables**, planes | Valores provisionales y las cuatro capacidades de §7 |
+| Q-L2 | Hardware del equipo maestro: ¿qué panel? ¿TPM 2.0 y SMBIOS con UUID y series reales? | Se midió **una** máquina; sin series reales se usa la huella de instalación |
+| Q-L3 | Emisión: quién emite, dónde vive la llave privada, cómo se rota, cómo se atiende una liberación; **fecha de la ceremonia de llaves** | `produccion.json` vacío: ningún nodo acepta una licencia real hasta entonces |
+| Q-L4 | AVACOM Contenido ya ata su contenido a un dispositivo: ¿qué debe respetar o heredar el LMS? | Nada: no se toca esa protección |
+| Q-L5 | Ante manipulación (reloj, integridad): ¿señal y aviso o restricción? ¿Quién recibe la señal sin internet? | Señal y aviso (bandera + asiento + `/health/`) |
+| Q-L6 a Q-L11 | Llave de firma del APK, TLS en la LAN, `minSdk`, Authenticode, ofuscador, activación en línea y revocación | Fases 4 a 6 y V1 |
+| Q-L12 | ¿Puede un vencimiento limitar la exportación de calificaciones al cierre del ciclo? | **No**: `boletines/` y `exportaciones/` son núcleo (D-6) |
+| Q-L13 | **Recuperación tras un salto accidental del reloj** (H-09): hoy la marca queda alta. ¿Licencia de recuperación emitida por AVACOM («restablecer reloj»), o una marca que mientras haya un salto pendiente sólo sube con el tiempo monótono (propuesta de la revisión independiente)? | Se documenta. La segunda opción tiene un hueco: el aplazamiento se mide en la línea de tiempo adelantada (un salto de un año aplazaría la degradación un año) y no cubre un salto con el nodo apagado |
+| Q-L14 | Una licencia con lista **explícita** de capacidades frente a una capacidad licenciable nueva (H-11): ¿qué pasa con las licencias vivas al añadirla? | No la habilitan; el emisor usa `*` por omisión |
+| Q-L15 | «Liberar este equipo» devuelve el nodo a la evaluación: si ya venció, el equipo liberado queda degradado. ¿Es lo que se quiere para el equipo viejo de un traslado, o debe conservar un plazo? | Queda degradado tras la histéresis; la clase sigue |

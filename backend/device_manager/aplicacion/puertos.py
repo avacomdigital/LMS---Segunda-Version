@@ -31,6 +31,13 @@ class Reloj(Protocol):
         """La marca autoritativa la pone el nodo (BR-062, INV-017)."""
 
 
+class CupoDeEquipos(Protocol):
+    """MOD-018 (FUN-091): el cupo de equipos de la licencia. Sólo se pregunta al REGISTRAR un equipo nuevo (nunca a uno que ya existe ni a su latido) y lanza `CupoAgotado` si no cabe."""
+
+    def exigir_equipo_nuevo(self, en_uso: int) -> None:
+        """`en_uso` = cuántos equipos activos hay ya, sin el equipo maestro."""
+
+
 class Outbox(Protocol):
     def publicar(self, agregado_tipo: str, agregado_id: str, tipo_evento: str, carga: dict) -> None: ...
 

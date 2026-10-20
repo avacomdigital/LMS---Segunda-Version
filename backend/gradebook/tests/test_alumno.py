@@ -48,12 +48,18 @@ class ModoSimpleTests(_ConPreescolar):
         self.assertNotIn("puntaje", str(item))
         self.assertNotIn("porcentaje", str(item))
         self.assertIsNone(item["aciertos"])                                      # y los aciertos esperan a que el profesor libere el resultado
-        # Cuando el profesor libera ese resultado (RF-004), se ven como símbolos, nunca como cifras.
+        self.assertIsNone(item["nota"])
+        # Cuando el profesor libera ese resultado (RF-004) se ven los símbolos y, desde la decisión del 2026-10-19, también la nota (porcentaje del examen, sin escala).
         self.accion(f"/intentos/{i}/liberar-resultado/", {})
         item = next(x for x in self.mias_de_ana() if x["asignacion_id"] == a["id"])
         simbolos = item["aciertos"]["simbolos"]
         self.assertTrue(simbolos and set(simbolos) <= {"acierto", "fallo"})
-        self.assertEqual(numeros({k: v for k, v in item.items() if k != "asignacion_id"}), [])
+        self.assertIsNotNone(item["nota"])
+        self.assertEqual((item["nota"]["aciertos"], item["nota"]["preguntas"]), (simbolos.count("acierto"), len(simbolos)))
+        # El profesor ve la misma nota en el libro, marcada como publicada.
+        fila = next(f for f in self.libro(grupo_id=self.grupo_pre["id"])["alumnos"] if f["alumno_id"] == self.ana_id)
+        self.assertEqual(fila["celdas"][a["id"]]["nota_simple"]["porcentaje"], item["nota"]["porcentaje"])
+        self.assertTrue(fila["celdas"][a["id"]]["nota_simple"]["publicada"])
 
     def test_los_tres_estados_de_presentacion(self):
         a = self.crear_asignacion("supervisado", tiempo={"modo": "sin_limite"}, grupo_id=self.grupo_pre["id"])

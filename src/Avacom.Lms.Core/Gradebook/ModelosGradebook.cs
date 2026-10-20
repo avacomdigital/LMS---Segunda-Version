@@ -91,6 +91,20 @@ public sealed record EscalaDePresentacion(
 
 // ------------------------------------------------------------------------------------------ la calificación
 
+/// <summary>
+/// La calificación en BRUTO, como la contó la evaluación: los puntos obtenidos sobre el máximo (14 de 18), los aciertos sobre las preguntas y el porcentaje (el resultado interno 0–100).
+/// La nota se lee con los tres: puntos · porcentaje · lo presentado con el sistema configurado. Sin puntos (una nota registrada a mano) van en nulo: nunca una cifra inventada.
+/// </summary>
+public sealed record NotaEnBruto(
+    [property: JsonPropertyName("puntos")] decimal? Puntos,
+    [property: JsonPropertyName("puntos_maximos")] decimal? PuntosMaximos,
+    [property: JsonPropertyName("aciertos")] int? Aciertos,
+    [property: JsonPropertyName("preguntas")] int? Preguntas,
+    [property: JsonPropertyName("porcentaje")] decimal? Porcentaje)
+{
+    public bool TienePuntos => Puntos is not null && PuntosMaximos is > 0;
+}
+
 public sealed record Calificacion(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("intento_id")] string IntentoId,
@@ -121,7 +135,11 @@ public sealed record Calificacion(
     [property: JsonPropertyName("retroalimentacion")] Dictionary<string, string>? Retroalimentacion = null,
     [property: JsonPropertyName("adaptacion")] string? Adaptacion = null,
     [property: JsonPropertyName("presentacion")] Presentacion? Presentacion = null,
-    [property: JsonPropertyName("desfase_con_evaluacion")] bool DesfaseConEvaluacion = false)
+    [property: JsonPropertyName("desfase_con_evaluacion")] bool DesfaseConEvaluacion = false,
+    [property: JsonPropertyName("puntos")] decimal? Puntos = null,
+    [property: JsonPropertyName("puntos_maximos")] decimal? PuntosMaximos = null,
+    [property: JsonPropertyName("bruto")] NotaEnBruto? Bruto = null,
+    [property: JsonPropertyName("materia")] string? Materia = null)
 {
     public bool EsEditable => EstadosDeCalificacion.Cuenta(Estado);
     public bool EstaReabierta => Estado == EstadosDeCalificacion.Reabierta;
@@ -192,7 +210,45 @@ public sealed record ColumnaDelLibro(
     [property: JsonPropertyName("afecta_oficial")] bool AfectaOficial,
     [property: JsonPropertyName("por_revisar")] int PorRevisar,
     [property: JsonPropertyName("curso_rotulo")] string? CursoRotulo = null,
-    [property: JsonPropertyName("resultados")] string? Resultados = null);
+    [property: JsonPropertyName("resultados")] string? Resultados = null,
+    [property: JsonPropertyName("conteo")] ConteoDeEvaluaciones? Conteo = null,
+    [property: JsonPropertyName("liberados_en")] long? LiberadosEn = null,
+    [property: JsonPropertyName("liberados_por")] string? LiberadosPor = null,
+    [property: JsonPropertyName("materia")] string? Materia = null);
+
+/// <summary>Un curso de una materia del grupo, para segmentar el libro: un profesor dicta varios cursos de la misma materia.</summary>
+public sealed record CursoDeMateria(
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("curso_rotulo")] string CursoRotulo,
+    [property: JsonPropertyName("evaluaciones")] int Evaluaciones)
+{
+    public string Rotulo => string.IsNullOrWhiteSpace(CursoRotulo) ? CursoRef : CursoRotulo;
+}
+
+/// <summary>Una materia del grupo (el código sale del identificador del curso; el nombre, de la biblioteca si responde) con sus cursos.</summary>
+public sealed record MateriaDelLibro(
+    [property: JsonPropertyName("codigo")] string Codigo,
+    [property: JsonPropertyName("rotulo")] string Rotulo,
+    [property: JsonPropertyName("cursos")] IReadOnlyList<CursoDeMateria> Cursos,
+    [property: JsonPropertyName("evaluaciones")] int Evaluaciones);
+
+/// <summary>Lo que el nodo aplicó al armar el libro o el boletín: la materia (como nodo académico, p. ej. <c>subject</c>), el curso y la evaluación.</summary>
+public sealed record FiltroDelLibro(
+    [property: JsonPropertyName("materia")] Dictionary<string, string>? Materia = null,
+    [property: JsonPropertyName("curso_ref")] string? CursoRef = null,
+    [property: JsonPropertyName("asignacion_id")] string? AsignacionId = null)
+{
+    public string? Subject => Materia is not null && Materia.TryGetValue("subject", out var s) ? s : null;
+}
+
+/// <summary>La nota de un examen en un nivel en modo simple: el porcentaje del examen, sin escala. <see cref="Publicada"/> dice si el alumno ya la ve (el profesor siempre la ve).</summary>
+public sealed record NotaSimple(
+    [property: JsonPropertyName("porcentaje")] decimal Porcentaje,
+    [property: JsonPropertyName("aciertos")] int Aciertos,
+    [property: JsonPropertyName("preguntas")] int Preguntas,
+    [property: JsonPropertyName("numero_intento")] int? NumeroIntento = null,
+    [property: JsonPropertyName("publicada_en")] long? PublicadaEn = null,
+    [property: JsonPropertyName("publicada")] bool Publicada = true);
 
 public sealed record IntentosDeCelda(
     [property: JsonPropertyName("total")] int Total,
@@ -210,7 +266,9 @@ public sealed record CeldaDelLibro(
     [property: JsonPropertyName("puntaje_efectivo")] decimal? PuntajeEfectivo = null,
     [property: JsonPropertyName("puntaje_original")] decimal? PuntajeOriginal = null,
     [property: JsonPropertyName("presentacion")] Presentacion? Presentacion = null,
-    [property: JsonPropertyName("politica_intentos")] string? PoliticaIntentos = null);
+    [property: JsonPropertyName("politica_intentos")] string? PoliticaIntentos = null,
+    [property: JsonPropertyName("nota_simple")] NotaSimple? NotaSimple = null,
+    [property: JsonPropertyName("bruto")] NotaEnBruto? Bruto = null);
 
 public sealed record AgregadoDeCurso(
     [property: JsonPropertyName("curso_ref")] string CursoRef,
@@ -227,7 +285,8 @@ public sealed record FilaDelLibro(
     [property: JsonPropertyName("alumno_id")] string AlumnoId,
     [property: JsonPropertyName("rotulo")] string Rotulo,
     [property: JsonPropertyName("celdas")] Dictionary<string, CeldaDelLibro> Celdas,
-    [property: JsonPropertyName("agregados")] IReadOnlyList<AgregadoDeCurso> Agregados);
+    [property: JsonPropertyName("agregados")] IReadOnlyList<AgregadoDeCurso> Agregados,
+    [property: JsonPropertyName("resumen")] ResumenDeEstudiante? Resumen = null);
 
 public sealed record TotalesDelLibro(
     [property: JsonPropertyName("alumnos")] int Alumnos,
@@ -244,7 +303,9 @@ public sealed record LibroDelGrupo(
     [property: JsonPropertyName("asignaciones")] IReadOnlyList<ColumnaDelLibro> Asignaciones,
     [property: JsonPropertyName("alumnos")] IReadOnlyList<FilaDelLibro> Alumnos,
     [property: JsonPropertyName("totales")] TotalesDelLibro Totales,
-    [property: JsonPropertyName("servidor_en")] long ServidorEn)
+    [property: JsonPropertyName("servidor_en")] long ServidorEn,
+    [property: JsonPropertyName("materias")] IReadOnlyList<MateriaDelLibro>? Materias = null,
+    [property: JsonPropertyName("filtro")] FiltroDelLibro? Filtro = null)
 {
     public bool EnModoCalificaciones => Modo == ModosDeNivel.Calificaciones;
 }
@@ -487,7 +548,8 @@ public sealed record ResultadoDelAlumno(
     [property: JsonPropertyName("curso_rotulo")] string? CursoRotulo = null,
     [property: JsonPropertyName("estado")] string? Estado = null,
     [property: JsonPropertyName("calificacion")] NotaPublicada? Calificacion = null,
-    [property: JsonPropertyName("aciertos")] AciertosEnSimbolos? Aciertos = null)
+    [property: JsonPropertyName("aciertos")] AciertosEnSimbolos? Aciertos = null,
+    [property: JsonPropertyName("nota")] NotaSimple? Nota = null)
 {
     public bool EsSimple => Modo == ModosDeNivel.Simple;
     public bool TieneNota => Calificacion is not null;
@@ -524,7 +586,8 @@ public sealed record NotaPublicada(
     [property: JsonPropertyName("retroalimentacion")] Dictionary<string, string>? Retroalimentacion = null,
     [property: JsonPropertyName("publicada_en")] long? PublicadaEn = null,
     [property: JsonPropertyName("numero_intento")] int? NumeroIntento = null,
-    [property: JsonPropertyName("escala")] EscalaResumen? Escala = null);
+    [property: JsonPropertyName("escala")] EscalaResumen? Escala = null,
+    [property: JsonPropertyName("bruto")] NotaEnBruto? Bruto = null);
 
 public sealed record MisResultados(
     [property: JsonPropertyName("alumno_id")] string AlumnoId,

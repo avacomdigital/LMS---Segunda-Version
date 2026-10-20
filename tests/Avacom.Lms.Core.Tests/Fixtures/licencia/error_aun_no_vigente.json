@@ -1,0 +1,5 @@
+{
+  "codigo": "licencia_invalida",
+  "detail": "La licencia todavía no empieza según la fecha de este equipo. Revisa que la fecha y la hora del equipo estén bien y vuelve a intentarlo.",
+  "motivo": "aun_no_vigente"
+}

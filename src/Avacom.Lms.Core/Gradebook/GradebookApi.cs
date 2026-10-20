@@ -44,8 +44,18 @@ public sealed class GradebookApi(HttpClient http, Uri baseUri) : ClienteJson(htt
 
     // ================================================================================================== leer
 
-    public Task<LibroDelGrupo?> LibroAsync(string actor, string grupoId, string? asignacionId = null, string? periodo = null, string? cursoRef = null, string? busqueda = null, CancellationToken ct = default) =>
-        ObtenerAsync<LibroDelGrupo>(Ruta("libro/", ("grupo_id", grupoId), ("asignacion_id", asignacionId), ("periodo", periodo), ("curso_ref", cursoRef), ("q", busqueda), ("actor", actor)), ct);
+    public Task<LibroDelGrupo?> LibroAsync(string actor, string grupoId, string? asignacionId = null, string? periodo = null, string? cursoRef = null, string? busqueda = null, bool soloResumen = false,
+                                           string? materia = null, CancellationToken ct = default) =>
+        ObtenerAsync<LibroDelGrupo>(Ruta("libro/", ("grupo_id", grupoId), ("asignacion_id", asignacionId), ("periodo", periodo), ("curso_ref", cursoRef), ("subject", materia), ("q", busqueda),
+            ("vista", soloResumen ? "resumen" : null), ("actor", actor)), ct);
+
+    public Task<BoletinDelEstudiante?> BoletinAsync(string actor, string alumnoId, string grupoId, string? cursoRef = null, int desde = 0, int limite = 20, string? materia = null, CancellationToken ct = default) =>
+        ObtenerAsync<BoletinDelEstudiante>(Ruta($"estudiantes/{Esc(alumnoId)}/boletin/", ("grupo_id", grupoId), ("curso_ref", cursoRef), ("subject", materia), ("desde", desde > 0 ? desde.ToString() : null),
+            ("limite", limite.ToString()), ("actor", actor)), ct);
+
+    public Task<RespuestaDeObservacion?> ObservarAsync(string actor, string alumnoId, string grupoId, IReadOnlyList<string> recomendaciones, string? texto = null, string? cursoRef = null, int? versionEsperada = null, CancellationToken ct = default) =>
+        ReemplazarAsync<RespuestaDeObservacion>(Base + $"estudiantes/{Esc(alumnoId)}/observacion/",
+            Docente(actor, ("grupo_id", grupoId), ("recomendaciones", recomendaciones), ("texto", texto), ("curso_ref", cursoRef), ("version_esperada", versionEsperada)), ct);
 
     public Task<ResumenDePeriodo?> ResumenAsync(string actor, string grupoId, string? periodo = null, string? cursoRef = null, CancellationToken ct = default) =>
         ObtenerAsync<ResumenDePeriodo>(Ruta("resumen/", ("grupo_id", grupoId), ("periodo", periodo), ("curso_ref", cursoRef), ("actor", actor)), ct);

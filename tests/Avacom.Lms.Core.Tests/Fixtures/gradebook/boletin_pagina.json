@@ -1,0 +1,279 @@
+{
+  "alumno": {
+    "id": "13f98eab-c7df-492f-b39b-3b724cf20076",
+    "rotulo": "Juan P."
+  },
+  "cursos": [
+    {
+      "bruto": {
+        "evaluaciones": 1,
+        "porcentaje": 71.43,
+        "puntos": 15.0,
+        "puntos_maximos": 21.0
+      },
+      "conteo": {
+        "aprobadas": 1,
+        "completadas": 2,
+        "con_nota": 1,
+        "no_aprobadas": 0,
+        "pendientes": 0,
+        "por_revisar": 1,
+        "publicadas": 1,
+        "sin_publicar": 0,
+        "sin_registro": 0
+      },
+      "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+      "curso_rotulo": "Estados de la materia y sus cambios",
+      "evaluaciones": 2,
+      "materia": "science",
+      "presentado": {
+        "clave": "3.8",
+        "cumple_criterio": true,
+        "desempeno": "Básico",
+        "etiqueta": "3.8",
+        "valor": 3.8
+      },
+      "promedio_simple": 71.43
+    }
+  ],
+  "evaluaciones": {
+    "curso_ref": "",
+    "desde": 1,
+    "items": [
+      {
+        "ajustada": false,
+        "asignacion_id": "69efcd34-87ce-49cf-a39e-18db850dc68a",
+        "bruto": null,
+        "calificacion_id": null,
+        "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+        "curso_rotulo": "Estados de la materia y sus cambios",
+        "estado": "reabierto",
+        "estado_simple": "completado",
+        "fecha": 1790000000000,
+        "intentos": 1,
+        "materia": "science",
+        "numero_intento": null,
+        "presentacion": null,
+        "publicada": false,
+        "puntaje_efectivo": null,
+        "retroalimentacion": {},
+        "tipo_evaluacion": "sumativa",
+        "titulo": "Examen de estados de la materia",
+        "version": null
+      }
+    ],
+    "limite": 1,
+    "total": 2
+  },
+  "filtro": {
+    "curso_ref": null,
+    "materia": null
+  },
+  "grupo": {
+    "codigo": "8A",
+    "id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
+    "nivel_clave": "secundaria",
+    "nombre": "Octavo A",
+    "periodo": "2026"
+  },
+  "insights": {
+    "comentarios": {
+      "dificultades": [
+        {
+          "fecha": 1790000000000,
+          "texto": "Se confunde al ordenar procesos.",
+          "titulo": "Examen de estados de la materia"
+        }
+      ],
+      "fortalezas": [
+        {
+          "fecha": 1790000000000,
+          "texto": "Razona bien los cambios de estado.",
+          "titulo": "Examen de estados de la materia"
+        }
+      ],
+      "oportunidades": [
+        {
+          "fecha": 1790000000000,
+          "texto": "Practicar con diagramas.",
+          "titulo": "Examen de estados de la materia"
+        }
+      ]
+    },
+    "constancia": {
+      "completadas": 2,
+      "evaluaciones": 2
+    },
+    "curso_a_reforzar": null,
+    "informativo": true,
+    "mejor_curso": null,
+    "tendencia": {
+      "calificaciones": 1,
+      "direccion": "insuficiente",
+      "minimo": 4
+    }
+  },
+  "materias": [
+    {
+      "codigo": "science",
+      "cursos": [
+        {
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "curso_rotulo": "Estados de la materia y sus cambios",
+          "evaluaciones": 2
+        }
+      ],
+      "evaluaciones": 2,
+      "rotulo": "Science"
+    }
+  ],
+  "modo": "calificaciones",
+  "observaciones": [
+    {
+      "actualizada_en": 1790000000000,
+      "actualizada_por": "c6f249c6-6035-4f8c-8b8f-ad57b7ff707f",
+      "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
+      "curso_ref": "",
+      "grupo_id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
+      "id": "ed438441-4a3c-4f5c-a581-eab9b1e2a6eb",
+      "periodo": "2026",
+      "recomendaciones": [
+        {
+          "codigo": "practicar_ejercicios",
+          "texto": "Practicar más ejercicios del tema con el modo estudio"
+        },
+        {
+          "codigo": "pedir_ayuda",
+          "texto": "Pedir ayuda al profesor cuando algo no quede claro"
+        }
+      ],
+      "texto": "Va mejorando.",
+      "version": 1
+    }
+  ],
+  "recomendaciones_disponibles": [
+    {
+      "codigo": "repasar_conceptos",
+      "texto": "Repasar los conceptos básicos de la materia antes de la próxima evaluación"
+    },
+    {
+      "codigo": "practicar_ejercicios",
+      "texto": "Practicar más ejercicios del tema con el modo estudio"
+    },
+    {
+      "codigo": "leer_con_atencion",
+      "texto": "Leer con atención el enunciado completo antes de responder"
+    },
+    {
+      "codigo": "justificar_respuestas",
+      "texto": "Justificar las respuestas con el procedimiento o un ejemplo"
+    },
+    {
+      "codigo": "revisar_antes_de_entregar",
+      "texto": "Revisar las respuestas antes de entregar"
+    },
+    {
+      "codigo": "participar_en_clase",
+      "texto": "Participar más en las actividades de clase"
+    },
+    {
+      "codigo": "entregar_a_tiempo",
+      "texto": "Entregar las evaluaciones y tareas dentro del plazo"
+    },
+    {
+      "codigo": "pedir_ayuda",
+      "texto": "Pedir ayuda al profesor cuando algo no quede claro"
+    },
+    {
+      "codigo": "organizar_el_tiempo",
+      "texto": "Organizar el tiempo de estudio en casa"
+    },
+    {
+      "codigo": "trabajo_en_equipo",
+      "texto": "Colaborar con los compañeros en el trabajo en equipo"
+    },
+    {
+      "codigo": "mantener_el_ritmo",
+      "texto": "Mantener el ritmo de trabajo: va bien"
+    },
+    {
+      "codigo": "ampliar_lecturas",
+      "texto": "Ampliar con lecturas y retos adicionales: puede ir más allá"
+    },
+    {
+      "codigo": "acompanamiento_familiar",
+      "texto": "Conviene el acompañamiento de la familia en las tareas"
+    },
+    {
+      "codigo": "apoyo_especializado",
+      "texto": "Conviene valorar un apoyo pedagógico especializado"
+    }
+  ],
+  "resumen": {
+    "bruto": {
+      "evaluaciones": 1,
+      "porcentaje": 71.43,
+      "puntos": 15.0,
+      "puntos_maximos": 21.0
+    },
+    "conteo": {
+      "aprobadas": 1,
+      "completadas": 2,
+      "con_nota": 1,
+      "no_aprobadas": 0,
+      "pendientes": 0,
+      "por_revisar": 1,
+      "publicadas": 1,
+      "sin_publicar": 0,
+      "sin_registro": 0
+    },
+    "evaluaciones": 2,
+    "oficial": false,
+    "ponderado": false,
+    "presentado": {
+      "clave": "3.8",
+      "cumple_criterio": true,
+      "desempeno": "Básico",
+      "etiqueta": "3.8",
+      "valor": 3.8
+    },
+    "promedio_simple": 71.43
+  },
+  "servidor_en": 1790000000000,
+  "sistema": {
+    "aprobacion_minima": 3.0,
+    "aprueba_desde": "Básico",
+    "codigo": "co-1-5",
+    "escala_id": "0710daa6-a95d-4fa9-ab10-f168532251c5",
+    "jurisdiccion": "Antioquia",
+    "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+    "numero": 1,
+    "pais": "CO",
+    "tipo": "numerica",
+    "tramos": [
+      {
+        "aprueba": false,
+        "clave": "bajo",
+        "etiqueta": "Bajo"
+      },
+      {
+        "aprueba": true,
+        "clave": "basico",
+        "etiqueta": "Básico"
+      },
+      {
+        "aprueba": true,
+        "clave": "alto",
+        "etiqueta": "Alto"
+      },
+      {
+        "aprueba": true,
+        "clave": "superior",
+        "etiqueta": "Superior"
+      }
+    ],
+    "valor_max": 5.0,
+    "valor_min": 1.0,
+    "version_id": "4e71c874-d5f4-4d43-95f2-fa1ba0a0083d"
+  }
+}

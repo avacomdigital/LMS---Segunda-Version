@@ -5,12 +5,12 @@
   "cambiado": true,
   "nivel": {
     "actualizada_en": 1790000000000,
-    "actualizada_por": "84b998a5-1c50-4283-8f66-31547fd627d4",
+    "actualizada_por": "68077550-92aa-4e5c-8cf9-2f9b87d143f4",
     "escala": {
       "aprobacion_minima": 3.0,
       "aprueba_desde": "Básico",
       "codigo": "co-1-5",
-      "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
+      "escala_id": "0710daa6-a95d-4fa9-ab10-f168532251c5",
       "jurisdiccion": "Antioquia",
       "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
       "numero": 1,
@@ -40,7 +40,7 @@
       ],
       "valor_max": 5.0,
       "valor_min": 1.0,
-      "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
+      "version_id": "4e71c874-d5f4-4d43-95f2-fa1ba0a0083d"
     },
     "modo": "calificaciones",
     "nivel_clave": "secundaria",

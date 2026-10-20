@@ -578,6 +578,21 @@ if (-not $InstalacionPresente) {
                     'Hasta que la administración lo configure (AVACOM OPS Master, Seguridad del aula, o manage.py acceso_pin_maestro --cambiar) no aparecen «Crear mi usuario» ni «Olvidé mi contraseña». En una actualización, deja además a los alumnos con PIN provisional en «PIN pendiente» (Nuevo PIN, en Grupos).'
             }
         }
+        # MOD-018: la licencia. Sin licencia el nodo opera 30 dias de evaluacion; la clase NUNCA se detiene (ni en gracia ni degradada): lo que cambia son los modulos licenciables.
+        $licenciaSalud = Prop $Salud 'licencia' $null
+        if ($null -ne $licenciaSalud) {
+            $estadoLicencia = [string](Prop $licenciaSalud 'estado' 'desconocido')
+            $diasLicencia = Prop $licenciaSalud 'dias_restantes' $null
+            $dias = if ($null -ne $diasLicencia) { " ($diasLicencia dias)" } else { '' }
+            switch ($estadoLicencia) {
+                { $_ -in @('activa', 'reactivada') } { Anotar 'OK' "La licencia esta $estadoLicencia$dias" }
+                'sin_licencia' { Anotar 'AVISO' "El nodo no tiene licencia: opera en su ventana de evaluacion$dias" '' 'Activala en AVACOM OPS Master, Licencia (solicitud, archivo de AVACOM y confirmar). Al terminar la evaluacion se apagan los modulos licenciables; la clase no se detiene.' }
+                { $_ -in @('en_gracia', 'liberacion_pendiente') } { Anotar 'AVISO' "La licencia esta en periodo de gracia$dias" '' 'Renuevala o reactivala en AVACOM OPS Master, Licencia. Mientras dure la gracia todo sigue funcionando.' }
+                'degradada' { Anotar 'AVISO' 'La licencia se acabo: los modulos licenciables estan apagados' '' 'Renuevala en AVACOM OPS Master, Licencia. La clase, la evaluacion y el modo de estudio siguen funcionando.' }
+                default { Anotar 'INFO' "Estado de la licencia: $estadoLicencia" }
+            }
+            if ((Prop $licenciaSalud 'modo' '') -eq 'ilimitada') { Anotar 'AVISO' 'Este nodo corre en modo de desarrollo (sin licencia): no es un nodo de produccion' }
+        }
         $configuracionAcceso = Invoke-Peticion "http://127.0.0.1:$Puerto/api/acceso/configuracion/"
         if ($configuracionAcceso.Estado -eq 200) {
             if ((Prop $configuracionAcceso.Json 'sesion_obligatoria' $true) -eq $true) {

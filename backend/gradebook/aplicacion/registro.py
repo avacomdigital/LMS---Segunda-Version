@@ -15,7 +15,7 @@ from __future__ import annotations
 from ..dominio import catalogos as cat
 from ..dominio import puntaje as pj
 from ..dominio.errores import ConflictoDeVersion, IntentoNoCalificable, ModoSimple, NoEncontrado
-from .base import _CasoDeUso, contexto_de, exigir_en_asignacion, exigir_sobre_resultado, modo_del_nivel, nuevo_id, salida_calificacion
+from .base import _CasoDeUso, contexto_de, exigir_en_asignacion, exigir_sobre_resultado, modo_del_nivel, nuevo_id, puntos_de, salida_calificacion
 from .derivados import RecalcularResultado
 from .puertos import Actor, UnidadDeTrabajo
 
@@ -92,10 +92,12 @@ class Registrador(_CasoDeUso):
         por = (intento.get("calificado_por") or cat.SISTEMA)
         automatica = por == cat.SISTEMA
         aciertos, preguntas = uow.evaluacion.aciertos_de(intento)
+        puntos, puntos_maximos = puntos_de(intento)
         fila = uow.calificaciones.crear({
             "id": nuevo_id(), "intento_id": intento["id"], "asignacion_id": asignacion["id"], "alumno_id": intento["alumno_id"], **contexto,
             "numero_intento": intento.get("numero") or 1, "puntaje_original": interno, "puntaje_efectivo": interno, "puntaje_fuente": interno,
-            "aciertos": aciertos, "preguntas": preguntas, "regla_puntuacion": cat.REGLA_AUTOMATICA if automatica else cat.REGLA_REVISION_DOCENTE,
+            "aciertos": aciertos, "preguntas": preguntas, "puntos": puntos, "puntos_maximos": puntos_maximos,
+            "regla_puntuacion": cat.REGLA_AUTOMATICA if automatica else cat.REGLA_REVISION_DOCENTE,
             "origen": cat.AUTOMATICA if automatica else cat.DOCENTE, "evaluador_id": por, "estado": cat.REVISADA, "version": 1,
             "registrada_en": ahora, "actualizada_en": ahora})
         uow.versiones.anexar(fila["id"], cat.V_REGISTRO, actor_id=por, en=ahora, puntaje_nuevo=interno, estado_nuevo=cat.REVISADA,
@@ -117,11 +119,12 @@ class Registrador(_CasoDeUso):
         guarda que se descartó (con el valor que tenía), para que quien lo ajustó lo vuelva a decidir."""
         por = intento.get("calificado_por") or actor_id or cat.SISTEMA
         aciertos, preguntas = uow.evaluacion.aciertos_de(intento)
+        puntos, puntos_maximos = puntos_de(intento)
         ajuste_vigente = c["puntaje_efectivo"] != c["puntaje_fuente"]
         conserva = ajuste_vigente and interno == c["puntaje_fuente"]
         efectivo = c["puntaje_efectivo"] if conserva else interno
         nueva = uow.calificaciones.actualizar_si_version(
-            c["id"], c["version"], puntaje_efectivo=efectivo, puntaje_fuente=interno, aciertos=aciertos, preguntas=preguntas, estado=cat.REVISADA,
+            c["id"], c["version"], puntaje_efectivo=efectivo, puntaje_fuente=interno, aciertos=aciertos, preguntas=preguntas, puntos=puntos, puntos_maximos=puntos_maximos, estado=cat.REVISADA,
             regla_puntuacion=cat.REGLA_REVISION_DOCENTE, origen=cat.DOCENTE, evaluador_id=por, actualizada_en=ahora)
         if nueva is None:
             actual = uow.calificaciones.por_id(c["id"])

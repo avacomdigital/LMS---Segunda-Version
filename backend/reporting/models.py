@@ -216,12 +216,18 @@ class Config(models.Model):
     umbral_privacidad = models.BooleanField(default=False)
     extraibles_permitidos = models.BooleanField(default=True)
     exigir_razon = models.BooleanField(default=False)
+    # El boletín académico individual: qué plantilla (`auto` = por el país de la política del libro y el nivel del grupo), cómo se llaman los periodos de la institución (los
+    # define su propio sistema de evaluación: ni cuatro periodos ni tres son universales) y la leyenda que aclara que no es un documento oficial.
+    plantilla_boletin = models.CharField(max_length=12, default=cat.PLANTILLA_AUTO)
+    periodos_boletin = models.JSONField(default=list)
+    leyenda_boletin = models.CharField(max_length=cat.MAX_LEYENDA_DE_BOLETIN, blank=True, default="")
     version = models.IntegerField(default=1)
     actualizada_en = models.BigIntegerField(null=True, blank=True)
     actualizada_por = models.CharField(max_length=64, blank=True, default="")
 
     class Meta:
         db_table = "m13_config"
+        constraints = [models.CheckConstraint(condition=Q(plantilla_boletin__in=cat.PLANTILLAS_DE_BOLETIN), name="ck_m13_config_plantilla_boletin")]
 
 
 class Exportacion(models.Model):
@@ -232,7 +238,7 @@ class Exportacion(models.Model):
     id = models.CharField(max_length=36, primary_key=True)
     tipo = models.CharField(max_length=16, choices=_lista(cat.TIPOS))
     parametros = models.JSONField(default=dict)                                 # el alcance del reporte: sólo identificadores y fechas
-    formato = models.CharField(max_length=8, choices=_lista(cat.FORMATOS))
+    formato = models.CharField(max_length=8, choices=_lista(cat.FORMATOS_DE_ARCHIVO))      # lo ENTREGADO: `zip` cuando va un archivo por estudiante
     actor_id = models.CharField(max_length=64, blank=True, default="")
     actor_rol = models.CharField(max_length=32, blank=True, default="")
     nominal = models.BooleanField(default=False)                                # el archivo lleva nombres de personas

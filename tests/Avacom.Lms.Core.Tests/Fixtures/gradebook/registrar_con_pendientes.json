@@ -1,12 +1,12 @@
 {
-  "asignacion_id": "c3f8b8bc-0530-4b13-bcad-a442e62a12ba",
+  "asignacion_id": "69efcd34-87ce-49cf-a39e-18db850dc68a",
   "calificaciones": [],
   "en_modo_simple": 0,
   "no_registrables": [
     {
-      "alumno_id": "5bc2bb96-0ce3-4dcf-bd07-ca2e0a15530b",
+      "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
       "detalle": "Quedan respuestas por revisar: no se registra una calificación definitiva mientras haya componentes pendientes.",
-      "intento_id": "8dbbaf3f-1a4f-49cb-b096-ea0f87800348",
+      "intento_id": "7b14aa68-7a7f-46a3-a0ea-097647e66408",
       "motivo": "revision_pendiente"
     }
   ],

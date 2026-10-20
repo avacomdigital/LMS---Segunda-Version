@@ -1,0 +1,75 @@
+{
+  "ahora": 1792511665163,
+  "avisos": [
+    {
+      "codigo": "gracia",
+      "dias": 30,
+      "motivo": "huella_distinta"
+    }
+  ],
+  "banderas": [],
+  "calculada_en": 1792511665033,
+  "capacidades": {
+    "habilitadas": [
+      "administracion_avanzada",
+      "busqueda",
+      "importacion",
+      "reportes"
+    ],
+    "no_disponibles": []
+  },
+  "consumo": {
+    "equipos": 1,
+    "usuarios": 3
+  },
+  "entorno": "pruebas",
+  "estado": "en_gracia",
+  "huella": {
+    "coincide": false,
+    "coinciden": 1,
+    "factores": 4,
+    "k": 3,
+    "nivel": "hardware",
+    "parcial": false
+  },
+  "licencia": {
+    "archivo": "4a9c00886dfd",
+    "aula": "Aula de pruebas",
+    "capacidades": [
+      "*"
+    ],
+    "desde": 1789919665033,
+    "emitida": 1789833265033,
+    "gracia_dias": 30,
+    "id": "a7a7a7a7-0001-4000-8000-000000000001",
+    "kid": "dev-1",
+    "liberacion_dias": 0,
+    "liberacion_pendiente": false,
+    "limites": {
+      "concurrentes_normal": 50,
+      "concurrentes_pico": 100,
+      "equipos": 55,
+      "usuarios": 1200
+    },
+    "serie": 1,
+    "tipo": "produccion",
+    "vence": 1821455665033
+  },
+  "limites": {
+    "concurrentes_normal": 50,
+    "concurrentes_pico": 100,
+    "equipos": 55,
+    "usuarios": 1200
+  },
+  "modo": "firmada",
+  "motivo": "huella_distinta",
+  "restringe": false,
+  "tipo": "produccion",
+  "vigencia": {
+    "desde": 1789919665033,
+    "dias_restantes": 30,
+    "gracia_dias": 30,
+    "hasta": 1795103665033,
+    "vence": 1821455665033
+  }
+}

@@ -20,7 +20,16 @@ public interface IGradebookApi
     ErrorAula? UltimoError { get; }
 
     // ---- leer
-    Task<LibroDelGrupo?> LibroAsync(string actor, string grupoId, string? asignacionId = null, string? periodo = null, string? cursoRef = null, string? busqueda = null, CancellationToken ct = default);
+    /// <summary>
+    /// El libro de un grupo. Con <paramref name="soloResumen"/> no trae las celdas alumno × evaluación sino lo que lleva cada estudiante y cada evaluación: es lo que necesitan las listas, y con
+    /// cientos de evaluaciones al año la tabla completa no se puede leer ni descargar.
+    /// </summary>
+    Task<LibroDelGrupo?> LibroAsync(string actor, string grupoId, string? asignacionId = null, string? periodo = null, string? cursoRef = null, string? busqueda = null, bool soloResumen = false,
+                                    string? materia = null, CancellationToken ct = default);
+    /// <summary>El boletín de un estudiante en un grupo (vista del profesor): lo que lleva, por curso, sus insights y UNA página de sus evaluaciones (las de un curso si se pide). <paramref name="materia"/> recorta a una materia (código del árbol).</summary>
+    Task<BoletinDelEstudiante?> BoletinAsync(string actor, string alumnoId, string grupoId, string? cursoRef = null, int desde = 0, int limite = 20, string? materia = null, CancellationToken ct = default);
+    /// <summary>Lo que el profesor recomienda a un estudiante en el periodo del grupo (la cuarta pregunta del boletín): frases del catálogo del nodo y un texto opcional. Crea o cambia; repetir lo mismo no deja rastro.</summary>
+    Task<RespuestaDeObservacion?> ObservarAsync(string actor, string alumnoId, string grupoId, IReadOnlyList<string> recomendaciones, string? texto = null, string? cursoRef = null, int? versionEsperada = null, CancellationToken ct = default);
     /// <summary>La calificación presentada de cada intento de una evaluación (la escala del nivel), para ponerla junto al porcentaje en los resultados del examen.</summary>
     Task<NotasDeAsignacion?> NotasDeAsignacionAsync(string actor, string asignacionId, CancellationToken ct = default);
     Task<ResumenDePeriodo?> ResumenAsync(string actor, string grupoId, string? periodo = null, string? cursoRef = null, CancellationToken ct = default);

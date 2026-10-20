@@ -19,12 +19,13 @@ M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION = "acceso", "aula", "d
 M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS = "auditoria", "instalacion", "expediente", "pruebas"
 M_BUSQUEDA = "busqueda"
 M_REPORTES = "reportes"
-MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES)
+M_LICENCIA = "licencia"
+MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES, M_LICENCIA)
 
 ETIQUETAS_MODULO = {
     M_ACCESO: "Acceso e identidad", M_AULA: "Aula (clase en vivo)", M_DISPOSITIVOS: "Dispositivos", M_ESTUDIO: "Modo estudio",
     M_EVALUACION: "Evaluaciones", M_AUDITORIA: "Auditoría", M_INSTALACION: "Instalación", M_EXPEDIENTE: "Expediente",
-    M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes",
+    M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes", M_LICENCIA: "Licencia",
 }
 
 
@@ -181,6 +182,8 @@ _LISTA: tuple[Accion, ...] = (
     _a("calificacion.modificacion_denegada", M_EVALUACION, "Intento de modificar calificaciones sin autorización", sensible=True),
     _a("calificacion.derivadas_reconstruidas", M_EVALUACION, "Resultados y agregados reconstruidos", evento_origen="calificacion.derivadas_reconstruidas.v1"),
     _a("calificacion.evento_omitido", M_EVALUACION, "Evento de la evaluación que el libro no pudo aplicar y dejó atrás", sensible=True),
+    _a("calificacion.observacion_registrada", M_EVALUACION, "Observación del profesor a un estudiante registrada (recomendaciones del boletín)", sensible=True,
+       evento_origen="calificacion.observacion_registrada.v1"),
     # ---- búsqueda (MOD-021): sólo lo que merece asiento (mantener el índice y un intento de abrir lo que no se puede leer). Buscar no se asienta: no cambia nada.
     _a("busqueda.indice_reconstruido", M_BUSQUEDA, "Índice de búsqueda reconstruido", evento_origen="busqueda.indice_reconstruido.v1"),
     _a("busqueda.apertura_denegada", M_BUSQUEDA, "Intento de abrir un resultado sin poder leerlo", sensible=True),
@@ -197,6 +200,20 @@ _LISTA: tuple[Accion, ...] = (
     _a("reporte.agregados_reconstruidos", M_REPORTES, "Agregados de reportes reconstruidos desde la cola", evento_origen="reporte.agregados_reconstruidos.v1"),
     _a("reporte.configuracion_cambiada", M_REPORTES, "Umbral de privacidad o política de exportación de reportes cambiados"),
     _a("reporte.evento_omitido", M_REPORTES, "Evento que los reportes no pudieron aplicar y dejaron atrás", sensible=True),
+    # ---- licencia (MOD-018): lo que merece asiento. Nunca llevan el contenido de una licencia ni huellas crudas: ids, serie, resultado y hash del archivo. Los dos últimos son extensiones propuestas.
+    _a("licencia.activada", M_LICENCIA, "Licencia activada en el nodo", evento_origen="licencia.activada.v1"),
+    _a("licencia.renovada", M_LICENCIA, "Licencia renovada con un archivo posterior", evento_origen="licencia.renovada.v1"),
+    _a("licencia.liberada", M_LICENCIA, "Licencia liberada: el equipo dejó de usarla", evento_origen="licencia.liberada.v1"),
+    _a("licencia.solicitud_generada", M_LICENCIA, "Solicitud de licencia generada (sólo nivel y cifras de la huella)"),
+    _a("licencia.gracia_iniciada", M_LICENCIA, "Periodo de gracia iniciado (la licencia venció o este equipo no es el de la licencia)", evento_origen="licencia.periodo_gracia_iniciado.v1"),
+    _a("licencia.degradada", M_LICENCIA, "Funciones degradadas al agotarse la gracia", evento_origen="licencia.funciones_degradadas.v1"),
+    _a("licencia.reactivada", M_LICENCIA, "Licencia reactivada tras una restauración", evento_origen="licencia.reactivada.v1"),
+    _a("licencia.bloqueo_aplicado", M_LICENCIA, "Bloqueo de licencia: un módulo no disponible o un cupo agotado (agregado por actor, capacidad y hora)"),
+    _a("licencia.reloj_sospechoso", M_LICENCIA, "Reloj del nodo sospechoso: retrocedió o saltó hacia adelante", evento_origen="licencia.reloj_sospechoso.v1"),
+    _a("licencia.integridad_alterada", M_LICENCIA, "Un ancla de la licencia no pasó su verificación", evento_origen="licencia.integridad_alterada.v1"),
+    _a("licencia.firma_invalida", M_LICENCIA, "Archivo de licencia rechazado: firma, llave o equipo no válidos"),
+    _a("licencia.evaluacion_iniciada", M_LICENCIA, "Ventana de evaluación iniciada (primer arranque con licenciamiento)", evento_origen="licencia.evaluacion_iniciada.v1"),
+    _a("licencia.reloj_confirmado", M_LICENCIA, "Fecha del nodo confirmada por el administrador tras un salto sospechoso del reloj"),
     # ---- expediente (lo que hoy escribe `expediente/servicios.py`) ----
     _a("inscripcion.creada", M_EXPEDIENTE, "Inscripción creada"),
     _a("inscripcion.retirada", M_EXPEDIENTE, "Inscripción retirada"),
@@ -259,7 +276,7 @@ def modulo_de(clave: str) -> str:
     prefijo = clave.split(".", 1)[0]
     return {"identidad": M_ACCESO, "identity": M_ACCESO, "acceso": M_ACCESO, "aula": M_AULA, "dispositivos": M_DISPOSITIVOS,
             "estudio": M_ESTUDIO, "evaluacion": M_EVALUACION, "calificacion": M_EVALUACION, "auditoria": M_AUDITORIA,
-            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES}.get(prefijo, M_EXPEDIENTE)
+            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES, "licencia": M_LICENCIA}.get(prefijo, M_EXPEDIENTE)
 
 
 def como_lista() -> list[dict]:

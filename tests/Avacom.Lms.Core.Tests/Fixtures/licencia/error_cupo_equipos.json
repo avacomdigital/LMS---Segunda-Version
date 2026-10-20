@@ -1,0 +1,7 @@
+{
+  "codigo": "cupo_agotado",
+  "detail": "Se alcanzó el cupo de equipos de la licencia (2). Lo que ya existe sigue funcionando; para dar de alta más hace falta ampliar la licencia.",
+  "en_uso": 2,
+  "limite": 2,
+  "tipo": "equipos"
+}

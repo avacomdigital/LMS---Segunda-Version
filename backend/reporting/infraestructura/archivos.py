@@ -22,6 +22,7 @@ import zipfile
 from xml.sax.saxutils import escape
 
 from ..aplicacion.puertos import ArchivoGenerado
+from ..dominio import archivo as arch
 from ..dominio import catalogos as cat
 from ..dominio import documento as doc
 
@@ -244,13 +245,45 @@ class EscritorDeArchivos:
         spool = tempfile.SpooledTemporaryFile(max_size=UMBRAL_EN_MEMORIA, mode="w+b")
         try:
             (escribir_xlsx if formato == cat.XLSX else escribir_csv)(documento, spool)
-            total = spool.tell()
-            spool.seek(0)
-            h = hashlib.sha256()
-            for bloque in iter(lambda: spool.read(1024 * 1024), b""):
-                h.update(bloque)
-            spool.seek(0)
-            return ArchivoGenerado(contenido=spool, bytes_total=total, huella=h.hexdigest())
+            return self._entregar(spool)
         except Exception:
             spool.close()
             raise
+
+    def escribir_varios(self, documentos: list[doc.Documento], formato: str, nombres: list[str]) -> ArchivoGenerado:
+        """VARIOS documentos (uno por estudiante) en UN `zip`: cada uno en el formato pedido, con su nombre ya saneado (sin repetir), fechas fijas en las partes del zip (misma
+        entrada → mismos bytes). Lo que el profesor lleva a la memoria USB es un solo archivo; dentro, uno por familia."""
+        if formato not in cat.FORMATOS:
+            raise ValueError(f"Formato fuera del catálogo de MOD-013: {formato}")
+        if len(documentos) != len(nombres):
+            raise ValueError("Cada documento necesita su nombre")
+        spool = tempfile.SpooledTemporaryFile(max_size=UMBRAL_EN_MEMORIA, mode="w+b")
+        try:
+            usados: set[str] = set()
+            with zipfile.ZipFile(spool, "w", zipfile.ZIP_DEFLATED) as z:
+                for documento, propuesto in zip(documentos, nombres):
+                    nombre = arch.sanear(propuesto, cat.EXTENSION_DE[formato])
+                    base, n = nombre, 2
+                    while nombre.casefold() in usados:
+                        raiz, punto, ext = base.rpartition(".")
+                        nombre, n = f"{raiz or ext} ({n}).{ext}" if punto else f"{base} ({n})", n + 1
+                    usados.add(nombre.casefold())
+                    parte = io.BytesIO()
+                    (escribir_xlsx if formato == cat.XLSX else escribir_csv)(documento, parte)
+                    informacion = zipfile.ZipInfo(nombre, FECHA_FIJA)
+                    informacion.compress_type = zipfile.ZIP_DEFLATED
+                    z.writestr(informacion, parte.getvalue())
+            return self._entregar(spool)
+        except Exception:
+            spool.close()
+            raise
+
+    @staticmethod
+    def _entregar(spool) -> ArchivoGenerado:
+        total = spool.tell()
+        spool.seek(0)
+        h = hashlib.sha256()
+        for bloque in iter(lambda: spool.read(1024 * 1024), b""):
+            h.update(bloque)
+        spool.seek(0)
+        return ArchivoGenerado(contenido=spool, bytes_total=total, huella=h.hexdigest())

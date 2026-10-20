@@ -4,17 +4,25 @@
     "actualizada_en": 1790000000000,
     "adaptacion": "",
     "ajustada": false,
-    "alumno_id": "b734f582-1a00-4f3d-ad26-7ad1df0beef6",
-    "asignacion_id": "21322d1c-33a5-47da-a80b-bc932f54aee3",
+    "alumno_id": "13f98eab-c7df-492f-b39b-3b724cf20076",
+    "asignacion_id": "69efcd34-87ce-49cf-a39e-18db850dc68a",
+    "bruto": {
+      "aciertos": 11,
+      "porcentaje": 95.24,
+      "preguntas": 12,
+      "puntos": 20.0,
+      "puntos_maximos": 21.0
+    },
     "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
     "desempeno_docente": "",
     "desempeno_motivo": "",
     "desfase_con_evaluacion": false,
     "estado": "revisada",
-    "evaluador_id": "96630f34-b415-4886-9556-9f7bb5c97f05",
-    "grupo_id": "aaa24399-46b8-4f25-802b-de7fa5fb2cdf",
-    "id": "cb74409b-261e-44d4-bd33-55c081c1ab1f",
-    "intento_id": "0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
+    "evaluador_id": "c6f249c6-6035-4f8c-8b8f-ad57b7ff707f",
+    "grupo_id": "29a1dd3a-812c-48f7-81c2-37a06f3d2a42",
+    "id": "35126c19-b9fe-4663-b54d-9c57a8ef3cee",
+    "intento_id": "7b14aa68-7a7f-46a3-a0ea-097647e66408",
+    "materia": "science",
     "nivel_clave": "secundaria",
     "numero_intento": 1,
     "origen": "docente",
@@ -32,12 +40,12 @@
       },
       "escala": {
         "codigo": "co-1-5",
-        "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
+        "escala_id": "0710daa6-a95d-4fa9-ab10-f168532251c5",
         "huella": "e5267421eccf458040a28416c320ad9905b2b43cd6451e762155d46169ee4ff7",
         "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
         "numero": 1,
         "tipo": "numerica",
-        "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
+        "version_id": "4e71c874-d5f4-4d43-95f2-fa1ba0a0083d"
       },
       "interno": 95.24,
       "presentada": {
@@ -52,6 +60,8 @@
     "publicada_por": "",
     "puntaje_efectivo": 95.24,
     "puntaje_original": 95.24,
+    "puntos": 20.0,
+    "puntos_maximos": 21.0,
     "registrada_en": 1790000000000,
     "regla_puntuacion": "mod10.revision_docente.v1",
     "retroalimentacion": {},
@@ -59,7 +69,7 @@
   },
   "historial": [
     {
-      "actor_id": "96630f34-b415-4886-9556-9f7bb5c97f05",
+      "actor_id": "c6f249c6-6035-4f8c-8b8f-ad57b7ff707f",
       "en": 1790000000000,
       "estado_anterior": "",
       "estado_nuevo": "revisada",
@@ -67,15 +77,15 @@
       "numero": 1,
       "puntaje_anterior": null,
       "puntaje_nuevo": 95.24,
-      "solicitud_id": "reg:0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
+      "solicitud_id": "reg:7b14aa68-7a7f-46a3-a0ea-097647e66408",
       "tipo": "registro"
     }
   ],
   "intento": {
-    "calificado_por": "96630f34-b415-4886-9556-9f7bb5c97f05",
+    "calificado_por": "c6f249c6-6035-4f8c-8b8f-ad57b7ff707f",
     "entregado_en": 1790000000000,
     "estado": "calificado",
-    "id": "0e9f2901-f8fc-41a5-8fcc-a53828cbd1e5",
+    "id": "7b14aa68-7a7f-46a3-a0ea-097647e66408",
     "numero": 1,
     "porcentaje": 95.2381
   },
@@ -89,7 +99,7 @@
       "puntaje": 2.0,
       "puntaje_maximo": null,
       "revisada_en": 1790000000000,
-      "revisor_id": "96630f34-b415-4886-9556-9f7bb5c97f05",
+      "revisor_id": "c6f249c6-6035-4f8c-8b8f-ad57b7ff707f",
       "tipo": "manual"
     },
     {
@@ -114,7 +124,7 @@
       "puntaje": 3.0,
       "puntaje_maximo": 3.0,
       "revisada_en": 1790000000000,
-      "revisor_id": "96630f34-b415-4886-9556-9f7bb5c97f05",
+      "revisor_id": "c6f249c6-6035-4f8c-8b8f-ad57b7ff707f",
       "tipo": "rubrica"
     }
   ],
@@ -123,7 +133,7 @@
     "aprobacion_minima": 3.0,
     "aprueba_desde": "Básico",
     "codigo": "co-1-5",
-    "escala_id": "6fad0440-2b6b-4e1f-abb2-99171df1bb69",
+    "escala_id": "0710daa6-a95d-4fa9-ab10-f168532251c5",
     "jurisdiccion": "Antioquia",
     "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
     "numero": 1,
@@ -153,6 +163,6 @@
     ],
     "valor_max": 5.0,
     "valor_min": 1.0,
-    "version_id": "184f88c8-df59-4792-8244-1b4f6c6b3c7e"
+    "version_id": "4e71c874-d5f4-4d43-95f2-fa1ba0a0083d"
   }
 }

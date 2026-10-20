@@ -15,9 +15,11 @@ public static class RutasDeReportes
     public const string Alumno = "reporte-alumno";
     public const string Uso = "reporte-uso";
     public const string Estado = "reportes-estado";
+    public const string Boletin = "reporte-boletin";
+    public const string Boletines = "reporte-boletines";
 
-    /// <summary>Lo que se va a elegir en la pantalla de elección: una clase, un grupo o un alumno.</summary>
-    public const string ElegirClase = "clase", ElegirGrupo = "grupo", ElegirAlumno = "alumno";
+    /// <summary>Lo que se va a elegir en la pantalla de elección: una clase, un grupo, un alumno, o el grupo cuyos boletines se quieren.</summary>
+    public const string ElegirClase = "clase", ElegirGrupo = "grupo", ElegirAlumno = "alumno", ElegirBoletin = "boletin";
 
     private static string Esc(string valor) => Uri.EscapeDataString(valor);
 
@@ -41,6 +43,12 @@ public static class RutasDeReportes
         Con(Uso, [("desde", periodo?.Desde?.ToString(System.Globalization.CultureInfo.InvariantCulture)), ("hasta", periodo?.Hasta?.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                   ("grupo", grupoId), .. DeNodo(nodo)]);
 
+    /// <summary>El boletín académico de un estudiante en un grupo.</summary>
+    public static string DeBoletin(string alumnoId, string grupoId, NodoAcademico? nodo = null) => Con(Boletin, [("alumno", alumnoId), ("grupo", grupoId), .. DeNodo(nodo)]);
+
+    /// <summary>Los boletines de todos los estudiantes de un grupo (uno por estudiante; se exportan juntos).</summary>
+    public static string DeBoletines(string grupoId, NodoAcademico? nodo = null) => Con(Boletines, [("grupo", grupoId), .. DeNodo(nodo)]);
+
     /// <summary>
     /// La pantalla que reabre un reporte reciente (los parámetros que el nodo guardó), o null si el tipo no se puede reabrir (uno reservado) o le falta lo esencial
     /// (un reciente de clase sin su identificador de sesión no es un reporte que se pueda pedir).
@@ -61,6 +69,11 @@ public static class RutasDeReportes
                 long? desde = long.TryParse(reciente.Parametro("desde"), out var d) ? d : null;
                 long? hasta = long.TryParse(reciente.Parametro("hasta"), out var h) ? h : null;
                 return DeUso(new PeriodoPedido(desde, hasta), reciente.Parametro("grupo_id"), nodo);
+            }
+            case TiposDeReporte.Boletin:
+            {
+                if (reciente.Parametro("grupo_id") is not { Length: > 0 } grupoDelBoletin) return null;
+                return reciente.Parametro("alumno_id") is { Length: > 0 } alumnoDelBoletin ? DeBoletin(alumnoDelBoletin, grupoDelBoletin, nodo) : DeBoletines(grupoDelBoletin, nodo);
             }
             default:
                 return null;

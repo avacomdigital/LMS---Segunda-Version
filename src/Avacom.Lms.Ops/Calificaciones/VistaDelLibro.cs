@@ -96,10 +96,12 @@ internal static class VistaDelLibro
         // El cero no existe para lo pendiente: sin presentación no hay nota que mostrar.
         var principal = presentacion is null ? "—" : GradebookTexto.Presentada(presentacion);
         decimal? interno = presentacion?.Interno ?? celda.PuntajeEfectivo;
-        // El resultado interno sólo acompaña a lo que ya es una calificación que cuenta (revisada o publicada): lo pendiente, lo provisional, lo reabierto, lo anulado y
-        // lo que sólo tiene la cifra técnica de la evaluación («sin registro») no enseñan ninguna cifra.
-        var secundario = interno is { } v && celda.Estado is EstadosDeResultado.Revisado or EstadosDeResultado.Definitivo
-            ? $"interno {GradebookTexto.Puntaje(v)} de 100"
+        // La nota se lee con los tres (puntos brutos · porcentaje · lo presentado): la cifra sólo acompaña a lo que ya es una calificación que cuenta (revisada o publicada); lo pendiente,
+        // lo provisional, lo reabierto, lo anulado y lo que sólo tiene la cifra técnica de la evaluación («sin registro») no enseñan ninguna. Sin puntos (registrada a mano) va el interno.
+        var cuenta = celda.Estado is EstadosDeResultado.Revisado or EstadosDeResultado.Definitivo;
+        var secundario = !cuenta ? null
+            : celda.Bruto is { TienePuntos: true } bruto ? GradebookTexto.Bruto(bruto)
+            : interno is { } v ? $"interno {GradebookTexto.Puntaje(v)} de 100"
             : null;
 
         var marcas = new List<string>();
@@ -122,7 +124,8 @@ internal static class VistaDelLibro
     /// se eligió un sistema. Pasar de modo no registra nada solo; «Registrar lo calificado» lo hace.
     /// </summary>
     public static int SinRegistrar(LibroDelGrupo libro, string asignacionId) =>
-        libro.Alumnos.Count(a => a.Celdas.TryGetValue(asignacionId, out var c) && c.Estado == EstadosDeResultado.SinRegistro && c.EstadoSimple == EstadosSimples.Completado);
+        libro.Asignaciones.FirstOrDefault(a => a.Id == asignacionId)?.Conteo?.SinRegistro                           // el nodo ya lo contó (también en el libro en resumen, sin celdas)
+        ?? libro.Alumnos.Count(a => a.Celdas.TryGetValue(asignacionId, out var c) && c.Estado == EstadosDeResultado.SinRegistro && c.EstadoSimple == EstadosSimples.Completado);
 
     /// <summary>El aviso de «Registrar lo calificado»: cuántas se registraron y, de lo que no, quién y por qué (lo que no se pudo no tumba a lo demás).</summary>
     public static (string Titulo, string? Detalle, bool Problemas) DescribirRegistro(RegistroDeAsignacion r, Func<string, string> rotuloDeAlumno)
@@ -144,6 +147,21 @@ internal static class VistaDelLibro
         if (r.NoRegistrables.Count > 6) lineas.Add($"…y {r.NoRegistrables.Count - 6} más.");
         return (titulo, lineas.Count == 0 ? null : string.Join("\n", lineas), r.NoRegistrables.Count > 0);
     }
+
+    // ------------------------------------------------------------------------------------- lista de estudiantes
+
+    public const string OrdenNombre = "nombre", OrdenAtencion = "atencion", OrdenPromedio = "promedio";
+
+    /// <summary>
+    /// El orden de la lista de estudiantes: de la A a la Z; quien más pide al profesor primero (revisar, registrar, publicar); o quien lleva el promedio más bajo primero. Quien aún no tiene
+    /// promedio (nada calificado) va AL FINAL del orden por promedio: lo pendiente no es un cero, así que no es «el más bajo».
+    /// </summary>
+    public static IEnumerable<FilaDelLibro> Ordenar(IEnumerable<FilaDelLibro> filas, string orden) => orden switch
+    {
+        OrdenAtencion => filas.OrderByDescending(f => f.Resumen?.Conteo.PorAtender ?? 0).ThenBy(f => f.Rotulo, StringComparer.CurrentCultureIgnoreCase),
+        OrdenPromedio => filas.OrderBy(f => f.Resumen?.PromedioSimple is null ? 1 : 0).ThenBy(f => f.Resumen?.PromedioSimple ?? 0).ThenBy(f => f.Rotulo, StringComparer.CurrentCultureIgnoreCase),
+        _ => filas.OrderBy(f => f.Rotulo, StringComparer.CurrentCultureIgnoreCase),
+    };
 
     public static int Reabiertas(LibroDelGrupo libro) =>
         libro.Alumnos.Sum(a => a.Celdas.Values.Count(c => c.Estado == EstadosDeResultado.Reabierto));

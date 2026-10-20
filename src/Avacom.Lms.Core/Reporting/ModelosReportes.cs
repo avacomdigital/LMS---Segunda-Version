@@ -17,8 +17,26 @@ public static class TiposDeReporte
     public const string Alumno = "alumno";
     public const string Grupo = "grupo";
     public const string Uso = "uso";
+    public const string Boletin = "boletin";               // el boletín académico individual (uno por estudiante)
     public const string Comparacion = "comparacion";       // reservado (V1)
     public const string Cobertura = "cobertura";           // reservado (V1)
+}
+
+/// <summary>Las plantillas del boletín académico: <c>auto</c> elige por el país de la política del libro y el nivel del grupo.</summary>
+public static class PlantillasDeBoletin
+{
+    public const string Auto = "auto";
+    public const string Colombia = "co";
+    public const string Mexico = "mx";
+    public const string Generica = "generica";
+
+    public static string Rotulo(string? codigo) => codigo switch
+    {
+        Colombia => "Colombia · áreas y asignaturas",
+        Mexico => "México · campos formativos / disciplinas",
+        Generica => "Genérica · asignaturas",
+        _ => "Automática (según el país del colegio)",
+    };
 }
 
 /// <summary>El estado técnico de las proyecciones; la pantalla lo muestra como antigüedad del dato, no como estado interno.</summary>
@@ -33,8 +51,10 @@ public static class FormatosDeExportacion
 {
     public const string Xlsx = "xlsx";
     public const string Csv = "csv";
+    /// <summary>Lo que el nodo ENTREGA cuando va un archivo por estudiante (los boletines de un grupo): un zip con un xlsx o un csv por cada uno. No se pide; se recibe.</summary>
+    public const string Zip = "zip";
 
-    public static string Extension(string formato) => formato == Csv ? "csv" : "xlsx";
+    public static string Extension(string formato) => formato switch { Csv => "csv", Zip => "zip", _ => "xlsx" };
 }
 
 /// <summary>Los tipos de destino con que el backend aplica la política del administrador (contrato con <see cref="Avacom.Lms.Core.Reporting.MotivosDeEscritura"/> y con la lista de destinos de OPS).</summary>
@@ -503,7 +523,11 @@ public sealed record ConfiguracionDeReportes(
     [property: JsonPropertyName("minimo_de_alumnos")] int MinimoDeAlumnos,
     [property: JsonPropertyName("razones")] IReadOnlyList<RazonDeExportacion> Razones,
     [property: JsonPropertyName("formatos")] IReadOnlyList<string> Formatos,
-    [property: JsonPropertyName("destinos")] IReadOnlyList<string> Destinos);
+    [property: JsonPropertyName("destinos")] IReadOnlyList<string> Destinos,
+    [property: JsonPropertyName("plantilla_boletin")] string? PlantillaBoletin = null,
+    [property: JsonPropertyName("periodos_boletin")] IReadOnlyList<string>? PeriodosBoletin = null,
+    [property: JsonPropertyName("leyenda_boletin")] string? LeyendaBoletin = null,
+    [property: JsonPropertyName("plantillas_de_boletin")] IReadOnlyList<string>? PlantillasDeBoletin = null);
 
 public sealed record RespuestaDeConfiguracion(
     [property: JsonPropertyName("configuracion")] ConfiguracionDeReportes Configuracion,
@@ -511,7 +535,192 @@ public sealed record RespuestaDeConfiguracion(
     [property: JsonPropertyName("servidor_en")] long ServidorEn);
 
 /// <summary>Lo que se cambia de la configuración: lo que vale null no viaja.</summary>
-public sealed record CambioDeConfiguracion(bool? UmbralPrivacidad = null, bool? ExtraiblesPermitidos = null, bool? ExigirRazon = null, int? VersionEsperada = null);
+public sealed record CambioDeConfiguracion(bool? UmbralPrivacidad = null, bool? ExtraiblesPermitidos = null, bool? ExigirRazon = null, int? VersionEsperada = null,
+                                           string? PlantillaBoletin = null, IReadOnlyList<string>? PeriodosBoletin = null, string? LeyendaBoletin = null);
+
+// ------------------------------------------------------------------------------------------------ el boletín académico individual
+
+/// <summary>La plantilla con que se armó un boletín: país, marco de referencia, cómo se organizan las áreas, los periodos de la institución y si lleva cifras.</summary>
+public sealed record PlantillaDeBoletin(
+    [property: JsonPropertyName("codigo")] string Codigo,
+    [property: JsonPropertyName("nombre")] string Nombre,
+    [property: JsonPropertyName("pais")] string Pais,
+    [property: JsonPropertyName("marco")] string Marco,
+    [property: JsonPropertyName("organizacion")] string Organizacion,
+    [property: JsonPropertyName("rotulo_de_area")] string RotuloDeArea,
+    [property: JsonPropertyName("periodos")] IReadOnlyList<string> Periodos,
+    [property: JsonPropertyName("sin_cifras")] bool SinCifras,
+    [property: JsonPropertyName("desempenos_nacionales")] IReadOnlyList<string>? DesempenosNacionales = null,
+    [property: JsonPropertyName("evaluacion_cualitativa")] string? EvaluacionCualitativa = null,
+    [property: JsonPropertyName("referentes")] string? Referentes = null,
+    [property: JsonPropertyName("leyenda")] string? Leyenda = null);
+
+public sealed record InstitucionDelBoletin(
+    [property: JsonPropertyName("nombre")] string Nombre,
+    [property: JsonPropertyName("pais")] string Pais,
+    [property: JsonPropertyName("jurisdiccion")] string Jurisdiccion);
+
+/// <summary>Un curso dentro de un área del boletín, con su nota en bruto (puntos sumados), su promedio simple y lo presentado con el sistema configurado.</summary>
+public sealed record CursoDelArea(
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("curso_rotulo")] string CursoRotulo,
+    [property: JsonPropertyName("evaluaciones")] int Evaluaciones,
+    [property: JsonPropertyName("con_nota")] int ConNota,
+    [property: JsonPropertyName("completadas")] int Completadas,
+    [property: JsonPropertyName("aprobadas")] int Aprobadas,
+    [property: JsonPropertyName("no_aprobadas")] int NoAprobadas,
+    [property: JsonPropertyName("pendientes")] int Pendientes,
+    [property: JsonPropertyName("bruto")] SumaBruta Bruto,
+    [property: JsonPropertyName("promedio_simple")] decimal? PromedioSimple = null,
+    [property: JsonPropertyName("presentado")] PromedioPresentado? Presentado = null,
+    [property: JsonPropertyName("desempeno")] string? Desempeno = null,
+    [property: JsonPropertyName("cumple_criterio")] bool? CumpleCriterio = null,
+    [property: JsonPropertyName("desempeno_nacional")] string? DesempenoNacional = null);
+
+/// <summary>Un área, asignatura, campo formativo o disciplina del boletín (según la plantilla), con sus cursos: la primera pregunta, «¿qué aprendió?».</summary>
+public sealed record AreaDelBoletin(
+    [property: JsonPropertyName("codigo")] string Codigo,
+    [property: JsonPropertyName("rotulo")] string Rotulo,
+    [property: JsonPropertyName("materia")] string Materia,
+    [property: JsonPropertyName("cursos")] IReadOnlyList<CursoDelArea> Cursos,
+    [property: JsonPropertyName("evaluaciones")] int Evaluaciones,
+    [property: JsonPropertyName("con_nota")] int ConNota,
+    [property: JsonPropertyName("aprobadas")] int Aprobadas,
+    [property: JsonPropertyName("no_aprobadas")] int NoAprobadas,
+    [property: JsonPropertyName("completadas")] int Completadas,
+    [property: JsonPropertyName("bruto")] SumaBruta Bruto,
+    [property: JsonPropertyName("campo_formativo")] string? CampoFormativo = null,
+    [property: JsonPropertyName("promedio_simple")] decimal? PromedioSimple = null,
+    [property: JsonPropertyName("presentado")] PromedioPresentado? Presentado = null,
+    [property: JsonPropertyName("desempeno")] string? Desempeno = null,
+    [property: JsonPropertyName("desempeno_nacional")] string? DesempenoNacional = null);
+
+public sealed record EvaluacionDelBoletinAcademico(
+    [property: JsonPropertyName("asignacion_id")] string AsignacionId,
+    [property: JsonPropertyName("titulo")] string Titulo,
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("curso_rotulo")] string CursoRotulo,
+    [property: JsonPropertyName("area")] string Area,
+    [property: JsonPropertyName("estado")] string Estado,
+    [property: JsonPropertyName("estado_simple")] string EstadoSimple,
+    [property: JsonPropertyName("publicada")] bool Publicada,
+    [property: JsonPropertyName("provisional")] bool Provisional,
+    [property: JsonPropertyName("ajustada")] bool Ajustada,
+    [property: JsonPropertyName("tipo_evaluacion")] string? TipoEvaluacion = null,
+    [property: JsonPropertyName("fecha")] long? Fecha = null,
+    [property: JsonPropertyName("bruto")] NotaEnBruto? Bruto = null,
+    [property: JsonPropertyName("presentada")] string? Presentada = null,
+    [property: JsonPropertyName("desempeno")] string? Desempeno = null,
+    [property: JsonPropertyName("cumple_criterio")] bool? CumpleCriterio = null);
+
+/// <summary>La segunda pregunta, «¿qué competencias alcanzó?»: logros (fortalezas anotadas), aprendizajes pendientes (dificultades) y las evaluaciones que cumplen o no el criterio.</summary>
+public sealed record CompetenciasDelBoletin(
+    [property: JsonPropertyName("logros")] IReadOnlyList<ComentarioDelProfesor> Logros,
+    [property: JsonPropertyName("pendientes")] IReadOnlyList<ComentarioDelProfesor> Pendientes,
+    [property: JsonPropertyName("evaluaciones_no_aprobadas")] IReadOnlyList<string> EvaluacionesNoAprobadas,
+    [property: JsonPropertyName("evaluaciones_aprobadas")] IReadOnlyList<string> EvaluacionesAprobadas,
+    [property: JsonPropertyName("objetivos")] DominioPorObjetivo Objetivos);
+
+public sealed record FilaDeProgreso(
+    [property: JsonPropertyName("periodo")] string Periodo,
+    [property: JsonPropertyName("grupo_codigo")] string GrupoCodigo,
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("curso_rotulo")] string CursoRotulo,
+    [property: JsonPropertyName("calificaciones")] int Calificaciones,
+    [property: JsonPropertyName("actual")] bool Actual,
+    [property: JsonPropertyName("promedio_simple")] decimal? PromedioSimple = null,
+    [property: JsonPropertyName("presentado")] PromedioPresentado? Presentado = null);
+
+/// <summary>La tercera pregunta, «¿cómo ha progresado?»: el promedio simple por curso en cada periodo en que estuvo, y la tendencia.</summary>
+public sealed record ProgresoDelBoletin(
+    [property: JsonPropertyName("periodos")] IReadOnlyList<string> Periodos,
+    [property: JsonPropertyName("filas")] IReadOnlyList<FilaDeProgreso> Filas,
+    [property: JsonPropertyName("tendencia")] TendenciaDelEstudiante? Tendencia = null);
+
+public sealed record ObservacionEnBoletin(
+    [property: JsonPropertyName("curso_ref")] string CursoRef,
+    [property: JsonPropertyName("curso_rotulo")] string CursoRotulo,
+    [property: JsonPropertyName("recomendaciones")] IReadOnlyList<string> Recomendaciones,
+    [property: JsonPropertyName("texto")] string Texto,
+    [property: JsonPropertyName("actualizada_en")] long? ActualizadaEn = null);
+
+/// <summary>La cuarta pregunta, «¿qué debe mejorar?»: lo que el profesor recomendó, las oportunidades que anotó y el curso que conviene reforzar.</summary>
+public sealed record RecomendacionesDelBoletin(
+    [property: JsonPropertyName("del_docente")] IReadOnlyList<ObservacionEnBoletin> DelDocente,
+    [property: JsonPropertyName("oportunidades")] IReadOnlyList<ComentarioDelProfesor> Oportunidades,
+    [property: JsonPropertyName("curso_a_reforzar")] CursoDestacado? CursoAReforzar = null,
+    [property: JsonPropertyName("mejor_curso")] CursoDestacado? MejorCurso = null);
+
+public sealed record ResumenDelBoletin(
+    [property: JsonPropertyName("evaluaciones")] int Evaluaciones,
+    [property: JsonPropertyName("con_nota")] int ConNota,
+    [property: JsonPropertyName("aprobadas")] int Aprobadas,
+    [property: JsonPropertyName("no_aprobadas")] int NoAprobadas,
+    [property: JsonPropertyName("completadas")] int Completadas,
+    [property: JsonPropertyName("pendientes")] int Pendientes,
+    [property: JsonPropertyName("bruto")] SumaBruta Bruto,
+    [property: JsonPropertyName("oficial")] bool Oficial,
+    [property: JsonPropertyName("ponderado")] bool Ponderado,
+    [property: JsonPropertyName("promedio_simple")] decimal? PromedioSimple = null,
+    [property: JsonPropertyName("presentado")] PromedioPresentado? Presentado = null);
+
+/// <summary>El modelo de información común del boletín académico de UN estudiante: responde las cuatro preguntas con lo que el libro ya presentó. No es un documento oficial.</summary>
+public sealed record ModeloDeBoletin(
+    [property: JsonPropertyName("plantilla")] PlantillaDeBoletin Plantilla,
+    [property: JsonPropertyName("institucion")] InstitucionDelBoletin Institucion,
+    [property: JsonPropertyName("estudiante")] AlumnoDelReporte Estudiante,
+    [property: JsonPropertyName("grupo")] GrupoResumido Grupo,
+    [property: JsonPropertyName("periodo")] string Periodo,
+    [property: JsonPropertyName("nivel_clave")] string NivelClave,
+    [property: JsonPropertyName("modo")] string Modo,
+    [property: JsonPropertyName("sin_cifras")] bool SinCifras,
+    [property: JsonPropertyName("areas")] IReadOnlyList<AreaDelBoletin> Areas,
+    [property: JsonPropertyName("evaluaciones")] IReadOnlyList<EvaluacionDelBoletinAcademico> Evaluaciones,
+    [property: JsonPropertyName("competencias")] CompetenciasDelBoletin Competencias,
+    [property: JsonPropertyName("progreso")] ProgresoDelBoletin Progreso,
+    [property: JsonPropertyName("recomendaciones")] RecomendacionesDelBoletin Recomendaciones,
+    [property: JsonPropertyName("resumen")] ResumenDelBoletin Resumen,
+    [property: JsonPropertyName("leyenda")] string Leyenda,
+    [property: JsonPropertyName("preguntas")] IReadOnlyList<string> Preguntas,
+    [property: JsonPropertyName("sistema")] EscalaResumen? Sistema = null);
+
+public sealed record ReporteDeBoletin(
+    [property: JsonPropertyName("tipo")] string Tipo,
+    [property: JsonPropertyName("titulo")] string Titulo,
+    [property: JsonPropertyName("generado_en")] long GeneradoEn,
+    [property: JsonPropertyName("generado_por")] QuienGenero GeneradoPor,
+    [property: JsonPropertyName("corte")] CorteDeDatos Corte,
+    [property: JsonPropertyName("privacidad")] Privacidad Privacidad,
+    [property: JsonPropertyName("nominal")] bool Nominal,
+    [property: JsonPropertyName("objetivos")] DominioPorObjetivo Objetivos,
+    [property: JsonPropertyName("avisos")] IReadOnlyList<AvisoDeReporte> Avisos,
+    [property: JsonPropertyName("servidor_en")] long ServidorEn,
+    [property: JsonPropertyName("alumno")] AlumnoDelReporte Alumno,
+    [property: JsonPropertyName("grupo")] GrupoResumido Grupo,
+    [property: JsonPropertyName("plantilla")] PlantillaDeBoletin Plantilla,
+    [property: JsonPropertyName("boletin")] ModeloDeBoletin Boletin);
+
+public sealed record TotalesDeBoletines(
+    [property: JsonPropertyName("estudiantes")] int Estudiantes,
+    [property: JsonPropertyName("boletines")] int Boletines,
+    [property: JsonPropertyName("con_nota")] int ConNota);
+
+/// <summary>Los boletines de un grupo: uno por estudiante, en orden alfabético. Se exportan como un zip con un archivo por estudiante.</summary>
+public sealed record ReporteDeBoletines(
+    [property: JsonPropertyName("tipo")] string Tipo,
+    [property: JsonPropertyName("titulo")] string Titulo,
+    [property: JsonPropertyName("generado_en")] long GeneradoEn,
+    [property: JsonPropertyName("generado_por")] QuienGenero GeneradoPor,
+    [property: JsonPropertyName("corte")] CorteDeDatos Corte,
+    [property: JsonPropertyName("privacidad")] Privacidad Privacidad,
+    [property: JsonPropertyName("nominal")] bool Nominal,
+    [property: JsonPropertyName("objetivos")] DominioPorObjetivo Objetivos,
+    [property: JsonPropertyName("avisos")] IReadOnlyList<AvisoDeReporte> Avisos,
+    [property: JsonPropertyName("servidor_en")] long ServidorEn,
+    [property: JsonPropertyName("grupo")] GrupoResumido Grupo,
+    [property: JsonPropertyName("plantilla")] PlantillaDeBoletin Plantilla,
+    [property: JsonPropertyName("boletines")] IReadOnlyList<ModeloDeBoletin> Boletines,
+    [property: JsonPropertyName("totales")] TotalesDeBoletines Totales);
 
 public sealed record FuenteDeAgregados(
     [property: JsonPropertyName("fuente")] string Fuente,
@@ -582,7 +791,14 @@ public sealed record AlcanceDeExportacion(
     [property: JsonPropertyName("nombre_sugerido")] string NombreSugerido,
     [property: JsonPropertyName("formatos")] IReadOnlyList<string> Formatos,
     [property: JsonPropertyName("politica")] PoliticaDeExportacion Politica,
-    [property: JsonPropertyName("servidor_en")] long ServidorEn);
+    [property: JsonPropertyName("servidor_en")] long ServidorEn,
+    [property: JsonPropertyName("formato_de_entrega")] string? FormatoDeEntrega = null,
+    [property: JsonPropertyName("archivos")] int Archivos = 1,
+    [property: JsonPropertyName("plantilla")] string? Plantilla = null)
+{
+    /// <summary>Lo que se va a escribir: un zip cuando va un archivo por estudiante; si no, el formato pedido.</summary>
+    public bool Empaquetado => FormatoDeEntrega == FormatosDeExportacion.Zip;
+}
 
 public sealed record IntentoDeExportacion(
     [property: JsonPropertyName("en")] long En,

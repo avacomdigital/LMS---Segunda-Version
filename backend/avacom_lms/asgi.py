@@ -21,6 +21,7 @@ from classroom_engine.infraestructura import programador  # noqa: E402
 from classroom_engine.interfaces.websockets import websocket_urlpatterns  # noqa: E402
 from evaluacion.infraestructura import programador as programador_evaluacion  # noqa: E402
 from gradebook.infraestructura import programador as programador_gradebook  # noqa: E402
+from licenciamiento.infraestructura import programador as programador_licencia  # noqa: E402
 from reporting.infraestructura import programador as programador_reporting  # noqa: E402
 from search.infraestructura import programador as programador_search  # noqa: E402
 
@@ -41,6 +42,13 @@ programador_gradebook.iniciar()
 programador_search.iniciar()
 # MOD-013: actualiza los agregados de los reportes FUERA del horario de clase (con una clase abierta espera) y da por no entregadas las exportaciones sin confirmar.
 programador_reporting.iniciar()
+# MOD-018: valida la licencia al arrancar y recalcula su estado cada pocos minutos (gracia y degradación salen del tiempo). Dentro de un `try/except`, como la cola de medios: si no
+# arranca, el nodo sigue (una licencia que no se pudo evaluar nunca cierra nada).
+try:
+    programador_licencia.iniciar()
+except Exception:   # noqa: BLE001 — R-04
+    import logging
+    logging.getLogger("avacom.licenciamiento").exception("El programador de la licencia no arrancó")
 # MOD-019: verifica la cadena de la bitácora cada hora (fuera de clase no hay diferencia: verifica por bloques) y rota por tamaño.
 verificador.iniciar()
 # Cola de medios: hilos que traen los recursos de AVACOM Contenido a la caché del nodo y la mantienen (al arrancar retoman lo que quedó a medias).

@@ -54,6 +54,8 @@ class CapturarContratoTests(BaseGradebook):
         abiertas = self.pendientes(i)
         puntos = self.puntos_de(i)
         self.guardar("libro_con_revision", self.libro())
+        self.guardar("libro_por_materia", self.libro(subject="science"))                                     # segmentado por materia (lo aplica el nodo)
+        self.guardar("libro_sin_materia", self.libro(subject="math"))
         self.guardar("registrar_con_pendientes", self.gb(f"/asignaciones/{a['id']}/registrar/", {}))        # en revisión docente: no se puede registrar todavía, y se dice por qué
         self.guardar("bandeja", self.leer("/revisiones/", grupo_id=self.grupo["id"]))
         detalle = self.leer(f"/revisiones/{i}/")
@@ -102,6 +104,14 @@ class CapturarContratoTests(BaseGradebook):
         self.guardar("clasificacion", self.gb(f"/asignaciones/{a2['id']}/clasificacion/", {"tipo_evaluacion": "formativa", "objetivos": ["obj-1"]}, metodo="put"))
         self.guardar("resumen", self.leer("/resumen/", grupo_id=self.grupo["id"]))
         self.guardar("estudiante", self.leer(f"/estudiantes/{self.estudiante_id}/"))
+        # las recomendaciones del profesor (la cuarta pregunta del boletín): crear, repetir sin cambios y lo que no vale
+        self.guardar("observacion", self.gb(f"/estudiantes/{self.estudiante_id}/observacion/", {"grupo_id": self.grupo["id"], "recomendaciones": ["practicar_ejercicios", "pedir_ayuda"], "texto": "Va mejorando."}, metodo="put"))
+        self.guardar("observacion_repetida", self.gb(f"/estudiantes/{self.estudiante_id}/observacion/", {"grupo_id": self.grupo["id"], "recomendaciones": ["practicar_ejercicios", "pedir_ayuda"], "texto": "Va mejorando."}, metodo="put"))
+        self.guardar("observacion_invalida", self.gb(f"/estudiantes/{self.estudiante_id}/observacion/", {"grupo_id": self.grupo["id"], "recomendaciones": ["inventada"]}, metodo="put", esperado=400))
+        self.guardar("boletin", self.leer(f"/estudiantes/{self.estudiante_id}/boletin/", grupo_id=self.grupo["id"]))
+        self.guardar("boletin_por_materia", self.leer(f"/estudiantes/{self.estudiante_id}/boletin/", grupo_id=self.grupo["id"], subject="science"))
+        self.guardar("boletin_pagina", self.leer(f"/estudiantes/{self.estudiante_id}/boletin/", grupo_id=self.grupo["id"], limite=1, desde=1))
+        self.guardar("libro_resumen", self.libro(vista="resumen"))
         self.guardar("sincronizar", self.sincronizar())
         self.guardar("sin_permiso", self.gb("/escalas/adoptar/", {"plantilla": "gen-0-5"}, cliente=self.docente, esperado=403))
         self.guardar("reconstruir", self.gb("/derivados/reconstruir/", {"reproducir": True}, cliente=self.admin))
@@ -117,4 +127,5 @@ class CapturarContratoTests(BaseGradebook):
         self.accion(f"/intentos/{i3}/liberar-resultado/", {})
         self.guardar("mias_simple", self.leer("/mias/", cliente=self.api, alumno_id=ana_id))
         self.guardar("registrar_modo_simple", self.gb(f"/asignaciones/{a3['id']}/registrar/", {}))          # en modo simple no se registra nada y se dice
+        self.guardar("boletin_simple", self.leer(f"/estudiantes/{ana_id}/boletin/", grupo_id=grupo_pre["id"]))
         self.guardar("libro_simple", self.libro(grupo_id=grupo_pre["id"]))

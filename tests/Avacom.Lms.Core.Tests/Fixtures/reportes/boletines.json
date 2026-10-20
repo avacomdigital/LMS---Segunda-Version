@@ -1,0 +1,516 @@
+{
+  "avisos": [],
+  "boletines": [
+    {
+      "areas": [
+        {
+          "aprobadas": 0,
+          "bruto": {
+            "evaluaciones": 0,
+            "porcentaje": null,
+            "puntos": null,
+            "puntos_maximos": null
+          },
+          "campo_formativo": null,
+          "codigo": "science",
+          "completadas": 0,
+          "con_nota": 0,
+          "cursos": [
+            {
+              "aprobadas": 0,
+              "bruto": {
+                "evaluaciones": 0,
+                "porcentaje": null,
+                "puntos": null,
+                "puntos_maximos": null
+              },
+              "completadas": 0,
+              "con_nota": 0,
+              "cumple_criterio": null,
+              "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+              "curso_rotulo": "Estados de la materia y sus cambios",
+              "desempeno": null,
+              "desempeno_nacional": null,
+              "evaluaciones": 1,
+              "no_aprobadas": 0,
+              "pendientes": 1,
+              "presentado": null,
+              "promedio_simple": null
+            }
+          ],
+          "desempeno": null,
+          "desempeno_nacional": null,
+          "evaluaciones": 1,
+          "materia": "science",
+          "no_aprobadas": 0,
+          "presentado": null,
+          "promedio_simple": null,
+          "rotulo": "Science"
+        }
+      ],
+      "competencias": {
+        "evaluaciones_aprobadas": [],
+        "evaluaciones_no_aprobadas": [],
+        "logros": [],
+        "objetivos": {
+          "disponible": false,
+          "texto": "La agregación por objetivos y competencias llega con el módulo de objetivos."
+        },
+        "pendientes": []
+      },
+      "estudiante": {
+        "id": "4d876f31-7b24-4603-95d2-842b130b5e9f",
+        "rotulo": "Ana"
+      },
+      "evaluaciones": [
+        {
+          "ajustada": false,
+          "area": "Science",
+          "asignacion_id": "7be311bb-e3e2-47f6-9dae-8dcf44562867",
+          "bruto": null,
+          "cumple_criterio": null,
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "curso_rotulo": "Estados de la materia y sus cambios",
+          "desempeno": null,
+          "estado": "pendiente",
+          "estado_simple": "no_iniciado",
+          "fecha": 1790000010000,
+          "presentada": null,
+          "provisional": false,
+          "publicada": false,
+          "tipo_evaluacion": "sumativa",
+          "titulo": "Examen de estados de la materia"
+        }
+      ],
+      "grupo": {
+        "codigo": "8A",
+        "id": "19114f4b-dd10-45c0-bbe6-e8f8d8269c2f",
+        "nivel_clave": "secundaria",
+        "nombre": "Octavo A",
+        "periodo": "2026"
+      },
+      "institucion": {
+        "jurisdiccion": "",
+        "nombre": "IE San José",
+        "pais": "CO"
+      },
+      "leyenda": "Documento de apoyo generado por AVACOM OPS a partir del libro de calificaciones. No es un boletín ni una boleta oficial: la institución expide el suyo según su sistema de evaluación. El promedio es simple e informativo (no ponderado).",
+      "modo": "calificaciones",
+      "nivel_clave": "secundaria",
+      "periodo": "2026",
+      "plantilla": {
+        "codigo": "co",
+        "desempenos_nacionales": [
+          "Superior",
+          "Alto",
+          "Básico",
+          "Bajo"
+        ],
+        "evaluacion_cualitativa": "Desempeños, logros y dificultades",
+        "leyenda": "Documento de apoyo generado por AVACOM OPS a partir del libro de calificaciones. No es un boletín ni una boleta oficial: la institución expide el suyo según su sistema de evaluación. El promedio es simple e informativo (no ponderado).",
+        "marco": "Decreto 1290 de 2009, compilado en el Decreto 1075 de 2015 (el SIEE de la institución define escala, periodicidad y promoción)",
+        "nombre": "Colombia · boletín por áreas y asignaturas",
+        "organizacion": "Áreas y asignaturas",
+        "pais": "CO",
+        "periodos": [],
+        "referentes": "DBA, estándares y currículo institucional",
+        "rotulo_de_area": "Área / asignatura",
+        "sin_cifras": false
+      },
+      "preguntas": [
+        "¿Qué aprendió?",
+        "¿Qué competencias alcanzó?",
+        "¿Cómo ha progresado?",
+        "¿Qué debe mejorar?"
+      ],
+      "progreso": {
+        "filas": [],
+        "periodos": [
+          "2026"
+        ],
+        "tendencia": {
+          "calificaciones": 0,
+          "direccion": "insuficiente",
+          "minimo": 4
+        }
+      },
+      "recomendaciones": {
+        "curso_a_reforzar": null,
+        "del_docente": [],
+        "mejor_curso": null,
+        "oportunidades": []
+      },
+      "resumen": {
+        "aprobadas": 0,
+        "bruto": {
+          "evaluaciones": 0,
+          "porcentaje": null,
+          "puntos": null,
+          "puntos_maximos": null
+        },
+        "completadas": 0,
+        "con_nota": 0,
+        "evaluaciones": 1,
+        "no_aprobadas": 0,
+        "oficial": false,
+        "pendientes": 1,
+        "ponderado": false,
+        "presentado": null,
+        "promedio_simple": null
+      },
+      "sin_cifras": false,
+      "sistema": {
+        "aprobacion_minima": 3.0,
+        "aprueba_desde": "Básico",
+        "codigo": "co-1-5",
+        "escala_id": "b9f233a8-dbab-4107-87db-0cd2dc087a5d",
+        "jurisdiccion": "",
+        "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+        "numero": 1,
+        "pais": "CO",
+        "tipo": "numerica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "etiqueta": "Bajo"
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "etiqueta": "Básico"
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "etiqueta": "Alto"
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "etiqueta": "Superior"
+          }
+        ],
+        "valor_max": 5.0,
+        "valor_min": 1.0,
+        "version_id": "842e3f75-01aa-4e73-bd80-1e7a4f832716"
+      }
+    },
+    {
+      "areas": [
+        {
+          "aprobadas": 1,
+          "bruto": {
+            "evaluaciones": 1,
+            "porcentaje": 71.43,
+            "puntos": 15.0,
+            "puntos_maximos": 21.0
+          },
+          "campo_formativo": null,
+          "codigo": "science",
+          "completadas": 1,
+          "con_nota": 1,
+          "cursos": [
+            {
+              "aprobadas": 1,
+              "bruto": {
+                "evaluaciones": 1,
+                "porcentaje": 71.43,
+                "puntos": 15.0,
+                "puntos_maximos": 21.0
+              },
+              "completadas": 1,
+              "con_nota": 1,
+              "cumple_criterio": true,
+              "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+              "curso_rotulo": "Estados de la materia y sus cambios",
+              "desempeno": "Básico",
+              "desempeno_nacional": "Básico",
+              "evaluaciones": 1,
+              "no_aprobadas": 0,
+              "pendientes": 0,
+              "presentado": {
+                "clave": "3.8",
+                "cumple_criterio": true,
+                "desempeno": "Básico",
+                "etiqueta": "3.8",
+                "valor": 3.8
+              },
+              "promedio_simple": 71.43
+            }
+          ],
+          "desempeno": "Básico",
+          "desempeno_nacional": "Básico",
+          "evaluaciones": 1,
+          "materia": "science",
+          "no_aprobadas": 0,
+          "presentado": {
+            "clave": "3.8",
+            "cumple_criterio": true,
+            "desempeno": "Básico",
+            "etiqueta": "3.8",
+            "valor": 3.8
+          },
+          "promedio_simple": 71.43,
+          "rotulo": "Science"
+        }
+      ],
+      "competencias": {
+        "evaluaciones_aprobadas": [
+          "Examen de estados de la materia"
+        ],
+        "evaluaciones_no_aprobadas": [],
+        "logros": [],
+        "objetivos": {
+          "disponible": false,
+          "texto": "La agregación por objetivos y competencias llega con el módulo de objetivos."
+        },
+        "pendientes": []
+      },
+      "estudiante": {
+        "id": "eb1d3065-62b7-4589-89f8-ff85c8eb1f3d",
+        "rotulo": "Juan P."
+      },
+      "evaluaciones": [
+        {
+          "ajustada": false,
+          "area": "Science",
+          "asignacion_id": "7be311bb-e3e2-47f6-9dae-8dcf44562867",
+          "bruto": {
+            "aciertos": 10,
+            "porcentaje": 71.43,
+            "preguntas": 12,
+            "puntos": 15.0,
+            "puntos_maximos": 21.0
+          },
+          "cumple_criterio": true,
+          "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+          "curso_rotulo": "Estados de la materia y sus cambios",
+          "desempeno": "Básico",
+          "estado": "revisado",
+          "estado_simple": "completado",
+          "fecha": 1790000010000,
+          "presentada": "3.8",
+          "provisional": true,
+          "publicada": false,
+          "tipo_evaluacion": "sumativa",
+          "titulo": "Examen de estados de la materia"
+        }
+      ],
+      "grupo": {
+        "codigo": "8A",
+        "id": "19114f4b-dd10-45c0-bbe6-e8f8d8269c2f",
+        "nivel_clave": "secundaria",
+        "nombre": "Octavo A",
+        "periodo": "2026"
+      },
+      "institucion": {
+        "jurisdiccion": "",
+        "nombre": "IE San José",
+        "pais": "CO"
+      },
+      "leyenda": "Documento de apoyo generado por AVACOM OPS a partir del libro de calificaciones. No es un boletín ni una boleta oficial: la institución expide el suyo según su sistema de evaluación. El promedio es simple e informativo (no ponderado).",
+      "modo": "calificaciones",
+      "nivel_clave": "secundaria",
+      "periodo": "2026",
+      "plantilla": {
+        "codigo": "co",
+        "desempenos_nacionales": [
+          "Superior",
+          "Alto",
+          "Básico",
+          "Bajo"
+        ],
+        "evaluacion_cualitativa": "Desempeños, logros y dificultades",
+        "leyenda": "Documento de apoyo generado por AVACOM OPS a partir del libro de calificaciones. No es un boletín ni una boleta oficial: la institución expide el suyo según su sistema de evaluación. El promedio es simple e informativo (no ponderado).",
+        "marco": "Decreto 1290 de 2009, compilado en el Decreto 1075 de 2015 (el SIEE de la institución define escala, periodicidad y promoción)",
+        "nombre": "Colombia · boletín por áreas y asignaturas",
+        "organizacion": "Áreas y asignaturas",
+        "pais": "CO",
+        "periodos": [],
+        "referentes": "DBA, estándares y currículo institucional",
+        "rotulo_de_area": "Área / asignatura",
+        "sin_cifras": false
+      },
+      "preguntas": [
+        "¿Qué aprendió?",
+        "¿Qué competencias alcanzó?",
+        "¿Cómo ha progresado?",
+        "¿Qué debe mejorar?"
+      ],
+      "progreso": {
+        "filas": [
+          {
+            "actual": true,
+            "calificaciones": 1,
+            "curso_ref": "avacom.co.lower-secondary.6.science.states-of-matter",
+            "curso_rotulo": "Estados de la materia y sus cambios",
+            "grupo_codigo": "8A",
+            "periodo": "2026",
+            "presentado": {
+              "clave": "3.8",
+              "cumple_criterio": true,
+              "desempeno": "Básico",
+              "etiqueta": "3.8",
+              "valor": 3.8
+            },
+            "promedio_simple": 71.43
+          }
+        ],
+        "periodos": [
+          "2026"
+        ],
+        "tendencia": {
+          "calificaciones": 1,
+          "direccion": "insuficiente",
+          "minimo": 4
+        }
+      },
+      "recomendaciones": {
+        "curso_a_reforzar": null,
+        "del_docente": [
+          {
+            "actualizada_en": 1790000010000,
+            "curso_ref": "",
+            "curso_rotulo": "General",
+            "recomendaciones": [
+              "Practicar más ejercicios del tema con el modo estudio",
+              "Pedir ayuda al profesor cuando algo no quede claro"
+            ],
+            "texto": "Va mejorando."
+          }
+        ],
+        "mejor_curso": null,
+        "oportunidades": []
+      },
+      "resumen": {
+        "aprobadas": 1,
+        "bruto": {
+          "evaluaciones": 1,
+          "porcentaje": 71.43,
+          "puntos": 15.0,
+          "puntos_maximos": 21.0
+        },
+        "completadas": 1,
+        "con_nota": 1,
+        "evaluaciones": 1,
+        "no_aprobadas": 0,
+        "oficial": false,
+        "pendientes": 0,
+        "ponderado": false,
+        "presentado": {
+          "clave": "3.8",
+          "cumple_criterio": true,
+          "desempeno": "Básico",
+          "etiqueta": "3.8",
+          "valor": 3.8
+        },
+        "promedio_simple": 71.43
+      },
+      "sin_cifras": false,
+      "sistema": {
+        "aprobacion_minima": 3.0,
+        "aprueba_desde": "Básico",
+        "codigo": "co-1-5",
+        "escala_id": "b9f233a8-dbab-4107-87db-0cd2dc087a5d",
+        "jurisdiccion": "",
+        "nombre": "Colombia · 1,0 a 5,0 (Bajo a Superior)",
+        "numero": 1,
+        "pais": "CO",
+        "tipo": "numerica",
+        "tramos": [
+          {
+            "aprueba": false,
+            "clave": "bajo",
+            "etiqueta": "Bajo"
+          },
+          {
+            "aprueba": true,
+            "clave": "basico",
+            "etiqueta": "Básico"
+          },
+          {
+            "aprueba": true,
+            "clave": "alto",
+            "etiqueta": "Alto"
+          },
+          {
+            "aprueba": true,
+            "clave": "superior",
+            "etiqueta": "Superior"
+          }
+        ],
+        "valor_max": 5.0,
+        "valor_min": 1.0,
+        "version_id": "842e3f75-01aa-4e73-bd80-1e7a4f832716"
+      }
+    }
+  ],
+  "corte": {
+    "antiguedad_ms": 0,
+    "en": 1790000010000,
+    "estado": "al_dia",
+    "explicacion": "Esto es lo que había en el nodo a esa hora.",
+    "incompleto": false,
+    "integracion": {
+      "equipos": 0,
+      "estado": "completa",
+      "motivo_linea": "",
+      "motivos": [],
+      "sin_sincronizar": 0,
+      "texto": "Sin tabletas en este reporte"
+    },
+    "texto": "Datos al 21 sep · 09:13"
+  },
+  "generado_en": 1790000010000,
+  "generado_por": {
+    "id": "66e50236-9f01-4d6d-85f6-765de6898419",
+    "rotulo": "Prof. Gómez"
+  },
+  "grupo": {
+    "codigo": "8A",
+    "id": "19114f4b-dd10-45c0-bbe6-e8f8d8269c2f",
+    "nivel_clave": "secundaria",
+    "nombre": "Octavo A",
+    "periodo": "2026"
+  },
+  "nominal": true,
+  "objetivos": {
+    "disponible": false,
+    "texto": "Aún no disponible: el dominio por objetivo llega con el módulo de objetivos."
+  },
+  "plantilla": {
+    "codigo": "co",
+    "desempenos_nacionales": [
+      "Superior",
+      "Alto",
+      "Básico",
+      "Bajo"
+    ],
+    "evaluacion_cualitativa": "Desempeños, logros y dificultades",
+    "leyenda": "Documento de apoyo generado por AVACOM OPS a partir del libro de calificaciones. No es un boletín ni una boleta oficial: la institución expide el suyo según su sistema de evaluación. El promedio es simple e informativo (no ponderado).",
+    "marco": "Decreto 1290 de 2009, compilado en el Decreto 1075 de 2015 (el SIEE de la institución define escala, periodicidad y promoción)",
+    "nombre": "Colombia · boletín por áreas y asignaturas",
+    "organizacion": "Áreas y asignaturas",
+    "pais": "CO",
+    "periodos": [],
+    "referentes": "DBA, estándares y currículo institucional",
+    "rotulo_de_area": "Área / asignatura",
+    "sin_cifras": false
+  },
+  "privacidad": {
+    "alumnos": 2,
+    "aplicada": false,
+    "aviso": "",
+    "minimo": 5,
+    "umbral_activo": false
+  },
+  "servidor_en": 1790000010000,
+  "tipo": "boletin",
+  "titulo": "Boletines académicos · grupo 8A",
+  "totales": {
+    "boletines": 2,
+    "con_nota": 1,
+    "estudiantes": 2
+  }
+}

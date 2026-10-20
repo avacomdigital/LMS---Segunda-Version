@@ -30,6 +30,9 @@
             <HorizontalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
                 <!-- RF-08: «Seguridad del aula» (PIN maestro, profesores registrados con él y puertas de entrada), sólo para la administración. Es un botón
                      y no una tesela para que se toque igual que el resto de la cabecera (y lo encuentre UI Automation). -->
+                <!-- MOD-018: «Licencia» (estado, activación y renovación sin internet, copia y liberación) para la administración y el soporte técnico, que tienen license.read;
+                     sin sesión el prototipo lo deja ver y el nodo decide. Mismo aspecto que «Seguridad del aula», a su lado. -->
+                <Button x:Name="LicenciaButton" IsVisible="False" Text="Licencia" AutomationId="dashboard-licencia" HeightRequest="40" MinimumWidthRequest="110" Padding="16,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnLicenciaClicked" />
                 <Button x:Name="SeguridadButton" IsVisible="False" Text="Seguridad del aula" HeightRequest="40" MinimumWidthRequest="120" Padding="16,0" Margin="0,0,10,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnSeguridadClicked" />
                 <Border BackgroundColor="#977528" HeightRequest="48" StrokeThickness="0" WidthRequest="48">
                     <Label x:Name="InicialesLabel" FontAttributes="Bold" HorizontalOptions="Center" Text="EC" TextColor="White" VerticalOptions="Center" />
@@ -50,6 +53,15 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label x:Name="PinBannerLabel" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
                     <Button x:Name="PinBannerButton" Grid.Column="1" Text="Cambiar ahora" HeightRequest="40" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnSeguridadClicked" />
+                </Grid>
+            </Border>
+            <!-- MOD-018 · R-01: banda de la licencia (evaluación, por vencer, gracia, funciones en pausa, cupo, fecha, huella, programa modificado) para quien ve la licencia.
+                 Persistente como la del PIN: no se descarta mientras lo que avisa siga pendiente. Vive SÓLO en el menú principal y NO se muestra con una clase abierta en este equipo
+                 (ninguna alerta administrativa interrumpe una sesión activa). El tono y el texto los pone el código (ReglasDeLicencia.Banner). -->
+            <Border x:Name="LicenciaBanner" IsVisible="False" AutomationId="licencia-banner" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Label x:Name="LicenciaBannerLabel" AutomationId="licencia-banner-texto" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button x:Name="LicenciaBannerButton" Grid.Column="1" Text="Ver la licencia" AutomationId="licencia-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#0B4F70" FontSize="14" Clicked="OnLicenciaClicked" />
                 </Grid>
             </Border>
             <Border x:Name="AvisoBanner" IsVisible="False" HorizontalOptions="Center" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">

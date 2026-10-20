@@ -1,0 +1,53 @@
+{
+  "ahora": 1792511662857,
+  "avisos": [
+    {
+      "codigo": "evaluacion",
+      "dias": 30,
+      "urgente": false
+    }
+  ],
+  "banderas": [],
+  "calculada_en": 1792511662857,
+  "capacidades": {
+    "habilitadas": [
+      "administracion_avanzada",
+      "busqueda",
+      "importacion",
+      "reportes"
+    ],
+    "no_disponibles": []
+  },
+  "consumo": {
+    "equipos": 1,
+    "usuarios": 3
+  },
+  "entorno": "pruebas",
+  "estado": "sin_licencia",
+  "huella": {
+    "coincide": null,
+    "coinciden": null,
+    "factores": null,
+    "k": null,
+    "nivel": "hardware",
+    "parcial": false
+  },
+  "licencia": null,
+  "limites": {
+    "concurrentes_normal": 50,
+    "concurrentes_pico": 100,
+    "equipos": 100,
+    "usuarios": 3000
+  },
+  "modo": "firmada",
+  "motivo": "evaluacion",
+  "restringe": false,
+  "tipo": null,
+  "vigencia": {
+    "desde": null,
+    "dias_restantes": 30,
+    "gracia_dias": null,
+    "hasta": 1795103662857,
+    "vence": null
+  }
+}

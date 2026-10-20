@@ -1,0 +1,5 @@
+{
+  "codigo": "licencia_invalida",
+  "detail": "Este equipo todavía no tiene una licencia instalada: usa «Activar».",
+  "motivo": "sin_licencia_instalada"
+}

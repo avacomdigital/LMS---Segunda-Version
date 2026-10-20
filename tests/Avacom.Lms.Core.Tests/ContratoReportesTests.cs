@@ -320,4 +320,65 @@ public sealed class ContratoReportesTests
         Assert.DoesNotContain("excepción", mensaje, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(codigo, mensaje.Replace(" ", "_"), StringComparison.OrdinalIgnoreCase);
     }
+
+    // ----------------------------------------------------------------------------------------------- el boletín académico (2026-10-19)
+
+    [Fact]
+    public void Boletin_RespondeLasCuatroPreguntasConLaPlantillaDelPais()
+    {
+        var r = Cargar<ReporteDeBoletin>("boletin");
+        Assert.Equal((TiposDeReporte.Boletin, true, false), (r.Tipo, r.Nominal, r.Privacidad.Aplicada));
+        Assert.Equal("Juan P.", r.Alumno.Rotulo);
+        var b = r.Boletin;
+        Assert.Equal(("co", "Áreas y asignaturas", "IE San José", "2026"), (b.Plantilla.Codigo, b.Plantilla.Organizacion, b.Institucion.Nombre, b.Periodo));
+        Assert.Equal(new[] { "Superior", "Alto", "Básico", "Bajo" }, b.Plantilla.DesempenosNacionales);
+        Assert.Equal(4, b.Preguntas.Count);
+        Assert.False(b.SinCifras);
+        // 1 · qué aprendió: el área, su curso, los puntos brutos, el porcentaje, la calificación presentada, el desempeño y el nacional
+        var area = Assert.Single(b.Areas);
+        var curso = Assert.Single(area.Cursos);
+        Assert.Equal(("Science", "science", 15m, 21m, 71.43m), (area.Rotulo, area.Materia, curso.Bruto.Puntos, curso.Bruto.PuntosMaximos, curso.Bruto.Porcentaje));
+        Assert.Equal(("3.8", "Básico", "Básico", true), (curso.Presentado!.Etiqueta, curso.Desempeno, curso.DesempenoNacional, curso.CumpleCriterio));
+        var e = Assert.Single(b.Evaluaciones);
+        Assert.Equal(("3.8", 15m, EstadosDeResultado.Revisado, true), (e.Presentada, e.Bruto!.Puntos, e.Estado, e.Provisional));
+        // 2 · competencias · 3 · progreso · 4 · recomendaciones
+        Assert.Equal(new[] { "Examen de estados de la materia" }, b.Competencias.EvaluacionesAprobadas);
+        Assert.False(b.Competencias.Objetivos.Disponible);
+        var fila = Assert.Single(b.Progreso.Filas);
+        Assert.Equal(("2026", "8A", true, 71.43m), (fila.Periodo, fila.GrupoCodigo, fila.Actual, fila.PromedioSimple));
+        Assert.Equal("insuficiente", b.Progreso.Tendencia!.Direccion);
+        var rec = Assert.Single(b.Recomendaciones.DelDocente);
+        Assert.Equal(("General", 2, "Va mejorando."), (rec.CursoRotulo, rec.Recomendaciones.Count, rec.Texto));
+        Assert.Equal((1, 1, false, false), (b.Resumen.ConNota, b.Resumen.Aprobadas, b.Resumen.Oficial, b.Resumen.Ponderado));
+        Assert.Contains("No es un boletín ni una boleta oficial", b.Leyenda);
+    }
+
+    [Fact]
+    public void Boletines_UnoPorEstudianteEnOrden_YSeExportanComoZip()
+    {
+        var g = Cargar<ReporteDeBoletines>("boletines");
+        Assert.Equal((2, 2, 1), (g.Totales.Estudiantes, g.Totales.Boletines, g.Totales.ConNota));
+        Assert.Equal(new[] { "Ana", "Juan P." }, g.Boletines.Select(b => b.Estudiante.Rotulo).ToArray());
+        var alcance = Cargar<AlcanceDeExportacion>("boletines_alcance");
+        Assert.True(alcance.Empaquetado);
+        Assert.Equal((FormatosDeExportacion.Zip, 2, "xlsx"), (alcance.FormatoDeEntrega, alcance.Archivos, alcance.Formato));
+        Assert.EndsWith(".zip", alcance.NombreSugerido);
+        Assert.Equal("Colombia · boletín por áreas y asignaturas", alcance.Plantilla);
+        var uno = Cargar<AlcanceDeExportacion>("boletin_alcance");
+        Assert.False(uno.Empaquetado);
+        Assert.EndsWith(".xlsx", uno.NombreSugerido);
+        Assert.DoesNotContain("Juan", uno.NombreSugerido);                                       // el nombre del archivo nunca lleva una persona
+    }
+
+    [Fact]
+    public void ConfiguracionDelBoletin_PlantillaPeriodosYLeyenda()
+    {
+        var c = Cargar<RespuestaDeConfiguracion>("configuracion_boletin").Configuracion;
+        Assert.Equal(("mx", 3), (c.PlantillaBoletin, c.PeriodosBoletin!.Count));
+        Assert.Equal(new[] { "auto", "co", "mx", "generica" }, c.PlantillasDeBoletin);
+        Assert.Equal("México · campos formativos / disciplinas", PlantillasDeBoletin.Rotulo(c.PlantillaBoletin));
+        var recientes = Cargar<RecientesDeReportes>("recientes_boletin").Recientes;
+        Assert.Equal(new[] { "Boletines del grupo 8A", "Boletín de Juan P." }, recientes.Select(r => r.Titulo).ToArray());
+        Assert.All(recientes, r => Assert.Equal(TiposDeReporte.Boletin, r.Tipo));
+    }
 }

@@ -53,6 +53,69 @@ public sealed class GradebookTextoTests
     [InlineData(" no ")]
     public void ElMotivoExigeAlMenosTresLetras(string? motivo) => Assert.NotNull(GradebookTexto.ValidarMotivo(motivo));
 
+    // ------------------------------------------------------------------------------------------- el boletín
+
+    [Theory]
+    [InlineData("Julian Reyes", "JR")]
+    [InlineData("Ana", "A")]
+    [InlineData("Juan P.", "JP")]
+    [InlineData("  ", "?")]
+    [InlineData(null, "?")]
+    [InlineData("maría pérez", "MP")]
+    public void Boletin_LasInicialesDelAvatar(string? nombre, string esperado) => Assert.Equal(esperado, BoletinTexto.Iniciales(nombre));
+
+    [Fact]
+    public void Boletin_ElPromedioSeLeeConComaYSinPromedioEsUnGuion()
+    {
+        Assert.Equal("3,8", BoletinTexto.Promedio(new PromedioPresentado("3.8", 3.8m, "3.8", "Básico", true)));
+        Assert.Equal("NT", BoletinTexto.Promedio(new PromedioPresentado("NT", null, "NT", "Notable", true)));          // en una escala sin números es la etiqueta
+        Assert.Equal("—", BoletinTexto.Promedio(null));
+        Assert.Equal("—", BoletinTexto.PromedioInterno(null));                                                           // lo que no se ha calificado no es un cero
+        Assert.Equal("71,43", BoletinTexto.PromedioInterno(71.43m));
+        Assert.Equal("Básico · cumple el criterio", BoletinTexto.LecturaDelPromedio(new PromedioPresentado("3.8", 3.8m, "3.8", "Básico", true)));
+        Assert.Equal("Bajo · no cumple el criterio", BoletinTexto.LecturaDelPromedio(new PromedioPresentado("2.0", 2m, "2.0", "Bajo", false)));
+        Assert.Equal("A", BoletinTexto.LecturaDelPromedio(new PromedioPresentado("A", null, "A", "A", null)));
+        Assert.Equal(string.Empty, BoletinTexto.LecturaDelPromedio(null));
+    }
+
+    [Fact]
+    public void Boletin_LoQueLeQuedaAlProfesorSeDiceEnUnaFraseOQuedaVacio()
+    {
+        Assert.Equal("2 por revisar · 1 sin registrar · 3 sin publicar", BoletinTexto.PorAtender(new ConteoDeEvaluaciones(0, 0, 0, 3, 2, 1, 0, 0, 0)));
+        Assert.Equal("1 por revisar", BoletinTexto.PorAtender(new ConteoDeEvaluaciones(0, 0, 0, 0, 1, 0, 0, 0, 0)));
+        Assert.Equal(string.Empty, BoletinTexto.PorAtender(new ConteoDeEvaluaciones(5, 5, 5, 0, 0, 0, 0, 5, 0)));
+        Assert.Equal(6, new ConteoDeEvaluaciones(0, 0, 0, 3, 2, 1, 0, 0, 0).PorAtender);
+    }
+
+    [Fact]
+    public void Boletin_LaConstanciaSeDiceConLoQueHay()
+    {
+        Assert.Equal("Completó 5 de 8 evaluaciones.", BoletinTexto.Constancia(new ConstanciaDelEstudiante(5, 8)));
+        Assert.Equal("Todavía no hay evaluaciones.", BoletinTexto.Constancia(new ConstanciaDelEstudiante(0, 0)));
+        Assert.Equal("Completó su única evaluación.", BoletinTexto.Constancia(new ConstanciaDelEstudiante(1, 1)));
+    }
+
+    [Fact]
+    public void Boletin_LaTendenciaNoSeInventaConPocosDatos()
+    {
+        Assert.Contains("lleva 1 calificación y se necesitan 4", BoletinTexto.Tendencia(new TendenciaDelEstudiante("insuficiente", 1, 4)));
+        Assert.Contains("Va mejorando", BoletinTexto.Tendencia(new TendenciaDelEstudiante("sube", 5, null, 66m, 78.5m, 12.5m, 2)));
+        Assert.Contains("78,5 de 100", BoletinTexto.Tendencia(new TendenciaDelEstudiante("sube", 5, null, 66m, 78.5m, 12.5m, 2)));
+        Assert.Contains("Va bajando", BoletinTexto.Tendencia(new TendenciaDelEstudiante("baja", 5, null, 80m, 60m, -20m, 2)));
+        Assert.Contains("estable", BoletinTexto.Tendencia(new TendenciaDelEstudiante("estable", 6, null, 70m, 71m, 1m, 3)));
+        Assert.Equal(["▲", "▼", "▬", "·"], new[] { "sube", "baja", "estable", "insuficiente" }.Select(BoletinTexto.SimboloDeTendencia).ToArray());
+    }
+
+    [Fact]
+    public void Boletin_LaFechaSeLeeEnEspanolYSinFechaEsUnGuion()
+    {
+        Assert.Equal("—", BoletinTexto.Fecha(null));
+        Assert.Equal("—", BoletinTexto.Fecha(0));
+        var texto = BoletinTexto.Fecha(new DateTimeOffset(2026, 10, 12, 15, 0, 0, TimeSpan.Zero).ToUnixTimeMilliseconds());
+        Assert.Contains("2026", texto);
+        Assert.DoesNotContain(".", texto);
+    }
+
     // ---------------------------------------------------------------------------------- el sistema de calificación
 
     private static EscalaResumen Sistema(string nombre, decimal? min = null, decimal? max = null, decimal? aprobacion = null, string? apruebaDesde = null, params string[] niveles) =>
@@ -232,6 +295,20 @@ public sealed class GradebookTextoTests
         Assert.Equal("Notable", GradebookTexto.Valor(new ValorPresentado(null, "Notable", "NT")));   // una escala sin números: la etiqueta
         Assert.Equal("—", GradebookTexto.Valor(null));
         Assert.Equal("4", GradebookTexto.Valor(new ValorPresentado(4m, "", "")));                    // sin etiqueta, el número sin ceros de más
+    }
+
+    [Fact]
+    public void Bruto_DiceLosPuntosSobreElMaximoYElPorcentaje_YNoInventaNada()
+    {
+        // La nota se lee con los tres: puntos · porcentaje · sistema. Sin puntos (registrada a mano) sólo el porcentaje; sin nada, vacío.
+        Assert.Equal("14 de 18 puntos · 77,78 %", GradebookTexto.Bruto(new NotaEnBruto(14m, 18m, 7, 9, 77.78m)));
+        Assert.Equal("77,78 %", GradebookTexto.Bruto(new NotaEnBruto(null, null, null, null, 77.78m)));
+        Assert.Equal(string.Empty, GradebookTexto.Bruto(new NotaEnBruto(null, null, null, null, null)));
+        Assert.Equal(string.Empty, GradebookTexto.Bruto(null));
+        Assert.Equal("14 de 18 puntos", GradebookTexto.Puntos(new NotaEnBruto(14m, 18m, null, null, null)));
+        Assert.Equal(string.Empty, GradebookTexto.Puntos(new NotaEnBruto(14m, 0m, null, null, null)));       // un máximo de cero no es una cuenta
+        Assert.Equal("27 de 36 puntos · 75 %", BoletinTexto.Bruto(new SumaBruta(27m, 36m, 75m, 2)));
+        Assert.Equal(string.Empty, BoletinTexto.Bruto(new SumaBruta(null, null, null, 0)));
     }
 
     [Fact]

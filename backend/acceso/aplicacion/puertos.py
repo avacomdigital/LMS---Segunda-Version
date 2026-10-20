@@ -78,6 +78,8 @@ class RepositorioUsuarios(Protocol):
                estado: str | None = None, origen: str | None = None) -> list[Usuario]: ...
     def visitantes_activos(self, organizacion_id: str, creados_antes_de: int | None = None) -> list[Usuario]:
         """Las cuentas efímeras de visita aún activas (RN-45); con `creados_antes_de`, sólo las que ya pasaron su día."""
+    def contar_activos(self, organizacion_id: str) -> int:
+        """Las identidades activas que cuentan para el cupo de la licencia (BR-027): sin visitantes, retiradas ni provisionales ya vinculadas."""
 
 
 class RepositorioPinesMaestros(Protocol):
@@ -223,6 +225,12 @@ class UnidadDeTrabajo(Protocol):
 
 class FabricaUoW(Protocol):
     def __call__(self) -> UnidadDeTrabajo: ...
+
+
+class CupoDeUsuarios(Protocol):
+    """MOD-018 (BR-027): el cupo de identidades de la licencia. Sólo se pregunta al CREAR una identidad nueva (nunca a las existentes) y lanza `CupoAgotado` si no cabe."""
+
+    def exigir_usuario_nuevo(self, en_uso: int) -> None: ...
 
 
 class Hasher(Protocol):

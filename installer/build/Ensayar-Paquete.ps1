@@ -54,6 +54,8 @@ $EntornoOriginal = @{}
 foreach ($e in [Environment]::GetEnvironmentVariables().GetEnumerator()) {
     if ($e.Key -like 'AVACOM_*' -or $e.Key -eq 'WEBVIEW2_USER_DATA_FOLDER') { $EntornoOriginal[$e.Key] = $e.Value }
 }
+# `ProgramData` tambien se restaura: Fijar-Datos lo mueve a la carpeta del ensayo (ver abajo).
+if ($env:ProgramData) { $EntornoOriginal['ProgramData'] = $env:ProgramData }
 
 # ---------------------------------------------------------------- utilidades
 function Titulo([string] $texto) { Write-Host ''; Write-Host "  -- $texto" -ForegroundColor Cyan }
@@ -76,6 +78,11 @@ function Restaurar-Entorno {
 function Fijar-Datos([string] $ruta) {
     $env:AVACOM_OPS_ENSAYO = '1'
     $env:AVACOM_OPS_DATOS = $ruta
+    # MOD-018 (licenciamiento): el paquete que se ensaya es de PRODUCCION (lleva el marcador de canal y su backend.env dice AVACOM_LMS_ENTORNO=instalado) y el estado de la licencia de un nodo de
+    # produccion vive SIEMPRE en %ProgramData%\AVACOM\OPS Master\Config\licencia: ninguna variable AVACOM_* lo mueve (D-5; si no, bastaria apuntarla a una carpeta vacia para reiniciar la
+    # evaluacion). Sin esto el ensayo escribiria el ancla del reloj y el secreto de instalacion en el ProgramData REAL de este equipo ("SIN tocar este equipo") y, 30 dias despues, la evaluacion
+    # de ese estado habria vencido y los ensayos de reportes y busqueda recibirian 402. `ProgramData` NO es una variable AVACOM_*: el host la deja pasar al backend, asi que se mueve aqui.
+    $env:ProgramData = Join-Path $ruta 'ProgramData'
 }
 
 function Puerto-Libre {

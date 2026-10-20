@@ -21,6 +21,7 @@ from acceso.dominio import errores as errores_acceso
 from acceso.interfaces.permisos import SesionSiSeExige, principal_de
 
 from ..aplicacion import ajuste as ajuste_cu
+from ..aplicacion import boletin as boletin_cu
 from ..aplicacion import consultas as consultas_cu
 from ..aplicacion import consumidor as consumidor_cu
 from ..aplicacion import derivados as derivados_cu
@@ -118,7 +119,8 @@ class LibroView(VistaGradebook):
         c = self._consulta(request)
         self._al_dia()
         return Response(consultas_cu.LibroDelGrupo(servicios()).ejecutar(
-            self._docente(request), c.get("grupo_id", ""), asignacion_id=c.get("asignacion_id", ""), periodo=c.get("periodo", ""), curso_ref=c.get("curso_ref", ""), q=c.get("q", "")))
+            self._docente(request), c.get("grupo_id", ""), asignacion_id=c.get("asignacion_id", ""), periodo=c.get("periodo", ""), curso_ref=c.get("curso_ref", ""), q=c.get("q", ""),
+            completo=c.get("vista", "completo") != "resumen", consulta=c))
 
 
 class ResumenView(VistaGradebook):
@@ -132,6 +134,22 @@ class EstudianteView(VistaGradebook):
     def get(self, request, alumno_id: str):
         self._al_dia()
         return Response(consultas_cu.HistorialDelEstudiante(servicios()).ejecutar(self._docente(request), alumno_id, grupo_id=self._consulta(request).get("grupo_id", "")))
+
+
+class BoletinView(VistaGradebook):
+    def get(self, request, alumno_id: str):
+        c = self._consulta(request)
+        self._al_dia()
+        return Response(boletin_cu.BoletinDelEstudiante(servicios()).ejecutar(
+            self._docente(request), alumno_id, c.get("grupo_id", ""), curso_ref=c.get("curso_ref", ""), desde=c.get("desde"), limite=c.get("limite"), consulta=c))
+
+
+class ObservacionView(VistaGradebook):
+    """Lo que el profesor recomienda a un estudiante en un periodo (la cuarta pregunta del boletín). `PUT` crea o cambia; repetir lo mismo no deja rastro."""
+
+    def put(self, request, alumno_id: str):
+        datos = _cuerpo(request)
+        return Response(boletin_cu.RegistrarObservacion(servicios()).ejecutar(self._docente(request, datos), alumno_id, datos))
 
 
 class AsignacionView(VistaGradebook):

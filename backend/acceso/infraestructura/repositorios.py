@@ -273,6 +273,13 @@ class UsuariosDjango:
         if creados_antes_de is not None:
             consulta = consulta.filter(creado_en__lt=creados_antes_de)
         return [self._a_entidad(f) for f in consulta.order_by("creado_en")]
+
+    def contar_activos(self, organizacion_id: str) -> int:
+        """BR-027 (MOD-018): las identidades ACTIVAS que cuentan para el cupo de la licencia. No cuentan las cuentas efímeras de visita (RN-45: entrar como visitante nunca se bloquea),
+        ni las retiradas o suspendidas, ni las provisionales que ya se vincularon a una persona real (esa persona ya cuenta)."""
+        return m.Usuario.objects.filter(organizacion_id=organizacion_id, estado=EstadoUsuario.ACTIVO.value, vinculado_a__isnull=True) \
+            .exclude(origen=OrigenCuenta.VISITANTE.value).count()
+
     def _ident(self, f: m.IdentificadorUsuario) -> e.Identificador:
         return e.Identificador(f.id, f.usuario_id, TipoIdentificador(f.tipo), self.c.descifrar(f.valor_cifrado, CTX_IDENT),
                                f.es_login, f.creado_en, f.verificado_en, f.emisor, f.principal, f.retirado_en)

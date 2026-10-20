@@ -349,6 +349,7 @@ internal sealed class HojaDeExportar : ContentView
     private View TarjetaDeFormato(string formato)
     {
         var (titulo, descripcion) = TextoDeExportacion.Formato(formato);
+        if (_alcance is { Empaquetado: true } empaquetado) descripcion = $"Un archivo por estudiante ({empaquetado.Archivos}), todos en un zip.";
         var pila = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
         pila.Add(new Label { Text = _formato == formato ? $"✓  {titulo}" : titulo, FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.Tinta });
         pila.Add(Ds.Secundario(descripcion, 13));
@@ -482,7 +483,8 @@ internal sealed class HojaDeExportar : ContentView
         _cuerpo.Add(ExamenUi.Aviso(texto.Advertencia, null, texto.Nominal ? Tono.Ambar : Tono.Info));
         if (texto.Privacidad is { } privacidad) _cuerpo.Add(ExamenUi.Aviso("Privacidad", privacidad, Tono.Info));
         var (formatoTitulo, _) = TextoDeExportacion.Formato(_formato);
-        _cuerpo.Add(ExamenUi.Dato("Formato", formatoTitulo, 110));
+        _cuerpo.Add(ExamenUi.Dato("Formato", alcance.Empaquetado ? $"{formatoTitulo} · {alcance.Archivos} archivos (uno por estudiante) en un zip" : formatoTitulo, 110));
+        if (alcance.Plantilla is { Length: > 0 } plantilla) _cuerpo.Add(ExamenUi.Dato("Plantilla", plantilla, 110));
         _cuerpo.Add(ExamenUi.Dato("Nombre", alcance.NombreSugerido, 110));
         _cuerpo.Add(ExamenUi.Dato("Datos al", FormatoDeReportes.FechaLarga(alcance.Corte.En), 110));
         if (alcance.Corte.Incompleto || alcance.Corte.Integracion.Incompleta)
