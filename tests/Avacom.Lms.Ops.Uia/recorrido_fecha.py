@@ -6,13 +6,18 @@ Para mover la fecha sin tocar la del equipo de quien trabaja en él, el nodo de 
 `time.time()` un desfase leído de un archivo, y SÓLO a quien llama desde el módulo de licencia: las sesiones, la bitácora y el resto del nodo siguen con la hora de verdad. Así «alguien
 adelantó la fecha 40 días» pasa de verdad dentro del proceso del nodo, que es lo único que Q-L13 trata como salto (el reloj monótono no se mueve), y OPS lo ve como lo vería el colegio.
 
-Recorre: licencia activa sin error · fecha adelantada 40 días (el nodo la detecta en su siguiente ciclo, no la acepta, no degrada ni apaga ningún módulo y avisa con las dos fechas) · el
-menú principal y la pantalla Licencia lo dicen como un error, con «Confirmar la fecha de hoy» · la hoja de confirmación habla de la fecha del equipo · al corregir la fecha el error se
-quita solo · de nuevo adelantada, la administración confirma que es la correcta: el aviso se quita y sólo entonces el aula guarda esa fecha · y volver atrás después es otro aviso.
+Recorre, en cuatro fases cortas (cada una con una OPS recién abierta): (1) licencia activa sin error · fecha adelantada 40 días: el nodo la detecta en su siguiente ciclo, no la acepta, no
+degrada ni apaga ningún módulo y avisa con las dos fechas · la pantalla Licencia y el menú principal lo dicen como un error, con «Confirmar la fecha de hoy»; (2) la hoja de confirmación
+habla de la fecha del equipo; (3) al corregir la fecha el error se quita solo; (4) de nuevo adelantada, la administración confirma que es la correcta: el aviso se quita y sólo entonces el
+aula guarda esa fecha · y volver atrás después es otro aviso.
+
+Por qué en fases: OPS (WinUI) se cae a veces —0xc0000005 dentro de Microsoft.UI.Xaml.dll— o vuelve al acceso cuando la UI Automation la maneja, SIN que esta pantalla tenga nada que ver
+(se reproduce yendo y viniendo de Licencia con la fecha en orden). Si pasa a mitad de una fase, se ve en el código de salida o en la pantalla de acceso, la fase se repite con otra OPS y
+sus anotaciones se descartan (queda dicho en la salida); una falla con OPS viva sigue siendo una falla. La fase 4 cambia lo que el nodo guardó, así que corre sobre un nodo propio.
 
 Uso (desde la raíz del repositorio, con OPS compilado para Windows):
     backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\recorrido_fecha.py --ops <Avacom.Lms.Ops.exe> --salida <carpeta> [--puerto 8017]
-Sale con 0 si todo se cumplió; con 1 y la lista de lo que falló si no (≈ 4 minutos, con las ventanas de OPS en primer plano). No toca el nodo del aula (:8000) ni la OPS de quien trabaja en
+Sale con 0 si todo se cumplió; con 1 y la lista de lo que falló si no (≈ 6 minutos, con las ventanas de OPS en primer plano). No toca el nodo del aula (:8000) ni la OPS de quien trabaja en
 el equipo (perfil de pruebas propio). Sólo corre en un árbol de desarrollo (usa las llaves de desarrollo de las pruebas).
 """
 from __future__ import annotations
@@ -39,6 +44,8 @@ anotar = ra.anotar
 
 DIA_S = 86_400
 DESFASE = 40 * DIA_S
+ACCESO = "Escribe tu documento y tu contraseña"
+REPETIDAS: list[str] = []                        # las fases que hubo que repetir porque OPS se cayó, para decirlo al final
 
 SITECUSTOMIZE = r'''
 import os, sys, time as _t
@@ -153,77 +160,181 @@ def activar_por_la_api(trabajo: Path) -> None:
     ra.api("DELETE", "/api/acceso/sesiones/actual/", None, admin)        # la sesión del personal es única: se suelta para que OPS entre con la suya
 
 
-def recorrido(exe: Path, salida: Path, token: str, desfase: Path) -> None:
-    ops = ra.Ops(exe, salida, f"uia-lic-fecha-{int(time.time())}")
-    try:
-        anotar("el acceso abre con el nodo instalado", ops.esperar("Escribe tu documento y tu contraseña", 30000))
-        anotar("entra con el PIN maestro", entrar(ops))
-        anotar("llega al menú principal con el botón «Licencia»", esperar_boton(ops, "Licencia"))
-        anotar("con la fecha en orden el menú no dice nada de la fecha", not rl.hay(ops, "adelantada"))
-        ops.captura("30-menu-sin-error")
+# ------------------------------------------------------------------------------------------------------------------------ un nodo con el reloj movible
 
-        # --------------------------------------------------------------------------------------------------------- alguien adelanta la fecha 40 días
-        mover_fecha(desfase, DESFASE)
-        e = esperar_estado(token, con_error)
-        aviso = (e.get("avisos") or [{}])[0]
-        ahora_real = time.time() * 1000
-        anotar("el nodo detecta la fecha adelantada en su siguiente ciclo", con_error(e), str(e.get("banderas")))
-        anotar("la hora del aula no se movió: sigue siendo la de verdad, no la del salto", abs(e.get("ahora", 0) - ahora_real) < 10 * 60_000,
-               f"el aula lleva {(e.get('ahora', 0) - ahora_real) / DIA_S / 1000:+.2f} días respecto de la hora real")
-        anotar("no degrada ni apaga ningún módulo: sigue «activa» y con los cuatro módulos", e.get("estado") == "activa" and len(e.get("capacidades", {}).get("habilitadas", [])) == 4,
-               f"{e.get('estado')} {e.get('capacidades', {}).get('habilitadas')}")
-        anotar("el aviso trae los 40 días y las dos fechas, y va primero", aviso.get("codigo") == "reloj_adelantado" and aviso.get("adelanto_dias") == 40
-               and abs(aviso.get("fecha_equipo", 0) - aviso.get("fecha_esperada", 0) - DESFASE * 1000) < 10 * 60_000, str(aviso))
-        codigo, _ = ra.api("GET", "/api/reportes/estado/", None, token)
-        anotar("con la fecha adelantada ningún módulo está en pausa (Reportes no responde 402)", codigo != 402, str(codigo))
+class Nodo:
+    """Un nodo aislado (base y carpeta de estado temporales), con la organización sembrada, la licencia de prueba activa y el reloj de la licencia movible."""
 
-        anotar("la pantalla Licencia abre", rl.ir_a_licencia(ops))
-        anotar("la pantalla dice, con las dos fechas, que la fecha está adelantada y que el aula no la aceptó", ops.esperar("está adelantada", 20000) and rl.hay(ops, "el aula esperaba el")
-               and rl.hay(ops, "No se aceptó"))
-        anotar("la píldora dice «Fecha adelantada» y la pantalla sigue en «Licencia activa»", rl.hay(ops, "Fecha adelantada") and rl.hay(ops, "Licencia activa"))
-        anotar("ofrece «Confirmar la fecha de hoy»", any("Confirmar la fecha de hoy" in b for b in rl.botones(ops)))          # es un botón (con su descripción como nombre), no un texto
-        ops.captura("31-licencia-fecha-adelantada")
-        anotar("vuelve al menú principal", ops.invocar("Menú principal"))
-        anotar("el menú principal lo dice como un error, con «Ver la licencia»", ops.esperar("está adelantada", 20000) and "Ver la licencia" in rl.botones(ops))
-        ops.captura("32-menu-fecha-adelantada")
+    def __init__(self) -> None:
+        self.trabajo = Path(tempfile.mkdtemp(prefix="ops-uia-fecha-"))
+        self.desfase = self.trabajo / "desfase.txt"
+        self.proceso: subprocess.Popen | None = None
+        try:
+            self.proceso = levantar_nodo(self.trabajo / "nodo.sqlite3", self.trabajo / "estado", self.trabajo / "reloj", self.desfase)
+            print(f"Nodo aislado en {ra.NODO}, con el reloj de la licencia movible (archivo {self.desfase})", flush=True)
+            self.token = rl.sembrar()
+            activar_por_la_api(self.trabajo)
+        except BaseException:
+            self.cerrar()
+            raise
 
-        # --------------------------------------------------------------------------------------------------------- la hoja de confirmación
-        anotar("la hoja de confirmación abre", rl.ir_a_licencia(ops) and rl.toque(ops, "licencia-fecha") and ops.esperar("FECHA DEL EQUIPO", 10000))
-        anotar("la hoja habla de la fecha del equipo y de corregirla en Windows", rl.hay(ops, "Si hoy es") and rl.hay(ops, "corrígela en la configuración de Windows"))
-        ops.captura("33-confirmar-la-fecha")
-        rl.toque(ops, "licencia-hoja-cerrar")
+    def cerrar(self) -> None:
+        if self.proceso is not None:
+            self.proceso.kill()
+            try:
+                self.proceso.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                pass
+            self.proceso = None
+        shutil.rmtree(self.trabajo, ignore_errors=True)
+        puerto = int(ra.NODO.rsplit(":", 1)[1])
+        for _ in range(30):                                          # el puerto tarda un instante en soltarse
+            if not ra.puerto_ocupado(puerto):
+                break
+            time.sleep(1)
 
-        # --------------------------------------------------------------------------------------------------------- la fecha se corrige: el error se quita solo
-        mover_fecha(desfase, 0)
-        e = esperar_estado(token, sin_error)
-        anotar("al corregir la fecha el nodo quita el error solo", sin_error(e) and e.get("estado") == "activa", str(e.get("banderas")))
-        anotar("y no queda nada detrás: ni marca adelantada ni aviso de reloj atrasado", "reloj_sospechoso" not in (e.get("banderas") or []) and abs(e.get("ahora", 0) - time.time() * 1000) < 10 * 60_000)
-        rl.toque(ops, "licencia-actualizar")
-        time.sleep(3)
-        anotar("la pantalla ya no muestra el error ni ofrece confirmar", not rl.hay(ops, "está adelantada") and not any("Confirmar la fecha de hoy" in b for b in rl.botones(ops)))
-        ops.captura("34-licencia-fecha-corregida")
-        ops.invocar("Menú principal")
-        anotar("el menú principal tampoco", esperar_boton(ops, "Licencia", 15000) and not rl.hay(ops, "adelantada"))
 
-        # --------------------------------------------------------------------------------------------------------- otra vez adelantada: la administración confirma que es la correcta
-        mover_fecha(desfase, DESFASE)
-        esperar_estado(token, con_error)
-        anotar("de nuevo adelantada: el error vuelve", rl.ir_a_licencia(ops) and ops.esperar("está adelantada", 20000))
-        anotar("la administración abre «Confirmar la fecha de hoy»", rl.toque(ops, "licencia-fecha") and ops.esperar("FECHA DEL EQUIPO", 10000))
-        anotar("y confirma que la fecha del equipo es la correcta", rl.toque(ops, "licencia-fecha-confirmar") and ops.esperar("Fecha confirmada", 20000))
-        ops.captura("35-fecha-confirmada")
-        rl.toque(ops, "licencia-listo")
-        e = esperar_estado(token, sin_error, 20)
-        anotar("el aviso se quita y sólo entonces el aula guarda esa fecha", sin_error(e) and abs(e.get("ahora", 0) - (time.time() * 1000 + DESFASE * 1000)) < 10 * 60_000,
-               f"el aula lleva {(e.get('ahora', 0) - time.time() * 1000) / DIA_S / 1000:+.2f} días respecto de la hora real")
-        anotar("la pantalla ya no muestra el error", ops.esperar("Licencia activa", 15000) and not rl.hay(ops, "está adelantada"))
+# ------------------------------------------------------------------------------------------------------------------------ las fases
 
-        # --------------------------------------------------------------------------------------------------------- volver atrás después de confirmar es otro aviso
-        mover_fecha(desfase, 0)
-        e = esperar_estado(token, lambda x: "reloj_sospechoso" in (x.get("banderas") or []))
-        anotar("confirmada una fecha, devolver el reloj es un reloj atrasado (otro aviso, no el de la fecha adelantada)", "reloj_sospechoso" in (e.get("banderas") or []) and sin_error(e), str(e.get("banderas")))
-    finally:
-        ops.cerrar()
+class OpsCaida(Exception):
+    """OPS se cerró o volvió al acceso a mitad de una fase: es ruido del arnés (WinUI con la UI Automation), no un resultado del producto; la fase se repite."""
+
+
+def verificar(ops) -> None:
+    """Lanza `OpsCaida` si OPS ya no está donde la fase la dejó: el proceso terminó (con su código de salida) o la pantalla volvió al acceso."""
+    codigo = ops.proceso.poll()
+    if codigo is not None:
+        raise OpsCaida(f"OPS terminó con el código {codigo & 0xFFFFFFFF:#x}")
+    if rl.hay(ops, ACCESO):
+        raise OpsCaida("OPS volvió a la pantalla de acceso")
+
+
+def comprobar(ops, paso: str, ok: bool, detalle: str = "") -> bool:
+    """`anotar`, pero antes de dar por fallida una comprobación de pantalla mira que OPS siga ahí: si no, la fase se repite en lugar de culpar al producto."""
+    if not ok:
+        verificar(ops)
+    return anotar(paso, ok, detalle)
+
+
+def acceso(ops) -> None:
+    """Entra con la administración y espera el menú principal. Lanza `OpsCaida` si no lo logra."""
+    if not ops.esperar(ACCESO, 30000):
+        raise OpsCaida("OPS no mostró la pantalla de acceso")
+    if not entrar(ops) or not esperar_boton(ops, "Licencia"):
+        raise OpsCaida("OPS no llegó al menú principal")
+
+
+def en_fase(nombre: str, exe: Path, salida: Path, nodo: Nodo | None, preparar, cuerpo, intentos: int = 4) -> None:
+    """
+    Una fase con una OPS recién abierta. `preparar(nodo)` deja el nodo como la fase lo necesita (la fecha) y `cuerpo(ops, nodo)` hace las comprobaciones. Con `nodo=None` cada intento levanta
+    un nodo propio (la fase cambia lo que el nodo guardó y no se puede repetir sobre el mismo). Si OPS se cae a mitad de la fase se repite con otra y se descartan sus anotaciones.
+    """
+    for intento in range(1, intentos + 1):
+        marca = len(ra.resultados)
+        propio = Nodo() if nodo is None else None
+        actual = propio or nodo
+        ops = None
+        try:
+            if preparar is not None:
+                preparar(actual)
+            ops = ra.Ops(exe, salida, f"uia-lic-fecha-{int(time.time() * 1000)}")
+            acceso(ops)
+            cuerpo(ops, actual)
+            verificar(ops)                                          # si se cayó justo al final, tampoco vale
+            return
+        except OpsCaida as caida:
+            del ra.resultados[marca:]
+            REPETIDAS.append(f"{nombre} (intento {intento}: {caida})")
+            print(f"  (fase «{nombre}», intento {intento} de {intentos}: {caida}; se repite con otra OPS)", flush=True)
+        finally:
+            if ops is not None:
+                ops.cerrar()
+            if propio is not None:
+                propio.cerrar()
+    anotar(f"la fase «{nombre}» corre completa", False, f"OPS se cayó {intentos} veces seguidas")
+
+
+def preparar_en_orden(nodo: Nodo) -> None:
+    """Fase 1: la fecha en orden y sin error (si una vuelta anterior dejó un episodio abierto, se cierra al concordar la fecha)."""
+    mover_fecha(nodo.desfase, 0)
+    esperar_estado(nodo.token, sin_error)
+
+
+def preparar_adelantada(nodo: Nodo) -> None:
+    """Fases 2 y 3: la fecha ya adelantada 40 días y el error puesto."""
+    mover_fecha(nodo.desfase, DESFASE)
+    esperar_estado(nodo.token, con_error)
+
+
+def fase_adelanta(ops, nodo: Nodo) -> None:
+    token, desfase = nodo.token, nodo.desfase
+    comprobar(ops, "con la fecha en orden el menú no dice nada de la fecha", not rl.hay(ops, "adelantada"))
+    ops.captura("30-menu-sin-error")
+
+    # alguien adelanta la fecha 40 días
+    mover_fecha(desfase, DESFASE)
+    e = esperar_estado(token, con_error)
+    aviso = (e.get("avisos") or [{}])[0]
+    ahora_real = time.time() * 1000
+    anotar("el nodo detecta la fecha adelantada en su siguiente ciclo", con_error(e), str(e.get("banderas")))
+    anotar("la hora del aula no se movió: sigue siendo la de verdad, no la del salto", abs(e.get("ahora", 0) - ahora_real) < 10 * 60_000,
+           f"el aula lleva {(e.get('ahora', 0) - ahora_real) / DIA_S / 1000:+.2f} días respecto de la hora real")
+    anotar("no degrada ni apaga ningún módulo: sigue «activa» y con los cuatro módulos", e.get("estado") == "activa" and len(e.get("capacidades", {}).get("habilitadas", [])) == 4,
+           f"{e.get('estado')} {e.get('capacidades', {}).get('habilitadas')}")
+    anotar("el aviso trae los 40 días y las dos fechas, y va primero", aviso.get("codigo") == "reloj_adelantado" and aviso.get("adelanto_dias") == 40
+           and abs(aviso.get("fecha_equipo", 0) - aviso.get("fecha_esperada", 0) - DESFASE * 1000) < 10 * 60_000, str(aviso))
+    codigo, _ = ra.api("GET", "/api/reportes/estado/", None, token)
+    anotar("con la fecha adelantada ningún módulo está en pausa (Reportes no responde 402)", codigo != 402, str(codigo))
+
+    comprobar(ops, "la pantalla Licencia abre", rl.ir_a_licencia(ops))
+    comprobar(ops, "la pantalla dice, con las dos fechas, que la fecha está adelantada y que el aula no la aceptó",
+              ops.esperar("está adelantada", 20000) and rl.hay(ops, "el aula esperaba el") and rl.hay(ops, "No se aceptó"))
+    comprobar(ops, "la píldora dice «Fecha adelantada» y la pantalla sigue en «Licencia activa»", rl.hay(ops, "Fecha adelantada") and rl.hay(ops, "Licencia activa"))
+    comprobar(ops, "ofrece «Confirmar la fecha de hoy»", any("Confirmar la fecha de hoy" in b for b in rl.botones(ops)))          # es un botón (con su descripción como nombre), no un texto
+    ops.captura("31-licencia-fecha-adelantada")
+    comprobar(ops, "vuelve al menú principal", ops.invocar("Menú principal"))
+    comprobar(ops, "el menú principal lo dice como un error, con «Ver la licencia»", ops.esperar("está adelantada", 20000) and "Ver la licencia" in rl.botones(ops))
+    ops.captura("32-menu-fecha-adelantada")
+
+
+def fase_hoja(ops, nodo: Nodo) -> None:
+    comprobar(ops, "al abrir OPS con la fecha adelantada, el menú principal ya la dice como un error", ops.esperar("está adelantada", 25000) and "Ver la licencia" in rl.botones(ops))
+    comprobar(ops, "la hoja de confirmación abre", rl.ir_a_licencia(ops) and rl.toque(ops, "licencia-fecha") and ops.esperar("FECHA DEL EQUIPO", 10000))
+    comprobar(ops, "la hoja habla de la fecha del equipo y de corregirla en Windows", rl.hay(ops, "Si hoy es") and rl.hay(ops, "corrígela en la configuración de Windows"))
+    ops.captura("33-confirmar-la-fecha")
+    rl.toque(ops, "licencia-hoja-cerrar")
+
+
+def fase_se_corrige(ops, nodo: Nodo) -> None:
+    mover_fecha(nodo.desfase, 0)
+    e = esperar_estado(nodo.token, sin_error)
+    anotar("al corregir la fecha el nodo quita el error solo", sin_error(e) and e.get("estado") == "activa", str(e.get("banderas")))
+    anotar("y no queda nada detrás: ni marca adelantada ni aviso de reloj atrasado", "reloj_sospechoso" not in (e.get("banderas") or []) and abs(e.get("ahora", 0) - time.time() * 1000) < 10 * 60_000)
+    comprobar(ops, "la pantalla Licencia abre", rl.ir_a_licencia(ops) and ops.esperar("Licencia activa", 15000))
+    comprobar(ops, "la pantalla ya no muestra el error ni ofrece confirmar", not rl.hay(ops, "está adelantada") and not any("Confirmar la fecha de hoy" in b for b in rl.botones(ops)))
+    ops.captura("34-licencia-fecha-corregida")
+    comprobar(ops, "vuelve al menú principal", ops.invocar("Menú principal"))
+    comprobar(ops, "el menú principal tampoco", esperar_boton(ops, "Licencia", 15000) and not rl.hay(ops, "adelantada"))
+
+
+def fase_confirma(ops, nodo: Nodo) -> None:
+    token, desfase = nodo.token, nodo.desfase
+    mover_fecha(desfase, DESFASE)
+    esperar_estado(token, con_error)
+    comprobar(ops, "de nuevo adelantada: el error vuelve", rl.ir_a_licencia(ops) and ops.esperar("está adelantada", 20000))
+    comprobar(ops, "la administración abre «Confirmar la fecha de hoy»", rl.toque(ops, "licencia-fecha") and ops.esperar("FECHA DEL EQUIPO", 10000))
+    comprobar(ops, "y confirma que la fecha del equipo es la correcta", rl.toque(ops, "licencia-fecha-confirmar") and ops.esperar("Fecha confirmada", 20000))
+    ops.captura("35-fecha-confirmada")
+    rl.toque(ops, "licencia-listo")
+    e = esperar_estado(token, sin_error, 20)
+    anotar("el aviso se quita y sólo entonces el aula guarda esa fecha", sin_error(e) and abs(e.get("ahora", 0) - (time.time() * 1000 + DESFASE * 1000)) < 10 * 60_000,
+           f"el aula lleva {(e.get('ahora', 0) - time.time() * 1000) / DIA_S / 1000:+.2f} días respecto de la hora real")
+    comprobar(ops, "la pantalla ya no muestra el error", ops.esperar("Licencia activa", 15000) and not rl.hay(ops, "está adelantada"))
+
+    # volver atrás después de confirmar es otro aviso
+    mover_fecha(desfase, 0)
+    e = esperar_estado(token, lambda x: "reloj_sospechoso" in (x.get("banderas") or []))
+    anotar("confirmada una fecha, devolver el reloj es un reloj atrasado (otro aviso, no el de la fecha adelantada)", "reloj_sospechoso" in (e.get("banderas") or []) and sin_error(e), str(e.get("banderas")))
 
 
 def main() -> int:
@@ -238,25 +349,27 @@ def main() -> int:
         return 2
     salida = Path(args.salida)
     salida.mkdir(parents=True, exist_ok=True)
-    trabajo = Path(tempfile.mkdtemp(prefix="ops-uia-fecha-"))
-    desfase = trabajo / "desfase.txt"
-    nodo = levantar_nodo(trabajo / "nodo.sqlite3", trabajo / "estado", trabajo / "reloj", desfase)
-    print(f"Nodo aislado en {ra.NODO}, con el reloj de la licencia movible (archivo {desfase})", flush=True)
+    exe = Path(args.ops)
     ra.tomar_candado()
+    nodo: Nodo | None = None
     try:
-        token = rl.sembrar()
-        activar_por_la_api(trabajo)
-        recorrido(Path(args.ops), salida, token, desfase)
+        nodo = Nodo()
+        en_fase("la fecha se adelanta", exe, salida, nodo, preparar_en_orden, fase_adelanta)
+        en_fase("la hoja de confirmación", exe, salida, nodo, preparar_adelantada, fase_hoja)
+        en_fase("la fecha se corrige", exe, salida, nodo, preparar_adelantada, fase_se_corrige)
+        nodo.cerrar()
+        nodo = None
+        en_fase("la administración confirma", exe, salida, None, None, fase_confirma)           # cambia lo que el nodo guardó: cada intento, un nodo nuevo
     finally:
         ra.soltar_candado()
-        nodo.kill()
-        try:
-            nodo.wait(timeout=20)
-        except subprocess.TimeoutExpired:
-            pass
-        shutil.rmtree(trabajo, ignore_errors=True)
+        if nodo is not None:
+            nodo.cerrar()
     fallos = [r for r in ra.resultados if not r[1]]
     print(f"\n{len(ra.resultados) - len(fallos)} de {len(ra.resultados)} comprobaciones cumplidas. Capturas en {salida}")
+    if REPETIDAS:
+        print(f"Fases repetidas porque OPS se cayó o volvió al acceso ({len(REPETIDAS)}; ruido del arnés, no una falla de la pantalla):")
+        for r in REPETIDAS:
+            print(f"  · {r}")
     for paso, _, detalle in fallos:
         print(f"  FALLÓ: {paso} {detalle}")
     return 1 if fallos else 0
