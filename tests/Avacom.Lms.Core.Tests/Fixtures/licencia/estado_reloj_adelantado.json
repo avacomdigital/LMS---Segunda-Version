@@ -1,14 +1,17 @@
 {
-  "ahora": 1796144065033,
+  "ahora": 1793393568322,
   "avisos": [
     {
-      "codigo": "reloj_sospechoso"
+      "adelanto_dias": 32,
+      "codigo": "reloj_adelantado",
+      "fecha_equipo": 1796158368322,
+      "fecha_esperada": 1793393568322
     }
   ],
   "banderas": [
-    "reloj_sospechoso"
+    "reloj_adelantado"
   ],
-  "calculada_en": 1796144065033,
+  "calculada_en": 1793393568322,
   "capacidades": {
     "habilitadas": [
       "administracion_avanzada",
@@ -33,13 +36,13 @@
     "parcial": false
   },
   "licencia": {
-    "archivo": "4a9c00886dfd",
+    "archivo": "fc059472e36e",
     "aula": "Aula de pruebas",
     "capacidades": [
       "*"
     ],
-    "desde": 1789919665033,
-    "emitida": 1789833265033,
+    "desde": 1789933968322,
+    "emitida": 1789847568322,
     "gracia_dias": 30,
     "id": "a7a7a7a7-0001-4000-8000-000000000001",
     "kid": "dev-1",
@@ -53,7 +56,7 @@
     },
     "serie": 1,
     "tipo": "produccion",
-    "vence": 1821455665033
+    "vence": 1821469968322
   },
   "limites": {
     "concurrentes_normal": 50,
@@ -66,10 +69,10 @@
   "restringe": false,
   "tipo": "produccion",
   "vigencia": {
-    "desde": 1789919665033,
-    "dias_restantes": 293,
+    "desde": 1789933968322,
+    "dias_restantes": 325,
     "gracia_dias": 30,
-    "hasta": 1821455665033,
-    "vence": 1821455665033
+    "hasta": 1821469968322,
+    "vence": 1821469968322
   }
 }

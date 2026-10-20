@@ -43,11 +43,14 @@ public static class MotivosDeEstado
 /// <summary>Banderas ortogonales al estado: se suman a él, no lo reemplazan.</summary>
 public static class BanderasDeLicencia
 {
+    /// <summary>El reloj de este equipo está ATRASADO respecto de lo que el aula ya vio.</summary>
     public const string RelojSospechoso = "reloj_sospechoso";
+    /// <summary>La fecha de este equipo está ADELANTADA y el nodo no la acepta (Q-L13): un error hasta que la fecha concuerde o la administración la confirme.</summary>
+    public const string RelojAdelantado = "reloj_adelantado";
     public const string HuellaParcial = "huella_parcial";
     public const string IntegridadAlterada = "integridad_alterada";
 
-    public static readonly IReadOnlyList<string> Todas = [RelojSospechoso, HuellaParcial, IntegridadAlterada];
+    public static readonly IReadOnlyList<string> Todas = [RelojSospechoso, RelojAdelantado, HuellaParcial, IntegridadAlterada];
 }
 
 /// <summary>Los módulos que una licencia puede apagar (P-07). Todo lo demás —la clase, la evaluación, el modo de estudio, la lectura de datos— es núcleo y no se apaga nunca.</summary>
@@ -71,10 +74,11 @@ public static class AvisosDeLicencia
     public const string PorVencer = "por_vencer";
     public const string Cupo = "cupo";
     public const string RelojSospechoso = BanderasDeLicencia.RelojSospechoso;
+    public const string RelojAdelantado = BanderasDeLicencia.RelojAdelantado;
     public const string HuellaParcial = BanderasDeLicencia.HuellaParcial;
     public const string IntegridadAlterada = BanderasDeLicencia.IntegridadAlterada;
 
-    public static readonly IReadOnlyList<string> Todos = [Degradada, Gracia, LiberacionPendiente, Evaluacion, PorVencer, Cupo, RelojSospechoso, HuellaParcial, IntegridadAlterada];
+    public static readonly IReadOnlyList<string> Todos = [Degradada, Gracia, LiberacionPendiente, Evaluacion, PorVencer, Cupo, RelojSospechoso, RelojAdelantado, HuellaParcial, IntegridadAlterada];
 }
 
 /// <summary>Los <c>motivo</c> de un 400 <c>licencia_invalida</c> (backend/licenciamiento/dominio/errores.py: «son parte del contrato, no se renombran»).</summary>
@@ -221,7 +225,10 @@ public sealed record CapacidadesDeLicencia(
     [property: JsonPropertyName("habilitadas")] IReadOnlyList<string>? Habilitadas,
     [property: JsonPropertyName("no_disponibles")] IReadOnlyList<string>? NoDisponibles);
 
-/// <summary>Un aviso con sus cifras (los campos que no aplican a su código llegan ausentes y quedan null).</summary>
+/// <summary>
+/// Un aviso con sus cifras (los campos que no aplican a su código llegan ausentes y quedan null). La fecha adelantada (<c>reloj_adelantado</c>, Q-L13) trae cuántos días lo está
+/// (<see cref="AdelantoDias"/>), la fecha que tiene el equipo (<see cref="FechaEquipo"/>) y la que el aula lleva (<see cref="FechaEsperada"/>, la hora confiable), en milisegundos del nodo.
+/// </summary>
 public sealed record AvisoDeLicencia(
     [property: JsonPropertyName("codigo")] string Codigo,
     [property: JsonPropertyName("motivo")] string? Motivo = null,
@@ -231,7 +238,10 @@ public sealed record AvisoDeLicencia(
     [property: JsonPropertyName("tipo")] string? Tipo = null,
     [property: JsonPropertyName("en_uso")] int? EnUso = null,
     [property: JsonPropertyName("limite")] int? Limite = null,
-    [property: JsonPropertyName("porcentaje")] int? Porcentaje = null);
+    [property: JsonPropertyName("porcentaje")] int? Porcentaje = null,
+    [property: JsonPropertyName("adelanto_dias")] int? AdelantoDias = null,
+    [property: JsonPropertyName("fecha_equipo")] long? FechaEquipo = null,
+    [property: JsonPropertyName("fecha_esperada")] long? FechaEsperada = null);
 
 /// <summary>Lo que se usa del cupo según la última instantánea del nodo (el conteo fino y en el momento está en <c>consumo/</c>).</summary>
 public sealed record ConsumoActual(
@@ -273,6 +283,15 @@ public sealed record EstadoLicencia(
     public IReadOnlyList<string> NoDisponibles => Capacidades?.NoDisponibles ?? [];
 
     public bool Tiene(string bandera) => Banderas?.Contains(bandera) == true;
+
+    /// <summary>
+    /// El aviso de fecha adelantada (Q-L13), si lo hay: lo que el nodo no aceptó. Con él, <see cref="Ahora"/> es la hora que el aula lleva y la fecha del equipo es
+    /// <see cref="AvisoDeLicencia.FechaEquipo"/>.
+    /// </summary>
+    public AvisoDeLicencia? FechaAdelantada => AvisosActivos.FirstOrDefault(a => a.Codigo == AvisosDeLicencia.RelojAdelantado);
+
+    /// <summary>La fecha que tiene el equipo del aula: la adelantada que el nodo no aceptó, o, si no hay ninguna, la del nodo (<see cref="Ahora"/>). Es la que se confirma.</summary>
+    public long FechaDelEquipo => FechaAdelantada?.FechaEquipo ?? Ahora;
 }
 
 // ------------------------------------------------------------------------------------------------ consumo/ y capacidades/

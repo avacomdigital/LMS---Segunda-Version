@@ -156,6 +156,26 @@ public sealed class LicenciaTextoTests
     }
 
     [Fact]
+    public void LaFechaAdelantada_DiceLasDosFechas_YQueElAulaNoLaAcepto()
+    {
+        // Q-L13: un error con la fecha que tiene el equipo y la que el aula esperaba; nunca promete pausar nada
+        var aviso = new AvisoDeLicencia(AvisosDeLicencia.RelojAdelantado, AdelantoDias: 32, FechaEquipo: Ms(2027, 3, 5), FechaEsperada: Ms(2027, 2, 1));
+        var t = LicenciaTexto.Aviso(aviso, null, Utc);
+        Assert.Contains("5 de marzo de 2027 a las 12:00", t);
+        Assert.Contains("1 de febrero de 2027", t);
+        Assert.Contains("está adelantada", t);
+        Assert.Contains("No se aceptó", t);
+        Assert.Contains("nada se pone en pausa", t);
+        Assert.Contains("Corrígela", t);
+        Limpia(t);
+        Assert.Equal(LicenciaTexto.Bandera(BanderasDeLicencia.RelojAdelantado), LicenciaTexto.Aviso(new AvisoDeLicencia(AvisosDeLicencia.RelojAdelantado)));     // sin las fechas: la frase de la bandera
+        Assert.Equal("Fecha adelantada", LicenciaTexto.BanderaBreve(BanderasDeLicencia.RelojAdelantado));
+        Assert.Contains("confirmarla", LicenciaTexto.LlamadaDelBanner(aviso));
+        Assert.Contains("Corrígela", LicenciaTexto.Bandera(BanderasDeLicencia.RelojAdelantado));
+        Assert.Contains("el aula guarda esa fecha", LicenciaTexto.ConfirmacionDeFecha(Ms(2027, 3, 5), Utc));
+    }
+
+    [Fact]
     public void CadaModulo_TieneNombreYDescripcion_YLosBoletinesNoSePausan()
     {
         foreach (var c in CapacidadesLicenciables.Todas.Append("otro"))

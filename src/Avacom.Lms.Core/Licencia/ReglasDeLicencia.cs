@@ -36,11 +36,12 @@ public static class ReglasDeLicencia
     public static bool MostrarBanner(UsuarioDeSesion? usuario, bool hayClaseAbierta) => VeLaLicencia(usuario) && !hayClaseAbierta;
 
     /// <summary>
-    /// El orden de importancia de los avisos, el mismo con que el nodo los emite (<c>estado.avisos</c>): primero el del estado (degradada, gracia, liberación pendiente, evaluación, por
-    /// vencer), luego el cupo y al final las banderas. Un código que esta versión no conoce va al final, pero no se calla.
+    /// El orden de importancia de los avisos, el mismo con que el nodo los emite (<c>estado.avisos</c>): primero el error de la fecha adelantada (Q-L13), luego el del estado
+    /// (degradada, gracia, liberación pendiente, evaluación, por vencer), el cupo y al final las banderas. Un código que esta versión no conoce va al final, pero no se calla.
     /// </summary>
     private static int Rango(string codigo) => codigo switch
     {
+        AvisosDeLicencia.RelojAdelantado => -1,
         AvisosDeLicencia.Degradada => 0,
         AvisosDeLicencia.Gracia => 1,
         AvisosDeLicencia.LiberacionPendiente => 2,
@@ -66,7 +67,7 @@ public static class ReglasDeLicencia
     /// </summary>
     public static TonoDeAviso TonoDe(AvisoDeLicencia aviso) => aviso.Codigo switch
     {
-        AvisosDeLicencia.Degradada => TonoDeAviso.Fuerte,
+        AvisosDeLicencia.Degradada or AvisosDeLicencia.RelojAdelantado => TonoDeAviso.Fuerte,
         AvisosDeLicencia.Gracia or AvisosDeLicencia.LiberacionPendiente or AvisosDeLicencia.IntegridadAlterada => TonoDeAviso.Atencion,
         AvisosDeLicencia.Evaluacion => aviso.Urgente == true ? TonoDeAviso.Atencion : TonoDeAviso.Informativo,
         AvisosDeLicencia.PorVencer => aviso.Dias is <= 7 ? TonoDeAviso.Atencion : TonoDeAviso.Informativo,
@@ -106,6 +107,10 @@ public static class ReglasDeLicencia
     /// <summary>[Liberar este equipo] (JRN-020): hace falta una licencia instalada que liberar.</summary>
     public static bool OfrecerLiberar(EstadoLicencia? estado) => estado is { Licencia: not null } && !estado.Ilimitada;
 
-    /// <summary>[Confirmar la fecha de hoy] (P-06): sólo con la bandera <c>reloj_sospechoso</c>.</summary>
-    public static bool OfrecerConfirmarFecha(EstadoLicencia? estado) => estado is not null && !estado.Ilimitada && estado.Tiene(BanderasDeLicencia.RelojSospechoso);
+    /// <summary>
+    /// [Confirmar la fecha de hoy] (P-06 · Q-L13): sólo con una bandera de reloj. Con <c>reloj_adelantado</c> es la salida cuando la fecha del equipo ES la correcta (el aula se había
+    /// quedado atrás): sin confirmarla, el nodo no la acepta ni la guarda. Si la fecha está mal, se corrige en Windows y el aviso se quita solo.
+    /// </summary>
+    public static bool OfrecerConfirmarFecha(EstadoLicencia? estado) =>
+        estado is not null && !estado.Ilimitada && (estado.Tiene(BanderasDeLicencia.RelojSospechoso) || estado.Tiene(BanderasDeLicencia.RelojAdelantado));
 }

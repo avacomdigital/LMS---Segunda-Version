@@ -293,6 +293,7 @@ public sealed class LicenciaPage : ContentPage
     private async Task AbrirFechaAsync()
     {
         var fecha = new ConfirmacionDeFecha(LicenciaUi.Api, LicenciaUi.Actor);
-        if (await _hoja.FechaAsync(fecha, _estado?.Ahora ?? RelojNodo.AhoraMs)) await CargarAsync();
+        // Lo que se confirma es la fecha que tiene el equipo: con una fecha adelantada (Q-L13) no es la hora del aula (`Ahora`), es la que el aula no aceptó.
+        if (await _hoja.FechaAsync(fecha, _estado?.FechaDelEquipo ?? RelojNodo.AhoraMs)) await CargarAsync();
     }
 }

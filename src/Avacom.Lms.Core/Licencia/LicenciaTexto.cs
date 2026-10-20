@@ -203,6 +203,8 @@ public static class LicenciaTexto
     public static string Bandera(string bandera) => bandera switch
     {
         BanderasDeLicencia.RelojSospechoso => "La fecha de este equipo cambió de golpe. Nada se pone en pausa por eso: si la fecha de hoy es la correcta, confírmala.",
+        BanderasDeLicencia.RelojAdelantado => "La fecha de este equipo está adelantada y el aula no la aceptó: la licencia sigue contando con la fecha real y nada se pone en pausa por eso. " +
+            "Corrígela en la configuración de Windows; si la fecha del equipo es la correcta, confírmala.",
         BanderasDeLicencia.HuellaParcial => "Una pieza del equipo cambió y la licencia sigue valiendo. Si cambian más piezas, habrá que pedir una licencia nueva.",
         BanderasDeLicencia.IntegridadAlterada => "Cambiaron archivos del programa del aula. Todo sigue funcionando; avisa a soporte técnico para que lo revise.",
         _ => "El aula marcó algo de la licencia que esta versión no conoce. Avisa a soporte técnico.",
@@ -212,6 +214,7 @@ public static class LicenciaTexto
     public static string BanderaBreve(string bandera) => bandera switch
     {
         BanderasDeLicencia.RelojSospechoso => "Fecha por confirmar",
+        BanderasDeLicencia.RelojAdelantado => "Fecha adelantada",
         BanderasDeLicencia.HuellaParcial => "Una pieza cambió",
         BanderasDeLicencia.IntegridadAlterada => "Programa modificado",
         _ => "Otra señal",
@@ -299,7 +302,11 @@ public static class LicenciaTexto
             }
             case AvisosDeLicencia.Cupo:
                 return Cupo(aviso);
+            case AvisosDeLicencia.RelojAdelantado when aviso is { FechaEquipo: { } equipo, FechaEsperada: { } esperada }:
+                return $"La fecha de este equipo ({FechaYHora(equipo, zona)}) está adelantada: el aula esperaba el {Fecha(esperada, zona)}. No se aceptó y nada se pone en pausa por eso. " +
+                       "Corrígela en la configuración de Windows.";
             case AvisosDeLicencia.RelojSospechoso:
+            case AvisosDeLicencia.RelojAdelantado:
             case AvisosDeLicencia.HuellaParcial:
             case AvisosDeLicencia.IntegridadAlterada:
                 return Bandera(aviso.Codigo);
@@ -328,6 +335,7 @@ public static class LicenciaTexto
         AvisosDeLicencia.Degradada when aviso.Motivo == MotivosDeEstado.EvaluacionVencida => "Toca «Ver la licencia» para activarla.",
         AvisosDeLicencia.Gracia or AvisosDeLicencia.Degradada or AvisosDeLicencia.PorVencer => "Toca «Ver la licencia» para renovarla.",
         AvisosDeLicencia.RelojSospechoso => "Toca «Ver la licencia» para confirmar la fecha.",
+        AvisosDeLicencia.RelojAdelantado => "Si la fecha del equipo es la correcta, toca «Ver la licencia» para confirmarla.",
         _ => "Toca «Ver la licencia» para ver qué hacer.",
     };
 
@@ -555,13 +563,16 @@ public static class LicenciaTexto
     // ================================================================================================== confirmar la fecha (P-06)
 
     public const string FechaTitulo = "Confirmar la fecha de hoy";
-    public const string FechaDescripcion = "La fecha del equipo cambió de golpe: confirma que la de hoy es la correcta.";
+    public const string FechaDescripcion = "La fecha del equipo no coincide con la que el aula lleva: si la de hoy es la correcta, confírmala; si no, corrígela en Windows.";
     public const string FechaHecha = "Fecha confirmada. El aviso de la fecha se quitó.";
 
-    /// <summary>La única confirmación: la fecha y la hora que tiene el equipo del aula, y qué hacer si están mal.</summary>
+    /// <summary>
+    /// La única confirmación: la fecha y la hora que tiene el equipo del aula (la adelantada que el aula no aceptó, Q-L13) y qué hacer si están mal. Sólo al confirmarla el aula la guarda;
+    /// si se corrige la fecha en Windows, el aviso se quita solo.
+    /// </summary>
     public static string ConfirmacionDeFecha(long ahoraDelNodoMs, TimeZoneInfo? zona = null) =>
-        $"El equipo del aula vio un salto en su fecha. Si hoy es {FechaYHora(ahoraDelNodoMs, zona)}, confírmalo y el aviso se quita. " +
-        "Si la fecha está mal, corrígela en la configuración de Windows en lugar de confirmar.";
+        $"El equipo del aula tiene una fecha que no coincide con la que el aula llevaba. Si hoy es {FechaYHora(ahoraDelNodoMs, zona)}, confírmalo: el aviso se quita y el aula guarda esa fecha. " +
+        "Si la fecha está mal, corrígela en la configuración de Windows en lugar de confirmar: el aviso se quita solo.";
 
     // ================================================================================================== escribir en la memoria
 

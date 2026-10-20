@@ -175,12 +175,21 @@ public sealed class ContratoLicenciaTests
     }
 
     [Fact]
-    public void ElReloj_RetrocesoYSalto_YLaConfirmacionApagaLaBandera()
+    public void ElReloj_FechaAdelantadaQueNoSeAcepta_YLaConfirmacionApagaLaBandera()
     {
+        // Q-L13: respuesta REAL del nodo con la fecha del equipo 32 días adelantada: la hora del aula (`ahora`) no se movió, y el aviso trae las dos fechas
         Assert.Empty(Estado("estado_reloj_retroceso").BanderasActivas);
-        var salto = Estado("estado_reloj_salto");
-        Assert.True(salto.Tiene(BanderasDeLicencia.RelojSospechoso));
-        Assert.Equal(AvisosDeLicencia.RelojSospechoso, Assert.Single(salto.AvisosActivos).Codigo);
+        var adelantado = Estado("estado_reloj_adelantado");
+        Assert.True(adelantado.Tiene(BanderasDeLicencia.RelojAdelantado));
+        Assert.False(adelantado.Tiene(BanderasDeLicencia.RelojSospechoso));                       // eso es el reloj atrasado: otra bandera
+        Assert.Equal(EstadosDeLicencia.Activa, adelantado.Estado);                                // no degrada por el salto
+        var aviso = Assert.Single(adelantado.AvisosActivos);
+        Assert.Equal(AvisosDeLicencia.RelojAdelantado, aviso.Codigo);
+        Assert.Equal(32, aviso.AdelantoDias);
+        Assert.Equal(adelantado.Ahora, aviso.FechaEsperada);                                      // lo que el aula lleva es la hora confiable
+        Assert.Equal(aviso.FechaEsperada + 32L * 24 * 3_600_000, aviso.FechaEquipo);
+        Assert.Equal(aviso.FechaEquipo, adelantado.FechaDelEquipo);                               // y lo que se confirma es la fecha del equipo
+        Assert.Same(aviso, adelantado.FechaAdelantada);
         var confirmada = Estado("reloj_confirmar");
         Assert.Empty(confirmada.BanderasActivas);
         Assert.Empty(confirmada.AvisosActivos);

@@ -84,7 +84,11 @@ public sealed class ReglasDeLicenciaTests
 
         Assert.Equal((AvisosDeLicencia.Gracia, TonoDeAviso.Atencion), (ReglasDeLicencia.Banner(Fixture("estado_gracia"))!.Aviso.Codigo, ReglasDeLicencia.Banner(Fixture("estado_gracia"))!.Tono));
         Assert.Equal(AvisosDeLicencia.LiberacionPendiente, ReglasDeLicencia.Banner(Fixture("estado_liberacion_pendiente"))!.Aviso.Codigo);
-        Assert.Equal(AvisosDeLicencia.RelojSospechoso, ReglasDeLicencia.Banner(Fixture("estado_reloj_salto"))!.Aviso.Codigo);
+        var adelantada = ReglasDeLicencia.Banner(Fixture("estado_reloj_adelantado"))!;                                  // Q-L13: un error, y con las dos fechas
+        Assert.Equal((AvisosDeLicencia.RelojAdelantado, TonoDeAviso.Fuerte), (adelantada.Aviso.Codigo, adelantada.Tono));
+        Assert.Contains("está adelantada", adelantada.Texto);
+        Assert.Contains("Corrígela", adelantada.Texto);
+        Assert.EndsWith("confirmarla.", adelantada.Texto);
         Assert.Equal(AvisosDeLicencia.HuellaParcial, ReglasDeLicencia.Banner(Fixture("estado_huella_parcial"))!.Aviso.Codigo);
         var porVencer = ReglasDeLicencia.Banner(Fixture("estado_por_vencer_y_cupo"))!;
         Assert.Equal((AvisosDeLicencia.PorVencer, TonoDeAviso.Informativo), (porVencer.Aviso.Codigo, porVencer.Tono));     // 12 días: informa; con 7 o menos, atención
@@ -121,6 +125,7 @@ public sealed class ReglasDeLicenciaTests
             [
                 new AvisoDeLicencia("aviso_que_no_conozco"),
                 new AvisoDeLicencia(AvisosDeLicencia.IntegridadAlterada),
+                new AvisoDeLicencia(AvisosDeLicencia.RelojAdelantado),
                 new AvisoDeLicencia(AvisosDeLicencia.HuellaParcial),
                 new AvisoDeLicencia(AvisosDeLicencia.RelojSospechoso),
                 new AvisoDeLicencia(AvisosDeLicencia.Cupo, Tipo: "usuarios", EnUso: 95, Limite: 100, Porcentaje: 95),
@@ -131,8 +136,8 @@ public sealed class ReglasDeLicenciaTests
             ],
         };
         var orden = ReglasDeLicencia.AvisosDelBanner(e).Select(a => a.Codigo + (a.Tipo is null ? string.Empty : ":" + a.Tipo)).ToArray();
-        Assert.Equal(new[] { "gracia", "por_vencer", "cupo:usuarios", "cupo:equipos", "reloj_sospechoso", "huella_parcial", "integridad_alterada", "aviso_que_no_conozco" }, orden);
-        Assert.Equal(7, ReglasDeLicencia.Banner(e)!.Mas);                                // el vacío no cuenta
+        Assert.Equal(new[] { "reloj_adelantado", "gracia", "por_vencer", "cupo:usuarios", "cupo:equipos", "reloj_sospechoso", "huella_parcial", "integridad_alterada", "aviso_que_no_conozco" }, orden);
+        Assert.Equal(8, ReglasDeLicencia.Banner(e)!.Mas);                                // el vacío no cuenta
     }
 
     [Theory]
@@ -146,6 +151,7 @@ public sealed class ReglasDeLicenciaTests
     [InlineData(AvisosDeLicencia.Cupo, null, null, 92, TonoDeAviso.Informativo)]
     [InlineData(AvisosDeLicencia.Cupo, null, null, 100, TonoDeAviso.Atencion)]
     [InlineData(AvisosDeLicencia.RelojSospechoso, null, null, null, TonoDeAviso.Informativo)]
+    [InlineData(AvisosDeLicencia.RelojAdelantado, null, null, null, TonoDeAviso.Fuerte)]
     [InlineData(AvisosDeLicencia.HuellaParcial, null, null, null, TonoDeAviso.Informativo)]
     [InlineData(AvisosDeLicencia.IntegridadAlterada, null, null, null, TonoDeAviso.Atencion)]
     public void ElTonoDeCadaAviso(string codigo, int? dias, bool? urgente, int? porcentaje, TonoDeAviso tono) =>
@@ -185,7 +191,8 @@ public sealed class ReglasDeLicenciaTests
             Assert.True(ReglasDeLicencia.OfrecerCopia(e), nombre);
             Assert.True(ReglasDeLicencia.OfrecerLiberar(e), nombre);
         }
-        Assert.True(ReglasDeLicencia.OfrecerConfirmarFecha(Fixture("estado_reloj_salto")));
+        Assert.True(ReglasDeLicencia.OfrecerConfirmarFecha(Fixture("estado_reloj_adelantado")));          // la salida cuando la fecha del equipo ES la correcta (Q-L13)
+        Assert.True(ReglasDeLicencia.OfrecerConfirmarFecha(Fixture("estado_activa") with { Banderas = [BanderasDeLicencia.RelojSospechoso] }));
         Assert.False(ReglasDeLicencia.OfrecerConfirmarFecha(Fixture("estado_reloj_retroceso")));
         Assert.False(ReglasDeLicencia.OfrecerConfirmarFecha(Fixture("reloj_confirmar")));
         Assert.False(ReglasDeLicencia.OfrecerActivacion(null));
