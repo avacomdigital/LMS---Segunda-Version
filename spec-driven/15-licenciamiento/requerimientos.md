@@ -213,7 +213,7 @@ Reglas, en orden:
 2. **La huella no coincide** (≥ k factores): `en_gracia` (motivo `huella_distinta`) desde la primera vez que se observó, por `gracia_dias`; después, `degradada`.
 3. **Vigente** (`ahora ≤ vence`): `liberacion_pendiente` si lo declara la licencia (plazo = `liberacion_dias` desde que se instaló esa serie, sin pasar de `vence`); `reactivada` si pasaron ≤ 72 h desde una reactivación; si no, `activa`.
 4. **Vencida**: `en_gracia` hasta `vence + gracia_dias`; después, `degradada`.
-5. **Degradar exige histéresis** (la condición sostenida ≥ 24 h) y que un salto de reloj sospechoso **hacia adelante** no esté pendiente de confirmar (se aplaza a lo más 72 h: una sospecha no puede ser una palanca para no degradar nunca). **Retroceder el reloj no aplaza nada**: el vencimiento se mide contra la marca alta.
+5. **Degradar exige histéresis** (la condición sostenida ≥ 24 h) y que un salto de reloj sospechoso **hacia adelante** no esté pendiente de confirmar (se aplaza a lo más 72 h **de tiempo real**: una sospecha no puede ser una palanca para no degradar nunca). **Retroceder el reloj no aplaza nada ni lo congela**: el vencimiento se mide contra el instante confiable, que nunca baja de la marca alta **y avanza con el reloj monótono** aunque el de pared esté atrasado (LIC-B-25: una fecha atrasada, o una pila de BIOS agotada, no alarga una licencia).
 
 ### 5.5 · La política es un dato (valores provisionales, Q-L1)
 
@@ -269,7 +269,7 @@ Identificadores crudos del equipo (sólo hashes con clave de producto) · claves
 | LIC-D-07 | **Debe** no llevar identificadores crudos ni datos de personas en solicitudes, asientos, eventos ni logs | P-04 · P-16 | Un recorrido por los archivos y la bitácora no encuentra el `MachineGuid`, el UUID de SMBIOS ni una serie en claro | LT-06 |
 | LIC-D-08 | **Debe** calcular el estado con una función pura y **no guardarlo** | P-05 | Borrar la memoria y las filas derivadas devuelve el mismo estado; la tabla de estados × reloj × gracia está completa | LT-07 |
 | LIC-D-09 | **Debe** guardar el historial de sólo inserción y **volver a verificar la firma al arrancar** | P-05 · R-04 | Un `UPDATE` o `DELETE` sobre `m18_licencia` falla; una fila con el archivo alterado se ignora y deja asiento | LT-08 |
-| LIC-D-10 | **Debe** tener marca alta monótona con trigger y anclas externas | P-06 | El trigger impide bajarla; restaurar una base vieja no rebobina el vencimiento; retroceder el reloj no alarga la licencia | LT-09 · LT-28 |
+| LIC-D-10 | **Debe** tener marca alta monótona con trigger y anclas externas | P-06 | El trigger impide bajarla; restaurar una base vieja no rebobina el vencimiento; retroceder el reloj no alarga ni congela la licencia (LIC-B-25) | LT-09 · LT-28 |
 | LIC-D-11 | **Debe** guardar la política como dato; ninguna variable de entorno puede, en un nodo instalado, acortar la evaluación, ampliar límites ni apagar la licencia | P-13 · P-12 | Con `AVACOM_LMS_ENTORNO=pruebas` en `backend.env` de un layout de producción el nodo **sigue evaluando** la licencia | LT-10 · LT-15 |
 | LIC-D-12 | **Debe** proteger la llave privada del nodo (DPAPI de máquina) y no guardarla en la base | P-04 | La base no contiene la llave privada; sin la carpeta de estado no se puede firmar una solicitud | LT-11 |
 | LIC-D-13 | **Debe** respetar un escritor por tabla y no tener claves foráneas fuera de `m18_*` | R-08 | `test_arquitectura.py`: dominio y aplicación sin Django; sin FK ajenas; sin lectura ni escritura de `m01_*`/`m09_*` | LT-12 |
@@ -477,6 +477,7 @@ Las variables `AVACOM_LICENCIA_*` sólo cambian **dónde viven los archivos y co
 | LIC-B-22 | **Debe** abrir la ventana de evaluación al actualizar un nodo ya instalado | P-14 | Un nodo con datos y sin licencia queda en `sin_licencia` con 30 días y nadie queda bloqueado | LT-34 |
 | LIC-B-23 | **Debe** no cambiar ninguna prueba existente | R-14 | La suite completa del backend en verde **sin licencia** | LT-35 |
 | LIC-B-24 | **Debe** entregar la copia de la licencia vigente (CAP-111) | CAP-111 | `GET copia/` devuelve el archivo firmado idéntico al instalado y una hoja de texto | LT-36 |
+| LIC-B-25 | **Debe** hacer que el instante confiable **avance con el reloj monótono del proceso** aunque el reloj de pared esté por debajo de la marca alta, y que el aplazamiento por un salto sospechoso se mida con ese mismo instante | P-06 · H-13 · H-14 | Con una licencia de 30 días de vigencia y 30 de gracia, atrasar la fecha 100 días degrada a los ~51 días reales (no a los 151); adelantar la fecha y devolverla aplaza la degradación 72 horas reales (no lo que duró el salto) y un nodo degradado no recupera sus módulos; tras un reinicio sólo se pierde el tiempo apagado | LT-28 |
 
 
 ---
@@ -727,7 +728,7 @@ El detalle, con resultados y con lo que **no** se pudo comprobar, queda en `03-p
 | LT-16…LT-21 | API por rol · activar, inspeccionar y renovar · solicitud · liberación · reactivación (TST-060) · transiciones y avisos |
 | LT-22…LT-24 | **Tabla de rutas derivada del resolvedor** (cada intocable responde igual con la licencia degradada) · fallo interno → pasa · **0 consultas SQL** |
 | LT-25…LT-27 | Cupo de usuarios (visitantes y retirados no cuentan; importación fila por fila) · cupo de equipos (examen en tableta nueva funciona; `MASTER` no cuenta) · concurrencia desde la licencia |
-| LT-28…LT-30 | Reloj (retroceso, adelanto, respaldo viejo, tolerancia de `desde`) · programador (35 clientes sin «database is locked») · bitácora sin contenido y bloqueos agregados |
+| LT-28…LT-30 | Reloj (retroceso **y congelamiento**, adelanto **y devolución**, respaldo viejo, tolerancia de `desde`) · programador (35 clientes sin «database is locked») · bitácora sin contenido y bloqueos agregados |
 | LT-31…LT-36 | Migración idempotente · `/health/` aditivo · nodo sin organización · evaluación al actualizar · **suite completa sin cambios** · copia |
 | LT-40…LT-44 | UIA de OPS: pantalla Licencia y tercios · flujo de tres pasos con unidad virtual · banner por rol y sin clase · teselas, H-01 y H-02 · Core y Ops con respuestas reales capturadas |
 | LT-45…LT-48 | Instalador conserva la carpeta de estado · cero internet · Student sin lógica y kiosco intacto · contenido del paquete (sin emisor, sin llave de desarrollo, sin privadas, **con** pública de producción) |
