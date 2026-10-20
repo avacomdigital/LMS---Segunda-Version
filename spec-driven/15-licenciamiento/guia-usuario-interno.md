@@ -195,7 +195,7 @@ Se hace **una vez**, con el CTO presente, en un equipo **sin red**.
 | «La firma de la solicitud no es válida» | El archivo se dañó o se copió como texto con un carácter de más | Pide a tu contacto que **vuelva a generar** la solicitud (no hay que reparar nada) |
 | La solicitud dice **nivel instalacion** | El equipo trae datos de fábrica sin identificar (SMBIOS «To be filled by O.E.M.») | Se puede emitir. Avisa que es la huella más débil y que no borren la carpeta de licencia |
 | La solicitud ya fue atendida | El colegio mandó dos veces la misma solicitud | La herramienta lo detecta por el registro. Si hace falta de nuevo, usa `--reemitir` (queda una **serie nueva**) |
-| El colegio dice «aún no vigente» | El reloj del computador está muy atrasado | Ya empezaste la vigencia un día antes; pídele que corrija la fecha y la hora del equipo |
+| El colegio dice «aún no vigente» | El reloj del computador está atrasado **más de dos días** | La licencia ya empieza un día antes y el equipo tolera otro día más; pídele que corrija la fecha y la hora del equipo y que vuelva a activar (no hace falta emitir otra) |
 | El colegio dice «otra licencia» | Cargó una licencia con otro código distinto de la instalada | Es un cambio de licencia: antes hay que **liberar** el equipo (caso 5.3) |
 | El colegio dice «actualiza AVACOM OPS» | La licencia usa algo que su versión no entiende | Pídele que actualice el instalador y vuelva a cargar |
 | El colegio dice «llave desconocida» | La licencia se firmó con una llave que su instalador no trae todavía | Revisa la rotación de llaves (§6, paso 5) |
