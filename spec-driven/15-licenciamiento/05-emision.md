@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | **Construido y probado** (2026-10-20): `tools/licencias/` con 95 pruebas en verde y la carpeta portátil armada y ensayada. **Sin llave de producción todavía**: la ceremonia la hace el CTO (Q-L3) |
+| Estado | **Construido y probado** (2026-10-20): `tools/licencias/` con 100 pruebas en verde y la carpeta portátil armada y ensayada. **Sin llave de producción todavía**: la ceremonia la hace el CTO (Q-L3) |
 | Qué es | El «keygen» interno de AVACOM: lee la solicitud (`.avreq`) de un colegio y firma su licencia (`.avlic`). Es una herramienta de consola; **jamás viaja en el instalador ni en el APK** |
 | Quién lo usa | Personal de AVACOM que emite licencias. La guía paso a paso es [guia-usuario-interno.md](guia-usuario-interno.md) |
 | Requisitos que cumple | `LIC-E-01…15` de [requerimientos.md](requerimientos.md) §8 |
@@ -16,7 +16,7 @@
 tools/licencias/
 ├── avacom_licencias/
 │   ├── dominio_nodo.py     carga el dominio PURO del nodo (licenciamiento.dominio): vendor/ o backend/
-│   ├── llaves.py           par Ed25519; la privada cifrada con frase de paso (.avkey); la pública en texto (.pub)
+│   ├── llaves.py           par Ed25519; la privada cifrada con frase de paso (.avkey); la pública en texto (.pub) y en el formato del nodo (.produccion.json)
 │   ├── emision.py          fechas, construir la Licencia, firmar y volver a leer lo firmado con el lector del nodo
 │   ├── registro.py         el registro de emisiones, de sólo añadir y encadenado
 │   ├── planes.py           los planes como dato (planes/*.json)
@@ -25,7 +25,7 @@ tools/licencias/
 │   ├── cli.py              los subcomandos
 │   └── guiado.py           el menú numerado
 ├── planes/                 evaluacion · anual-aula · anual-sin-tope (valores provisionales, Q-L1)
-├── tests/                  95 pruebas
+├── tests/                  100 pruebas
 ├── iniciar.py              punto de entrada de los .bat
 ├── Emitir-Licencia.bat     modo guiado (doble clic)
 ├── avacom-licencias.bat    línea de comandos
@@ -42,7 +42,7 @@ tools/licencias/
 
 | Comando | Qué hace | Opciones que importan |
 |---|---|---|
-| `claves generar` | Ceremonia: crea `<kid>.avkey` (privada cifrada) y `<kid>.pub` | `--kid`, `--salida`. No sobrescribe nada; frase de al menos 16 caracteres, escrita dos veces |
+| `claves generar` | Ceremonia: crea `<kid>.avkey` (privada cifrada), `<kid>.pub` y `<kid>.produccion.json` (la pública en el formato del nodo) | `--kid` (hasta 32 caracteres: lo que acepta el cargador del nodo), `--salida`. No sobrescribe nada; frase de al menos 16 caracteres, escrita dos veces |
 | `claves ver` | Comprueba que la privada abre y firma | `--privada` |
 | `solicitud ver` | Verifica la firma del nodo y resume la solicitud, con avisos | un `.avreq` o su texto `AVQ1.…` |
 | `emitir` | Firma la licencia | `--solicitud`, `--privada`, `--aula`, `--plan`, `--hasta` o `--meses`, `--gracia`, `--equipos`, `--usuarios`, `--normal`, `--pico`, `--capacidades`, `--tipo`, `--serie`, `--licencia`, `--reemplaza`, `--liberacion-pendiente`, `--salida`, `--registro`, `--reemitir` |
@@ -76,7 +76,8 @@ Si la frase es equivocada, el archivo de la llave está dañado o la verificaci�
 | `<aula>-AAAAMMDD-s<serie>.avlic` | La licencia (≈ 380 bytes). Binaria, firmada con Ed25519 (formato de [requerimientos.md](requerimientos.md) §5.1) |
 | `<aula>-AAAAMMDD-s<serie>.txt` | Hoja de entrega (UTF-8): aula, licencia, serie, vigencia, gracia, límites, módulos, nombre del archivo, SHA-256, **los cuatro pasos del colegio** y la variante de texto `AVL1.…` |
 | `<kid>.avkey` | Llave privada **cifrada** (JSON): `formato`, `version`, `kid`, `publica`, `kdf` (scrypt N=2^15, r=8, p=1, sal), `cifrado` (AES-256-GCM, nonce, datos). El `kid` y la pública van como **dato asociado**: cambiar uno impide abrirla |
-| `<kid>.pub` | Llave pública en texto: `kid`, `publica` (hex), `sha256`, `creada`. Es lo único que se entrega al equipo de desarrollo |
+| `<kid>.pub` | Llave pública en texto: `kid`, `publica` (hex), `sha256`, `creada` |
+| `<kid>.produccion.json` | La misma pública en el formato de `backend/licenciamiento/claves/produccion.json`: `{"version": 1, "claves": [{"kid", "publica", "estado": "vigente"}]}`. Es lo que se **pega o se une** a ese archivo para que el nodo reconozca la llave; junto con el `.pub`, **lo único que se entrega al equipo de desarrollo**. `verificar` también lo lee (y **nunca** toma por buena el `desarrollo.json` del nodo) |
 | `registro-emisiones.jsonl` | Un renglón por emisión (§5) |
 
 ## 5 · El registro de emisiones
@@ -105,10 +106,10 @@ Se hace **una vez**, con el CTO presente, en un equipo **sin red** y con la memo
 | # | Paso | Evidencia |
 |---|---|---|
 | 1 | Abrir una consola en la carpeta de la herramienta. Confirmar que el equipo **no tiene red** | Nota en el acta |
-| 2 | `avacom-licencias claves generar --kid prod-2026-1 --salida <USB>\claves`; elegir y repetir la frase de paso (≥ 16 caracteres) | Archivos `prod-2026-1.avkey` y `prod-2026-1.pub` |
+| 2 | `avacom-licencias claves generar --kid prod-2026-1 --salida <USB>\claves`; elegir y repetir la frase de paso (≥ 16 caracteres) | Archivos `prod-2026-1.avkey`, `prod-2026-1.pub` y `prod-2026-1.produccion.json` |
 | 3 | `avacom-licencias claves ver --privada <USB>\claves\prod-2026-1.avkey`: debe decir «abre» y «firma de prueba correcta» | La **huella pública** (SHA-256) anotada en el acta |
 | 4 | Dos copias de la privada **cifrada** en dos memorias distintas, en dos lugares distintos. La frase de paso va **aparte** (sobre cerrado, caja fuerte) | Acta con dónde está cada cosa (sin la frase) |
-| 5 | Entregar **sólo** `prod-2026-1.pub` a desarrollo para `backend/licenciamiento/claves/`; comparar la huella pública en el repositorio con la del acta | La huella coincide |
+| 5 | Entregar **sólo** `prod-2026-1.pub` y `prod-2026-1.produccion.json` a desarrollo para `backend/licenciamiento/claves/produccion.json` (la entrada con `estado: "vigente"`); comparar la huella pública en el repositorio con la del acta | La huella coincide |
 | 6 | Construir un instalador **con** esa pública y comprobar que activa una licencia emitida con la herramienta (`verificar` y una activación real) | `03-pruebas.md` |
 | 7 | Reconstruir `Build-Emisor.ps1` si el dominio del nodo cambió | Versión de la carpeta portátil |
 
@@ -132,14 +133,14 @@ El script **falla** si el paquete contiene una llave privada, la semilla de desa
 
 **Si el dominio del nodo cambia** (por ejemplo, otra versión del formato), hay que **reconstruir** la carpeta: el `vendor/` es una copia.
 
-## 9 · Pruebas (95)
+## 9 · Pruebas (100)
 
 | Archivo | Qué comprueba |
 |---|---|
-| `test_llaves.py` (8) | Crear y abrir; la privada **no** está en claro en el archivo; frase equivocada; el `kid` y la pública atados al cifrado; archivos que no son llaves; nombres y frases inválidos; la pública se comprueba |
+| `test_llaves.py` (11) | Crear y abrir; la privada **no** está en claro en el archivo; frase equivocada; el `kid` y la pública atados al cifrado; archivos que no son llaves; nombres y frases inválidos; el nombre cabe en lo que acepta el nodo (32); la entrada para el nodo es el formato de `produccion.json` y se lee como la lee el nodo; la pública se comprueba |
 | `test_registro.py` (6) | Cadena íntegra; alterar, quitar y reordenar rompen la cadena y se niega a seguir; renglón ilegible; consultas |
 | `test_emision.py` (19) | Fechas (desde/vence, meses con calendario, vigencia pasada o de más de 25 años); **el margen contra un reloj atrasado** (activa hasta 38 h de atraso; más allá cae a la evaluación, H-08); validaciones; **400 licencias al azar que el lector del nodo lee idéntico**; un archivo distinto de lo pedido o firmado con otra llave no se entrega; **3000 mutaciones y todos los truncamientos rechazados**; liberación pendiente entendida por el estado del nodo; avisos |
-| `test_cli.py` (47) | Licencia nueva de punta a punta; sin la palabra de confirmación no se crea nada; plan sin tope pide dos confirmaciones; límites y módulos a mano; opciones inválidas; solicitud alterada, ajena o repetida; frase equivocada sin rastro; registro alterado; no se pisan archivos; **sin red**; ni la privada ni la frase quedan en ningún archivo; renovación; serie desconocida; **cambio de equipo** con `.avrel` (de otro equipo, del equipo emitido, serie conocida, alterado) y con liberación pendiente; `verificar` (otra llave, alterado, texto, huella contra la solicitud); `solicitud ver` (instalación avisa, sin hashes crudos, reloj atrasado); registro y planes; **rotación de llaves** |
+| `test_cli.py` (49) | Licencia nueva de punta a punta; sin la palabra de confirmación no se crea nada; plan sin tope pide dos confirmaciones; límites y módulos a mano; opciones inválidas; solicitud alterada, ajena o repetida; frase equivocada sin rastro; registro alterado; no se pisan archivos; **sin red**; ni la privada ni la frase quedan en ningún archivo; renovación; serie desconocida; **cambio de equipo** con `.avrel` (de otro equipo, del equipo emitido, serie conocida, alterado) y con liberación pendiente; `verificar` (otra llave, alterado, texto, huella contra la solicitud); `solicitud ver` (instalación avisa, sin hashes crudos, reloj atrasado); registro y planes; **rotación de llaves** |
 | `test_guiado.py` (8) | Emitir desde el menú, rutas arrastradas con comillas, cancelar, opciones inexistentes, un error no cierra la herramienta, cambio de computador, verificar, fin de la entrada |
 | `test_contenido.py` (7) | Sin imports de las pruebas del nodo, sin semilla de desarrollo, sin llaves PEM/OpenSSH, sin `.avkey`; ningún módulo toca la red; **no arrastra Django**; los planes de fábrica son válidos y emitibles; un plan de desarrollo o con datos malos se rechaza |
 

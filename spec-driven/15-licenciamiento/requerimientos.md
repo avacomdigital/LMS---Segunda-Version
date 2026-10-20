@@ -130,7 +130,7 @@ magic(4) · versión(u16) · largo del kid(u8) · kid · [ etiqueta(u16) · larg
 
 - Todo va en orden de red (big endian). `magic`: `AVLC` licencia, `AVRQ` solicitud, `AVRL` liberación. **Versión = 1**; ni una menor (degradación) ni una mayor (no se entiende).
 - La **firma Ed25519** cubre **todo lo anterior a ella** (magic, versión y `kid` incluidos). El algoritmo está **fijado**: no existe un campo `alg` que negociar.
-- `kid`: 1–64 caracteres `[a-z0-9._-]`. En una **licencia** elige entre las llaves públicas que el nodo conoce (`prod-2026-1`). En una **solicitud** o **liberación** el `kid` **es la llave pública del nodo** en hexadecimal (64 caracteres) y se verifica contra sí misma: demuestra que quien pide posee esa llave y que nadie tocó la huella en el camino.
+- `kid`: 1–64 caracteres `[a-z0-9._-]` en el formato. En una **licencia** elige entre las llaves públicas que el nodo conoce (`prod-2026-1`; el cargador del nodo acepta nombres de hasta 32 caracteres, y es el límite que respeta el emisor). En una **solicitud** o **liberación** el `kid` **es la llave pública del nodo** en hexadecimal (64 caracteres) y se verifica contra sí misma: demuestra que quien pide posee esa llave y que nadie tocó la huella en el camino.
 - Las etiquetas van en orden **estrictamente ascendente**. El bit 15 marca una etiqueta **crítica**: quien no la entiende **rechaza** el archivo; una no crítica desconocida se ignora.
 - Topes: archivo ≤ 16 KiB (una licencia real mide < 600 bytes), valor ≤ 4096, ≤ 32 etiquetas.
 - La variante de texto es **estricta**: sólo la forma canónica (sin espacios, sin relleno, sin bits sobrantes). Una variante «equivalente» no es otro texto válido.
@@ -181,7 +181,7 @@ Reglas de forma: `0 < desde < vence`, vigencia ≤ 25 años, `serie ≥ 1`, `gra
 | Llave | Dónde vive | Quién la usa |
 |---|---|---|
 | **Emisión** (privada, Ed25519) | **Fuera** del repositorio y de todo equipo de cliente (HSM, YubiKey o equipo sin red). Nunca en CI, logs ni chat | El emisor (§8) |
-| **Emisión** (públicas, ≥ 2) | `backend/licenciamiento/claves/` (la vigente y la siguiente, para rotar) | El nodo, para verificar `.avlic` |
+| **Emisión** (públicas, ≥ 2) | `backend/licenciamiento/claves/produccion.json`: `{"version": 1, "claves": [{"kid", "publica", "estado": "vigente" \| "siguiente" \| "retirada"}]}` (la vigente y la siguiente, para rotar; las `retirada` se ignoran). **Hoy está vacío**: la ceremonia es del CTO | El nodo, para verificar `.avlic` |
 | **Desarrollo** `dev-1`, `dev-2` | Derivadas de una semilla **pública**, sólo en `licenciamiento.tests`. El nodo las acepta **únicamente** si el entorno es de desarrollo o de pruebas | Las pruebas |
 | **Nodo** (par Ed25519 propio) | La privada, **protegida con DPAPI de máquina** en la carpeta de estado, nunca en la base; la pública, en `m18_nodo` y como `kid` de cada `.avreq` y `.avrel` | El nodo, para firmar sus solicitudes y liberaciones |
 
@@ -608,7 +608,7 @@ Herramienta de **consola** en `tools/licencias/` (raíz del repositorio), para e
 | Comando (propuesto) | Para qué |
 |---|---|
 | `avacom-licencias` (sin argumentos) | **Modo guiado**: un menú numerado con las tareas de abajo, para personal no técnico |
-| `claves generar --kid prod-2026-1 --salida <carpeta>` | **Ceremonia de llaves**: crea el par Ed25519; la privada **cifrada con frase de paso** (`<kid>.avkey`) y la pública (`<kid>.pub`) para `backend/licenciamiento/claves/` |
+| `claves generar --kid prod-2026-1 --salida <carpeta>` | **Ceremonia de llaves**: crea el par Ed25519; la privada **cifrada con frase de paso** (`<kid>.avkey`) y la pública en texto (`<kid>.pub`) y en el formato de `backend/licenciamiento/claves/produccion.json` (`<kid>.produccion.json`) |
 | `claves ver` | Muestra el `kid` y la huella (SHA-256) de la pública; comprueba que la privada abre y firma |
 | `solicitud ver <archivo.avreq \| AVQ1.…>` | Verifica la firma del nodo y muestra nivel, `k` de `n`, versión del nodo, aula, fecha, y si pide **renovar** una licencia. **Sin hashes crudos** |
 | `emitir …` | Firma una licencia a partir de una solicitud y un **plan** (§8.2) |

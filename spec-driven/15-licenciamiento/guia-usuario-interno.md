@@ -173,10 +173,10 @@ Plan `evaluacion`: tipo evaluación, un mes, gracia corta. Sólo con aprobación
 
 Se hace **una vez**, con el CTO presente, en un equipo **sin red**.
 
-1. Genera el par: `avacom-licencias claves generar --kid prod-2026-1 --salida F:\claves`. Elige la frase de paso (mínimo 16 caracteres) y escríbela **dos veces**. Se crean `prod-2026-1.avkey` (la privada, **cifrada**) y `prod-2026-1.pub` (la pública).
+1. Genera el par: `avacom-licencias claves generar --kid prod-2026-1 --salida F:\claves`. Elige la frase de paso (mínimo 16 caracteres) y escríbela **dos veces**. Se crean `prod-2026-1.avkey` (la privada, **cifrada**), `prod-2026-1.pub` (la pública) y `prod-2026-1.produccion.json` (la misma pública en el formato que lee el nodo). El nombre de la llave (kid) admite hasta 32 caracteres.
 2. Comprueba: `avacom-licencias claves ver --privada F:\claves\prod-2026-1.avkey`. Debe decir que abre y que firma de prueba.
 3. **Respaldos**: dos copias de la privada **cifrada** en dos memorias USB distintas, guardadas en **lugares distintos**. La frase de paso se guarda aparte (sobre cerrado, caja fuerte).
-4. **Publica la pública**: entrega `prod-2026-1.pub` al equipo de desarrollo para ponerla en `backend/licenciamiento/claves/` y en el instalador. Una licencia sólo se puede verificar en los equipos cuyo instalador ya trae esa pública.
+4. **Publica la pública**: entrega `prod-2026-1.pub` y `prod-2026-1.produccion.json` al equipo de desarrollo: la entrada del `.produccion.json` se une a `backend/licenciamiento/claves/produccion.json` y viaja en el instalador. Una licencia sólo se puede verificar en los equipos cuyo instalador ya trae esa pública. (Nunca se entrega ni se usa la llave de desarrollo: el emisor ni siquiera la reconoce.)
 5. **Rotación** (cada año o si hay sospecha): genera `prod-2027-1`, publica su pública en un instalador **antes** de emitir con ella, y sigue emitiendo con la vigente hasta que los nodos la traigan. Los nodos conservan las públicas anteriores mientras haya licencias vivas firmadas con ellas.
 6. **Pérdida o robo de la privada**: avisa **de inmediato** al CTO. Se genera una llave nueva, se publica un instalador que la traiga y se **reemiten** las licencias firmadas con la anterior.
 
