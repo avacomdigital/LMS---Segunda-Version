@@ -6,7 +6,7 @@
 | Qué vas a hacer | Recibir la **solicitud** (`.avreq`) del colegio, revisarla, **firmar** una licencia (`.avlic`) con la herramienta **AVACOM Emisor de Licencias** y entregársela. Unos 10–15 minutos |
 | Herramienta | `tools/licencias/` (el emisor o «keygen» interno). Sólo para AVACOM: **nunca** viaja en el instalador del colegio |
 | Qué dice el sistema detrás | [requerimientos.md](requerimientos.md) §8 y el manual técnico `05-emision.md` |
-| Estado | **Guía de trabajo.** Los valores comerciales (planes, días, límites) son **provisionales** hasta que el CTO conteste Q-L1 |
+| Estado | **Guía de trabajo.** Los valores comerciales (planes, días, límites) son **provisionales** (CTO, 2026-10-20, Q-L1): por ahora un aula tiene como máximo **60 equipos y 1200 usuarios** y la gracia son **30 días corridos exactos**. La herramienta no emite nada que pase de ahí |
 
 ---
 
@@ -27,7 +27,7 @@
 | 4 | **Lee el resumen** antes de escribir la palabra de confirmación | Es la única revisión humana antes de firmar |
 | 5 | Sólo se emiten licencias de tipo `produccion` y `evaluacion`. **Nunca** `desarrollo` | Las de desarrollo no se firman con la llave de producción |
 | 6 | Cada emisión deja **un renglón** en el registro. No lo edites ni lo borres | Es tu comprobante y el de la conciliación mensual |
-| 7 | Plan y límites salen del **contrato**, no de lo que pida el cliente por teléfono | Evita emitir de más |
+| 7 | Plan y límites salen del **contrato**, no de lo que pida el cliente por teléfono. **Un aula no pasa de 60 equipos y 1200 usuarios** y la gracia es **siempre de 30 días** (decisión del CTO, Q-L1 y Q-L16): la herramienta lo rechaza aunque lo escribas en una opción. Si un contrato pide más, no se «fuerza» con otra opción: lo decide el CTO y se cambia `planes/reglas.json` | Evita emitir de más |
 | 8 | Si la solicitud no verifica, **no se emite**: pide una nueva | Una firma inválida significa un archivo alterado o dañado |
 
 ## 3 · Lo que necesitas
@@ -91,14 +91,14 @@ RESUMEN DE LA LICENCIA
   Licencia ........ 9a944ae0… · serie 1 (licencia nueva)
   Vigencia ........ 2026-10-19 → 2027-10-31 (UTC)
   Gracia .......... 30 días
-  Límites ......... 55 equipos · 1200 usuarios · 50 concurrentes normales · 100 en pico
+  Límites ......... 60 equipos · 1200 usuarios · 50 concurrentes normales · 100 en pico
   Módulos ......... todos (*)
   Huella .......... nivel hardware · 3 de 4 piezas
   Llave ........... prod-2026-1
 Para firmar, escribe EMITIR y pulsa Intro:
 ```
 
-   Si hay algo que debas saber (huella de nivel instalación, el reloj del colegio atrasado, una licencia de evaluación, un límite sin tope), el resumen trae debajo una sección **AVISOS**. Léela.
+   Si hay algo que debas saber (huella de nivel instalación, el reloj del colegio atrasado, una licencia de evaluación, un límite de concurrentes sin tope), el resumen trae debajo una sección **AVISOS**. Léela. (Equipos y usuarios **no** pueden quedar sin tope ni pasar de 60 y 1200: la herramienta se detiene antes del resumen con «El tamaño máximo de un aula es de 60 equipos y 1200 usuarios».)
 
 5. Si **lo escribes**, firma, **vuelve a leer lo firmado con el mismo lector que usará el computador del colegio** y deja un renglón en el registro. Si escribes otra cosa, no se crea ningún archivo ni ningún renglón.
 
@@ -167,7 +167,18 @@ El sistema no puede saber, sin internet, que una licencia está activa en otro c
 
 ### 5.6 · Licencia de evaluación
 
-Plan `evaluacion`: tipo evaluación, un mes, gracia corta. Sólo con aprobación comercial. La herramienta te avisa «tipo evaluación» en el resumen. No la mandes a un cliente de producción por error.
+Plan `evaluacion`: tipo evaluación, un mes y, como todas, **30 días de gracia** (Q-L16: ya no hay una gracia «corta»). Sólo con aprobación comercial. La herramienta te avisa «tipo evaluación» en el resumen. No la mandes a un cliente de producción por error.
+
+### 5.7 · Los planes que existen
+
+`avacom-licencias planes` los lista y repite las **reglas del CTO** que ningún plan ni opción puede contradecir (`planes/reglas.json`):
+
+| Regla | Valor | De dónde sale |
+|---|---|---|
+| Gracia | **30 días corridos exactos** (después de vencer; el día 31 pasa a «degradada») | Q-L16 |
+| Tamaño máximo de un aula | **60 equipos y 1200 usuarios** en una misma pantalla | Q-L1 (provisional) |
+
+El plan **`anual-aula`** (el de producción) trae 60 equipos y 1200 usuarios. El plan `anual-sin-tope` **se retiró**: «sin tope» en equipos o usuarios ya no se puede emitir. Lo demás de los planes (concurrentes, módulos, meses) sigue siendo provisional.
 
 ## 6 · La ceremonia de claves (sólo la primera vez, y al rotar)
 
@@ -196,6 +207,8 @@ Se hace **una vez**, con el CTO presente, en un equipo **sin red**.
 | La solicitud dice **nivel instalacion** | El equipo trae datos de fábrica sin identificar (SMBIOS «To be filled by O.E.M.») | Se puede emitir. Avisa que es la huella más débil y que no borren la carpeta de licencia |
 | La solicitud ya fue atendida | El colegio mandó dos veces la misma solicitud | La herramienta lo detecta por el registro. Si hace falta de nuevo, usa `--reemitir` (queda una **serie nueva**) |
 | El colegio dice «aún no vigente» | El reloj del computador está atrasado **más de dos días** | La licencia ya empieza un día antes y el equipo tolera otro día más; pídele que corrija la fecha y la hora del equipo y que vuelva a activar (no hace falta emitir otra) |
+| El colegio ve el **error «Fecha adelantada»** (en el menú y en Licencia, con la fecha del equipo y la que se esperaba) | La fecha del computador **saltó hacia el futuro** de golpe (pila de la placa, un cambio a mano, una zona horaria mal puesta). El nodo **no la acepta ni la guarda**: la licencia **no** se degrada ni se acorta a las 72 horas, sólo avisa hasta que la fecha concuerde (Q-L13) | **No hace falta emitir nada.** 1) Que corrija la fecha y la hora de Windows: el aviso se quita solo. 2) Si la fecha del equipo es la **correcta** (el equipo se había quedado atrás), que la **administración** pulse «Confirmar la fecha de hoy» en la pantalla Licencia. Las clases siguen todo el tiempo |
+| El colegio pregunta «¿hasta cuándo tengo gracia?» | La gracia son **30 días corridos exactos** después del vencimiento (una licencia que vence el 31 de octubre degrada el 30 de noviembre, a la misma hora), sin margen extra (Q-L16) | Dile la fecha exacta; el aviso «Está en gracia» de OPS cuenta los días que quedan |
 | El colegio dice «otra licencia» | Cargó una licencia con otro código distinto de la instalada | Es un cambio de licencia: antes hay que **liberar** el equipo (caso 5.3) |
 | El colegio dice «actualiza AVACOM OPS» | La licencia usa algo que su versión no entiende | Pídele que actualice el instalador y vuelva a cargar |
 | El colegio dice «llave desconocida» | La licencia se firmó con una llave que su instalador no trae todavía | Revisa la rotación de llaves (§6, paso 5) |
@@ -218,7 +231,8 @@ Se hace **una vez**, con el CTO presente, en un equipo **sin red**.
 | **Licencia** (`.avlic`) | El archivo que firma AVACOM. Dice qué puede hacer el aula y hasta cuándo |
 | **Liberación** (`.avrel`) | La prueba, firmada por el computador viejo, de que ya no usará la licencia |
 | **Serie** | Un número que sube con cada archivo de la misma licencia (1, 2, 3…). No se puede volver a una serie anterior |
-| **Gracia** | Los días en que el colegio sigue con todo funcionando después de vencer, antes de perder funciones |
+| **Gracia** | Los 30 días corridos exactos en que el colegio sigue con todo funcionando después de vencer, antes de perder funciones |
+| **Fecha adelantada** | El error que muestra OPS cuando la fecha del computador saltó hacia el futuro: la fecha no se acepta ni se guarda hasta que concuerde con la de hoy (o la administración la confirme) |
 | **Huella** | La identidad del computador maestro hecha con varias piezas (por ejemplo, 3 de 4 deben coincidir) |
 | **kid** | El nombre de la llave con que se firmó (`prod-2026-1`) |
 | **Degradada** | Se acabó la gracia: se apagan reportes, búsqueda, importación y ajustes avanzados. Las clases siguen |

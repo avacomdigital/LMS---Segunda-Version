@@ -157,6 +157,25 @@ public sealed class ReglasDeLicenciaTests
     public void ElTonoDeCadaAviso(string codigo, int? dias, bool? urgente, int? porcentaje, TonoDeAviso tono) =>
         Assert.Equal(tono, ReglasDeLicencia.TonoDe(new AvisoDeLicencia(codigo, Dias: dias, Urgente: urgente, Porcentaje: porcentaje)));
 
+    [Fact]
+    public void LaPantallaDeLicencia_DiceLaFechaAdelantadaConSusFechasYComoUnError()
+    {
+        var e = Fixture("estado_reloj_adelantado");
+        var texto = ReglasDeLicencia.TextoDeBandera(e, BanderasDeLicencia.RelojAdelantado);
+        Assert.Contains("está adelantada", texto);
+        Assert.Contains("el aula esperaba el", texto);                                  // las dos fechas, no la frase genérica
+        Assert.Contains("No se aceptó", texto);
+        Assert.Equal(TonoDeAviso.Fuerte, ReglasDeLicencia.TonoDeBandera(BanderasDeLicencia.RelojAdelantado));
+        // las demás banderas siguen como siempre
+        Assert.Equal(LicenciaTexto.Bandera(BanderasDeLicencia.HuellaParcial), ReglasDeLicencia.TextoDeBandera(e, BanderasDeLicencia.HuellaParcial));
+        Assert.Equal(TonoDeAviso.Atencion, ReglasDeLicencia.TonoDeBandera(BanderasDeLicencia.IntegridadAlterada));
+        Assert.Equal(TonoDeAviso.Informativo, ReglasDeLicencia.TonoDeBandera(BanderasDeLicencia.RelojSospechoso));
+        Assert.Equal(TonoDeAviso.Informativo, ReglasDeLicencia.TonoDeBandera(BanderasDeLicencia.HuellaParcial));
+        // sin el aviso con las fechas (un nodo que no las traiga) la bandera dice su frase de siempre
+        var sinFechas = e with { Avisos = [] };
+        Assert.Equal(LicenciaTexto.Bandera(BanderasDeLicencia.RelojAdelantado), ReglasDeLicencia.TextoDeBandera(sinFechas, BanderasDeLicencia.RelojAdelantado));
+    }
+
     // ---------------------------------------------------------------------------------------------------- la vía y las acciones
 
     [Fact]

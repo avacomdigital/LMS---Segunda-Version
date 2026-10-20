@@ -143,12 +143,12 @@ def avisos(estado: Estado, consumo, politica: Politica = POLITICA_PROVISIONAL) -
     Los avisos que ve el administrador (banner y pantalla de Licencia), en orden de importancia. Son CÓDIGOS con sus cifras: el texto lo pone el cliente. Ninguno interrumpe una
     clase (la pantalla decide cuándo mostrarlos); sólo existen para que nadie se entere de un vencimiento el día que ocurre.
 
-    La fecha adelantada (Q-L13) es un ERROR y va primero: trae cuántos días está adelantada, la fecha que tiene el equipo y la que el aula lleva (la hora confiable), para que el cliente
-    diga «tu equipo marca X, el aula esperaba Y: corrígela».
+    La fecha adelantada (Q-L13) es un ERROR y va primero: trae cuántos días está adelantada (al día más cercano, nunca 0), la fecha que tiene el equipo y la que el aula lleva (la hora
+    confiable), para que el cliente diga «tu equipo marca X, el aula esperaba Y: corrígela».
     """
     salida: list[dict] = []
     if estado.reloj_adelanto_ms > 0:
-        salida.append({"codigo": cat.B_RELOJ_ADELANTADO, "adelanto_dias": -(-estado.reloj_adelanto_ms // DIA_MS), "fecha_equipo": estado.ahora + estado.reloj_adelanto_ms,
+        salida.append({"codigo": cat.B_RELOJ_ADELANTADO, "adelanto_dias": max(1, round(estado.reloj_adelanto_ms / DIA_MS)), "fecha_equipo": estado.ahora + estado.reloj_adelanto_ms,
                        "fecha_esperada": estado.ahora})
     if estado.estado == cat.DEGRADADA:
         salida.append({"codigo": "degradada", "motivo": estado.motivo})

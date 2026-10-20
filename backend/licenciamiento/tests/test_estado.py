@@ -178,13 +178,16 @@ class AvisosTests(SimpleTestCase):
 
     def test_la_fecha_adelantada_es_un_error_que_va_primero_con_las_dos_fechas(self):
         """Q-L13: el aviso dice cuántos días está adelantada, la fecha que tiene el equipo y la que el aula lleva (la confiable); va antes que el estado y que cualquier otro."""
-        adelanto = 10 * DIA_MS + 1
+        adelanto = 10 * DIA_MS + 5_000                                            # diez días y unos segundos (lo que pasa entre el salto y el ciclo que lo ve)
         e = calcular(ahora=V + 5 * DIA_MS, reloj_adelanto_ms=adelanto, reloj_retroceso=True)
         avisos = self.avisos(e)
-        self.assertEqual(avisos[0], {"codigo": "reloj_adelantado", "adelanto_dias": 11, "fecha_equipo": V + 5 * DIA_MS + adelanto, "fecha_esperada": V + 5 * DIA_MS})
+        self.assertEqual(avisos[0], {"codigo": "reloj_adelantado", "adelanto_dias": 10, "fecha_equipo": V + 5 * DIA_MS + adelanto, "fecha_esperada": V + 5 * DIA_MS})      # 10, no 11
         self.assertEqual([a["codigo"] for a in avisos], ["reloj_adelantado", "gracia", "reloj_sospechoso"])         # no se repite como bandera suelta
         self.assertEqual(e.reloj_adelanto_ms, adelanto)
         self.assertEqual(self.avisos(calcular(reloj_adelanto_ms=1))[0]["adelanto_dias"], 1)                       # 1 ms de adelanto: «1 día», nunca 0
+        self.assertEqual(self.avisos(calcular(reloj_adelanto_ms=int(1.4 * DIA_MS)))[0]["adelanto_dias"], 1)       # al día más cercano
+        self.assertEqual(self.avisos(calcular(reloj_adelanto_ms=int(1.6 * DIA_MS)))[0]["adelanto_dias"], 2)
+        self.assertEqual(self.avisos(calcular(reloj_adelanto_ms=41 * DIA_MS - 60_000))[0]["adelanto_dias"], 41)
         self.assertEqual(self.avisos(calcular()), [])
         self.assertEqual(calcular().reloj_adelanto_ms, 0)
 

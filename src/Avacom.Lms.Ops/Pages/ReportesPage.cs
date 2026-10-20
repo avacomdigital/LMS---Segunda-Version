@@ -105,14 +105,16 @@ public sealed class ReportesPage : ContentPage
                 // alcanza desde aquí: el botón de la cabecera se queda y el aviso lo repite. El texto es el común de la licencia; quien la administra tiene a mano «Ver la licencia».
                 if (api.UltimoError is { EsModuloNoDisponible: true } porLicencia)
                 {
+                    // 64 px, como todo lo de la licencia (NFR-044: la pantalla táctil de 86").
+                    const double alto = Avacom.Lms.Ops.Licencia.Ui.LicenciaUi.AltoTactil;
                     var botones = new List<View>
                     {
                         ExamenUi.Accion("Visitantes y actividad", Ds.Rango.Secondary, ReportesUi.Seguro(nameof(ReportesPage), "VisitantesConLicencia", () => Shell.Current.GoToAsync("activity-monitor")),
-                            250, "reportes-licencia-visitantes", margen: false).Vista,
+                            250, "reportes-licencia-visitantes", alto, margen: false).Vista,
                     };
                     if (ReglasDeLicencia.VeLaLicencia(Sesion.Usuario))
                         botones.Add(ExamenUi.Accion("Ver la licencia", Ds.Rango.Quiet, ReportesUi.Seguro(nameof(ReportesPage), "VerLicencia", () => Shell.Current.GoToAsync("licencia")), 200,
-                            "reportes-licencia-ver", margen: false).Vista);
+                            "reportes-licencia-ver", alto, margen: false).Vista);
                     PonerSoloCentral(ReportesUi.Estado("No disponible con la licencia de este equipo", LicenciaTexto.ParaError(porLicencia) ?? ReportesUi.Error(api), [.. botones]));
                     _recientesHost.Clear();
                     _usoHost.Content = null;

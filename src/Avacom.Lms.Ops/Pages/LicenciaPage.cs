@@ -47,7 +47,7 @@ public sealed class LicenciaPage : ContentPage
         textos.Add(_subtitulo);
         var acciones = new HorizontalStackLayout { Spacing = 12, VerticalOptions = LayoutOptions.Center };
         acciones.Add(LicenciaUi.Accion("Actualizar", Ds.Rango.Secondary, LicenciaUi.Seguro("Actualizar", CargarAsync), "licencia-actualizar", 170).Vista);
-        acciones.Add(LicenciaUi.Accion("‹  Menú principal", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), "licencia-volver", 220).Vista);
+        acciones.Add(LicenciaUi.Accion("‹  Menú principal", Ds.Rango.Quiet, LicenciaUi.Seguro("Volver", AlMenuPrincipalAsync), "licencia-volver", 220).Vista);
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, Padding = new Thickness(44, 24, 48, 0), VerticalOptions = LayoutOptions.Start };
         cabecera.Add(textos, 0, 0);
         cabecera.Add(acciones, 1, 0);
@@ -91,6 +91,23 @@ public sealed class LicenciaPage : ContentPage
         base.OnDisappearing();
         _visible = false;
         _hoja.IsVisible = false;                    // si se sale con la hoja abierta, nadie se queda esperando
+    }
+
+    /// <summary>
+    /// «Menú principal» lleva al menú aunque se haya llegado por otro camino (desde Reportes, con «Ver la licencia» del aviso de módulo en pausa): se cuentan las pantallas que hay
+    /// encima del menú, como en el cierre de la clase. Si el menú no está en la pila, se vuelve una pantalla atrás.
+    /// </summary>
+    private static Task AlMenuPrincipalAsync()
+    {
+        var pila = Shell.Current.Navigation.NavigationStack;
+        for (var i = pila.Count - 1; i >= 0; i--)
+        {
+            if (pila[i] is not DashboardPage) continue;
+            var saltos = pila.Count - 1 - i;
+            if (saltos > 0) return Shell.Current.GoToAsync(string.Join("/", Enumerable.Repeat("..", saltos)));
+            break;
+        }
+        return Shell.Current.GoToAsync("..");
     }
 
     // =============================================================================================================== leer
@@ -190,8 +207,8 @@ public sealed class LicenciaPage : ContentPage
             pila.Add(Ds.Secundario(LicenciaTexto.Huella(e.Huella), 14));
         }
 
-        foreach (var bandera in e.BanderasActivas)
-            pila.Add(ExamenUi.Aviso(LicenciaTexto.BanderaBreve(bandera), LicenciaTexto.Bandera(bandera), bandera == BanderasDeLicencia.IntegridadAlterada ? Tono.Ambar : Tono.Info));
+        foreach (var bandera in e.BanderasActivas)       // la fecha adelantada (Q-L13) es un error con las dos fechas; las reglas del Core eligen el texto y el tono
+            pila.Add(ExamenUi.Aviso(LicenciaTexto.BanderaBreve(bandera), ReglasDeLicencia.TextoDeBandera(e, bandera), LicenciaUi.TonoDe(ReglasDeLicencia.TonoDeBandera(bandera))));
 
         var avisos = ReglasDeLicencia.AvisosDelBanner(e).Where(a => !e.Tiene(a.Codigo)).ToList();       // las banderas ya se dijeron arriba
         if (avisos.Count > 0)
@@ -270,8 +287,15 @@ public sealed class LicenciaPage : ContentPage
         return LicenciaUi.Tarjeta(pila);
     }
 
+    /// <summary>
+    /// Con la hoja abierta, las acciones de la pantalla no hacen nada. El velo ya impide tocarlas; esto cubre un segundo toque que llegó en cola y a UI Automation, que invoca sin mirar el
+    /// velo: abrir otra acción encima de una en marcha la reemplazaría (y una liberación que no pudo guardar su <c>.avrel</c> lo perdería).
+    /// </summary>
+    private bool HojaAbierta => _hoja.IsVisible;
+
     private async Task AbrirActivacionAsync()
     {
+        if (HojaAbierta) return;
         var e = _estado;
         var flujo = new FlujoDeActivacion(LicenciaUi.Api, LicenciaUi.Actor, ReglasDeLicencia.Via(e, Sesion.Usuario),
             ct => Task.Run(() => LicenciaUi.Buscador().Buscar(), ct), new LectorDeArchivosDelSistema(), new EscritorDeLicencias(), LicenciaUi.RecordarCarpeta);
@@ -280,18 +304,21 @@ public sealed class LicenciaPage : ContentPage
 
     private async Task AbrirCopiaAsync()
     {
+        if (HojaAbierta) return;
         var copia = new CopiaDeCustodia(LicenciaUi.Api, LicenciaUi.Actor, new EscritorDeLicencias(), () => RelojNodo.AhoraMs);
         await _hoja.CopiaAsync(copia);
     }
 
     private async Task AbrirLiberacionAsync()
     {
+        if (HojaAbierta) return;
         var flujo = new FlujoDeLiberacion(LicenciaUi.Api, LicenciaUi.Actor, new EscritorDeLicencias());
         if (await _hoja.LiberarAsync(flujo)) await CargarAsync();
     }
 
     private async Task AbrirFechaAsync()
     {
+        if (HojaAbierta) return;
         var fecha = new ConfirmacionDeFecha(LicenciaUi.Api, LicenciaUi.Actor);
         // Lo que se confirma es la fecha que tiene el equipo: con una fecha adelantada (Q-L13) no es la hora del aula (`Ahora`), es la que el aula no aceptó.
         if (await _hoja.FechaAsync(fecha, _estado?.FechaDelEquipo ?? RelojNodo.AhoraMs)) await CargarAsync();

@@ -11,6 +11,7 @@ Prueba de punta a punta de las pantallas de acceso de AVACOM OPS Master contra u
 | `recorrido_licencia.py` | La pantalla **Licencia** (MOD-018) de punta a punta: ver más abajo |
 | `licencia_en_vivo.py` | Las rutas del backend con la licencia en cada estado y el cupo, por HTTP, sin ventanas: ver más abajo |
 | `licencia_paquete.py` | El backend empaquetado del instalador y el emisor portátil trabajando juntos, como producción: ver más abajo |
+| `recorrido_fecha.py` | La **fecha adelantada** (Q-L13) de punta a punta, con el reloj de la licencia movible: ver más abajo |
 
 ## Cómo se corre
 
@@ -70,6 +71,18 @@ backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\licencia_paquete.py [-
 
 `licencia_paquete.py` necesita el instalador preparado (`installer\build\Build-Installer.ps1` deja `dist\staging`) y el emisor compilado (`tools\licencias\Build-Emisor.ps1`); si falta alguno lo dice y sale con 2. Corre al compilar cada versión: es la prueba de que el
 instalador que se entrega, el emisor y la llave pública que se incruste después de la ceremonia **funcionan juntos**.
+
+### La fecha adelantada (Q-L13)
+
+`recorrido_fecha.py --ops <exe> --salida <carpeta> [--puerto 8017]` comprueba lo que decidió el CTO el 2026-10-20: **una fecha adelantada no se acepta, no se guarda y no degrada; avisa con un error hasta que la fecha concuerde**
+(≈ 4 min, con las ventanas en primer plano y el candado de pantalla). No cambia la fecha de Windows (exigiría administrador): el nodo aislado arranca con un `sitecustomize.py` **de la prueba** (en una carpeta temporal, por
+`PYTHONPATH`) que lee un archivo de desfase y se lo suma a `time.time()` **sólo** para quien llama desde el módulo `licenciamiento` (mirando tres marcos hacia arriba: su reloj es el de la evaluación, `RelojNodo`); las sesiones, la
+bitácora y el resto del nodo siguen con la hora real. Así «alguien adelantó la fecha 40 días» pasa **dentro del proceso en marcha**, que es lo único que el nodo trata como salto.
+
+Recorre: licencia activa sin error · fecha adelantada 40 días → el nodo la detecta en su siguiente ciclo, **no la acepta** (la hora del aula no se mueve), no degrada ni apaga ningún módulo y avisa con los 40 días y las dos fechas,
+primero · la pantalla Licencia y el menú principal lo dicen como un error, con «Confirmar la fecha de hoy» y «Ver la licencia» · la hoja habla de la fecha del equipo y de corregirla en Windows · al **corregir** la fecha el error se
+quita solo · de nuevo adelantada: la administración **confirma** y sólo entonces el aula guarda esa fecha · devolver el reloj después es otro aviso (`reloj_sospechoso`). Escribe `30-…` a `35-…` (con su versión de tercios). Como el campo de
+contraseña a veces no recibe la clave si se escribe antes de que la pantalla esté lista, el ingreso se repite hasta tres veces y sólo sigue al PIN cuando la pantalla del PIN aparece de verdad.
 
 Cuidados: los mismos de arriba (nodo aislado, perfil de OPS de pruebas, candado de pantalla). Dos más: la sesión del personal es **única**, así que el guion mira el estado por la API con una cuenta lectora aparte (entrar con
 la de la administración cerraría la de OPS); y los controles se tocan por `AutomationId` con la acción `tecla` de `ui-ops.ps1` porque la página y la hoja tienen botones que se llaman igual («Liberar este equipo»).

@@ -83,11 +83,11 @@
 stateDiagram-v2
     [*] --> sin_licencia: primer arranque, evaluación de 30 días
     sin_licencia --> activa: activar un archivo válido
-    sin_licencia --> degradada: evaluación vencida y 24 h
+    sin_licencia --> degradada: se cumplen los 30 días de evaluación
     activa --> en_gracia: vence la vigencia
     activa --> en_gracia: la huella ya no coincide
     en_gracia --> activa: renovar con una serie posterior
-    en_gracia --> degradada: se acaba la gracia y 24 h
+    en_gracia --> degradada: se cumplen los 30 días de gracia
     degradada --> activa: renovar o reactivar
     activa --> reactivada: restauración en el mismo equipo
     reactivada --> activa: pasan 72 h
@@ -103,9 +103,9 @@ stateDiagram-v2
 | `reactivada` | Justo después de recuperar la licencia tras una restauración (FUN-194) | Igual que activa; se muestra 72 h |
 | `en_gracia` | Venció, o este equipo ya no es el de la licencia | **No se pierde nada**; aviso visible. Dura `gracia_dias` |
 | `liberacion_pendiente` | Licencia emitida mientras se libera el equipo anterior (JRN-020, MSG-063) | Opera por el plazo que trae la propia licencia |
-| `degradada` | Se acabó la gracia (o la evaluación) y pasaron 24 h de histéresis | Se apagan **sólo** las capacidades licenciables. Clase, examen, estudio, notas y bitácora siguen |
+| `degradada` | Se acabó la gracia (o la evaluación): degrada **en ese instante**, sin día de más (la gracia son 30 días corridos exactos, Q-L16) | Se apagan **sólo** las capacidades licenciables. Clase, examen, estudio, notas y bitácora siguen |
 
-Banderas **ortogonales** (se suman al estado, no lo reemplazan): `reloj_sospechoso`, `huella_parcial`, `integridad_alterada`. Ninguna quita funciones: sólo avisan (y `reloj_sospechoso` por un salto hacia adelante aplaza una degradación hasta 72 h).
+Banderas **ortogonales** (se suman al estado, no lo reemplazan): `reloj_sospechoso` (reloj atrasado), `reloj_adelantado` (fecha adelantada que el nodo **no acepta**, Q-L13), `huella_parcial`, `integridad_alterada`. Ninguna quita funciones: sólo avisan; la fecha adelantada es un **error** que no se guarda, no degrada y no se quita hasta que la fecha concuerda.
 
 **El estado no se guarda**: sale de una función pura `calcular(contexto, política)` con el tiempo y los hechos del historial. Lo que se guarda es el historial de sólo inserción y los eventos.
 
@@ -192,11 +192,11 @@ Reglas de forma: `0 < desde < vence`, vigencia ≤ 25 años, `serie ≥ 1`, `gra
 | Entrada (`Contexto`) | Qué es |
 |---|---|
 | `licencia` | La licencia vigente verificada, o nada |
-| `ahora` | El instante **confiable**: `max(reloj del nodo, marca alta)` |
+| `ahora` | El instante **confiable**: `max(reloj del nodo, marca alta)`; con una fecha adelantada que no se acepta, el que el aula lleva (nunca el del salto) |
 | `instalada_en` | Primer arranque con licenciamiento (empieza la evaluación) |
 | `coincidencia` | Huella de la licencia contra la de este equipo (`k`, cuántos factores, `ok`, `parcial`) |
 | `licencia_instalada_en` · `huella_distinta_desde` · `reactivada_en` | Hitos del historial |
-| `reloj_retroceso` · `salto_adelante_desde` | Señales del reloj |
+| `reloj_retroceso` · `reloj_adelanto_ms` | Señales del reloj: el reloj atrasado, y cuánto está adelantada la fecha del equipo cuando el nodo no la acepta (0 si no lo está; Q-L13) |
 | `integridad_alterada` | Señal de integridad (Fase 4) |
 
 | Salida (`Estado`) | Qué es |
@@ -209,13 +209,13 @@ Reglas de forma: `0 < desde < vence`, vigencia ≤ 25 años, `serie ≥ 1`, `gra
 
 Reglas, en orden:
 
-1. **Sin licencia, o `ahora < desde`**: ventana de evaluación desde `instalada_en`. Con las licenciables habilitadas y los límites de evaluación. Al terminar (más histéresis): `degradada` (motivo `evaluacion_vencida`).
+1. **Sin licencia, o `ahora < desde`**: ventana de evaluación desde `instalada_en`. Con las licenciables habilitadas y los límites de evaluación. Al cumplirse los 30 días: `degradada` (motivo `evaluacion_vencida`), en ese instante.
 2. **La huella no coincide** (≥ k factores): `en_gracia` (motivo `huella_distinta`) desde la primera vez que se observó, por `gracia_dias`; después, `degradada`.
 3. **Vigente** (`ahora ≤ vence`): `liberacion_pendiente` si lo declara la licencia (plazo = `liberacion_dias` desde que se instaló esa serie, sin pasar de `vence`); `reactivada` si pasaron ≤ 72 h desde una reactivación; si no, `activa`.
 4. **Vencida**: `en_gracia` hasta `vence + gracia_dias`; después, `degradada`.
-5. **Degradar exige histéresis** (la condición sostenida ≥ 24 h) y que un salto de reloj sospechoso **hacia adelante** no esté pendiente de confirmar (se aplaza a lo más 72 h **de tiempo real**: una sospecha no puede ser una palanca para no degradar nunca). **Retroceder el reloj no aplaza nada ni lo congela**: el vencimiento se mide contra el instante confiable, que nunca baja de la marca alta **y avanza con el reloj monótono** aunque el de pared esté atrasado (LIC-B-25: una fecha atrasada, o una pila de BIOS agotada, no alarga una licencia).
+5. **Degradar ocurre en el instante en que se acaba el plazo**: la gracia son 30 días corridos exactos (Q-L16), sin histéresis (`histeresis_ms = 0`: el instante confiable jamás baja, así que el estado no puede oscilar en el borde). **Retroceder el reloj no aplaza nada ni lo congela**: el vencimiento se mide contra el instante confiable, que nunca baja de la marca alta **y avanza con el reloj monótono** aunque el de pared esté atrasado (LIC-B-25: una fecha atrasada, o una pila de BIOS agotada, no alarga una licencia). **Adelantar la fecha tampoco la mueve** (Q-L13, LIC-B-27): un salto hacia adelante mayor que el umbral dentro de un proceso en marcha **no se acepta ni se guarda**, la licencia sigue contando el tiempo real, no degrada por él y el nodo avisa con un error hasta que la fecha concuerde; no hay aplazamiento de 72 h.
 
-### 5.5 · La política es un dato (valores provisionales, Q-L1)
+### 5.5 · La política es un dato (decidido por el CTO el 2026-10-20: gracia, tamaño máximo y fecha adelantada; lo demás, provisional)
 
 | Parámetro | Valor provisional | Para qué |
 |---|---|---|
@@ -223,13 +223,15 @@ Reglas, en orden:
 | Avisos | 30 · 14 · 7 · 3 · 1 días | Un aviso al cruzar cada umbral antes de vencer |
 | Aviso de evaluación | ≤ 7 días | Cuándo empieza a avisar la evaluación |
 | Tolerancia de retroceso | 5 min | Ajustes de hora normales |
-| Salto hacia adelante sospechoso | 7 días | Entre dos lecturas del **mismo proceso**; un nodo apagado diez días **no** es un salto |
-| Aplazamiento por sospecha | 72 h | Tope de lo que una sospecha puede retrasar la degradación |
-| Histéresis | 24 h | Para degradar |
+| Salto hacia adelante (fecha adelantada) | 7 días | Entre dos lecturas del **mismo proceso**; un nodo apagado diez días **no** es un salto. **Decidido (Q-L13):** no se acepta, no se guarda y no degrada |
+| La fecha «concuerda» | 1 día | El reloj de pared a menos de esto del instante confiable: el error de la fecha adelantada se quita solo |
+| Histéresis | 0 | **Decidido (Q-L16):** la gracia son 30 días corridos exactos y degrada en el instante en que se cumplen |
+| Gracia (la trae cada licencia) | 30 días corridos exactos | **Decidido (Q-L16):** el emisor no firma otra |
 | Huella `k` | 2 de 2 · 2 de 3 · 3 de 4 | Entre los factores de unidad (`k_para`) |
 | Ventana «reactivada» | 72 h | |
 | Aviso de cupo | 90 % | |
-| Límites de evaluación | 100 equipos · 3000 usuarios · 50/100 concurrentes | Holgados, para no bloquear a nadie por actualizar |
+| Límites de evaluación | 60 equipos · 1200 usuarios · 50/100 concurrentes | **Decidido (Q-L1):** el tamaño máximo de un aula, también sin licencia. El cupo sólo cuenta al crear: lo que ya existe sigue funcionando |
+| Tamaño máximo de un aula | 60 equipos · 1200 usuarios | **Decidido (Q-L1):** en una misma pantalla; ninguna licencia que emita AVACOM pasa de ahí, ni «sin tope» (`planes/reglas.json`) |
 
 Lo que decide **cada licencia** (vigencia, gracia, límites, módulos) viaja **dentro** de ella; la política sólo cubre lo que una licencia no puede decir.
 
@@ -334,7 +336,7 @@ La licencia entra por un **puerto** con dos adaptadores, igual que el resto de l
 | **EvaluarEstado** (programador) | FUN-192 · FUN-193 | Sistema | — | Temporizador | Transiciones a gracia y a degradada | `licencia.periodo_gracia_iniciado.v1` · `licencia.funciones_degradadas.v1` | `licencia.gracia_iniciada` · `licencia.degradada` |
 | **AvisarEscalonado** | CAP-114 | Sistema | — | Se cruzó 30/14/7/3/1 | Un aviso por umbral (`m18_aviso`) | `licencia.aviso_emitido.v1` (extensión) | — |
 | **CalcularConsumo** | FUN-190 | Sistema | — | La licencia declara límites | Consumo frente a los dueños | `licencia.consumo_calculado.v1` | — |
-| **ConfirmarReloj** | P-06 | Técnico · Admin | `license.activate` | Hay un salto de reloj sospechoso | Levanta el aplazamiento de una degradación | — | `licencia.reloj_confirmado` (extensión) |
+| **ConfirmarReloj** | P-06 · Q-L13 | Técnico · Admin | `license.activate` | Hay una fecha adelantada que el nodo no aceptó (o un reloj atrasado) | Acepta la fecha del equipo como la correcta: cierra el episodio y **sólo entonces** el aula la guarda como marca alta | — | `licencia.reloj_confirmado` (extensión) |
 | **EntregarCopia** | CAP-111 | Técnico · Admin | `license.read` | Licencia instalada | El archivo firmado + una hoja de entrega | — | — (lectura) |
 | **AplicarCupo** (servicio) | BR-027 · BR-063 | `acceso` · `device_manager` | — | Alta **nueva** | Admite o responde `cupo_agotado` | — | `licencia.bloqueo_aplicado` (agregado) |
 
@@ -366,7 +368,7 @@ Ejemplo ilustrativo de `GET estado/` (la forma exacta la fija `02-api.md`):
   "hasta": 1793000000000, "dias_restantes": 12, "servidor_en": 1790000000000,
   "licencia": {"id": "a7a7a7a7-0001-4000-8000-000000000001", "serie": 2, "aula": "Colegio de ejemplo",
                "tipo": "produccion", "desde": 1761000000000, "vence": 1789000000000, "gracia_dias": 30, "kid": "prod-2026-1"},
-  "limites": {"equipos": 55, "usuarios": 1200, "concurrentes_normal": 50, "concurrentes_pico": 100},
+  "limites": {"equipos": 60, "usuarios": 1200, "concurrentes_normal": 50, "concurrentes_pico": 100},
   "capacidades": {"reportes": true, "busqueda": true, "importacion": true, "administracion_avanzada": true},
   "huella": {"nivel": "hardware", "k": 3, "en_licencia": 4, "coinciden": 4},
   "avisos": [{"codigo": "gracia", "motivo": "vencida", "dias": 12}]
@@ -462,12 +464,12 @@ Las variables `AVACOM_LICENCIA_*` sólo cambian **dónde viven los archivos y co
 | LIC-B-07 | **Debe** generar una solicitud firmada con la llave del nodo, sin hashes crudos | CAP-110 | El emisor la lee, verifica la firma contra su `kid` y obtiene `k` de `n`; no contiene identificadores en claro | LT-18 |
 | LIC-B-08 | **Debe** liberar el equipo y aceptar una licencia con `LIBERACION_PENDIENTE` que opera por su plazo | JRN-020 · MSG-063 | Con la bandera, el estado es `liberacion_pendiente` con los días que trae; al acabarse, `degradada` | LT-19 |
 | LIC-B-09 | **Debe** reactivar tras una restauración en el mismo equipo | FUN-194 · TST-060 · JRN-019 | Restaurar una base anterior a la activación: el nodo reconoce la copia de la carpeta de estado y pasa a `reactivada`; la clase es operable en ≤ 30 min | LT-20 |
-| LIC-B-10 | **Debe** implementar los estados y transiciones de §4 con histéresis y avisos 30/14/7/3/1 una vez por umbral | FUN-192 · FUN-193 | Tabla estados × reloj × gracia completa; un aviso por umbral aunque el cálculo se repita | LT-21 |
+| LIC-B-10 | **Debe** implementar los estados y transiciones de §4 —degradando en el instante en que se acaba la gracia, sin histéresis (Q-L16)— y avisos 30/14/7/3/1 una vez por umbral | FUN-192 · FUN-193 | Tabla estados × reloj × gracia completa (con los 30 días EXACTOS: una hora antes sigue en gracia, en el instante degrada); un aviso por umbral aunque el cálculo se repita | LT-21 |
 | LIC-B-11 | **Debe** aplicar la tabla de rutas con un middleware: lista blanca, 402, 0 SQL, falla → pasa | P-10 | Con la licencia degradada cada ruta intocable responde igual y cada licenciable responde 402 | LT-22 · LT-23 · LT-24 |
 | LIC-B-12 | **Debe** aplicar el cupo de usuarios sólo en `CrearUsuario._crear`, sin contar visitantes ni retirados, con importación fila por fila | BR-027 | 30 visitantes retirados no cuentan; importar 10 filas con cupo de 6 crea 6 y rechaza 4 con su código | LT-25 |
 | LIC-B-13 | **Debe** aplicar el cupo de equipos sólo en el latido y el alta manual, sin contar al `MASTER` y sin tocar `resolver` | BR-063 | Una tableta nueva con el cupo lleno: latido 402, **abrir un examen funciona**; una ya registrada, nunca se ve afectada | LT-26 |
 | LIC-B-14 | **Debe** tomar la concurrencia 50/100 de la licencia, con respaldo a `settings`, sin reiniciar | BR-063 | Activar una licencia con 60/120 cambia el tope sin reiniciar; sin licencia rigen 50/100 | LT-27 |
-| LIC-B-15 | **Debe** medir contra el reloj confiable (marca alta, anclas, retroceso, adelanto, respaldo viejo) | P-06 | Retroceder el reloj no alarga; adelantarlo mucho no degrada de golpe; restaurar un respaldo viejo no rebobina | LT-28 |
+| LIC-B-15 | **Debe** medir contra el reloj confiable (marca alta, anclas, retroceso, adelanto, respaldo viejo) | P-06 | Retroceder el reloj no alarga; adelantarlo mucho no se acepta, no se guarda y no degrada (avisa con un error hasta que la fecha concuerde); restaurar un respaldo viejo no rebobina | LT-28 |
 | LIC-B-16 | **Debe** correr un programador en `asgi.py` con `try/except` que no interrumpe una clase | P-11 | Si no arranca, el nodo sirve igual; no hay «database is locked» con 35 clientes simulados | LT-29 |
 | LIC-B-17 | **Debe** publicar los eventos `.v1` por la cola propia | P-16 | Cada transición publica su evento una vez | LT-13 |
 | LIC-B-18 | **Debe** asentar sólo acciones del catálogo cerrado, sin contenido de licencia ni huellas crudas, con los bloqueos agregados | P-16 · R-07 | 1000 bloqueos en una hora dejan un asiento por actor y capacidad | LT-30 |
@@ -477,7 +479,9 @@ Las variables `AVACOM_LICENCIA_*` sólo cambian **dónde viven los archivos y co
 | LIC-B-22 | **Debe** abrir la ventana de evaluación al actualizar un nodo ya instalado | P-14 | Un nodo con datos y sin licencia queda en `sin_licencia` con 30 días y nadie queda bloqueado | LT-34 |
 | LIC-B-23 | **Debe** no cambiar ninguna prueba existente | R-14 | La suite completa del backend en verde **sin licencia** | LT-35 |
 | LIC-B-24 | **Debe** entregar la copia de la licencia vigente (CAP-111) | CAP-111 | `GET copia/` devuelve el archivo firmado idéntico al instalado y una hoja de texto | LT-36 |
-| LIC-B-25 | **Debe** hacer que el instante confiable **avance con el reloj monótono del proceso** aunque el reloj de pared esté por debajo de la marca alta, y que el aplazamiento por un salto sospechoso se mida con ese mismo instante | P-06 · H-13 · H-14 | Con una licencia de 30 días de vigencia y 30 de gracia, atrasar la fecha 100 días degrada a los ~51 días reales (no a los 151); adelantar la fecha y devolverla aplaza la degradación 72 horas reales (no lo que duró el salto) y un nodo degradado no recupera sus módulos; tras un reinicio sólo se pierde el tiempo apagado | LT-28 |
+| LIC-B-25 | **Debe** hacer que el instante confiable **avance con el reloj monótono del proceso** aunque el reloj de pared esté por debajo de la marca alta | P-06 · H-13 | Con una licencia de 30 días de vigencia y 30 de gracia, atrasar la fecha 100 días degrada a los ~52 días reales (no a los 151); tras un reinicio sólo se pierde el tiempo apagado | LT-28 |
+| LIC-B-27 | **Debe** NO aceptar una fecha adelantada (Q-L13): un salto hacia adelante mayor de 7 días dentro de un proceso en marcha no sube la hora confiable, la marca alta, las anclas ni cuenta el asiento de la bitácora sellado con él; la licencia ni vence ni degrada por el salto (sin aplazamiento de 72 h); el estado trae `reloj_adelantado` y un aviso con los días y las dos fechas, que va primero; el episodio vive en la base y no lo olvida un reinicio, se cierra solo cuando la fecha vuelve a menos de un día de la confiable o cuando la administración confirma que la de hoy es la correcta; un nodo que arranca adelantado sin episodio abierto lo acepta (los días de calendario cuentan, Q-L16); solicitud, instalación y liberación se fechan con la hora confiable | P-06 · Q-L13 · H-09 · H-14 | Con una licencia de 30 días de vigencia y 30 de gracia, a los 59 días adelantar la fecha 10 días **no** degrada y avisa; la gracia termina el día 60 de tiempo real; devolver la fecha quita el error sin dejar marca alta; adelantar y devolver 400 días no cambia nada; confirmar la fecha la acepta y la guarda; un reinicio con la fecha todavía adelantada la sigue sin aceptar; 120 pasos al azar de tiempo real, saltos, correcciones y reinicios mantienen que el confiable nunca baja ni se adelanta al tiempo real | LT-28 |
+| LIC-B-28 | **Debe** degradar en el instante en que se cumple el plazo, sin histéresis: la gracia son 30 días corridos exactos (Q-L16) | Q-L16 | A `vence + 30 días − 1 h` el estado es `en_gracia`; a `vence + 30 días` es `degradada`; igual con la evaluación | LT-21 |
 | LIC-B-26 | **Debe** rechazar (`campo_invalido`) una licencia con un límite en 0 —equipos, usuarios, concurrentes normales o en pico—, aunque esté bien firmada | R-01 · H-15 | Una licencia con concurrencia 0 no se instala; con el mínimo (1) y con «sin tope» sí, y la clase admite al primer alumno. Un 0 no limita: detiene (el aula responde «aula llena» al primer alumno y no se registra ninguna tableta ni persona nueva) | LT-02 |
 
 
@@ -507,7 +511,7 @@ La lógica va en archivos **sin MAUI** que `Ops.Tests` y `Student.Tests` puedan 
 |---|---|
 | **Estado** | Un título y una frase por estado, con color suave (§7.5); vigencia («desde… hasta…»), días restantes, tipo, serie y **nivel de huella** (`hardware` o `instalación`, para que se vea cuando es la débil) |
 | **Qué incluye** | Los cuatro módulos licenciables con ✓ «incluido» o ✗ «no disponible» |
-| **Consumo** | Equipos, usuarios y concurrentes («52 de 55») con una barra desde cero y el aviso desde el 90 % |
+| **Consumo** | Equipos, usuarios y concurrentes («57 de 60») con una barra desde cero y el aviso desde el 90 % |
 | **Acciones** | «Activar la licencia» (o «Renovar» si ya hay una) · «Guardar una copia de la licencia» · «Liberar este equipo» |
 | **Historial** | Los últimos hechos: activada, renovada, reactivada, gracia, degradada |
 
@@ -524,7 +528,7 @@ La lógica va en archivos **sin MAUI** que `Ops.Tests` y `Student.Tests` puedan 
 **Banner persistente por rol** (molde `PinBanner` de `DashboardPage`):
 
 - Lo ven la **administración** y el **técnico**; el profesor, no (§7.4).
-- Sale **uno solo**, el más importante: `degradada` › `en_gracia` › evaluación con ≤ 7 días › `liberacion_pendiente` › cupo ≥ 90 % › `reloj_sospechoso` › `integridad_alterada` › `huella_parcial`.
+- Sale **uno solo**, el más importante: `reloj_adelantado` (el error de la fecha, **Q-L13**: en tono fuerte, con «Ver la licencia») › `degradada` › `en_gracia` › evaluación con ≤ 7 días › `liberacion_pendiente` › cupo ≥ 90 % › `reloj_sospechoso` › `integridad_alterada` › `huella_parcial`.
 - **Nunca durante una clase** (S4: «ninguna alerta administrativa interrumpe una sesión»): con una sesión de clase abierta en el nodo, el banner se oculta; el estado sigue en la pantalla Licencia.
 - Botón [Ver licencia]. Texto con los días, en español claro (§7.5).
 
@@ -535,7 +539,7 @@ La lógica va en archivos **sin MAUI** que `Ops.Tests` y `Student.Tests` puedan 
 - «**Visitantes y actividad**» (vincular a un visitante con un alumno, RF-09c) sólo se alcanza hoy desde la pantalla de Reportes: `ReportesPage` **conserva ese botón** aunque `reportes` esté apagada.
 - «**Seguridad del aula**» (cerrar el registro de profesores y de alumnos, apagar visitantes) debe seguir funcionando con la licencia degradada.
 
-**Otras pantallas.** **Dispositivos** (debería) muestra «Equipos 52 de 55». El **primer arranque** (debería) ofrece, como paso opcional y reanudable, «Registrar la licencia ahora o más tarde (30 días de evaluación)» (PAN-202, JRN-001 paso 3).
+**Otras pantallas.** **Dispositivos** (debería) muestra «Equipos 57 de 60». El **primer arranque** (debería) ofrece, como paso opcional y reanudable, «Registrar la licencia ahora o más tarde (30 días de evaluación)» (PAN-202, JRN-001 paso 3).
 
 ### 7.3 · Student (tabletas y portátiles de alumnos)
 
@@ -597,7 +601,7 @@ Los errores de archivo reutilizan las frases del contrato de motivos (§6.5), co
 | LIC-F-11 | **Debe** dejar Student sin pantalla ni lógica de licencia, con sólo los textos de §7.3 | P-19 · SEC-001 | UIA de Student igual que la línea base; una tableta registrada nunca se bloquea | LT-47 |
 | LIC-F-12 | **Debería** avisar al profesor, al tocar una función apagada, sin mostrar datos de licencia | H-10 | El mensaje dice qué hacer y a quién pedirlo | LT-43 |
 | LIC-F-13 | **Debe** cumplir R-10: objetivos ≥ 60 px, sin `Path`/`Ellipse`, composición por tercios | R-10 | Captura con la cuadrícula de tercios: tarjeta en el tercio central en X y de 1/6 a 5/6 en Y | LT-40 |
-| LIC-F-14 | **Debería** mostrar «Equipos 52 de 55» en Dispositivos | FUN-190 | El número coincide con `consumo/` | LT-40 |
+| LIC-F-14 | **Debería** mostrar «Equipos 57 de 60» en Dispositivos | FUN-190 | El número coincide con `consumo/` | LT-40 |
 | LIC-F-15 | **Debería** ofrecer en el primer arranque registrar la licencia (opcional, reanudable) | JRN-001 · PAN-202 | Se puede omitir y volver; no bloquea la instalación | LT-41 |
 | LIC-F-16 | **Debe** dar a cada estado vacío, de error y de carga su texto y **qué hacer** | R-10 | Ninguna pantalla queda en blanco ni con un código | LT-40 |
 
@@ -634,7 +638,7 @@ Herramienta de **consola** en `tools/licencias/` (raíz del repositorio), para e
 
 ### 8.2 · Planes como dato
 
-Un plan es un archivo `planes/*.json` (valores **provisionales**, Q-L1): nombre, tipo, meses, gracia, límites y capacidades. Entregan tres: `evaluacion` (tipo evaluación, un mes), `anual-aula` (12 meses, 30 días de gracia, 55 equipos, 1200 usuarios, 50/100 concurrentes, todos los módulos) y `anual-sin-tope` (los mismos plazos con `0xFFFFFFFF`, sólo con confirmación aparte). Cambiar un plan no toca código.
+Un plan es un archivo `planes/*.json`: nombre, tipo, meses, gracia, límites y capacidades. Entregan dos: `evaluacion` (tipo evaluación, un mes, 20 equipos) y `anual-aula` (12 meses, 30 días de gracia, 60 equipos, 1200 usuarios, 50/100 concurrentes, todos los módulos). Lo que decidió el CTO vive en `planes/reglas.json` y ninguna licencia lo contradice, ni con una opción de `emitir` ni con un plan nuevo: **la gracia son 30 días corridos exactos (Q-L16)** y **un aula no pasa de 60 equipos y 1200 usuarios, ni con «sin_tope» (Q-L1)**; por eso el plan `anual-sin-tope` ya no se entrega (el mecanismo de la segunda confirmación sigue en la herramienta). Cambiar un plan o una regla no toca código.
 
 ### 8.3 · El registro de emisiones
 
@@ -752,7 +756,8 @@ El detalle, con resultados y con lo que **no** se pudo comprobar, queda en `03-p
 | Middleware, programador, `/health/` (§6.6, §6.8) | Construidos. El middleware trata `HEAD` como `GET` (sólo `OPTIONS` pasa sin mirar), tal como lo pide esta especificación, con su prueba |
 | Instalador (§9) | Construido en curso: marcador de canal, prueba de contenido del paquete, puerta `-ExigirLlaveDeProduccion`, estado de la licencia en la última pantalla y en el verificador |
 | Pantallas de OPS y textos de Student (§7) | Pendiente (Fase 3, otra sesión) |
-| Emisor (§8) | **Construido y probado**: `05-emision.md`; 100 pruebas del emisor + 13 de interoperabilidad con el nodo |
+| Emisor (§8) | **Construido y probado**: `05-emision.md`; 105 pruebas del emisor + 13 de interoperabilidad con el nodo |
+| **Decisiones del CTO (2026-10-20, ≈ 15:30)** | **Q-L13** (fecha adelantada: no se guarda, no degrada a las 72 h, error hasta que la fecha concuerde): `reloj.resolver`, `Evaluar`, bandera y aviso `reloj_adelantado`, LIC-B-27. **Q-L16** (gracia de 30 días corridos exactos): histéresis 0, LIC-B-28 y `reglas.json` del emisor. **Q-L1** (60 equipos y 1200 usuarios como máximo en una misma pantalla): plan `anual-aula`, evaluación sin licencia y `reglas.json`; el plan `anual-sin-tope` se retiró. **Q-L2**: se deja tal cual. Backend 303 pruebas del módulo (44 nuevas), emisor 105, Core 2179, OPS 453; recorrido por UI Automation de la fecha adelantada ([06-verificacion-independiente.md](06-verificacion-independiente.md)) |
 
 Esta tabla se vuelve a llenar al cierre de cada fase.
 
@@ -762,19 +767,20 @@ Esta tabla se vuelve a llenar al cierre de cada fase.
 
 | Pregunta | Opción tomada aquí |
 |---|---|
-| **Q-L1** Modelo comercial: días de evaluación y gracia, límites, módulos | Todo **dato provisional** (§5.5, planes del emisor) |
-| **Q-L2** Hardware del panel: ¿TPM 2.0 y SMBIOS con series reales? | Se asume lo peor (relleno OEM): nivel `instalacion` posible y visible |
+| **Q-L1** Modelo comercial: días de evaluación y gracia, límites, módulos | **Decidido (2026-10-20): un aula, en una misma pantalla, tiene como máximo 60 equipos y 1200 usuarios.** Los planes y la evaluación sin licencia quedan en ese tamaño y el emisor no firma más. Los límites siguen siendo provisionales ("por ahora"): se cambian en `planes/reglas.json` y `politica.py`. Lo demás (concurrentes, módulos, meses) sigue provisional |
+| **Q-L2** Hardware del panel: ¿TPM 2.0 y SMBIOS con series reales? | **Decidido (2026-10-20): se deja tal cual.** La huella se sella con las piezas válidas del equipo (`k` de `n`); donde sólo hay dos distintivas (el equipo de pruebas: 2 de 2) no hay margen para que falle una, y un cambio de hardware que la afecte se resuelve con un traslado (D-10). Sin series reales vale el nivel `instalacion`, visible |
 | **Q-L3** Emisión: quién emite, dónde vive la privada, rotación, liberaciones | Emisor interno con privada **cifrada** y registro encadenado; la custodia (HSM, YubiKey, equipo sin red) la decide el CTO |
 | **Q-L4** AVACOM Contenido ya ata su contenido a un dispositivo | No se toca esa protección |
-| **Q-L5** Ante manipulación: ¿señal y aviso o restricción? | **Señal y aviso**; el reloj aplaza, nunca castiga por sorpresa |
+| **Q-L5** Ante manipulación: ¿señal y aviso o restricción? | **Señal y aviso**; el reloj avisa con un error, nunca castiga por sorpresa |
 | **Q-L6 · Q-L7 · Q-L9** Llave del APK, TLS, Authenticode | Fuera de este módulo |
 | **Q-L8** `minSdk` y attestation | Fase 5 |
 | **Q-L10 · Q-L11** Ofuscador comercial · activación en línea | Fuera / V1 |
 | **Q-L12** ¿Un vencimiento puede limitar la exportación de calificaciones? | **No** (por omisión): `boletines/` y `exportaciones/` quedan fuera de la capacidad (H-03) |
-| **Q-L13** **Recuperación tras un salto accidental del reloj hacia adelante** (H-09): hoy la marca alta queda alta para siempre y «confirmar» sólo levanta el aplazamiento. ¿Una **licencia de recuperación** emitida por AVACOM con una bandera crítica «restablecer reloj» (el administrador no puede bajarla solo), o una marca que **mientras haya un salto pendiente sólo sube con el tiempo monótono** y se acepta al confirmar o a las 72 horas? | **Sin decidir; no se construye ninguna.** La primera es la que se propone aquí (el emisor tendría que escribir la bandera, que hoy no existe). La segunda no cambia el efecto de retroceder (`max(reloj, marca)` no baja), **pero tiene un hueco**: `salto_desde` se mide en la línea de tiempo **adelantada** (la observación lleva la hora de pared adelantada), así que al corregir el reloj hacia atrás el aplazamiento seguiría «pendiente» hasta que la hora real alcance la adelantada —un salto de un año aplazaría la degradación un año: la palanca que P-06 prohíbe—, y tampoco cubre el salto con el nodo apagado (sin referencia monótona). Si el CTO elige una va como `Bugfix:` aparte, con pruebas de las **dos** líneas de tiempo (pared y monótona) y del reinicio |
+| **Q-L13** **Recuperación tras un salto accidental del reloj hacia adelante** (H-09) | **Decidido (2026-10-20): ya no se guarda y no degrada a las 72 horas; lanza un error hasta que la fecha concuerde con la actual.** Construido (LIC-B-27): la fecha adelantada no se acepta —ni hora, ni marca, ni anclas—, la licencia sigue contando el tiempo real, el aviso `reloj_adelantado` dice los días y las dos fechas y se quita solo al corregir la fecha; la administración puede **confirmar** que la del equipo es la correcta (la única forma de guardarla). No hace falta licencia de recuperación. **Límite que se documenta:** un salto seguido de un reinicio con la fecha todavía mal, sin episodio abierto, es indistinguible de un equipo apagado una temporada, y por Q-L16 el calendario cuenta: se acepta |
 | **Q-L14** Una licencia con lista **explícita** de capacidades frente a una capacidad licenciable que se añada después (H-11): ¿qué pasa con las licencias vivas? | No la habilitan; el emisor usa `*` por omisión (D-15 de `01-diseno.md`) |
-| **Q-L15** «Liberar este equipo» devuelve el nodo a `sin_licencia` con la evaluación contada desde el primer arranque: si ya venció, el equipo liberado queda degradado tras la histéresis. ¿Es lo que se quiere para el equipo viejo de un traslado, o debe conservar un plazo? | Queda degradado; la clase sigue (el núcleo nunca se degrada) |
-| **Q-L16** (nueva) ¿Gracia por omisión de 30 o de 45 días? Un receso escolar puede consumir la gracia sin que nadie use el sistema (E-1) | 30 días **provisionales**; se recomienda 45 |
+| **Q-L15** «Liberar este equipo» devuelve el nodo a `sin_licencia` con la evaluación contada desde el primer arranque: si ya venció, el equipo liberado queda degradado en ese instante. ¿Es lo que se quiere para el equipo viejo de un traslado, o debe conservar un plazo? | Queda degradado; la clase sigue (el núcleo nunca se degrada) |
+| **Q-L16** (nueva) ¿Gracia por omisión de 30 o de 45 días? Un receso escolar puede consumir la gracia sin que nadie use el sistema (E-1) | **Decidido (2026-10-20): gracia de 30 días calendario exactamente.** Corridos (cuenta el receso), sin histéresis (degrada en el instante en que se cumplen) y el emisor no firma otra (`planes/reglas.json`, incluido el plan `evaluacion`) |
 | **Q-L17** (nueva) ¿El profesor debe ver un aviso corto al tocar una función apagada? (H-10) | **Sí**, sin datos de la licencia |
+| **Q-L18** (nueva) Con un aula de hasta 60 equipos, ¿los 50 concurrentes «normales» y los 100 «en pico» siguen siendo los valores correctos? ¿La evaluación sin licencia debe quedar en 60 equipos y 1200 usuarios (antes 100 y 3000), como se hizo? | Los concurrentes no se tocaron; la evaluación usa 60 y 1200 (una línea de `politica.py` si el CTO quiere otra cosa) |
 
 **Decidido al construir (ya no son preguntas):** el equipo maestro (`MASTER`) **no** cuenta contra el cupo de equipos (H-04, D-12) · `desde` se acepta con un día de tolerancia en el nodo, la misma para activar y para decidir el estado, y el emisor lo retrasa un día (H-08, D-7 y D-8) · lo que cierra puertas y la salida de calificaciones no se licencian (H-02, H-03, D-6).

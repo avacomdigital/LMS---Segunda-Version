@@ -304,7 +304,7 @@ public static class LicenciaTexto
                 return Cupo(aviso);
             case AvisosDeLicencia.RelojAdelantado when aviso is { FechaEquipo: { } equipo, FechaEsperada: { } esperada }:
                 return $"La fecha de este equipo ({FechaYHora(equipo, zona)}) está adelantada: el aula esperaba el {Fecha(esperada, zona)}. No se aceptó y nada se pone en pausa por eso. " +
-                       "Corrígela en la configuración de Windows.";
+                       "Corrígela en Windows.";
             case AvisosDeLicencia.RelojSospechoso:
             case AvisosDeLicencia.RelojAdelantado:
             case AvisosDeLicencia.HuellaParcial:
@@ -335,7 +335,7 @@ public static class LicenciaTexto
         AvisosDeLicencia.Degradada when aviso.Motivo == MotivosDeEstado.EvaluacionVencida => "Toca «Ver la licencia» para activarla.",
         AvisosDeLicencia.Gracia or AvisosDeLicencia.Degradada or AvisosDeLicencia.PorVencer => "Toca «Ver la licencia» para renovarla.",
         AvisosDeLicencia.RelojSospechoso => "Toca «Ver la licencia» para confirmar la fecha.",
-        AvisosDeLicencia.RelojAdelantado => "Si la fecha del equipo es la correcta, toca «Ver la licencia» para confirmarla.",
+        AvisosDeLicencia.RelojAdelantado => "Si es la correcta, toca «Ver la licencia» para confirmarla.",
         _ => "Toca «Ver la licencia» para ver qué hacer.",
     };
 

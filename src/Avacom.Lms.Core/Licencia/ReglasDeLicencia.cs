@@ -75,6 +75,21 @@ public static class ReglasDeLicencia
         _ => TonoDeAviso.Informativo,
     };
 
+    /// <summary>
+    /// El texto con que la pantalla de Licencia dice una bandera: la frase de siempre y, con la fecha adelantada (Q-L13), la del aviso con la fecha del equipo y la que el aula esperaba
+    /// (la pantalla pinta las banderas y no repite el aviso que ya las dijo).
+    /// </summary>
+    public static string TextoDeBandera(EstadoLicencia estado, string bandera, TimeZoneInfo? zona = null) =>
+        bandera == BanderasDeLicencia.RelojAdelantado && estado.FechaAdelantada is { } adelantada ? LicenciaTexto.Aviso(adelantada, estado, zona) : LicenciaTexto.Bandera(bandera);
+
+    /// <summary>El tono de una bandera en la pantalla de Licencia: la fecha adelantada es un error (fuerte), la integridad pide atención y lo demás informa.</summary>
+    public static TonoDeAviso TonoDeBandera(string bandera) => bandera switch
+    {
+        BanderasDeLicencia.RelojAdelantado => TonoDeAviso.Fuerte,
+        BanderasDeLicencia.IntegridadAlterada => TonoDeAviso.Atencion,
+        _ => TonoDeAviso.Informativo,
+    };
+
     /// <summary>El aviso del banner: el más importante de <c>avisos[]</c>, con qué tocar y cuántos más hay. Null si no hay nada que avisar (o en modo de desarrollo).</summary>
     public static AvisoDelBanner? Banner(EstadoLicencia? estado, TimeZoneInfo? zona = null)
     {

@@ -79,7 +79,7 @@ class AlmacenEnCarpeta:
             log.exception("No se pudo borrar %s de la carpeta de estado de la licencia", nombre, extra={"evento": "licencia.estado_borrado_fallo", "ruta": "bad"})
 
     def poner_en_cuarentena(self, nombre: str) -> str | None:
-        """Aparta `nombre` a `nombre.ilegible-<fecha UTC>` (renombrar, nunca borrar) y devuelve el nombre nuevo; `None` si no se pudo. Sólo se conservan los últimos `CUARENTENA_MAXIMA`."""
+        """Aparta `nombre` a `nombre.ilegible-<n:04d>-<fecha UTC>` (renombrar, nunca borrar) y devuelve el nombre nuevo; `None` si no se pudo. Sólo se conservan los últimos `CUARENTENA_MAXIMA`."""
         origen = self._ruta(nombre)
         try:
             apartado = _nombre_apartado(nombre, (p.name for p in self.carpeta.glob(f"{nombre}{SUFIJO_ILEGIBLE}*")), time.time())

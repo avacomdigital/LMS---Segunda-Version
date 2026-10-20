@@ -77,9 +77,10 @@ internal sealed class HojaDeLicencia : ContentView
         contenido.Add(cabecera, 0, 0);
         contenido.Add(new ScrollView { Content = _cuerpo }, 0, 1);
         contenido.Add(new Border { Padding = new Thickness(0, 14, 0, 0), StrokeThickness = 0, BackgroundColor = Colors.Transparent, Content = _pie }, 0, 2);
+        // Blanco opaco (no el 96 % de las superficies): detrás está la lámina del estado, con texto grande, y se transparentaba.
         _tarjeta = new Border
         {
-            BackgroundColor = Ds.SuperficieContenido, Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioGrande },
+            BackgroundColor = Colors.White, Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioGrande },
             Padding = new Thickness(28, 24), HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, Content = contenido,
             Shadow = new Shadow { Brush = new SolidColorBrush(Ds.Tinta), Offset = new Point(0, 12), Radius = 32, Opacity = 0.28f }, AutomationId = "licencia-hoja",
         };
@@ -296,33 +297,62 @@ internal sealed class HojaDeLicencia : ContentView
     private void Avance(string texto) =>
         _cuerpo.Add(new Label { Text = texto, FontFamily = Ds.FuenteRegular, FontSize = 18, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap, AutomationId = "licencia-avance" });
 
+    /// <summary>
+    /// Dónde guardar: la última carpeta usada y las memorias USB primero (es lo que se lleva a AVACOM), luego Documentos, Escritorio y Descargas en una sola fila de fichas y al final los
+    /// discos y las unidades de red. Una memoria que se conecta aparece sola (el vigilante de unidades); «Buscar de nuevo» lo fuerza.
+    /// </summary>
     private void PintarDestinos(string titulo = LicenciaTexto.ElegirDestino)
     {
-        _cuerpo.Add(LicenciaUi.Eyebrow(titulo.ToUpperInvariant()));
-        var herramientas = ExamenUi.Fila();
-        herramientas.Add(LicenciaUi.Accion("Buscar de nuevo", Ds.Rango.Secondary, LicenciaUi.Seguro("Hoja.BuscarDestinos", RefrescarDestinosAsync), "licencia-destinos-buscar").Vista);
-        _cuerpo.Add(herramientas);
+        var cabeza = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 10 };
+        var eyebrow = LicenciaUi.Eyebrow(titulo.ToUpperInvariant());
+        eyebrow.VerticalOptions = LayoutOptions.Center;
+        cabeza.Add(eyebrow, 0, 0);
+        cabeza.Add(LicenciaUi.Accion("Buscar de nuevo", Ds.Rango.Secondary, LicenciaUi.Seguro("Hoja.BuscarDestinos", RefrescarDestinosAsync), "licencia-destinos-buscar").Vista, 1, 0);
+        _cuerpo.Add(cabeza);
         if (_destinos is null)
         {
             _cuerpo.Add(Ds.Secundario(_buscandoDestinos ? "Buscando memorias y carpetas…" : "Toca «Buscar de nuevo» para ver las memorias y carpetas.", 15));
             return;
         }
         if (_destinos.Aviso is { } aviso) _cuerpo.Add(ExamenUi.Aviso(aviso, null, Tono.Info));
+        var todos = Destinos().ToList();
+        var primero = _ultima is null ? null : todos.FirstOrDefault(d => string.Equals(Clave(d.Ruta), Clave(_ultima.Ruta), StringComparison.OrdinalIgnoreCase));
         var i = 0;
-        foreach (var d in Destinos())
+        foreach (var d in todos.Where(d => d == primero || (!d.EsAtajo && d.Tipo == TipoDeDestino.Extraible)))
+            _cuerpo.Add(FilaDeDestino(d, i++));
+        var atajos = todos.Where(d => d.EsAtajo && d != primero).ToList();
+        if (atajos.Count > 0)
         {
-            var destino = d;
-            var elegido = _elegido?.Id == destino.Id;
-            var pila = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
-            pila.Add(new Label { Text = elegido ? $"✓  {destino.Nombre}" : destino.Nombre, FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.TailTruncation });
-            pila.Add(new Label { Text = DetalleDe(destino), FontFamily = Ds.FuenteRegular, FontSize = 13, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.MiddleTruncation });
-            var marca = TextoDeExportacion.Marca(destino.Tipo);
-            var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 10 };
-            fila.Add(pila, 0, 0);
-            if (marca is not null) fila.Add(ExamenUi.Pildora(marca, destino.Tipo == TipoDeDestino.Extraible ? Tono.Info : Tono.Violeta, 12), 1, 0);
-            _cuerpo.Add(LicenciaUi.Tocable(fila, LicenciaUi.Seguro("Hoja.Destino", () => { _elegido = destino; Pintar(); return Task.CompletedTask; }),
-                $"{destino.Nombre}{(marca is null ? string.Empty : ", " + marca)}", $"licencia-destino-{i++}", elegido));
+            var fila = new Grid { ColumnSpacing = 8 };
+            for (var a = 0; a < atajos.Count; a++)
+            {
+                fila.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+                var destino = atajos[a];
+                var elegido = _elegido?.Id == destino.Id;
+                var rotulo = new Label { Text = elegido ? $"✓  {destino.Nombre}" : destino.Nombre, FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.Tinta,
+                    HorizontalTextAlignment = TextAlignment.Center, VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.TailTruncation };
+                var ficha = LicenciaUi.Tocable(rotulo, LicenciaUi.Seguro("Hoja.Atajo", () => { _elegido = destino; Pintar(); return Task.CompletedTask; }),
+                    $"{destino.Nombre}. {destino.Ruta}", $"licencia-destino-{i++}", elegido);
+                fila.Add(ficha, a, 0);
+            }
+            _cuerpo.Add(fila);
         }
+        foreach (var d in todos.Where(d => d != primero && !d.EsAtajo && d.Tipo != TipoDeDestino.Extraible))
+            _cuerpo.Add(FilaDeDestino(d, i++));
+    }
+
+    private View FilaDeDestino(DestinoDeExportacion destino, int indice)
+    {
+        var elegido = _elegido?.Id == destino.Id;
+        var pila = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
+        pila.Add(new Label { Text = elegido ? $"✓  {destino.Nombre}" : destino.Nombre, FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.TailTruncation });
+        pila.Add(new Label { Text = DetalleDe(destino), FontFamily = Ds.FuenteRegular, FontSize = 13, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.MiddleTruncation });
+        var marca = TextoDeExportacion.Marca(destino.Tipo);
+        var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 10 };
+        fila.Add(pila, 0, 0);
+        if (marca is not null) fila.Add(ExamenUi.Pildora(marca, destino.Tipo == TipoDeDestino.Extraible ? Tono.Info : Tono.Violeta, 12), 1, 0);
+        return LicenciaUi.Tocable(fila, LicenciaUi.Seguro("Hoja.Destino", () => { _elegido = destino; Pintar(); return Task.CompletedTask; }),
+            $"{destino.Nombre}{(marca is null ? string.Empty : ", " + marca)}", $"licencia-destino-{indice}", elegido);
     }
 
     private static string DetalleDe(DestinoDeExportacion d)
@@ -357,10 +387,15 @@ internal sealed class HojaDeLicencia : ContentView
             {
                 _cuerpo.Add(LicenciaUi.Seccion(LicenciaTexto.Paso1Titulo, LicenciaTexto.Paso1Texto));
                 Aviso(f.Aviso, Tono.Ambar, "licencia-aviso");
+                // El atajo de quien ya tiene el .avlic va en el cuerpo, junto a su explicación: el pie queda en una sola fila y la lista de memorias, a la vista.
+                var atajo = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
+                var explicacion = Ds.Secundario(LicenciaTexto.Paso1YaTengo, 14);
+                explicacion.VerticalOptions = LayoutOptions.Center;
+                atajo.Add(explicacion, 0, 0);
+                atajo.Add(LicenciaUi.Accion("Ya tengo el archivo de licencia", Ds.Rango.Secondary, LicenciaUi.Seguro("Hoja.YaTengo", BuscarLicenciasAsync), "licencia-ya-tengo").Vista, 1, 0);
+                _cuerpo.Add(atajo);
                 PintarDestinos();
-                _cuerpo.Add(Ds.Secundario(LicenciaTexto.Paso1YaTengo, 14));
                 BotonCerrar();
-                Boton("Ya tengo el archivo de licencia", Ds.Rango.Secondary, BuscarLicenciasAsync, "licencia-ya-tengo");
                 Boton(f.Aviso is null ? "Guardar la solicitud" : "Guardar otra vez", Ds.Rango.Primary, GuardarSolicitudAsync, "licencia-guardar-solicitud", _elegido is not null);
                 break;
             }
@@ -401,16 +436,18 @@ internal sealed class HojaDeLicencia : ContentView
                 Avance(LicenciaTexto.Instalando);
                 break;
             case PasoDeActivacion.Instalada:
+            {
                 _titulo.Text = f.Aviso?.Titulo ?? "Licencia instalada";
+                // El resultado ya trae la frase del estado nuevo: aquí sólo su píldora (con el tono del estado: una licencia en gracia no es un «éxito» verde), la serie y la vigencia.
+                var nuevo = f.EstadoNuevo;
+                if (nuevo is not null) _cuerpo.Add(ExamenUi.Pildora(LicenciaTexto.EstadoBreve(nuevo), LicenciaUi.TonoDe(LicenciaTexto.TonoDelEstado(nuevo)), 14));
                 _cuerpo.Add(new Label { Text = f.Aviso?.Texto ?? string.Empty, FontFamily = Ds.FuenteRegular, FontSize = 18, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap,
                     AutomationId = "licencia-resultado" });
-                if (f.EstadoNuevo is { } nuevo)
-                {
-                    _cuerpo.Add(ExamenUi.Aviso(LicenciaTexto.Titulo(nuevo), LicenciaTexto.Frase(nuevo), Tono.Exito));
-                    if (LicenciaTexto.Vigencia(nuevo) is { } vigencia) _cuerpo.Add(LicenciaUi.Dato("Vigencia", vigencia, 110));
-                }
+                if (nuevo?.Licencia is { } instalada) _cuerpo.Add(LicenciaUi.Dato("Serie", instalada.Serie.ToString(System.Globalization.CultureInfo.InvariantCulture), 110));
+                if (nuevo is not null && LicenciaTexto.Vigencia(nuevo) is { } vigencia) _cuerpo.Add(LicenciaUi.Dato("Vigencia", vigencia, 110));
                 Boton("Listo", Ds.Rango.Primary, () => { Cerrar(); return Task.CompletedTask; }, "licencia-listo");
                 break;
+            }
             case PasoDeActivacion.NoInstalada:
                 _titulo.Text = f.Aviso?.Titulo ?? "La licencia no se instaló";
                 _cuerpo.Add(new Label { Text = f.Aviso?.Texto ?? string.Empty, FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap,

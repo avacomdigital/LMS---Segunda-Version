@@ -56,23 +56,24 @@
 }
 ```
 
-- `estado`: `sin_licencia` · `activa` · `reactivada` · `en_gracia` · `liberacion_pendiente` · `degradada`. `motivo`: `evaluacion` · `evaluacion_vencida` · `vigente` · `vencida` · `huella_distinta` · `liberacion_pendiente` · `liberacion_no_confirmada` · `aun_no_vigente` · `reactivada` · `licencia_ilimitada` (el nodo de desarrollo o pruebas). `banderas`: `reloj_sospechoso` · `huella_parcial` · `integridad_alterada`.
+- `estado`: `sin_licencia` · `activa` · `reactivada` · `en_gracia` · `liberacion_pendiente` · `degradada`. `motivo`: `evaluacion` · `evaluacion_vencida` · `vigente` · `vencida` · `huella_distinta` · `liberacion_pendiente` · `liberacion_no_confirmada` · `aun_no_vigente` · `reactivada` · `licencia_ilimitada` (el nodo de desarrollo o pruebas). `banderas`: `reloj_sospechoso` (la fecha del equipo va **por detrás**) · `reloj_adelantado` (va **por delante** y el nodo no la acepta: Q-L13) · `huella_parcial` · `integridad_alterada`.
 - `licencia` es `null` sin licencia. **Nunca** trae la firma ni identificadores de hardware: `archivo` es el hash corto del archivo, `huella` sólo cifras y el nivel (`hardware` · `instalacion`; en `sin_licencia` `coincide` es `null`).
 - `vigencia.hasta` es el **próximo hito** para quien lee: fin de la vigencia, de la gracia, del plazo de liberación o de la evaluación; `dias_restantes` son días completos, hacia arriba y nunca negativos.
-- `limites` son los de la licencia; sin licencia, los de la evaluación (100 equipos, 3000 usuarios, 50/100 concurrentes). `null` = sin tope.
+- `limites` son los de la licencia; sin licencia, los de la evaluación (60 equipos, 1200 usuarios, 50/100 concurrentes: el tamaño máximo de un aula, Q-L1). `null` = sin tope. (Los ejemplos de arriba son una captura con la licencia de las pruebas, que trae 55 equipos; el plan `anual-aula` del emisor trae 60.)
 - `avisos[]`, en orden de importancia; son **códigos con sus cifras** y el texto lo pone el cliente:
 
   | `codigo` | Cifras | Cuándo |
   |---|---|---|
+  | `reloj_adelantado` | `adelanto_dias` (al día más cercano, mínimo 1), `fecha_equipo` y `fecha_esperada` (ms del nodo) | La fecha del equipo saltó hacia adelante, el nodo no la aceptó ni la guardó y espera a que concuerde (Q-L13). Va **primero**. No cambia el estado: nada se degrada |
   | `degradada` | `motivo` | Estado `degradada` |
   | `gracia` | `dias`, `motivo` (`vencida` o `huella_distinta`) | `en_gracia` |
   | `liberacion_pendiente` | `dias` | `liberacion_pendiente` |
   | `evaluacion` | `dias`, `urgente` (7 días o menos) | `sin_licencia`, **desde el primer día** |
   | `por_vencer` | `dias`, `umbral` (30/14/7/3/1) | `activa` o `reactivada` cerca del vencimiento |
   | `cupo` | `tipo` (`equipos`/`usuarios`), `en_uso`, `limite`, `porcentaje` | 90 % o más del límite |
-  | `reloj_sospechoso` · `huella_parcial` · `integridad_alterada` | — | La bandera correspondiente |
+  | `reloj_sospechoso` · `huella_parcial` · `integridad_alterada` | — | La bandera correspondiente (la de `reloj_adelantado` ya tiene su aviso con cifras) |
 
-- Otros ejemplos reales: `estado_sin_licencia` (`avisos: [{"codigo":"evaluacion","dias":30,"urgente":false}]`), `estado_gracia` (`dias: 22`), `estado_degradada` (`capacidades.no_disponibles` con las cuatro), `estado_huella_parcial`, `estado_huella_distinta`, `estado_liberacion_pendiente` (14 días), `estado_por_vencer_y_cupo` (`{"codigo":"por_vencer","dias":12,"umbral":14}`), `estado_cupo_lleno`, `estado_reloj_salto`.
+- Otros ejemplos reales: `estado_sin_licencia` (`avisos: [{"codigo":"evaluacion","dias":30,"urgente":false}]`), `estado_gracia` (`dias: 22`), `estado_degradada` (`capacidades.no_disponibles` con las cuatro), `estado_huella_parcial`, `estado_huella_distinta`, `estado_liberacion_pendiente` (14 días), `estado_por_vencer_y_cupo` (`{"codigo":"por_vencer","dias":12,"umbral":14}`), `estado_cupo_lleno`, `estado_reloj_retroceso` y `estado_reloj_adelantado` (`{"codigo":"reloj_adelantado","adelanto_dias":32,"fecha_equipo":…,"fecha_esperada":…}`: el estado sigue `activa`).
 
 ## 2 · Activar, renovar y liberar (sin internet, por archivo)
 
@@ -100,14 +101,16 @@
 \* `renovar/` siempre pide `license.renew`.
 
 - Un archivo cuya firma o llave no valen es un hecho auditable (`licencia.firma_invalida`, resultado `denegado`, con el tamaño y el hash corto, nunca el contenido); el resto son errores de uso y no dejan asiento.
-- **Liberar se puede deshacer** volviendo a activar el mismo archivo: el nodo guarda una «tumba» de lo que liberó para que una base restaurada no lo resucite, y activar a propósito la quita.
+- **Liberar se puede deshacer** volviendo a activar el mismo archivo: el nodo guarda una «tumba» de lo que liberó para que una base restaurada no lo resucite, y activar a propósito la quita (la respuesta dice `activada` y no `reactivada`: tras liberar ya no hay una licencia vigente). Los nombres sugeridos (`solicitud-…`, `liberacion-…`) llevan la hora **UTC**.
 - Activar, renovar o liberar **nunca detienen una clase ni tocan un dato académico** (R-01, R-03).
 
 ## 3 · El reloj (permiso `license.activate`)
 
 | Ruta | Verbo | Qué hace |
 |---|---|---|
-| `reloj/confirmar/` | POST | Extensión (P-06): tras un salto del reloj **hacia adelante** el nodo no degrada a nadie y avisa; quien administra confirma que la fecha de hoy es la correcta y la sospecha se apaga. Cuerpo vacío; 200 con el estado. Deja `licencia.reloj_confirmado` |
+| `reloj/confirmar/` | POST | Extensión (P-06): quien administra confirma que la fecha del equipo es la correcta. Con la bandera `reloj_adelantado` (Q-L13) es **la única forma de que el nodo acepte y guarde esa fecha**: el aula se había quedado atrás y hoy es la que dice el equipo; con `reloj_sospechoso` (la fecha iba por detrás) apaga la sospecha. Cuerpo vacío; 200 con el estado. Deja `licencia.reloj_confirmado`. Si la fecha del equipo está **mal**, no se confirma: se corrige en Windows y el aviso se quita solo |
+
+Una fecha adelantada **no cambia el estado ni apaga nada**: sólo levanta la bandera y el aviso `reloj_adelantado` hasta que la fecha concuerde (o la administración confirme) y las acciones que fechan algo (`activar/`, `renovar/`, `liberar/`, `solicitud/`) usan la hora que el nodo considera confiable, no la del equipo (D-18).
 
 No existe una ruta para **bajar** la marca alta del reloj (§5 de [01-diseno.md](01-diseno.md): Q-L13).
 
@@ -122,7 +125,7 @@ Son parte del contrato (OPS los convierte en frases; **no se renombran**). El `d
 | `kid_desconocido` | Firmada con una llave que este nodo no reconoce (por ejemplo, la de desarrollo en producción, o la de producción cuando todavía no hay ninguna) |
 | `firma_invalida` | El archivo fue modificado o no es de AVACOM |
 | `etiqueta_critica_desconocida` | «Actualiza AVACOM OPS»: la licencia exige algo que esta versión no entiende |
-| `campo_faltante` · `campo_invalido` | Falta información obligatoria o hay un dato fuera de rango |
+| `campo_faltante` · `campo_invalido` | Falta información obligatoria o hay un dato fuera de rango (por ejemplo, un límite en 0: no limita, detendría la clase; D-17) |
 | `tipo_no_admitido` | Licencia de desarrollo en un nodo de producción |
 | `aun_no_vigente` | Empieza en más de un día: «revisa que la fecha y la hora del equipo estén bien» |
 | `serie_no_posterior` · `otra_licencia` · `sin_licencia_instalada` | Reglas de serie (§2) |
