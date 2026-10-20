@@ -41,7 +41,7 @@
 
 ## 4 · Paso a paso: una licencia nueva
 
-Puedes usar el **modo guiado** (haz doble clic en `Emitir-Licencia.bat`: un menú numerado te hace las mismas preguntas) o la **línea de comandos** de abajo. Los dos hacen exactamente lo mismo.
+Puedes usar el **modo guiado** (haz doble clic en `Emitir-Licencia.bat`: un menú numerado te hace las mismas preguntas) o la **línea de comandos** de abajo. Los dos hacen exactamente lo mismo. Para la línea de comandos abre una consola **dentro de la carpeta de la herramienta** y escribe `avacom-licencias …` (en PowerShell, `.\avacom-licencias …`). Si las rutas llevan espacios, ponlas entre comillas; en el modo guiado puedes **arrastrar** el archivo a la ventana.
 
 ### Paso 1 · Recibe la solicitud
 
@@ -58,8 +58,8 @@ La herramienta **verifica la firma del computador del colegio** y te muestra:
 | Qué mira | Qué debes ver | Qué hacer si no |
 |---|---|---|
 | **Firma** | «La firma del equipo es válida» | Si no lo es, **no sigas**: pide una solicitud nueva (el archivo se dañó o lo alteraron) |
-| **Nivel de huella** | `hardware` (3 o más piezas válidas) | Si dice `instalacion`, el equipo tiene datos de fábrica poco útiles (común en paneles OEM). **Se puede emitir**, pero avisa al colegio: es la huella más débil y no deben borrar la carpeta de licencia |
-| **k de n** | Por ejemplo «3 de 5» | Si dice «1 de 1», es nivel `instalacion` |
+| **Nivel de huella** | `hardware` (el equipo trae al menos dos datos de fábrica útiles, uno de ellos de la placa) | Si dice `instalación`, el equipo tiene datos de fábrica poco útiles (común en paneles OEM). **Se puede emitir**, pero avisa al colegio: es la huella más débil y no deben borrar la carpeta de licencia |
+| **Piezas** | Cuántas piezas del equipo deben coincidir, por ejemplo «3 de 4» | Si dice «1 de 1», es nivel `instalación` |
 | **Versión del nodo** | Una versión reciente de AVACOM OPS | Si es muy vieja, pide que actualicen antes |
 | **Aula** | El nombre que el colegio escribió | Es sólo informativo: la licencia no depende de él |
 | **Creada** | Una fecha reciente (últimos 30 días) | Si es muy vieja, pide una nueva |
@@ -82,23 +82,32 @@ avacom-licencias emitir ^
 1. Te pide la **frase de paso** (no se ve mientras escribes).
 2. Verifica la solicitud y copia la huella tal cual.
 3. Calcula las fechas: **empieza ayer a las 00:00 UTC** (un día de margen por si el reloj del colegio está atrasado) y **vence el 31 de octubre de 2027 a las 23:59:59 UTC**.
-4. Te muestra un **resumen** como este y espera:
+4. Te muestra un **resumen** como este y espera (sale tal cual, con el código de la licencia que corresponda):
 
 ```text
 RESUMEN DE LA LICENCIA
   Aula ............ Colegio San Martín
-  Tipo ............ produccion
-  Serie ........... 1  (licencia nueva)
+  Tipo ............ producción
+  Licencia ........ 9a944ae0… · serie 1 (licencia nueva)
   Vigencia ........ 2026-10-19 → 2027-10-31 (UTC)
   Gracia .......... 30 días
   Límites ......... 55 equipos · 1200 usuarios · 50 concurrentes normales · 100 en pico
   Módulos ......... todos (*)
-  Huella .......... nivel hardware · 3 de 5 piezas
+  Huella .......... nivel hardware · 3 de 4 piezas
   Llave ........... prod-2026-1
 Para firmar, escribe EMITIR y pulsa Intro:
 ```
 
-5. Si **lo escribes**, firma, **vuelve a verificar** lo que escribió y deja un renglón en el registro. Si escribes otra cosa, no se crea ningún archivo.
+   Si hay algo que debas saber (huella de nivel instalación, el reloj del colegio atrasado, una licencia de evaluación, un límite sin tope), el resumen trae debajo una sección **AVISOS**. Léela.
+
+5. Si **lo escribes**, firma, **vuelve a leer lo firmado con el mismo lector que usará el computador del colegio** y deja un renglón en el registro. Si escribes otra cosa, no se crea ningún archivo ni ningún renglón.
+
+```text
+Licencia emitida y verificada (renglón 1 del registro).
+  Licencia ........... E:\salida\colegio-san-martin-20261020-s1.avlic
+  Hoja de entrega .... E:\salida\colegio-san-martin-20261020-s1.txt
+  SHA-256 ............ 17cd2832…
+```
 
 Resultado en `E:\salida`:
 
@@ -152,9 +161,9 @@ El sistema no puede saber, sin internet, que una licencia está activa en otro c
 
 | Qué se cambió | Efecto | Qué hacer |
 |---|---|---|
-| Un disco, una tarjeta de red | Ninguno (la licencia admite que cambien piezas: 3 de 5 deben coincidir) | Nada |
+| Un disco, una tarjeta de red | Ninguno (la licencia admite que cambien piezas: con 4 datos, 3 deben coincidir) | Nada |
 | La placa madre | Puede dejar de coincidir: el colegio ve «Esta licencia es de otro equipo» y sigue con clase durante los días de gracia | Nueva solicitud → misma licencia, serie siguiente |
-| Reinstalar Windows | Cambia una pieza de cinco | Nada, salvo que el equipo sea de nivel `instalacion`: ahí hay que pedir una solicitud nueva |
+| Reinstalar Windows | Cambia una sola pieza (el identificador de Windows) | Nada, salvo que el equipo sea de nivel `instalación`: ahí hay que pedir una solicitud nueva |
 
 ### 5.6 · Licencia de evaluación
 
@@ -210,6 +219,6 @@ Se hace **una vez**, con el CTO presente, en un equipo **sin red**.
 | **Liberación** (`.avrel`) | La prueba, firmada por el computador viejo, de que ya no usará la licencia |
 | **Serie** | Un número que sube con cada archivo de la misma licencia (1, 2, 3…). No se puede volver a una serie anterior |
 | **Gracia** | Los días en que el colegio sigue con todo funcionando después de vencer, antes de perder funciones |
-| **Huella** | La identidad del computador maestro hecha con varias piezas (3 de 5 deben coincidir) |
+| **Huella** | La identidad del computador maestro hecha con varias piezas (por ejemplo, 3 de 4 deben coincidir) |
 | **kid** | El nombre de la llave con que se firmó (`prod-2026-1`) |
 | **Degradada** | Se acabó la gracia: se apagan reportes, búsqueda, importación y ajustes avanzados. Las clases siguen |

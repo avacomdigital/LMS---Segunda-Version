@@ -178,7 +178,7 @@ Probabilidad: **B**aja · **M**edia · **A**lta (en un parque de aulas reales). 
 
 | # | Qué pasa | Impacto | P | Cómo lo cubre | Prueba |
 |---|---|---|---|---|---|
-| F-06 | Se cambia un disco o la tarjeta de red | Nada: coinciden ≥ 3 de 5 factores; bandera `huella_parcial` | A | P-04 | Quitar un factor de 5: sigue `activa` |
+| F-06 | Se cambia un disco o la tarjeta de red | Nada: con 4 factores coinciden 3 de 4; bandera `huella_parcial`. **Con sólo 2 factores útiles se exigen los 2**: cambiar uno cuenta como otro equipo (D-3) | A | P-04 | Quitar un factor de 4: sigue `activa`; con 2 factores, quitar uno: gracia |
 | F-07 | Se cambia la **placa madre** | Pueden quedar < 3 factores → «licencia de otro equipo» → `en_gracia` → `degradada` si no se reactiva | M | Gracia (`gracia_dias`), reactivación por solicitud nueva (JRN-020) | Cambiar 3 factores: gracia; reactivar: `activa` |
 | F-08 | **Reinstalar Windows** en un panel con SMBIOS **de relleno** (nivel `instalacion`) | Se cambia `MachineGuid` y, **si se pierde `%ProgramData%\AVACOM\OPS Master\Config\licencia\`**, el secreto de instalación desaparece: huella irrecuperable → gracia → degradada | M | La carpeta se conserva al actualizar y desinstalar; CAP-111 (copia en USB); reactivación | Borrar la carpeta y comprobar que se pide reactivar y la clase sigue |
 | F-09 | Panel con SMBIOS de relleno (muy común en OEM de pantallas interactivas) | Nada inmediato; la huella es la **débil** (de instalación) y se ve en pantalla | A | P-04: nunca se impide activar por hardware pobre | Factores basura → nivel `instalacion` visible |
@@ -253,7 +253,7 @@ Probabilidad: **B**aja · **M**edia · **A**lta (en un parque de aulas reales). 
 | Excepciones forzadas en middleware, cálculo y programador: la petición pasa | R-04, F-18, F-19 |
 | Cupo: nuevos bloqueados; existentes, readmisiones, latidos, visitantes y el equipo `MASTER` intactos; importación al tope fila por fila | §6, H-04…H-07, F-27…F-29 |
 | Reloj: retroceso, adelanto, respaldo viejo, tolerancia de `desde` | F-01…F-05, H-08 |
-| Huella: factores de relleno, 3 de 5, borrar el secreto de instalación | F-06…F-10 |
+| Huella: factores de relleno, k de n, borrar el secreto de instalación | F-06…F-10 |
 | Archivos: mutaciones, serie anterior, otra huella, llave de desarrollo, etiqueta crítica | F-11…F-16 |
 | P-12: `AVACOM_LMS_ENTORNO=pruebas` en un layout de producción de pruebas **sigue evaluando** | F-22 |
 | UIA de OPS con `reportes` apagada (botón «Visitantes y actividad»), con la licencia degradada (interruptores de seguridad) y con una clase abierta (sin banner) | H-01, H-02, F-30, F-31, F-34 |

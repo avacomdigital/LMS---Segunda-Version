@@ -167,13 +167,13 @@ Reglas de forma: `0 < desde < vence`, vigencia ≤ 25 años, `serie ≥ 1`, `gra
 | 2 | UUID de SMBIOS | `GetSystemFirmwareTable('RSMB')` |
 | 3 | Serie de la placa | SMBIOS tipo 2 |
 | 4 | Serie del chasis | SMBIOS tipo 3 |
-| 5 | `ProcessorId` | SMBIOS tipo 4 |
-| 6 | **Secreto de instalación** | Aleatorio del primer arranque, protegido con DPAPI de máquina. Sólo se usa si **no hay k factores de hardware válidos** |
+| 5 | `ProcessorId` | SMBIOS tipo 4. **Reservado: no sella** (D-3 de la otra sesión): es el CPUID del *modelo* del procesador, igual en todos los equipos del mismo modelo |
+| 6 | **Secreto de instalación** | Aleatorio del primer arranque, protegido con DPAPI de máquina. Sólo se usa si **la huella no alcanza nivel `hardware`** |
 
 - Cada factor viaja como `HMAC-SHA256(clave de producto, "factor:valor normalizado")`: nunca el identificador crudo. La clave de producto **no es un secreto**; evita que los identificadores sean «buscables» en una solicitud.
-- Se **descartan los valores de relleno** que traen las placas OEM de los paneles («To be filled by O.E.M.», ceros, `FFFF…`, «Default string», «System Serial Number»…).
-- Coincidencia **k de n** (por omisión 3 de 5): sobrevive al cambio de un disco o de una tarjeta; un disco clonado en otra placa no pasa.
-- Con menos de k factores válidos se usa la huella de **instalación** (nivel `instalacion`, visible en pantalla). **Nunca se impide activar por tener hardware pobre.**
+- Se **descartan los valores de relleno** que traen las placas OEM de los paneles («To be filled by O.E.M.», «Default string», ceros, `FFFF…`, «System Serial Number»…). En la máquina de desarrollo medida en la Fase 0, las series de placa, de chasis, de BIOS y de sistema eran «Default string»: **no es un caso raro**.
+- Coincidencia **k de n entre los factores de unidad** (1 a 4): **2 de 2, 2 de 3 o 3 de 4**. Con tres o más sobrevive al cambio de un disco o de una tarjeta; un disco clonado en otra placa no pasa. Con sólo dos (disco y placa) no se distingue un clon de una placa cambiada, así que se exigen los dos.
+- El nivel es **`hardware`** si hay al menos dos factores de unidad válidos y alguno ligado a la placa (UUID de SMBIOS, serie de la placa o del chasis); si no, **`instalacion`** (visible en pantalla; más débil: un disco clonado trae el secreto). **Nunca se impide activar por tener hardware pobre.**
 - La **deriva de huella es un modo de fallo esperado**: se resuelve reactivando o liberando, jamás con un bloqueo.
 
 ### 5.3 · Llaves
@@ -226,7 +226,7 @@ Reglas, en orden:
 | Salto hacia adelante sospechoso | 7 días | Entre dos lecturas del **mismo proceso**; un nodo apagado diez días **no** es un salto |
 | Aplazamiento por sospecha | 72 h | Tope de lo que una sospecha puede retrasar la degradación |
 | Histéresis | 24 h | Para degradar |
-| Huella `k` | 3 de 5 | |
+| Huella `k` | 2 de 2 · 2 de 3 · 3 de 4 | Entre los factores de unidad (`k_para`) |
 | Ventana «reactivada» | 72 h | |
 | Aviso de cupo | 90 % | |
 | Límites de evaluación | 100 equipos · 3000 usuarios · 50/100 concurrentes | Holgados, para no bloquear a nadie por actualizar |
@@ -262,7 +262,7 @@ Identificadores crudos del equipo (sólo hashes con clave de producto) · claves
 | LIC-D-03 | **Debe** haber una **sola forma canónica** de cada archivo | P-02 | Etiquetas desordenadas o repetidas, capacidades sin orden, factores sin orden y texto con relleno o espacios se rechazan | LT-03 |
 | LIC-D-04 | **Debe** distinguir etiquetas críticas y no críticas | P-02 | Una crítica desconocida rechaza (`etiqueta_critica_desconocida`); una no crítica desconocida se ignora; el bit crítico de una etiqueta conocida debe ser el declarado | LT-04 |
 | LIC-D-05 | **Debe** respetar los topes (16 KiB, 4096, 32 etiquetas, kid ≤ 64) | P-02 | Un archivo mayor o con más etiquetas se rechaza sin leerlo entero | LT-02 |
-| LIC-D-06 | **Debe** haber huella multifactor tolerante (≥ 3 de 5) con descarte de valores de relleno y nivel `instalacion` cuando faltan factores | P-04 | Con 3 de 5 coincidencias hay `activa`; con 2, `en_gracia`; factores de relleno no cuentan; menos de k factores válidos no impide activar | LT-05 |
+| LIC-D-06 | **Debe** haber huella multifactor tolerante (k de n entre los factores de unidad: 2 de 2, 2 de 3, 3 de 4) con descarte de valores de relleno y nivel `instalacion` cuando no alcanza el nivel `hardware` | P-04 · D-3 | Con 4 factores, 3 coincidencias dan `activa` y 2 dan `en_gracia`; los factores de relleno no cuentan; el `ProcessorId` no sella; un equipo sin factores útiles **puede** activar (nivel `instalacion`) | LT-05 |
 | LIC-D-07 | **Debe** no llevar identificadores crudos ni datos de personas en solicitudes, asientos, eventos ni logs | P-04 · P-16 | Un recorrido por los archivos y la bitácora no encuentra el `MachineGuid`, el UUID de SMBIOS ni una serie en claro | LT-06 |
 | LIC-D-08 | **Debe** calcular el estado con una función pura y **no guardarlo** | P-05 | Borrar la memoria y las filas derivadas devuelve el mismo estado; la tabla de estados × reloj × gracia está completa | LT-07 |
 | LIC-D-09 | **Debe** guardar el historial de sólo inserción y **volver a verificar la firma al arrancar** | P-05 · R-04 | Un `UPDATE` o `DELETE` sobre `m18_licencia` falla; una fila con el archivo alterado se ignora y deja asiento | LT-08 |
@@ -716,7 +716,7 @@ El detalle, con resultados y con lo que **no** se pudo comprobar, queda en `03-p
 | LT-01 | ≥ 100 000 mutaciones con semilla fija: **0 aceptadas** |
 | LT-02 | Rechazos por forma: versión menor y mayor, `kid` desconocido, etiqueta crítica desconocida, archivo truncado, bytes sobrantes, topes |
 | LT-03 · LT-04 | Forma canónica (texto, orden) · etiquetas críticas y no críticas |
-| LT-05 · LT-06 | Huella: relleno OEM, 3 de 5, nivel `instalacion` · sin identificadores crudos |
+| LT-05 · LT-06 | Huella: relleno OEM, k de n (2 de 2, 2 de 3, 3 de 4), `ProcessorId` que no sella, nivel `instalacion` · sin identificadores crudos |
 | LT-07 | Tabla de estados × reloj × gracia completa |
 | LT-08 · LT-09 | Historial de sólo inserción y fila alterada · trigger de la marca alta |
 | LT-10 · LT-15 | `backend.env` no apaga la licencia · layout de producción de pruebas con `AVACOM_LMS_ENTORNO=pruebas` **sigue evaluando** |
