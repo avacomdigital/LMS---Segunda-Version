@@ -4,7 +4,7 @@
 |---|---|
 | Estado | **Análisis** (2026-10-20), hecho **antes** de construir las Fases 2 y 3. No cambia código: dice dónde puede doler y qué hay que cuidar. |
 | Pregunta | ¿Qué funciones del producto puede perder un colegio por culpa del licenciamiento: **a propósito** (la licencia las apaga) y **por accidente** (un fallo, un reloj raro, un cambio de equipo, un error nuestro)? |
-| Base | Inventario automático de las **307 rutas reales** (método + ruta; 260 rutas distintas) recorriendo el resolvedor de Django, clasificadas con `backend/licenciamiento/dominio/rutas.py` (el estado del 2026-10-20 a las 10:00), más lectura de las pantallas de OPS y Student que las llaman. |
+| Base | Inventario automático de las rutas reales (método + ruta) recorriendo el resolvedor de Django, clasificadas con `backend/licenciamiento/dominio/rutas.py`, más lectura de las pantallas de OPS y Student que las llaman. **Dos fotos:** la **inicial** (2026-10-20 a las 10:00: 307 pares, 260 rutas distintas; 100 intocables · 170 núcleo · 37 licenciables) con la que se hallaron los hallazgos, y la **actual** (≈ 10:55: 316 pares, 269 rutas distintas; **109 · 178 · 29**), ya con la ruta `/api/licencia/` y con H-02 y H-03 adoptados por la otra sesión. |
 | Se lee con | [requerimientos.md](requerimientos.md) (qué se va a construir), [00-prompt.md](00-prompt.md) (decisiones P-n y reglas R-n) y, cuando existan, `01-diseno.md` y `03-pruebas.md` de la otra sesión. |
 | Convención | **H-n** = hallazgo que cambia el diseño · **F-n** = modo de fallo · **E-n** = escenario del calendario escolar. |
 
@@ -12,7 +12,7 @@
 
 ## 0 · En una página
 
-**Lo más importante.** Si todo sale mal con la licencia, lo máximo que se pierde son **37 de 307 rutas** (12 %): reportes, búsqueda, importación masiva y cuatro ajustes de administración avanzada. **Ninguna ruta de una clase, un examen, el modo estudio, el inicio de sesión ni la lectura de calificaciones puede apagarse** (las 100 rutas intocables). Eso es lo que prometen R-01 y R-04, y este análisis comprueba que la tabla actual lo cumple para todo lo que existe hoy.
+**Lo más importante.** Si todo sale mal con la licencia, lo máximo que se pierde son **29 de 316 rutas** (9 %): 15 de reportes, 8 de búsqueda, la importación masiva y cinco ajustes de administración avanzada (crear roles, crear, adoptar y versionar escalas de calificación, y reconstruir derivados). Con la tabla inicial eran 37 de 307 (12 %): la diferencia son los **boletines y las exportaciones** (H-03) y los **interruptores de seguridad** (H-02), que ya no se licencian. **Ninguna ruta de una clase, un examen, el modo estudio, el inicio de sesión ni la lectura de calificaciones puede apagarse** (las 109 rutas intocables). Eso es lo que prometen R-01 y R-04, y este análisis comprueba que la tabla actual lo cumple para todo lo que existe hoy.
 
 **Lo que sí hay que corregir antes de construir** (verificado en el código):
 
@@ -30,6 +30,8 @@
 | H-10 | Los avisos sólo los ve quien entra con rol administrador o técnico | En 30 días de evaluación nadie con ese rol abre OPS y el colegio se entera cuando ya está degradado | OPS + instalador |
 | H-11 | Una licencia con lista **explícita** de capacidades no habilita capacidades licenciables añadidas después | Una actualización «apaga» un módulo nuevo a quien no tenga `*` | Emisor (plan por omisión) |
 | H-12 | La llave pública de producción **todavía no existe** (ceremonia pendiente del CTO) | Un instalador sin ella no puede validar ninguna licencia real: todos los clientes caen a la evaluación y a los 30 días a degradada | Puerta de liberación |
+
+**Estado de los hallazgos (≈ 10:55):** H-02 a H-07 ya están **adoptados** por la otra sesión (la ruta `politicas/` y los boletines y exportaciones salieron de la tabla de licenciables; el cupo de usuarios vive sólo en `CrearUsuario._crear`; el de equipos sólo en el latido y el alta manual, con `resolver` intacto y el equipo `MASTER` fuera). **Pendientes:** H-01 (pantalla) y H-08 a H-12.
 
 **Los cinco modos de fallo con más probabilidad de doler** (§8): F-03 (reloj de fábrica atrasado al activar), F-07 (cambio de placa), F-08 (reinstalar Windows con SMBIOS de relleno), F-33 (nadie ve el aviso) y E-1 (vencer en vacaciones).
 
@@ -56,32 +58,35 @@ Regla de oro del análisis: **una función nueva es núcleo salvo que alguien la
 
 ## 3 · Inventario por módulo
 
+Foto **actual** (≈ 10:55), con la ruta de la licencia y con H-02 y H-03 adoptados; entre paréntesis, la foto inicial donde difiere.
+
 | Módulo (app) | A · Intocable | B · Núcleo | C · Licenciable | Total |
 |---|---:|---:|---:|---:|
-| acceso | 20 | 42 | 3 | 65 |
+| acceso | 20 | 43 (42) | 2 (3) | 65 |
 | aula (`classroom_engine`) | 30 | 0 | 0 | 30 |
 | modo estudio | 32 | 0 | 0 | 32 |
 | evaluación | 15 | 41 | 0 | 56 |
 | calificaciones (`gradebook`) | 0 | 32 | 4 | 36 |
-| reportes (`reporting`) | 0 | 0 | **22** | 22 |
+| reportes (`reporting`) | 0 | 7 (0) | **15 (22)** | 22 |
 | búsqueda (`search`) | 0 | 0 | **8** | 8 |
+| **licencia (`licenciamiento`)** | 9 | 0 | 0 | 9 |
 | dispositivos | 1 | 5 | 0 | 6 |
 | auditoría y logs | 1 | 11 | 0 | 12 |
 | biblioteca | 0 | 13 | 0 | 13 |
 | cola de medios | 0 | 6 | 0 | 6 |
 | expediente (y `/health/`) | 1 | 20 | 0 | 21 |
-| **Total** | **100** | **170** | **37** | **307** |
+| **Total** | **109 (100)** | **178 (170)** | **29 (37)** | **316 (307)** |
 
-**Lo que hay en A (100).** Inicio y cierre de sesión (incluido visitante y traspaso entre apps), instalación, configuración pública, PIN maestro, «mi cuenta», registro propio de profesores y de alumnos, PIN del alumno, canje de autorizaciones temporales, grupos del aula; **todo** el aula (30) y **todo** el modo estudio (32); de evaluación, lo que usa el alumno (`estudiantes`, `mias`, `antesala`, abrir intento, `estado`, `latido`, `preguntas`, `medios`, `respuestas`, `incidentes`, `bloqueo`, `entregar`, `resultado`); el latido de los equipos, los logs de los clientes y `/health/`. (La ruta `…/respuestas/<pregunta>/puntuar/` —puntuar del profesor— cae en A porque el patrón es más ancho que su intención: no pierde nada, sólo está más protegida de lo necesario.)
+**Lo que hay en A (109; 100 sin la licencia).** Inicio y cierre de sesión (incluido visitante y traspaso entre apps), instalación, configuración pública, PIN maestro, «mi cuenta», registro propio de profesores y de alumnos, PIN del alumno, canje de autorizaciones temporales, grupos del aula; **todo** el aula (30) y **todo** el modo estudio (32); de evaluación, lo que usa el alumno (`estudiantes`, `mias`, `antesala`, abrir intento, `estado`, `latido`, `preguntas`, `medios`, `respuestas`, `incidentes`, `bloqueo`, `entregar`, `resultado`); el latido de los equipos, los logs de los clientes y `/health/`. (La ruta `…/respuestas/<pregunta>/puntuar/` —puntuar del profesor— cae en A porque el patrón es más ancho que su intención: no pierde nada, sólo está más protegida de lo necesario.)
 
-**Lo que hay en C (37).**
+**Lo que hay en C (29; 37 en la foto inicial).**
 
 | Capacidad | Rutas | Qué quita al colegio | Quién la usa hoy en pantalla |
 |---|---:|---|---|
-| `reportes` | 22 | Reportes de clase, grupo, alumno y uso de equipos; boletín académico; filtros, recientes, estado, actualizar y reconstruir; **exportar a archivo** | Tesela **Reportes** de OPS y sus 9 pantallas (inicio, elegir, clase, grupo, alumno, uso, estado, boletín y boletines) |
+| `reportes` | 15 (22) | Reportes de clase, grupo, alumno y uso de equipos; filtros, recientes, estado, actualizar y reconstruir. **Ya no** los boletines ni las exportaciones (H-03): siguen siendo la vía para sacar las calificaciones | Tesela **Reportes** de OPS y sus pantallas (inicio, elegir, clase, grupo, alumno, uso, estado) |
 | `busqueda` | 8 | Buscar evaluaciones, estudios y clases; índice, sinónimos | Tesela **Buscar** de OPS |
 | `importacion` | 1 | Alta **masiva** de usuarios por archivo (`POST usuarios/importar/`) | **Ninguna pantalla de OPS** la usa hoy (sólo clientes de API) |
-| `administracion_avanzada` | 6 | Crear roles; **cambiar políticas de acceso** (`PUT politicas/<perfil>/`); adoptar, crear y versionar escalas de calificación; reconstruir derivados del libro | `CalificacionesConfigPage` (escalas), **`SeguridadAulaPage` (políticas: H-02)** |
+| `administracion_avanzada` | 5 (6) | Crear roles; adoptar, crear y versionar escalas de calificación; reconstruir derivados del libro. **Ya no** cambiar políticas de acceso (`PUT politicas/<perfil>/`, H-02) | `CalificacionesConfigPage` (escalas) |
 
 **Lo que queda en B y puede sorprender** (no se apaga, pero conviene saberlo): crear un usuario a mano (`POST usuarios/`), el padrón (`padron/estudiantes/`, grupos, matrícula), publicar y ajustar calificaciones, asignar y aplicar evaluaciones, la bitácora y su exportación, la cola de medios, la biblioteca y los equipos (`GET/POST dispositivos/`, bloquear, asignar, liberar).
 
@@ -147,12 +152,12 @@ BR-027 y BR-063: **«bloquear lo nuevo, nunca lo existente»**. Sólo se mira al
 
 | # | Evidencia | Propuesta | Estado |
 |---|---|---|---|
-| **H-01** | `ReportesPage.cs:41` abre `activity-monitor` («Visitantes y actividad»); `AppShell.xaml.cs:16` lo registra pero la tesela del menú ya no lo abre (`DashboardPage.xaml:81`). Su API (`/api/acceso/visitantes/`, `usuarios/<id>/vincular/`) es núcleo | `ReportesPage` conserva ese botón aunque `reportes` esté apagada, o se le da entrada propia (p. ej. en «Seguridad del aula») | Enviado a la otra sesión |
-| **H-02** | `rutas.py`: `PUT /api/acceso/politicas/<perfil>/` → `administracion_avanzada`. `SeguridadAulaPage.cs:239` y `AccesoApi.cs:355` usan **esa misma ruta** para los interruptores de «registro de profesores», «autorregistro de alumnos» y «visitantes» | Sacar `politicas/` de la tabla C. Lo que **cierra puertas** no se licencia | Enviado |
-| **H-03** | `reporting` no tiene ruta de exportación aparte; `gradebook` no exporta. `Q-L12` y R-03: por omisión no limitar la exportación de calificaciones | `boletines/` y `exportaciones/` pasan a núcleo hasta que el CTO conteste; el resto de `/api/reportes/` se apaga. Alternativa: dejar todo en C y decidirlo (D-n) | Enviado (CTO) |
-| **H-04** | `Sesion.cs:346` (`tipo: "MASTER"`); tipos `TABLETA`, `MASTER`, `OTRO` (`device_manager/dominio/dispositivo.py:15`) | El cupo de equipos cuenta `TABLETA` y `OTRO`, activos | Enviado |
-| **H-05** | `acceso/aplicacion/casos_uso.py:1227` (`_crear`) lo usan `CrearUsuario`, `ImportarUsuarios._fila` (1396), `RegistrarEstudiante` (autoalta), `RegistrarDocente` y el padrón. `AbrirSesionVisitante` (`estudiantes.py:190`) crea el `Usuario` directo | El gancho de cupo va **sólo** en `_crear`; «identidades activas» excluye origen `VISITANTE` y estado `RETIRADO` | Enviado |
-| **H-06** | `casos_uso.py:1345` atrapa `errores.ErrorAcceso` por fila; `views.py:49` sólo traduce `ErrorAcceso` | `CupoAgotado` hereda de `ErrorAcceso` (`http = 402`, `codigo = "cupo_agotado"`) | Enviado |
+| **H-01** | `ReportesPage.cs:41` abre `activity-monitor` («Visitantes y actividad»); `AppShell.xaml.cs:16` lo registra pero la tesela del menú ya no lo abre (`DashboardPage.xaml:81`). Su API (`/api/acceso/visitantes/`, `usuarios/<id>/vincular/`) es núcleo | `ReportesPage` conserva ese botón aunque `reportes` esté apagada, o se le da entrada propia (p. ej. en «Seguridad del aula») | Enviado a la otra sesión · **pendiente** (Fase 3) |
+| **H-02** | `rutas.py`: `PUT /api/acceso/politicas/<perfil>/` → `administracion_avanzada`. `SeguridadAulaPage.cs:239` y `AccesoApi.cs:355` usan **esa misma ruta** para los interruptores de «registro de profesores», «autorregistro de alumnos» y «visitantes» | Sacar `politicas/` de la tabla C. Lo que **cierra puertas** no se licencia | **Adoptado** (`rutas.py`) |
+| **H-03** | `reporting` no tiene ruta de exportación aparte; `gradebook` no exporta. `Q-L12` y R-03: por omisión no limitar la exportación de calificaciones | `boletines/` y `exportaciones/` pasan a núcleo hasta que el CTO conteste; el resto de `/api/reportes/` se apaga. Alternativa: dejar todo en C y decidirlo (D-n) | **Adoptado** (`rutas.py`) · el CTO confirma (Q-L12) |
+| **H-04** | `Sesion.cs:346` (`tipo: "MASTER"`); tipos `TABLETA`, `MASTER`, `OTRO` (`device_manager/dominio/dispositivo.py:15`) | El cupo de equipos cuenta `TABLETA` y `OTRO`, activos | **Adoptado** (`resolver`: `tipo != MASTER`) |
+| **H-05** | `acceso/aplicacion/casos_uso.py:1227` (`_crear`) lo usan `CrearUsuario`, `ImportarUsuarios._fila` (1396), `RegistrarEstudiante` (autoalta), `RegistrarDocente` y el padrón. `AbrirSesionVisitante` (`estudiantes.py:190`) crea el `Usuario` directo | El gancho de cupo va **sólo** en `_crear`; «identidades activas» excluye origen `VISITANTE` y estado `RETIRADO` | **Adoptado** (`CrearUsuario._crear`, `contar_activos`) |
+| **H-06** | `casos_uso.py:1345` atrapa `errores.ErrorAcceso` por fila; `views.py:49` sólo traduce `ErrorAcceso` | `CupoAgotado` hereda de `ErrorAcceso` (`http = 402`, `codigo = "cupo_agotado"`) | **Adoptado** (`acceso/dominio/errores.py`) |
 | **H-07** | `resolver` lo llaman el aula (`casos_uso.py:455`), la evaluación (`aplicacion/base.py:104`, con `exigir_aparato=True` en `intentos.py:54`), el modo estudio (`base.py:111`, `sesion.py:141`, `paquetes.py:89`) y el acceso | `resolver` **nunca** rechaza por cupo. Un parámetro opt-in (`exigir_cupo`) lo activa sólo en `LatidoView` y en `POST dispositivos/` | **Por enviar** |
 | **H-08** | `estado.calcular`: `ahora < lic.desde` → `sin_licencia` con motivo `aun_no_vigente`; sin tolerancia | Tolerancia de ±24 h en `desde` (el nodo acepta una licencia que empieza «mañana»), y el emisor **retrasa** `desde` un día (lo hace el keygen por omisión) | **Por enviar** (emisor: hecho) |
 | **H-09** | El trigger de la marca alta impide bajarla (P-06) | Una licencia con un indicador crítico «restablecer reloj» (sólo AVACOM puede emitirla) permite bajar la marca hasta su `emitida`; el administrador **no** puede bajarla solo | **Por decidir** (CTO) |
