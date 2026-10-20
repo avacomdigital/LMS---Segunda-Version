@@ -55,18 +55,20 @@ class HistorialDjango:
 class ObservacionesDjango:
     @staticmethod
     def _dict(fila: m.Observacion) -> dict:
-        return {"tipo": fila.tipo, "licencia_id": fila.licencia_id, "serie": fila.serie, "en": fila.en, "detalle": fila.detalle}
+        return {"id": fila.id, "tipo": fila.tipo, "licencia_id": fila.licencia_id, "serie": fila.serie, "en": fila.en, "detalle": fila.detalle}
 
     def registrar(self, tipo: str, ahora: int, licencia_id: str = "", serie: int = 0, detalle: dict | None = None) -> dict:
         return self._dict(m.Observacion.objects.create(tipo=tipo, en=int(ahora), licencia_id=str(licencia_id or "")[:36], serie=int(serie or 0), detalle=detalle or {}))
 
     def ultima(self, tipo: str, licencia_id: str | None = None, serie: int | None = None) -> dict | None:
+        """La más reciente POR ORDEN DE INSERCIÓN (`id`), no por la hora `en`: un salto del reloj tuerce las horas (una observación posterior puede llevar una hora menor) y el orden de las
+        filas no."""
         consulta = m.Observacion.objects.filter(tipo=tipo)
         if licencia_id is not None:
             consulta = consulta.filter(licencia_id=licencia_id)
         if serie is not None:
             consulta = consulta.filter(serie=serie)
-        fila = consulta.order_by("-en", "-id").first()
+        fila = consulta.order_by("-id").first()
         return self._dict(fila) if fila else None
 
 

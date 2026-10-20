@@ -1,10 +1,13 @@
 """
-MOD-018 · el reloj del equipo no puede servir para alargar una licencia (H-13) ni para aplazar sin fin una degradación (H-14). Lo encontró la verificación independiente
+MOD-018 · el reloj del equipo no puede servir para alargar una licencia (H-13). Lo encontró la verificación independiente
 (`spec-driven/15-licenciamiento/06-verificacion-independiente.md`).
 
 El instante confiable es `max(reloj de pared, marca alta)`. Si el reloj de pared queda por debajo de la marca (alguien atrasa la fecha, o una pila de BIOS agotada devuelve el reloj a
-2010), ese máximo es un valor FIJO —la marca—: el tiempo de la licencia se congelaba hasta que la hora de pared alcanzaba la marca, y las 72 h de tope del aplazamiento por un salto
-sospechoso no corrían. Con el reloj de pared por debajo de la marca, el instante confiable avanza ahora con el reloj monótono del proceso (`reloj.piso_monotono`).
+2010), ese máximo es un valor FIJO —la marca—: el tiempo de la licencia se congelaba hasta que la hora de pared alcanzaba la marca. Con el reloj de pared por debajo de la marca, el
+instante confiable avanza ahora con el reloj monótono del proceso (`reloj.piso_monotono`).
+
+El otro lado —adelantar la fecha (H-14, que aplazaba la degradación 72 h, y H-09)— lo resolvió el CTO (Q-L13): una fecha adelantada NO se acepta ni se guarda y avisa con un error hasta que
+la fecha concuerde. Esas pruebas están en `test_fecha_adelantada.py` y `test_reloj_resolver.py`.
 
 Se prueba con el nodo real y el reloj falso de `base.py`: `avanzar` pasa el tiempo de verdad (pared y monótono) y `saltar` sólo mueve el de pared (alguien cambió la hora).
 """
@@ -49,7 +52,7 @@ class AtrasarLaFechaTests(BaseDeReloj):
         self.evaluar("tick")
         e = self.pasar(45 * 24)                                 # día 55 de uso real: todavía en gracia
         self.assertEqual(e.estado.estado, "en_gracia")
-        e = self.pasar(7 * 24)                                  # día 62: pasó la gracia (día 60) y las 24 h de histéresis. Con la fecha congelada seguiría «en_gracia» ~100 días más
+        e = self.pasar(7 * 24)                                  # día 62: pasó la gracia (día 60). Con la fecha congelada seguiría «en_gracia» ~100 días más
         self.assertEqual((e.estado.estado, e.estado.motivo), ("degradada", "vencida"))
         self.assertEqual(sorted(e.estado.capacidades), [])
 
@@ -77,41 +80,6 @@ class AtrasarLaFechaTests(BaseDeReloj):
                 dias = dia
                 break
         self.assertTrue(dias and dias <= 55, f"degradó a los {dias} días reales (debía ser ~52)")
-
-
-class AdelantarYDevolverLaFechaTests(BaseDeReloj):
-    """H-14: las 72 h de tope del aplazamiento por un salto sospechoso son 72 h de verdad."""
-
-    def test_adelantar_y_devolver_la_fecha_aplaza_72_horas_y_no_mas(self):
-        self.reloj.avanzar(59 * DIA_MS)
-        self.assertEqual(self.evaluar("tick").estado.estado, "en_gracia")
-        self.reloj.saltar(10 * DIA_MS)                          # alguien adelanta la fecha 10 días…
-        e = self.evaluar("tick")
-        self.assertEqual(e.estado.estado, "en_gracia")          # …y la sospecha no degrada a nadie por sorpresa (P-06)
-        self.assertIn("reloj_sospechoso", e.estado.banderas)
-        self.reloj.saltar(-10 * DIA_MS)                         # …y la devuelve a la fecha real
-        e = self.pasar(60)
-        self.assertEqual(e.estado.estado, "en_gracia")          # a las 60 h todavía espera confirmación
-        e = self.pasar(24)
-        self.assertEqual(e.estado.estado, "degradada")          # a las 84 h el aplazamiento ya no es una palanca
-
-    def test_un_salto_de_un_ano_ya_devuelto_no_aplaza_un_ano(self):
-        self.reloj.avanzar(59 * DIA_MS)
-        self.evaluar("tick")
-        self.reloj.saltar(365 * DIA_MS)
-        self.evaluar("tick")
-        self.reloj.saltar(-365 * DIA_MS)
-        self.assertEqual(self.pasar(4 * 24).estado.estado, "degradada")
-
-    def test_un_nodo_degradado_no_recupera_los_modulos_adelantando_y_devolviendo_la_fecha(self):
-        self.reloj.avanzar(61 * DIA_MS + 2 * HORA_MS)
-        self.assertEqual(self.evaluar("tick").estado.estado, "degradada")
-        self.reloj.saltar(400 * DIA_MS)
-        self.evaluar("tick")
-        self.reloj.saltar(-400 * DIA_MS)
-        e = self.pasar(4 * 24)
-        self.assertEqual(e.estado.estado, "degradada")
-        self.assertEqual(sorted(e.estado.capacidades), [])
 
 
 class ConElRelojEnOrdenTests(BaseDeReloj):

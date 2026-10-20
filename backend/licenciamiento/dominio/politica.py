@@ -1,9 +1,10 @@
 """
 La política de licenciamiento COMO DATO (P-13): una sola tabla; nada comercial está cableado en el código.
 
-Los valores de abajo son PROVISIONALES: el Documento Maestro dice «falta el modelo comercial definitivo, que se decide fuera de este documento» (pregunta Q-L1 para el CTO).
-Lo que decide cada licencia concreta —vigencia, días de gracia, límites, módulos— viaja DENTRO de ella (`licencia.py`); esta política sólo cubre lo que una licencia no puede
-decir: qué pasa sin licencia, cuánto se tolera un reloj raro y cuándo se avisa.
+El Documento Maestro dice «falta el modelo comercial definitivo, que se decide fuera de este documento» (pregunta Q-L1). Decidido por el CTO (2026-10-20): el tamaño máximo de un aula
+—60 equipos y 1200 usuarios en una misma pantalla—, la gracia de 30 días corridos exactos (Q-L16, sin histéresis) y que una fecha adelantada no se acepta (Q-L13). Lo demás sigue siendo
+PROVISIONAL. Lo que decide cada licencia concreta —vigencia, días de gracia, límites, módulos— viaja DENTRO de ella (`licencia.py`); esta política sólo cubre lo que una licencia no
+puede decir: qué pasa sin licencia, cuánto se tolera un reloj raro y cuándo se avisa.
 """
 from __future__ import annotations
 
@@ -27,12 +28,14 @@ class Politica:
     evaluacion_urgente_dias: int = 7
     # El reloj del nodo puede bajar esto respecto de la marca alta sin que se considere un retroceso (ajustes de hora y sincronización normales).
     tolerancia_retroceso_ms: int = 5 * 60_000
-    # Un salto del reloj hacia adelante mayor que esto, DENTRO de un proceso en marcha, se toma como sospechoso: no degrada a nadie y espera confirmación.
+    # Un salto del reloj hacia adelante mayor que esto, DENTRO de un proceso en marcha, es una FECHA ADELANTADA (Q-L13): el nodo no la acepta —ni la marca alta, ni el vencimiento, ni
+    # ninguna ancla la guardan—, no degrada nada por ella y avisa con un error hasta que la fecha concuerde otra vez (o la administración confirme que la de hoy es la correcta).
     salto_adelante_ms: int = 7 * DIA_MS
-    # Lo máximo que una sospecha de salto hacia adelante puede aplazar una degradación (para que no sea una palanca para no degradar nunca).
-    diferimiento_salto_ms: int = 72 * HORA_MS
-    # Histéresis: la condición de degradar tiene que sostenerse tanto tiempo antes de aplicarse.
-    histeresis_ms: int = 24 * HORA_MS
+    # La fecha «concuerda» con la que el nodo lleva (el instante confiable) si no está más adelantada que esto: con eso se quita el aviso de fecha adelantada (Q-L13).
+    tolerancia_fecha_ms: int = DIA_MS
+    # Histéresis: la condición de degradar tiene que sostenerse tanto tiempo antes de aplicarse. CERO (Q-L16): la gracia son 30 días corridos EXACTOS y degrada en el instante en que
+    # se acaban. No hace falta amortiguar nada: el instante confiable jamás baja (marca alta), así que el estado no puede oscilar en el borde.
+    histeresis_ms: int = 0
     # Cuánto tiempo después de una reactivación (tras una restauración, FUN-194) se muestra el estado «reactivada».
     ventana_reactivada_ms: int = 72 * HORA_MS
     # Una licencia puede empezar hasta tanto tiempo DESPUÉS de hoy y regir ya: quien la emite y este nodo no comparten reloj ni huso horario. Es UNA sola tolerancia para los dos lados:
@@ -40,8 +43,9 @@ class Politica:
     tolerancia_inicio_ms: int = DIA_MS
     # Cupo: a partir de este porcentaje del límite se avisa.
     cupo_aviso_pct: int = 90
-    # Límites sin licencia (ventana de evaluación): los de hoy (BR-063 50/100) y topes de equipos y usuarios holgados, para no bloquear a nadie por actualizar.
-    limites_evaluacion: Limites = Limites(equipos=100, usuarios=3000, concurrentes_normal=50, concurrentes_pico=100)
+    # Límites sin licencia (ventana de evaluación): el tamaño máximo de un aula (Q-L1: 60 equipos y 1200 usuarios en una misma pantalla) y la concurrencia de hoy (BR-063 50/100).
+    # El cupo sólo cuenta al crear algo nuevo: lo que ya existe sigue funcionando aunque supere estos topes, así que actualizar no bloquea a nadie.
+    limites_evaluacion: Limites = Limites(equipos=60, usuarios=1200, concurrentes_normal=50, concurrentes_pico=100)
 
 
 POLITICA_PROVISIONAL = Politica()

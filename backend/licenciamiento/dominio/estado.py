@@ -8,11 +8,12 @@ La máquina de estados de la licencia (P-05) como UNA función pura: `calcular(c
     liberacion_pendiente   licencia emitida mientras el equipo anterior se libera (JRN-020, MSG-063): opera con el plazo que trae
     degradada              se acabó la gracia: los módulos licenciables se apagan; el núcleo —y la clase— siguen igual (R-01)
 
-Banderas ortogonales: `reloj_sospechoso`, `huella_parcial`, `integridad_alterada`.
+Banderas ortogonales: `reloj_sospechoso` (reloj atrasado), `reloj_adelantado` (fecha adelantada que no se acepta, Q-L13), `huella_parcial`, `integridad_alterada`.
 
 No se guarda un «estado actual» que pueda divergir de la realidad: el estado SALE del tiempo y de los hechos del historial. Las transiciones son consecuencia del tiempo y de las
-acciones del administrador. Para DEGRADAR se exige histéresis (la condición debe sostenerse ≥ 24 h) y que un salto sospechoso del reloj hacia adelante no esté pendiente de confirmar
-(se aplaza a lo más 72 h: una sospecha no puede ser una palanca para no degradar nunca). Retroceder el reloj NO aplaza nada: el vencimiento se mide contra la marca alta.
+acciones del administrador. Degradar ocurre EN el instante en que se acaba el plazo (Q-L16: la gracia son 30 días corridos exactos; el instante confiable jamás baja, así que no hace
+falta amortiguar nada: la política trae una histéresis y vale 0). Una fecha adelantada NO mueve ese instante (Q-L13): lo que recibe `calcular` ya es la hora confiable, nunca la del
+salto, así que ni vence ni degrada nada por ella. Retroceder el reloj tampoco aplaza nada: el vencimiento se mide contra la marca alta.
 """
 from __future__ import annotations
 
@@ -35,7 +36,7 @@ class Contexto:
     huella_distinta_desde: int | None = None            # la primera vez que se observó que este equipo no es el de la licencia
     reactivada_en: int | None = None
     reloj_retroceso: bool = False
-    salto_adelante_desde: int | None = None
+    reloj_adelanto_ms: int = 0                          # > 0: la fecha del equipo está adelantada tanto y NO se acepta (Q-L13); `ahora` ya es la hora confiable, no la del salto
     integridad_alterada: bool = False
 
 
@@ -52,6 +53,7 @@ class Estado:
     tipo: str | None = None
     licencia_id: str | None = None
     serie: int | None = None
+    reloj_adelanto_ms: int = 0                          # cuánto está adelantada la fecha del equipo (0 si no lo está): `ahora` es la hora confiable y el equipo dice `ahora + esto`
 
     @property
     def restringe(self) -> bool:
@@ -71,19 +73,17 @@ def _licenciables_de(licencia: Licencia | None) -> frozenset[str]:
     return frozenset(c for c in cat.CAPACIDADES_LICENCIABLES if licencia.habilita(c))
 
 
-def _salto_pendiente(ctx: Contexto, politica: Politica) -> bool:
-    return ctx.salto_adelante_desde is not None and ctx.ahora < ctx.salto_adelante_desde + politica.diferimiento_salto_ms
-
-
 def _se_puede_degradar(ctx: Contexto, limite: int, politica: Politica) -> bool:
-    """Pasó el límite Y la histéresis, y no hay un salto de reloj sospechoso por confirmar."""
-    return ctx.ahora >= limite + politica.histeresis_ms and not _salto_pendiente(ctx, politica)
+    """Pasó el límite (y la histéresis de la política, que hoy vale 0). Una fecha adelantada no interviene: `ctx.ahora` ya es la hora confiable (Q-L13)."""
+    return ctx.ahora >= limite + politica.histeresis_ms
 
 
 def _banderas(ctx: Contexto, politica: Politica) -> frozenset[str]:
     banderas: set[str] = set()
-    if ctx.reloj_retroceso or _salto_pendiente(ctx, politica):
+    if ctx.reloj_retroceso:
         banderas.add(cat.B_RELOJ_SOSPECHOSO)
+    if ctx.reloj_adelanto_ms > 0:
+        banderas.add(cat.B_RELOJ_ADELANTADO)
     if ctx.coincidencia is not None and ctx.coincidencia.ok and ctx.coincidencia.parcial:
         banderas.add(cat.B_HUELLA_PARCIAL)
     if ctx.integridad_alterada:
@@ -98,7 +98,7 @@ def calcular(ctx: Contexto, politica: Politica = POLITICA_PROVISIONAL) -> Estado
 
     def estado(nombre: str, motivo: str, hasta: int | None, habilitadas: frozenset[str], limites: Limites) -> Estado:
         return Estado(nombre, motivo, ahora, hasta, dias_hasta(hasta, ahora), banderas, habilitadas, limites,
-                      lic.tipo if lic else None, lic.id if lic else None, lic.serie if lic else None)
+                      lic.tipo if lic else None, lic.id if lic else None, lic.serie if lic else None, max(0, ctx.reloj_adelanto_ms))
 
     # ---- sin licencia (o una que todavía no empieza): la ventana de evaluación. «Todavía no empieza» tiene la misma tolerancia con que `Instalar` la acepta (un día): una licencia que
     # empieza esta tarde, emitida con otro huso, ya rige.
@@ -142,8 +142,14 @@ def avisos(estado: Estado, consumo, politica: Politica = POLITICA_PROVISIONAL) -
     """
     Los avisos que ve el administrador (banner y pantalla de Licencia), en orden de importancia. Son CÓDIGOS con sus cifras: el texto lo pone el cliente. Ninguno interrumpe una
     clase (la pantalla decide cuándo mostrarlos); sólo existen para que nadie se entere de un vencimiento el día que ocurre.
+
+    La fecha adelantada (Q-L13) es un ERROR y va primero: trae cuántos días está adelantada, la fecha que tiene el equipo y la que el aula lleva (la hora confiable), para que el cliente
+    diga «tu equipo marca X, el aula esperaba Y: corrígela».
     """
     salida: list[dict] = []
+    if estado.reloj_adelanto_ms > 0:
+        salida.append({"codigo": cat.B_RELOJ_ADELANTADO, "adelanto_dias": -(-estado.reloj_adelanto_ms // DIA_MS), "fecha_equipo": estado.ahora + estado.reloj_adelanto_ms,
+                       "fecha_esperada": estado.ahora})
     if estado.estado == cat.DEGRADADA:
         salida.append({"codigo": "degradada", "motivo": estado.motivo})
     elif estado.estado == cat.EN_GRACIA:

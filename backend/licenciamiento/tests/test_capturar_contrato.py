@@ -100,7 +100,7 @@ class CapturarContratoTests(BaseLicencia):
         self.capturar("estado_reloj_retroceso", self.admin.get(f"{L}/estado/"), 200)
         self.reloj.saltar(40 * DIA_MS)
         self.evaluar("tick")
-        self.capturar("estado_reloj_salto", self.admin.get(f"{L}/estado/"), 200)
+        self.capturar("estado_reloj_adelantado", self.admin.get(f"{L}/estado/"), 200)          # Q-L13: la fecha adelantada no se acepta; el aviso trae las dos fechas y los días
         self.capturar("reloj_confirmar", self.admin.post(f"{L}/reloj/confirmar/", {}, format="json"), 200)
 
     def test_capturar_liberacion_pendiente_e_instalacion(self):

@@ -36,6 +36,12 @@ class EstadoVivo:
         with self._candado:
             self._reloj = (int(reloj_ms), int(monotono_ms), int(reloj_ms if confiable_ms is None else confiable_ms))
 
+    def olvidar_reloj(self) -> None:
+        """Tras confirmar la fecha (Q-L13): la administración dijo que la de hoy es la correcta, así que lo que este proceso recordaba del reloj —y la retención de una fecha adelantada—
+        ya no vale. El siguiente ciclo parte de cero y toma la hora del equipo."""
+        with self._candado:
+            self._reloj = None
+
     def registrar_bloqueo(self, actor: str, clave: str, ahora_ms: int) -> None:
         hora = int(ahora_ms) // 3_600_000
         llave = (hora, actor, clave)

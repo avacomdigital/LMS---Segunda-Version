@@ -75,6 +75,22 @@ def mas_nueva(a: Licencia, b: Licencia) -> bool:
     return (a.emitida, a.serie) > (b.emitida, b.serie)
 
 
+def episodio_abierto(obs: dict) -> bool:
+    """¿La base dice que hay una fecha adelantada sin resolver (Q-L13)? La última `reloj_salto_adelante` ABRIÓ un episodio (`inicio`, no `fin`) y ninguna `reloj_confirmado` es posterior.
+    Se compara por `id`, el orden de inserción: un salto del reloj tuerce las horas (`en`)."""
+    salto, confirmado = obs.get(cat.O_SALTO), obs.get(cat.O_CONFIRMADO)
+    return (salto is not None and bool(salto["detalle"].get("inicio")) and not salto["detalle"].get("fin")
+            and salto["id"] > (confirmado["id"] if confirmado is not None else 0))
+
+
+def resolver_el_reloj(politica, *, ahora_reloj: int, monotono: int, previo, marca_db: int, marcas_externas, ultima_audit: int | None, obs: dict) -> rj.Resolucion:
+    """Lo que el nodo concluye del reloj (la única decisión sobre qué hora vale): `reloj.resolver` con lo que hay en la base y fuera de ella."""
+    return rj.resolver(
+        reloj_ms=ahora_reloj, monotono_ms=monotono, previo=previo, marca_propia_ms=max(marca_db, max(marcas_externas, default=0)), ultima_audit_ms=ultima_audit,
+        episodio_abierto=episodio_abierto(obs), tolerancia_retroceso_ms=politica.tolerancia_retroceso_ms, salto_adelante_ms=politica.salto_adelante_ms,
+        tolerancia_fecha_ms=politica.tolerancia_fecha_ms)
+
+
 def tumbas_de(datos: bytes | None) -> set[tuple[str, int]]:
     """Las licencias que este nodo liberó, según el archivo de la carpeta de estado. Un archivo ilegible equivale a ninguna."""
     if not datos:
@@ -109,6 +125,25 @@ class Evaluar(_CasoDeUso):
                 if entradas is not None and entradas.novedades and not asentado:
                     s.nodo.devolver_novedades(entradas.novedades)             # lo que no llegó a asentarse se reintenta en el siguiente ciclo
 
+    def hora_confiable(self) -> int:
+        """
+        La hora con que se FECHA un hecho de la licencia ahora mismo (la solicitud, la instalación, la liberación): la del equipo, salvo que esté adelantada y el nodo no la acepte (Q-L13),
+        y entonces la confiable. SÓLO LEE: no asienta, no publica ni recuerda nada (la evaluación de la acción que sigue lo hace); así una acción no cambia el orden de lo que el
+        nodo reconoce —por ejemplo, reactivar desde el espejo tras una restauración— sólo por preguntar la hora. Un fallo de lectura devuelve la hora del equipo: nunca estorba (R-04).
+        """
+        s = self.s
+        try:
+            with s.uow(lectura=True) as uow:
+                marca_db, ultima_audit = uow.marca.valor(), uow.auditoria.ultima_marca()
+                obs = {tipo: uow.observaciones.ultima(tipo) for tipo in (cat.O_SALTO, cat.O_CONFIRMADO)}
+            ahora = s.reloj.ahora_ms()
+            res = resolver_el_reloj(s.config.politica, ahora_reloj=ahora, monotono=s.reloj.monotono_ms(), previo=s.vivo.reloj_previo(), marca_db=marca_db,
+                                    marcas_externas=s.anclas.leer().marcas.values(), ultima_audit=ultima_audit, obs=obs)
+            return res.lectura.ahora if res.adelantado else ahora
+        except Exception:   # noqa: BLE001 — R-04: preguntar la hora nunca impide una acción
+            log.exception("No se pudo resolver la hora confiable; se usa la del equipo", extra={"evento": "licencia.hora_fallo", "ruta": "bad"})
+            return s.reloj.ahora_ms()
+
     # ------------------------------------------------------------------------------------------------------------------------- 1 · leer
     def _leer(self, origen: str) -> Entradas:
         s = self.s
@@ -133,7 +168,16 @@ class Evaluar(_CasoDeUso):
     def _planear(self, e: Entradas) -> Plan:
         s, politica = self.s, self.s.config.politica
         w: list[Escritura] = []
-        ahora = e.ahora_reloj
+
+        # ---- 0. el reloj (P-06 · Q-L13), ANTES que nada: de él sale la hora con que se fecha todo lo demás de este ciclo. Una fecha adelantada NO se acepta: ni la hora confiable, ni la marca
+        # alta, ni las anclas, ni los hechos que se asientan llevan la del salto; el episodio vive en la base (una observación `reloj_salto_adelante` que abre y otra que cierra) para que
+        # un reinicio no lo olvide, y una confirmación de la administración (`reloj_confirmado` posterior) también lo cierra. Se ordena por `id`: el salto tuerce las horas.
+        marca_externa = max(e.anclas.marcas.values(), default=0)
+        confirmado = e.obs[cat.O_CONFIRMADO]
+        res = resolver_el_reloj(politica, ahora_reloj=e.ahora_reloj, monotono=e.monotono, previo=e.previo, marca_db=e.marca_db, marcas_externas=e.anclas.marcas.values(),
+                                ultima_audit=e.ultima_audit, obs=e.obs)
+        lectura = res.lectura
+        ahora = lectura.ahora if res.adelantado else e.ahora_reloj
 
         def evento(clave: str, tipo: str, agregado_id: str, carga: dict, accion: str | None = None, detalle: dict | None = None) -> None:
             auditoria = {"accion": accion, "tabla": "m18_licencia", "objeto_id": agregado_id, "nuevo": detalle if detalle is not None else carga} if accion else None
@@ -173,26 +217,22 @@ class Evaluar(_CasoDeUso):
         elif lic_espejo is not None and (lic_espejo.id, lic_espejo.serie) in tumbas:
             w.append(Escritura("espejo_borrar"))                                             # el espejo es de una licencia que este nodo liberó
 
-        # ---- 3. el reloj confiable (P-06)
-        marca_externa = max(e.anclas.marcas.values(), default=0)
-        marca = max(e.marca_db, marca_externa, e.ultima_audit or 0)
-        # El piso monótono (H-13 · H-14): con el reloj de pared por debajo de la marca, el tiempo de la licencia sigue corriendo con el reloj monótono de ESTE proceso en vez de congelarse
-        piso = rj.piso_monotono(e.previo[2] if e.previo else None, e.previo[1] if e.previo else None, e.monotono)
-        lectura = rj.leer(ahora, marca, politica.tolerancia_retroceso_ms, piso)
-        confirmado_en = e.obs[cat.O_CONFIRMADO]["en"] if e.obs[cat.O_CONFIRMADO] else 0
+        # ---- 3. lo que se asienta del reloj y la marca alta (P-06 · Q-L13). El piso monótono (H-13): con el reloj de pared por debajo de la marca, el tiempo de la licencia sigue corriendo
+        # con el reloj monótono de ESTE proceso en vez de congelarse; con una fecha adelantada sin aceptar (Q-L13), igual: la hora confiable es la referencia, no la del salto.
+        confirmado_en = confirmado["en"] if confirmado is not None else 0
         previo_ret = e.obs[cat.O_RETROCESO]
         if lectura.retroceso and (previo_ret is None or ahora - previo_ret["en"] >= cat.REPETICION_OBSERVACION_MS):
             observar(cat.O_RETROCESO, detalle={"atras_ms": lectura.atras_ms})
             evento(f"reloj_retroceso:{ahora // HORA_MS}", cat.EV_RELOJ, "nodo", {"tipo": "retroceso", "atras_ms": lectura.atras_ms}, cat.A_RELOJ)
             previo_ret = {"en": ahora}
         retroceso_activo = lectura.retroceso or (previo_ret is not None and previo_ret["en"] > confirmado_en and ahora - previo_ret["en"] < cat.BANDERA_RELOJ_MS)
-        previo_salto = e.obs[cat.O_SALTO]
-        salto_nuevo = e.previo is not None and rj.salto_adelante(e.previo[0], e.previo[1], ahora, e.monotono, politica.salto_adelante_ms)
-        if salto_nuevo and (previo_salto is None or ahora - previo_salto["en"] >= cat.REPETICION_OBSERVACION_MS):
-            observar(cat.O_SALTO, detalle={"adelanto_ms": (ahora - e.previo[0]) - (e.monotono - e.previo[1])})
-            evento(f"reloj_salto:{ahora // HORA_MS}", cat.EV_RELOJ, "nodo", {"tipo": "salto_adelante"}, cat.A_RELOJ)
-            previo_salto = {"en": ahora}
-        salto_desde = previo_salto["en"] if previo_salto is not None and previo_salto["en"] > confirmado_en else None
+        if res.abre_episodio:
+            observar(cat.O_SALTO, detalle={"inicio": True, "adelanto_ms": res.adelanto_ms})
+            evento(f"reloj_salto:{ahora // HORA_MS}", cat.EV_RELOJ, "nodo", {"tipo": "salto_adelante", "adelanto_ms": res.adelanto_ms}, cat.A_RELOJ)
+        if res.cierra_episodio:
+            observar(cat.O_SALTO, detalle={"fin": True})
+            evento(f"reloj_normal:{ahora // HORA_MS}", cat.EV_RELOJ, "nodo", {"tipo": "normalizado"}, cat.A_RELOJ)
+        marca = res.marca
         nueva_marca = rj.marca_siguiente(marca, lectura.ahora)
         # La marca alta sube en la base y en las anclas de afuera, cada una cuando se ha quedado atrás MARGEN o más (una escritura pequeña cada ~10 min), y al instante si una acción,
         # el arranque o una base restaurada (que quedó por debajo de las anclas) lo piden.
@@ -232,7 +272,7 @@ class Evaluar(_CasoDeUso):
         # ---- 6. el estado
         estado = est.calcular(est.Contexto(
             licencia=efectiva, ahora=lectura.ahora, instalada_en=instalada_en, coincidencia=coincidencia, licencia_instalada_en=fila_instalada_en, huella_distinta_desde=huella_desde,
-            reactivada_en=reactivada_en, reloj_retroceso=retroceso_activo, salto_adelante_desde=salto_desde, integridad_alterada=integridad), politica)
+            reactivada_en=reactivada_en, reloj_retroceso=retroceso_activo, reloj_adelanto_ms=res.adelanto_ms, integridad_alterada=integridad), politica)
 
         # ---- 7. los bloqueos de licencia (módulo apagado o cupo agotado) que las peticiones fueron contando en memoria: UN asiento por actor, clave y hora (P-09, R-07)
         for bloqueo in e.bloqueos:

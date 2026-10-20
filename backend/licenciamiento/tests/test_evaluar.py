@@ -57,7 +57,7 @@ class EvaluacionAlActualizarTests(BaseLicencia):
         e = self.evaluar("tick")
         self.assertEqual((e.estado.estado, e.estado.dias_restantes), ("sin_licencia", 1))
         self.assertEqual(self.docente.get("/api/acceso/yo/").status_code, 200)
-        self.reloj.avanzar(2 * DIA_MS + HORA_MS)                               # pasó la ventana y las 24 h de histéresis
+        self.reloj.avanzar(2 * DIA_MS + HORA_MS)                               # pasaron los 30 días de la ventana (Q-L16: degrada en el instante en que se cumplen, sin histéresis)
         e = self.evaluar("tick")
         self.assertEqual((e.estado.estado, e.estado.motivo), ("degradada", "evaluacion_vencida"))
         self.assertEqual(sorted(e.estado.capacidades), [])
@@ -107,7 +107,7 @@ class RelojTests(BaseLicencia):
         self.assertTrue(m.Observacion.objects.filter(tipo=cat.O_RETROCESO).exists())
 
     def test_retroceder_el_reloj_no_aplaza_la_degradacion(self):
-        self.reloj.avanzar(61 * DIA_MS + 2 * HORA_MS)                                  # ya pasó la gracia y la histéresis
+        self.reloj.avanzar(61 * DIA_MS + 2 * HORA_MS)                                  # ya pasó la gracia
         self.assertEqual(self.evaluar("tick").estado.estado, "degradada")
         self.reloj.saltar(-50 * DIA_MS)                                        # y alguien devuelve la hora 50 días
         e = self.evaluar("tick")
@@ -141,28 +141,32 @@ class RelojTests(BaseLicencia):
         self.assertNotIn("reloj_sospechoso", e.estado.banderas)
         self.assertFalse(m.Observacion.objects.filter(tipo=cat.O_SALTO).exists())
 
-    def test_un_salto_hacia_adelante_no_degrada_a_nadie_avisa_y_espera_confirmacion(self):
+    def test_un_salto_hacia_adelante_no_se_acepta_no_degrada_y_avisa_con_un_error(self):
+        """Q-L13 (decisión del CTO). El detalle —marca, anclas, reinicios, confirmación, acciones— está en `test_fecha_adelantada.py`."""
         self.reloj.avanzar(59 * DIA_MS)
         self.assertEqual(self.evaluar("tick").estado.estado, "en_gracia")
-        self.reloj.saltar(10 * DIA_MS)                                         # alguien adelanta la hora diez días: ahora estaríamos 9 días después de la gracia
+        self.reloj.saltar(10 * DIA_MS)                                         # alguien adelanta la hora diez días: el equipo diría que pasaron 9 días de la gracia
         e = self.evaluar("tick")
-        self.assertEqual(e.estado.estado, "en_gracia")                         # NO degrada
-        self.assertIn("reloj_sospechoso", e.estado.banderas)
+        self.assertEqual((e.estado.estado, e.estado.ahora), ("en_gracia", self.t0 + 59 * DIA_MS))      # NO degrada y NO acepta la fecha
+        self.assertIn("reloj_adelantado", e.estado.banderas)
+        self.assertNotIn("reloj_sospechoso", e.estado.banderas)
         self.assertTrue(m.Observacion.objects.filter(tipo=cat.O_SALTO).exists())
         self.assertEqual(Bitacora.objects.filter(accion=cat.A_RELOJ).count(), 1)
-        r = self.admin.post(f"{L}/reloj/confirmar/", {}, format="json")        # la administración confirma que hoy es la fecha correcta
+        r = self.admin.post(f"{L}/reloj/confirmar/", {}, format="json")        # la administración confirma que hoy es la fecha correcta: sólo así se acepta
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(r.json()["estado"], "degradada")
-        self.assertNotIn("reloj_sospechoso", r.json()["banderas"])
+        self.assertNotIn("reloj_adelantado", r.json()["banderas"])
         self.assertEqual(Bitacora.objects.filter(accion=cat.A_RELOJ_CONFIRMADO).count(), 1)
 
-    def test_una_sospecha_de_salto_no_aplaza_la_degradacion_para_siempre(self):
+    def test_una_fecha_adelantada_no_aplaza_la_degradacion_de_verdad_ni_72_horas(self):
         self.reloj.avanzar(59 * DIA_MS)
         self.evaluar("tick")
         self.reloj.saltar(10 * DIA_MS)
         self.assertEqual(self.evaluar("tick").estado.estado, "en_gracia")
-        self.reloj.avanzar(73 * HORA_MS)                                       # sin confirmar: a las 72 h ya no es una palanca
-        self.assertEqual(self.evaluar("tick").estado.estado, "degradada")
+        self.reloj.avanzar(DIA_MS)                                             # el día 60 de TIEMPO REAL: se acaba la gracia, ni antes (por el salto) ni 72 h después (por esperar)
+        e = self.evaluar("tick")
+        self.assertEqual((e.estado.estado, e.estado.ahora), ("degradada", self.t0 + 60 * DIA_MS))
+        self.assertIn("reloj_adelantado", e.estado.banderas)
 
 
 class HuellaTests(BaseLicencia):

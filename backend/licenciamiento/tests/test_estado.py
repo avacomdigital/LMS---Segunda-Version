@@ -42,8 +42,10 @@ class TablaDeEstadosTests(SimpleTestCase):
         # ---------------------------------------------------------------- sin licencia: la ventana de evaluación desde el primer arranque (P-14)
         ("sin licencia, 5 días después de instalar", dict(licencia=None, coincidencia=None), cat.SIN_LICENCIA, cat.M_EVALUACION, 25, TODAS, set()),
         ("sin licencia, el último día", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 29 * DIA_MS - HORA_MS), cat.SIN_LICENCIA, cat.M_EVALUACION, 1, TODAS, set()),
-        ("sin licencia, pasó la ventana pero sigue la histéresis", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 30 * DIA_MS - HORA_MS), cat.SIN_LICENCIA, cat.M_EVALUACION, 0, TODAS, set()),
-        ("sin licencia, pasó la ventana y la histéresis", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 30 * DIA_MS - 25 * HORA_MS), cat.DEGRADADA, cat.M_EVALUACION_VENCIDA, 0, NINGUNA, set()),
+        ("sin licencia, queda una hora de ventana: sigue evaluando", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 30 * DIA_MS + HORA_MS), cat.SIN_LICENCIA, cat.M_EVALUACION, 1, TODAS, set()),
+        ("sin licencia, se cumplen los 30 días exactos: degrada en ese instante (sin histéresis, Q-L16)", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 30 * DIA_MS),
+         cat.DEGRADADA, cat.M_EVALUACION_VENCIDA, 0, NINGUNA, set()),
+        ("sin licencia, pasó la ventana", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 30 * DIA_MS - 25 * HORA_MS), cat.DEGRADADA, cat.M_EVALUACION_VENCIDA, 0, NINGUNA, set()),
         ("licencia que todavía no empieza: vale la evaluación", dict(licencia=licencia_de_ejemplo(desde=AHORA + 10 * DIA_MS, vence=AHORA + 400 * DIA_MS, emitida=AHORA - DIA_MS)),
          cat.SIN_LICENCIA, cat.M_AUN_NO_VIGENTE, 25, TODAS, set()),
         # La MISMA tolerancia (un día) con la que `Instalar` acepta el archivo: lo aceptado rige desde ya, con la evaluación vencida o sin ella (revisión independiente, BUG-1)
@@ -62,19 +64,23 @@ class TablaDeEstadosTests(SimpleTestCase):
         # ---------------------------------------------------------------- venció: gracia
         ("venció hace una hora: gracia con los 30 días completos", dict(ahora=V + HORA_MS), cat.EN_GRACIA, cat.M_VENCIDA, 30, TODAS, set()),
         ("venció hace 29 días: queda 1 de gracia", dict(ahora=V + 29 * DIA_MS), cat.EN_GRACIA, cat.M_VENCIDA, 1, TODAS, set()),
-        ("se acabó la gracia pero sigue la histéresis de 24 h", dict(ahora=V + GRACIA + HORA_MS), cat.EN_GRACIA, cat.M_VENCIDA, 0, TODAS, set()),
-        ("se acabó la gracia y la histéresis: degradada", dict(ahora=V + GRACIA + 25 * HORA_MS), cat.DEGRADADA, cat.M_VENCIDA, 0, NINGUNA, set()),
+        ("queda una hora de gracia: sigue en gracia", dict(ahora=V + GRACIA - HORA_MS), cat.EN_GRACIA, cat.M_VENCIDA, 1, TODAS, set()),
+        ("se cumplen los 30 días de gracia EXACTOS: degrada en ese instante (Q-L16: sin histéresis, sin día de más)", dict(ahora=V + GRACIA), cat.DEGRADADA, cat.M_VENCIDA, 0, NINGUNA, set()),
+        ("pasó la gracia: degradada", dict(ahora=V + GRACIA + 25 * HORA_MS), cat.DEGRADADA, cat.M_VENCIDA, 0, NINGUNA, set()),
         ("degradada mucho tiempo después: sigue igual (nunca se corta nada más)", dict(ahora=V + 400 * DIA_MS), cat.DEGRADADA, cat.M_VENCIDA, 0, NINGUNA, set()),
         # ---------------------------------------------------------------- el reloj
         ("RETROCESO: el reloj bajó pero el vencimiento se mide contra la marca alta; se avisa", dict(reloj_retroceso=True), cat.ACTIVA, cat.M_VIGENTE, 335, TODAS, {cat.B_RELOJ_SOSPECHOSO}),
         ("retroceso con la licencia ya vencida: NO aplaza la degradación", dict(ahora=V + GRACIA + 25 * HORA_MS, reloj_retroceso=True), cat.DEGRADADA, cat.M_VENCIDA, 0, NINGUNA, {cat.B_RELOJ_SOSPECHOSO}),
-        ("SALTO hacia adelante pendiente: aplaza la degradación y avisa", dict(ahora=V + GRACIA + 25 * HORA_MS, salto_adelante_desde=V + GRACIA + 24 * HORA_MS),
-         cat.EN_GRACIA, cat.M_VENCIDA, 0, TODAS, {cat.B_RELOJ_SOSPECHOSO}),
-        ("salto hacia adelante de hace más de 72 h: ya no aplaza (no es una palanca)", dict(ahora=V + GRACIA + 100 * HORA_MS, salto_adelante_desde=V + GRACIA + 10 * HORA_MS),
-         cat.DEGRADADA, cat.M_VENCIDA, 0, NINGUNA, set()),
-        ("salto hacia adelante con la licencia vigente: sólo la bandera", dict(salto_adelante_desde=AHORA - HORA_MS), cat.ACTIVA, cat.M_VIGENTE, 335, TODAS, {cat.B_RELOJ_SOSPECHOSO}),
-        ("salto hacia adelante sin licencia: la evaluación vencida tampoco degrada", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 31 * DIA_MS, salto_adelante_desde=AHORA - HORA_MS),
-         cat.SIN_LICENCIA, cat.M_EVALUACION, 0, TODAS, {cat.B_RELOJ_SOSPECHOSO}),
+        # Q-L13 · FECHA ADELANTADA: `ahora` ya es la hora confiable (nunca la del salto); la bandera avisa y no cambia ni aplaza ninguna transición
+        ("FECHA ADELANTADA con la licencia vigente: sólo la bandera, nada se pone en pausa", dict(reloj_adelanto_ms=10 * DIA_MS), cat.ACTIVA, cat.M_VIGENTE, 335, TODAS, {cat.B_RELOJ_ADELANTADO}),
+        ("fecha adelantada con la gracia vigente: sigue en gracia (no vence ni degrada por el salto)", dict(ahora=V + GRACIA - HORA_MS, reloj_adelanto_ms=400 * DIA_MS),
+         cat.EN_GRACIA, cat.M_VENCIDA, 1, TODAS, {cat.B_RELOJ_ADELANTADO}),
+        ("fecha adelantada y la gracia de verdad agotada: degrada igual, la bandera no aplaza nada (no es una palanca)", dict(ahora=V + GRACIA, reloj_adelanto_ms=2 * DIA_MS),
+         cat.DEGRADADA, cat.M_VENCIDA, 0, NINGUNA, {cat.B_RELOJ_ADELANTADO}),
+        ("fecha adelantada sin licencia: la evaluación sigue donde iba", dict(licencia=None, coincidencia=None, instalada_en=AHORA - 5 * DIA_MS, reloj_adelanto_ms=3000 * DIA_MS),
+         cat.SIN_LICENCIA, cat.M_EVALUACION, 25, TODAS, {cat.B_RELOJ_ADELANTADO}),
+        ("fecha adelantada y reloj atrasado a la vez: las dos banderas", dict(reloj_retroceso=True, reloj_adelanto_ms=DIA_MS), cat.ACTIVA, cat.M_VIGENTE, 335, TODAS,
+         {cat.B_RELOJ_SOSPECHOSO, cat.B_RELOJ_ADELANTADO}),
         # ---------------------------------------------------------------- la huella
         ("huella parcial (cambió un componente): sigue activa y avisa", dict(coincidencia=Coincidencia(3, 5, 4, True, True, "hardware")), cat.ACTIVA, cat.M_VIGENTE, 335, TODAS, {cat.B_HUELLA_PARCIAL}),
         ("otro equipo, primera vez que se ve: gracia completa", dict(coincidencia=Coincidencia(3, 5, 1, False, False, "hardware")), cat.EN_GRACIA, cat.M_HUELLA_DISTINTA, 30, TODAS, set()),
@@ -126,8 +132,8 @@ class TablaDeEstadosTests(SimpleTestCase):
             for licencia in (None, LIC):
                 for coincidencia in (None, Coincidencia(3, 5, 0, False, False, "hardware"), Coincidencia(3, 5, 5, True, False, "hardware")):
                     for retroceso in (False, True):
-                        for salto in (None, ahora - HORA_MS, ahora - 100 * HORA_MS):
-                            e = calcular(licencia=licencia, ahora=ahora, coincidencia=coincidencia, reloj_retroceso=retroceso, salto_adelante_desde=salto)
+                        for adelanto in (0, HORA_MS, 100 * DIA_MS):
+                            e = calcular(licencia=licencia, ahora=ahora, coincidencia=coincidencia, reloj_retroceso=retroceso, reloj_adelanto_ms=adelanto)
                             self.assertIn(e.estado, cat.ESTADOS)
                             self.assertIn(e.motivo, cat.MOTIVOS)
                             self.assertTrue(e.capacidades <= TODAS)
@@ -169,6 +175,18 @@ class AvisosTests(SimpleTestCase):
     def test_las_banderas_tambien_avisan(self):
         e = calcular(reloj_retroceso=True, integridad_alterada=True, coincidencia=Coincidencia(3, 5, 4, True, True, "hardware"))
         self.assertEqual([a["codigo"] for a in self.avisos(e)], ["reloj_sospechoso", "huella_parcial", "integridad_alterada"])
+
+    def test_la_fecha_adelantada_es_un_error_que_va_primero_con_las_dos_fechas(self):
+        """Q-L13: el aviso dice cuántos días está adelantada, la fecha que tiene el equipo y la que el aula lleva (la confiable); va antes que el estado y que cualquier otro."""
+        adelanto = 10 * DIA_MS + 1
+        e = calcular(ahora=V + 5 * DIA_MS, reloj_adelanto_ms=adelanto, reloj_retroceso=True)
+        avisos = self.avisos(e)
+        self.assertEqual(avisos[0], {"codigo": "reloj_adelantado", "adelanto_dias": 11, "fecha_equipo": V + 5 * DIA_MS + adelanto, "fecha_esperada": V + 5 * DIA_MS})
+        self.assertEqual([a["codigo"] for a in avisos], ["reloj_adelantado", "gracia", "reloj_sospechoso"])         # no se repite como bandera suelta
+        self.assertEqual(e.reloj_adelanto_ms, adelanto)
+        self.assertEqual(self.avisos(calcular(reloj_adelanto_ms=1))[0]["adelanto_dias"], 1)                       # 1 ms de adelanto: «1 día», nunca 0
+        self.assertEqual(self.avisos(calcular()), [])
+        self.assertEqual(calcular().reloj_adelanto_ms, 0)
 
 
 class RelojTests(SimpleTestCase):

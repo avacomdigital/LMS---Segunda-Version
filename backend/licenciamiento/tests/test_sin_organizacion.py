@@ -41,7 +41,7 @@ class NodoSinOrganizacionTests(TestCase):
         self.assertEqual((cuerpo["estado"], cuerpo["motivo"], cuerpo["tipo"], cuerpo["licencia"]), (cat.SIN_LICENCIA, cat.M_EVALUACION, None, None))
         self.assertEqual(cuerpo["capacidades"]["no_disponibles"], [])                                      # durante la evaluación todo está habilitado
         self.assertEqual(cuerpo["vigencia"]["dias_restantes"], 30)
-        self.assertEqual(cuerpo["limites"], {"equipos": 100, "usuarios": 3000, "concurrentes_normal": 50, "concurrentes_pico": 100})
+        self.assertEqual(cuerpo["limites"], {"equipos": 60, "usuarios": 1200, "concurrentes_normal": 50, "concurrentes_pico": 100})       # el tamaño máximo de un aula (Q-L1)
         self.assertEqual(cuerpo["consumo"], None)
         self.assertEqual([a["codigo"] for a in cuerpo["avisos"]], ["evaluacion"])                          # el aviso existe desde el primer día
 
@@ -50,7 +50,7 @@ class NodoSinOrganizacionTests(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         cuerpo = r.json()
         self.assertEqual((cuerpo["equipos"]["en_uso"], cuerpo["usuarios"]["en_uso"]), (None, None))
-        self.assertEqual((cuerpo["equipos"]["limite"], cuerpo["equipos"]["porcentaje"]), (100, None))
+        self.assertEqual((cuerpo["equipos"]["limite"], cuerpo["equipos"]["porcentaje"]), (60, None))
         self.assertEqual(cuerpo["concurrentes"], {"normal": 50, "pico": 100})
         servicios.exigir_equipo_nuevo(5)                                                                   # el cupo de la evaluación rige con la cifra que trae quien da de alta (el dueño del dato)
         servicios.exigir_usuario_nuevo(5)

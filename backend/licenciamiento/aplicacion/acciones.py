@@ -108,14 +108,23 @@ class ConsultarCopia(_Consulta):
         return {"archivo": datos, "texto": lic_mod.a_texto(datos), "nombre": nombre, "sha256": sha, "licencia": self._instantanea().licencia}
 
 
+class _ConHora(_CasoDeUso):
+    """Los casos de uso que FECHAN un hecho de la licencia (la solicitud, la instalación, la liberación). La hora no es la del reloj de pared a secas: con una fecha adelantada que el nodo
+    no acepta (Q-L13) es la hora confiable, que sigue el reloj monótono; así ni la solicitud ni el `.avrel` ni la fila del historial llevan la fecha del salto, y `desde` se compara con la
+    misma hora con que `estado.calcular` decide si ya rige (una sola tolerancia, D-8)."""
+
+    def _ahora(self) -> int:
+        return Evaluar(self.s).hora_confiable()              # mira el reloj AHORA (un salto reciente todavía no está en la instantánea publicada) y no asienta nada
+
+
 # ------------------------------------------------------------------------------------------------------------------------- solicitud
-class GenerarSolicitud(_CasoDeUso):
+class GenerarSolicitud(_ConHora):
     """CAP-110 (primer paso): la solicitud de licencia de ESTE equipo. Lleva la huella hasheada —nunca identificadores crudos—, un nonce, la versión y el nivel de huella."""
 
     def ejecutar(self, actor: Actor) -> dict:
         s = self.s
         s.autorizacion.exigir(actor, cat.P_ACTIVAR)
-        ahora = s.reloj.ahora_ms()
+        ahora = self._ahora()
         nivel, k, factores = hu.huella_de_solicitud(hu.factores_validos(s.huella.crudos()), s.nodo.secreto_de_instalacion())
         instantanea = s.vivo.leer()
         vigente = instantanea.licencia["id"] if instantanea is not None and instantanea.licencia else None
@@ -129,7 +138,7 @@ class GenerarSolicitud(_CasoDeUso):
 
 
 # ------------------------------------------------------------------------------------------------------------------------- activar y renovar
-class Instalar(_CasoDeUso):
+class Instalar(_ConHora):
     """FUN-188 (activar) y FUN-191 (renovar). El archivo se verifica antes de mirar nada; se comprueba que sea para ESTE equipo; y las reglas de serie impiden volver a una licencia anterior."""
 
     def ejecutar(self, actor: Actor, licencia: bytes | str, via: str) -> dict:
@@ -139,7 +148,7 @@ class Instalar(_CasoDeUso):
         s.autorizacion.exigir(actor, cat.P_RENOVAR if via == "renovar" else cat.P_ACTIVAR)
         datos = lic_mod.de_texto(licencia) if isinstance(licencia, str) else bytes(licencia)
         with s.bloqueo:
-            ahora = s.reloj.ahora_ms()
+            ahora = self._ahora()
             try:
                 lic = lic_mod.leer(datos, s.claves.publicas())
                 if lic.tipo == lic_mod.TIPO_DESARROLLO and s.config.entorno == "produccion":
@@ -223,14 +232,14 @@ class Instalar(_CasoDeUso):
 
 
 # ------------------------------------------------------------------------------------------------------------------------- liberar
-class Liberar(_CasoDeUso):
+class Liberar(_ConHora):
     """JRN-020: «Liberar este equipo». El nodo escribe su `.avrel` firmado con su llave y deja de usar la licencia. Se puede deshacer volviendo a activar el mismo archivo."""
 
     def ejecutar(self, actor: Actor) -> dict:
         s = self.s
         s.autorizacion.exigir(actor, cat.P_ACTIVAR)
         with s.bloqueo:
-            ahora = s.reloj.ahora_ms()
+            ahora = self._ahora()
             with s.uow(lectura=True) as uow:
                 fila = uow.historial.vigente()
             if fila is None:
@@ -259,15 +268,18 @@ class Liberar(_CasoDeUso):
 
 # ------------------------------------------------------------------------------------------------------------------------- reloj
 class ConfirmarReloj(_CasoDeUso):
-    """P-06: ante un salto del reloj hacia adelante el nodo NO degrada a nadie: avisa y espera. Quien administra confirma que la fecha de hoy es la correcta y la sospecha se apaga."""
+    """P-06 · Q-L13: ante una fecha adelantada el nodo NO la acepta —no degrada nada, no la guarda— y avisa con un error hasta que la fecha concuerde. Esta es la salida cuando la fecha del
+    equipo ES la correcta (el aula se había quedado atrás, o estuvo apagada con un salto pendiente): quien administra la confirma, el episodio se cierra y entonces —sólo entonces— la fecha
+    se guarda como marca alta. Es la única forma de aceptar un salto, y queda en la bitácora con quien la hizo. Si la fecha está mal, se corrige en Windows y el aviso se quita solo."""
 
     def ejecutar(self, actor: Actor) -> dict:
         s = self.s
         s.autorizacion.exigir(actor, cat.P_ACTIVAR)
         with s.bloqueo:
-            ahora = s.reloj.ahora_ms()
+            ahora = s.reloj.ahora_ms()                       # lo que se confirma ES la hora del equipo: no la confiable
             with s.uow() as uow:
                 uow.observaciones.registrar(cat.O_CONFIRMADO, ahora, detalle={})
                 uow.auditoria.registrar(actor.id, cat.A_RELOJ_CONFIRMADO, "m18_licencia", "nodo", nuevo={"instante": ahora})
+            s.vivo.olvidar_reloj()                           # lo que el proceso recordaba del reloj ya no vale: el siguiente ciclo toma la hora del equipo
             instantanea = Evaluar(s).ejecutar("accion")
         return estado_a_dict(instantanea)

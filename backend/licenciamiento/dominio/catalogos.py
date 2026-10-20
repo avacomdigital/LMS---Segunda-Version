@@ -17,9 +17,10 @@ M_LIBERACION_PENDIENTE, M_LIBERACION_NO_CONFIRMADA, M_AUN_NO_VIGENTE, M_REACTIVA
 MOTIVOS = (M_EVALUACION, M_EVALUACION_VENCIDA, M_VIGENTE, M_VENCIDA, M_HUELLA_DISTINTA, M_LIBERACION_PENDIENTE, M_LIBERACION_NO_CONFIRMADA, M_AUN_NO_VIGENTE, M_REACTIVADA,
            M_LICENCIA_ILIMITADA)
 
-# Banderas ORTOGONALES: se suman al estado, no lo reemplazan.
+# Banderas ORTOGONALES: se suman al estado, no lo reemplazan. `reloj_sospechoso` es el reloj ATRASADO (retroceso); `reloj_adelantado` es la fecha adelantada que el nodo no acepta (Q-L13).
 B_RELOJ_SOSPECHOSO, B_HUELLA_PARCIAL, B_INTEGRIDAD_ALTERADA = "reloj_sospechoso", "huella_parcial", "integridad_alterada"
-BANDERAS = (B_RELOJ_SOSPECHOSO, B_HUELLA_PARCIAL, B_INTEGRIDAD_ALTERADA)
+B_RELOJ_ADELANTADO = "reloj_adelantado"
+BANDERAS = (B_RELOJ_SOSPECHOSO, B_RELOJ_ADELANTADO, B_HUELLA_PARCIAL, B_INTEGRIDAD_ALTERADA)
 
 # ------------------------------------------------------------------------------------------------------------------- capacidades (P-07)
 # SÓLO lo que se puede degradar. Todo lo demás (login y sesión, aula en curso y readmisión, evaluación, modo estudio, LECTURA del expediente y de las calificaciones, bitácora,
@@ -71,6 +72,8 @@ O_HUELLA_INICIO, O_HUELLA_FIN = "huella_distinta_inicio", "huella_distinta_fin"
 O_RETROCESO, O_SALTO, O_CONFIRMADO = "reloj_retroceso", "reloj_salto_adelante", "reloj_confirmado"
 O_INTEGRIDAD, O_FIRMA_INVALIDA = "integridad_alterada", "firma_invalida"
 OBSERVACIONES = (O_HUELLA_INICIO, O_HUELLA_FIN, O_RETROCESO, O_SALTO, O_CONFIRMADO, O_INTEGRIDAD, O_FIRMA_INVALIDA)
+# Q-L13 · `O_SALTO` ABRE un episodio de fecha adelantada (`detalle.inicio`) y otra fila `O_SALTO` lo CIERRA (`detalle.fin`) cuando la fecha vuelve a concordar; una `O_CONFIRMADO` posterior
+# también lo cierra. Manda la fila más reciente POR `id`, nunca por `en`: un salto del reloj tuerce las horas, el orden de inserción no.
 
 # La carpeta de estado (`%ProgramData%\AVACOM\OPS Master\Config\licencia\`): lo que NO se pierde al restaurar la base de datos.
 ARCHIVO_ESPEJO = "actual.avlic"            # copia de la licencia vigente (FUN-194: sirve para reactivarla tras una restauración)

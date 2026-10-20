@@ -185,6 +185,8 @@ class Vivo(Protocol):
     def reloj_previo(self) -> tuple[int, int, int] | None:
         """`(reloj de pared, monótono, instante confiable)` de la lectura anterior de este proceso, o None si es el primer ciclo."""
     def recordar_reloj(self, reloj_ms: int, monotono_ms: int, confiable_ms: int | None = None) -> None: ...
+    def olvidar_reloj(self) -> None:
+        """Descarta la lectura anterior del reloj: tras confirmar la fecha, el siguiente ciclo parte de cero (Q-L13)."""
     def registrar_bloqueo(self, actor: str, clave: str, ahora_ms: int) -> None:
         """Cuenta un bloqueo de licencia: un módulo apagado (`clave` = la capacidad) o un cupo agotado (`clave` = `cupo:equipos`). Sólo memoria: la bitácora lo asienta el
         programador, UNA vez por actor, clave y hora (R-07: ninguna petición escribe en la base por esto)."""
