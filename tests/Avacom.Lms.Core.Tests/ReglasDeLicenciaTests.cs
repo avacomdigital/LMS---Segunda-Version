@@ -7,7 +7,9 @@ namespace Avacom.Lms.Core.Tests;
 /// <summary>
 /// Lo que OPS decide sobre la licencia sin decidir la licencia (SEC-001): quién ve el botón y el banner, que el banner nunca sale con una clase abierta (R-01), qué aviso va primero y con qué
 /// tono (la evaluación desde el primer día, en atención con 7 días o menos), por qué vía se instala un archivo y qué acciones se ofrecen (ninguna en modo de desarrollo).
+/// En «estado global» por la misma razón que <see cref="ContratoLicenciaTests"/>.
 /// </summary>
+[Collection("estado global")]
 public sealed class ReglasDeLicenciaTests
 {
     private static EstadoLicencia Fixture(string nombre) =>

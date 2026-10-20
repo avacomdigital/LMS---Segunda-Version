@@ -9,7 +9,9 @@ namespace Avacom.Lms.Core.Tests;
 /// <summary>
 /// Los textos de la licencia (MOD-018): cada estado, motivo, aviso, bandera y error tiene su frase; ninguna queda vacía, dice «null» ni deja un hueco sin llenar («{n}»); las fechas y los días
 /// se dicen en español; los textos que el nodo y el cliente comparten (aun_no_vigente, MSG-063) dicen lo mismo; y la hoja de la copia de custodia no lleva datos de personas ni la huella.
+/// En «estado global» por la misma razón que <see cref="ContratoLicenciaTests"/>: sus ~800 casos no deben alterar el reparto de la fase en paralelo.
 /// </summary>
+[Collection("estado global")]
 public sealed class LicenciaTextoTests
 {
     private static readonly TimeZoneInfo Utc = TimeZoneInfo.Utc;

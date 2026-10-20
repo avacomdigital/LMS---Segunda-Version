@@ -9,7 +9,10 @@ namespace Avacom.Lms.Core.Tests;
 /// Los DTOs de <c>/api/licencia/</c> (MOD-018) contra las respuestas REALES del backend, capturadas por <c>backend/licenciamiento/tests/test_capturar_contrato.py</c> en
 /// <c>Fixtures/licencia/</c>, y contra los archivos de verdad que el nodo produce (una licencia binaria, la misma en texto, una alterada, una solicitud y una liberación). Un campo mal escrito
 /// en un DTO se descubre aquí y no en una pantalla. Se comprueba la FORMA y los valores que no cambian entre corridas (los identificadores, los hashes y las horas sí cambian).
+/// Va en «estado global» (que corre aparte, después de las colecciones en paralelo) sólo para no cambiar el reparto de la fase en paralelo: ahí hay una prueba que cuenta los renglones
+/// pendientes del registro local de TODO el proceso y se vuelve inestable si otras pruebas que escriben en él coinciden con ella.
 /// </summary>
+[Collection("estado global")]
 public sealed class ContratoLicenciaTests
 {
     private static string Carpeta => Path.Combine(AppContext.BaseDirectory, "Fixtures", "licencia");
