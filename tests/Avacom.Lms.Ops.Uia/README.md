@@ -8,6 +8,8 @@ Prueba de punta a punta de las pantallas de acceso de AVACOM OPS Master contra u
 | `recorrido_acceso.py` | El recorrido completo: levanta el nodo, abre OPS, recorre las pantallas, comprueba y captura |
 | `ui-ops.ps1` | Lista controles, invoca botones por nombre, escribe en campos, marca un PIN en el teclado propio, espera un texto, captura el área de contenido |
 | `tercios.ps1` | Dibuja la cuadrícula de tercios sobre una captura (así se juzga la composición de las pantallas de tarjeta) |
+| `recorrido_licencia.py` | La pantalla **Licencia** (MOD-018) de punta a punta: ver más abajo |
+| `licencia_en_vivo.py` | Las rutas del backend con la licencia en cada estado y el cupo, por HTTP, sin ventanas: ver más abajo |
 
 ## Cómo se corre
 
@@ -45,3 +47,22 @@ Tarda unos 6 minutos. Sale con 0 si todo se cumplió y lista lo que falló si no
   terminar. La ventana de prueba toma el foco mientras dura.
 - Si una OPS del usuario está abierta, compila con `-p:OutDir=` a otra carpeta (la suya bloquea `bin\`); el guion sólo cierra las instancias que abre.
 - UI Automation no ve lo que queda debajo de una WebView; en estas pantallas no hay ninguna.
+
+## Licencia (MOD-018)
+
+Dos guiones que comprueban la licencia **desde fuera**, contra un nodo aislado con `AVACOM_LICENCIA_MODO=firmada` (puerto propio, base y carpeta de estado temporales, sesión obligatoria). Sólo corren en un
+árbol de desarrollo: las licencias se firman con las llaves de desarrollo de `backend/licenciamiento/tests/emisor.py`, como lo haría AVACOM con la solicitud que OPS guarda.
+
+| Guion | Qué comprueba | Cuánto tarda |
+|---|---|---|
+| `recorrido_licencia.py --ops <exe> --salida <carpeta>` | **La pantalla Licencia por UIA, sin teclado y con la regla de tercios en cada captura**: evaluación y su aviso desde el primer día · activar en los tres pasos con una licencia firmada a partir de la solicitud (una memoria USB simulada con `subst`) · copia de custodia (tres archivos, hoja sin documentos ni nombres) · renovar · «Vencida · en gracia» · «Funciones en pausa» y el aviso del menú · el soporte técnico **no renueva** · la administración renueva · liberar y volver a activar · el profesor no ve botón ni aviso · con la licencia en pausa, Reportes y Buscar lo dicen y Evaluaciones, Calificaciones y Clase de hoy abren sin aviso | ≈ 12 min |
+| `licencia_en_vivo.py rutas` | **Todas las rutas del backend** (el inventario sale del resolvedor de Django en el momento) con la licencia en evaluación, activa, en gracia y degradada: la licenciable apagada responde 402 `no_disponible_por_licencia`, ninguna intocable ni de núcleo lo responde y todas responden lo mismo que con la licencia activa. Imprime los 5xx para clasificarlos a mano | ≈ 5 min |
+| `licencia_en_vivo.py cupo` | Con 2 equipos y 6 usuarios: la tercera tableta recibe 402 `cupo_agotado`, las registradas y el equipo maestro siguen, la clase y el visitante entran siempre, el séptimo usuario recibe 402 y el estado avisa del cupo al ciclo siguiente del programador | ≈ 1 min |
+
+```powershell
+backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\recorrido_licencia.py --ops C:\temp\ops-uia\Avacom.Lms.Ops.exe --salida C:\temp\ops-uia\capturas-licencia [--puerto 8013] [--sin-modulos]
+backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\licencia_en_vivo.py todo [--puerto 8014]
+```
+
+Cuidados: los mismos de arriba (nodo aislado, perfil de OPS de pruebas, candado de pantalla). Dos más: la sesión del personal es **única**, así que el guion mira el estado por la API con una cuenta lectora aparte (entrar con
+la de la administración cerraría la de OPS); y los controles se tocan por `AutomationId` con la acción `tecla` de `ui-ops.ps1` porque la página y la hoja tienen botones que se llaman igual («Liberar este equipo»).
