@@ -16,7 +16,11 @@
 | Interoperabilidad emisor ↔ nodo (`backend/licenciamiento/tests/test_emisor_real.py`) | **13 de 13** en ≈ 13 s: el emisor real firma, el nodo real activa, renueva y traslada por su API. Se salta sola sin la herramienta; sólo usa llaves que crea en una carpeta temporal. Comprueba la tolerancia de `desde` con relojes de −30, −45 y −72 horas, el traslado del técnico y que el técnico no renueva |
 | Clasificación de rutas frente a la licencia | **316 rutas: 109 intocables · 178 núcleo · 29 licenciables**, igual que en la segunda foto. Ninguna ruta de una clase, un examen, el modo estudio, el inicio de sesión ni la lectura de calificaciones se puede apagar (inventario recorriendo el resolvedor real de Django) |
 | Fallas de reloj y límites | **Tres defectos confirmados y abiertos: H-13, H-14 y H-15** (§2) |
-| Backend completo, Core, OPS, Student, UIA de la pantalla Licencia, regresión de módulos | **Pendiente**: se corren cuando la otra sesión termine su propia corrida (dos corridas completas a la vez se estorban) |
+| Módulo de licencia del backend (250 pruebas) sobre el árbol commiteado | **250 de 250** (6 omitidas por diseño) en ≈ 147 s; la suite completa de la otra sesión (2195, 14 omitidas) se toma como línea base del backend y se repite una vez, cuando los arreglos de §2 estén dentro |
+| Pruebas de .NET sobre el árbol commiteado (12:07) | **Core 2122 · OPS 453 · Student 102**, todas correctas (líneas base antes de empezar: 1221 · 399 · 102; la diferencia incluye lo de otros módulos que se commiteó a la vez) |
+| **Regresión en vivo de las 316 rutas** con la licencia en cada estado (evaluación, activa, en gracia, degradada) contra un nodo aislado por HTTP real: 1244 peticiones | **0 desvíos**: toda ruta licenciable con su módulo apagado responde exactamente `402 no_disponible_por_licencia` con su capacidad y con el módulo encendido no lo responde; **ninguna de las 109 intocables ni de las 178 de núcleo** responde nunca ese 402, y todas responden lo mismo en los cuatro estados que con la licencia activa |
+| 5xx de ese barrido | 25 rutas, **iguales en los cuatro estados** (no vienen de la licencia): 21 son 503 («AVACOM Biblioteca no está encendida en este equipo»: el nodo de prueba no tiene la biblioteca conectada) y 2 son 501 («llega en una versión posterior») —ambos por diseño— y **1 par es un defecto real de otro módulo, ya corregido**: `DELETE …/padron/grupos/<id>/estudiantes/` y `POST …/estudiantes/<id>/` daban `TypeError` sin atrapar (500) porque `PadronMatriculaView` atiende dos rutas con firmas distintas; ahora 405 (`Bugfix:` e3784980, 4 pruebas nuevas) |
+| UIA de la pantalla Licencia de OPS, Student con el cupo de equipos agotado, contenido del instalador reconstruido | **Pendiente**: el guion de UIA está listo y espera la pantalla (la otra sesión está haciendo su propio recorrido visual y sólo puede haber uno a la vez) |
 
 ## 2 · Defectos encontrados
 
@@ -58,10 +62,10 @@ cd backend && .venv/Scripts/python.exe manage.py test licenciamiento.tests.test_
 
 ## 4 · Pendiente (se completa en este documento)
 
-1. Corrida completa del backend (`manage.py test`, línea base 1945 y 8 omitidas en 870 s), `makemigrations --check`, y `dotnet test` de Core (1221), OPS (399) y Student (102) con las pruebas nuevas.
-2. Recorrido por UI Automation de la pantalla **Licencia** de OPS en un nodo aislado (puerto 8010, unidad virtual para la memoria USB, **sin teclado**): activar, renovar, liberar, copia, banner por rol, y verificación con la regla de tercios.
-3. Regresión de los módulos desarrollados después del licenciamiento con la licencia en cada estado (activa, en gracia, degradada, cupo lleno): Reportes, Búsqueda, Importación, Escalas de calificación; el aula, el examen y el modo estudio **no** deben notar nada; Student con el cupo de equipos agotado.
-4. El contenido del instalador reconstruido: sin emisor, sin llave de desarrollo, sin llaves privadas, con la pública de producción cuando exista (hoy `produccion.json` está vacío).
+1. Recorrido por UI Automation de la pantalla **Licencia** de OPS en un nodo aislado (puerto propio, unidad virtual para la memoria USB, **sin teclado**): evaluación, activar en tres pasos, copia de custodia, renovar, gracia, funciones en pausa, soporte técnico que no renueva, liberar, volver a activar y el profesor que no ve nada; con la regla de tercios en cada captura.
+2. Student con el cupo de equipos agotado: la tableta nueva debe ver «Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu profesor» y las ya registradas no deben notar nada.
+3. Una segunda corrida completa del backend, **una sola vez**, cuando estén dentro los arreglos de §2 (H-13, H-14, H-15), y las 100 pruebas del emisor contra el dominio ya corregido.
+4. El contenido del instalador reconstruido: sin emisor, sin llave de desarrollo, sin llaves privadas, con la pública de producción cuando exista (hoy `produccion.json` está vacío); y reconstruir el paquete portátil del emisor con el dominio final.
 
 ## 5 · Lo que esta verificación no puede comprobar
 
