@@ -75,14 +75,19 @@ instalador que se entrega, el emisor y la llave pública que se incruste despué
 ### La fecha adelantada (Q-L13)
 
 `recorrido_fecha.py --ops <exe> --salida <carpeta> [--puerto 8017]` comprueba lo que decidió el CTO el 2026-10-20: **una fecha adelantada no se acepta, no se guarda y no degrada; avisa con un error hasta que la fecha concuerde**
-(≈ 4 min, con las ventanas en primer plano y el candado de pantalla). No cambia la fecha de Windows (exigiría administrador): el nodo aislado arranca con un `sitecustomize.py` **de la prueba** (en una carpeta temporal, por
+(≈ 6 min, con las ventanas en primer plano y el candado de pantalla; 37 comprobaciones). No cambia la fecha de Windows (exigiría administrador): el nodo aislado arranca con un `sitecustomize.py` **de la prueba** (en una carpeta temporal, por
 `PYTHONPATH`) que lee un archivo de desfase y se lo suma a `time.time()` **sólo** para quien llama desde el módulo `licenciamiento` (mirando tres marcos hacia arriba: su reloj es el de la evaluación, `RelojNodo`); las sesiones, la
 bitácora y el resto del nodo siguen con la hora real. Así «alguien adelantó la fecha 40 días» pasa **dentro del proceso en marcha**, que es lo único que el nodo trata como salto.
 
 Recorre: licencia activa sin error · fecha adelantada 40 días → el nodo la detecta en su siguiente ciclo, **no la acepta** (la hora del aula no se mueve), no degrada ni apaga ningún módulo y avisa con los 40 días y las dos fechas,
 primero · la pantalla Licencia y el menú principal lo dicen como un error, con «Confirmar la fecha de hoy» y «Ver la licencia» · la hoja habla de la fecha del equipo y de corregirla en Windows · al **corregir** la fecha el error se
-quita solo · de nuevo adelantada: la administración **confirma** y sólo entonces el aula guarda esa fecha · devolver el reloj después es otro aviso (`reloj_sospechoso`). Escribe `30-…` a `35-…` (con su versión de tercios). Como el campo de
-contraseña a veces no recibe la clave si se escribe antes de que la pantalla esté lista, el ingreso se repite hasta tres veces y sólo sigue al PIN cuando la pantalla del PIN aparece de verdad.
+quita solo · de nuevo adelantada: la administración **confirma** y sólo entonces el aula guarda esa fecha · devolver el reloj después es otro aviso (`reloj_sospechoso`). Escribe `30-…` a `35-…` (con su versión de tercios).
+
+**Va en cuatro fases cortas** (la fecha se adelanta · la hoja de confirmación · la fecha se corrige · la administración confirma), cada una con una OPS recién abierta, y **repite la fase si OPS se cae o vuelve al acceso**
+(lo dice en la salida y descarta lo anotado en ese intento; una falla con OPS viva sigue siendo una falla). Es por una fragilidad previa de OPS bajo la UI Automation, que **no** es de esta pantalla: se reproduce yendo y
+viniendo de «Licencia» con la fecha en orden (`APPCRASH` de `Avacom.Lms.Ops.exe` con 0xc0000005 dentro de `Microsoft.UI.Xaml.dll`, o la vuelta al acceso, hacia la novena vuelta). La última fase cambia lo que el nodo guardó
+(la fecha confirmada), así que cada intento suyo levanta un nodo nuevo. Además, el campo de contraseña a veces no recibe la clave si se escribe antes de que la pantalla esté lista: el ingreso se repite hasta tres veces y sólo
+sigue al PIN cuando la pantalla del PIN aparece de verdad.
 
 Cuidados: los mismos de arriba (nodo aislado, perfil de OPS de pruebas, candado de pantalla). Dos más: la sesión del personal es **única**, así que el guion mira el estado por la API con una cuenta lectora aparte (entrar con
 la de la administración cerraría la de OPS); y los controles se tocan por `AutomationId` con la acción `tecla` de `ui-ops.ps1` porque la página y la hoja tienen botones que se llaman igual («Liberar este equipo»).
