@@ -221,7 +221,9 @@ def desde_campos(campos: Mapping[int, bytes], kid: str = "", sha256: str = "") -
     if len(crudo_limites) != 16:
         raise LicenciaInvalida("campo_invalido")
     equipos, usuarios, normal, pico = (int.from_bytes(crudo_limites[i:i + 4], "big") for i in (0, 4, 8, 12))
-    if normal > pico:
+    # Un límite en 0 no «limita»: DETIENE (sin concurrencia el aula no admite ni al primer alumno; sin equipos o sin usuarios no se registra ninguna tableta ni persona NUEVA). R-01: ninguna
+    # licencia, venga de donde venga, puede detener una clase. El emisor oficial ya no emite ceros; el nodo no depende de que todos los emisores sean cuidadosos.
+    if normal > pico or min(equipos, usuarios, normal, pico) < 1:
         raise LicenciaInvalida("campo_invalido")
     tipo = _TIPOS.get(_entero(campos[T_TIPO], 1))
     if tipo is None:

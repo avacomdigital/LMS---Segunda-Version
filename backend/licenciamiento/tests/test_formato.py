@@ -44,9 +44,10 @@ class IdaYVueltaTests(SimpleTestCase):
         leida = licencia.leer(emitir(lic), claves_publicas())
         self.assertEqual((leida.liberacion_pendiente, leida.liberacion_dias, leida.hash_clave_nodo), (True, 14, b"\x07" * 32))
 
-    def test_sin_tope_y_cero_son_valores_distintos(self):
-        leida = licencia.leer(emitir(licencia_de_ejemplo(limites=Limites(ILIMITADO, 0, 0, ILIMITADO))), claves_publicas())
-        self.assertEqual(leida.limites, Limites(ILIMITADO, 0, 0, ILIMITADO))
+    def test_sin_tope_y_el_minimo_son_valores_distintos(self):
+        """«Sin tope» (0xFFFFFFFF) y el mínimo (1) son valores distintos; el cero ya no es un límite válido (R-01: un límite en 0 detendría la clase)."""
+        leida = licencia.leer(emitir(licencia_de_ejemplo(limites=Limites(ILIMITADO, 1, 1, ILIMITADO))), claves_publicas())
+        self.assertEqual(leida.limites, Limites(ILIMITADO, 1, 1, ILIMITADO))
 
     def test_las_capacidades_se_leen_como_conjunto_y_habilitan(self):
         leida = licencia.leer(emitir(licencia_de_ejemplo(capacidades=frozenset({"reportes", "busqueda"}))), claves_publicas())
