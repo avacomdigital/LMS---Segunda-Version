@@ -64,6 +64,30 @@ class LlavesTests(unittest.TestCase):
         self.assertNotEqual(a[2], b[2])
         self.assertNotEqual(json.loads(a[0])["kdf"]["sal"], json.loads(b[0])["kdf"]["sal"])
 
+    def test_el_nombre_cabe_en_lo_que_acepta_el_nodo(self):
+        """El cargador de llaves del nodo acepta hasta 32 caracteres: el emisor no crea una llave que el nodo no reconocería."""
+        llaves.generar("a" * 32, FRASE, CREADA)
+        with self.assertRaises(llaves.ErrorDeLlave):
+            llaves.generar("a" * 33, FRASE, CREADA)
+
+    def test_la_entrada_para_el_nodo_es_el_formato_de_produccion_json(self):
+        _, _, publica = llaves.generar("prod-2026-1", FRASE, CREADA)
+        texto = llaves.entrada_para_el_nodo("prod-2026-1", publica)
+        self.assertEqual(json.loads(texto), {"version": 1, "claves": [{"kid": "prod-2026-1", "publica": publica.hex(), "estado": "vigente"}]})
+        self.assertEqual(llaves.leer_claves_del_nodo(texto), {"prod-2026-1": publica})
+        self.assertNotIn("privada", texto)
+
+    def test_leer_claves_del_nodo_hace_lo_mismo_que_el_nodo(self):
+        buena = {"kid": "a", "publica": "11" * 32, "estado": "siguiente"}
+        casos = {"retirada": [dict(buena, estado="retirada")], "kid inválido": [dict(buena, kid="Mal Nombre")], "pública corta": [dict(buena, publica="11" * 31)],
+                 "pública no hex": [dict(buena, publica="zz" * 32)], "sin kid": [{"publica": "11" * 32}], "basura": ["x", 5, None]}
+        for nombre, claves in casos.items():
+            self.assertEqual(llaves.leer_claves_del_nodo(json.dumps({"claves": claves})), {}, nombre)
+        self.assertEqual(llaves.leer_claves_del_nodo(json.dumps({"claves": [buena]})), {"a": bytes.fromhex("11" * 32)})
+        self.assertEqual(llaves.leer_claves_del_nodo(json.dumps([1, 2])), {})
+        with self.assertRaises(llaves.ErrorDeLlave):
+            llaves.leer_claves_del_nodo("{ no es json")
+
     def test_la_publica_se_comprueba(self):
         _, texto, _ = llaves.generar("prod-2026-1", FRASE, CREADA)
         malo = texto.replace("sha256=", "sha256=00")

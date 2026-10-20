@@ -326,6 +326,24 @@ class VerificarTests(BaseConCarpeta):
         r = correr(["verificar", str(self.archivo), "--publicas", str(self.llaves_dir)])
         self.assertEqual(r.codigo, 0, r.error)
 
+    def test_verifica_con_el_archivo_en_el_formato_del_nodo(self):
+        """La ceremonia deja también `<kid>.produccion.json`, el formato de `backend/licenciamiento/claves/produccion.json`: sirve para verificar."""
+        entrada = self.llaves_dir / f"{self.kid}.produccion.json"
+        self.assertTrue(entrada.is_file())
+        r = correr(["verificar", str(self.archivo), "--publica", str(entrada)])
+        self.assertEqual(r.codigo, 0, r.error)
+
+    def test_las_llaves_de_desarrollo_del_nodo_nunca_se_toman_por_buenas(self):
+        """Una carpeta con un desarrollo.json (como la del nodo) se ignora: aunque ahí estuviera la llave que firmó, no verificaría."""
+        carpeta = self.dir / "claves-del-nodo"
+        carpeta.mkdir()
+        (carpeta / "desarrollo.json").write_text((self.llaves_dir / f"{self.kid}.produccion.json").read_text(encoding="utf-8"), encoding="utf-8")
+        r = correr(["verificar", str(self.archivo), "--publicas", str(carpeta)])
+        self.assertEqual(r.codigo, 1)
+        self.assertIn("Indica la llave pública", r.error)
+        (carpeta / "produccion.json").write_text((self.llaves_dir / f"{self.kid}.produccion.json").read_text(encoding="utf-8"), encoding="utf-8")
+        self.assertEqual(correr(["verificar", str(self.archivo), "--publicas", str(carpeta)]).codigo, 0)
+
     def test_ninguna_mutacion_de_una_licencia_emitida_por_la_herramienta_se_acepta(self):
         datos = self.archivo.read_bytes()
         azar = random.Random(99)

@@ -25,8 +25,9 @@ FORMATO = "avacom-avkey"
 VERSION = 1
 SCRYPT_N, SCRYPT_R, SCRYPT_P = 2 ** 15, 8, 1
 MIN_FRASE = 16
-_KID = re.compile(r"^[a-z0-9._-]{1,64}$")
+_KID = re.compile(r"^[a-z0-9._-]{1,32}$")          # 32 es lo que acepta el cargador de llaves públicas del nodo (infraestructura/claves.py)
 ENCABEZADO_PUBLICA = "avacom-llave-publica"
+ESTADOS_QUE_VALEN = ("vigente", "siguiente")         # los mismos que acepta el nodo; `retirada` se ignora
 
 
 class ErrorDeLlave(ValueError):
@@ -42,7 +43,7 @@ class LlaveAbierta:
 
 def kid_valido(kid: object) -> str:
     if not isinstance(kid, str) or not _KID.match(kid):
-        raise ErrorDeLlave("El nombre de la llave (kid) sólo puede llevar minúsculas, números, punto, guion y guion bajo (hasta 64 caracteres), por ejemplo «prod-2026-1».")
+        raise ErrorDeLlave("El nombre de la llave (kid) sólo puede llevar minúsculas, números, punto, guion y guion bajo (hasta 32 caracteres), por ejemplo «prod-2026-1».")
     return kid
 
 
@@ -64,6 +65,28 @@ def texto_publica(kid: str, publica: bytes, creada: str) -> str:
 
 def huella_de_publica(publica: bytes) -> str:
     return hashlib.sha256(publica).hexdigest()
+
+
+def entrada_para_el_nodo(kid: str, publica: bytes, estado: str = "vigente") -> str:
+    """El archivo que se pega en `backend/licenciamiento/claves/produccion.json` (o se une a él): el MISMO formato que lee el nodo. Sólo lleva la pública."""
+    return json.dumps({"version": 1, "claves": [{"kid": kid_valido(kid), "publica": publica.hex(), "estado": estado}]}, indent=2) + "\n"
+
+
+def leer_claves_del_nodo(texto: str) -> dict[str, bytes]:
+    """`{kid: pública}` de un archivo en el formato de `produccion.json` del nodo. Una entrada mal formada o `retirada` se ignora, como hace el nodo."""
+    try:
+        datos = json.loads(texto)
+    except ValueError as error:
+        raise ErrorDeLlave("El archivo de llaves públicas no es un JSON válido.") from error
+    salida: dict[str, bytes] = {}
+    for entrada in datos.get("claves", []) if isinstance(datos, dict) else []:
+        try:
+            kid, estado, publica = str(entrada["kid"]), str(entrada.get("estado", "vigente")), bytes.fromhex(str(entrada["publica"]))
+        except (KeyError, ValueError, TypeError, AttributeError):
+            continue
+        if _KID.match(kid) and len(publica) == 32 and estado in ESTADOS_QUE_VALEN:
+            salida[kid] = publica
+    return salida
 
 
 def generar(kid: str, frase: str, creada: str, azar=secrets.token_bytes) -> tuple[bytes, str, bytes]:

@@ -90,22 +90,36 @@ def _solicitud(valor: str):
         raise ErrorDeUso(f"La solicitud no es válida: {error.detalle} Pide una nueva al colegio.") from error
 
 
+ARCHIVO_DE_DESARROLLO = "desarrollo.json"      # las llaves de desarrollo del nodo: esta herramienta NUNCA las toma por buenas
+
+
 def _claves_publicas(publicas: list[str] | None, carpeta: str | None) -> dict[str, bytes]:
+    """Las llaves con las que se verifica: `--publica` (un `.pub` o un archivo en el formato de `produccion.json`), `--publicas <carpeta>` o, si no se da nada, las de
+    `backend/licenciamiento/claves/produccion.json` y las de `claves-publicas/`."""
     rutas: list[Path] = [Path(archivos.limpiar(r)) for r in (publicas or [])]
-    carpetas = [Path(archivos.limpiar(carpeta))] if carpeta else [RAIZ.parents[1] / "backend" / "licenciamiento" / "claves", RAIZ / "claves-publicas"]
     if not rutas:
+        if carpeta:
+            carpetas = [Path(archivos.limpiar(carpeta))]
+        else:
+            produccion = RAIZ.parents[1] / "backend" / "licenciamiento" / "claves" / "produccion.json"
+            rutas += [produccion] if produccion.is_file() else []
+            carpetas = [RAIZ / "claves-publicas"]
         for c in carpetas:
             if c.is_dir():
-                rutas += sorted(c.glob("*.pub"))
+                rutas += sorted(c.glob("*.pub")) + sorted(p for p in c.glob("*.json") if p.name != ARCHIVO_DE_DESARROLLO)
     claves: dict[str, bytes] = {}
     for ruta in rutas:
         if not ruta.is_file():
             raise ErrorDeUso(f"No se encontró la llave pública «{ruta}».")
         try:
-            kid, publica = llaves.leer_publica(ruta.read_text(encoding="utf-8-sig"))
+            texto = ruta.read_text(encoding="utf-8-sig")
+            if ruta.suffix.lower() == ".json":
+                claves.update(llaves.leer_claves_del_nodo(texto))
+            else:
+                kid, publica = llaves.leer_publica(texto)
+                claves[kid] = publica
         except llaves.ErrorDeLlave as error:
             raise ErrorDeUso(f"«{ruta.name}»: {error}") from error
-        claves[kid] = publica
     if not claves:
         raise ErrorDeUso("Indica la llave pública con la que se firmó (--publica archivo.pub, o --publicas <carpeta>).")
     return claves
@@ -115,8 +129,8 @@ def _claves_publicas(publicas: list[str] | None, carpeta: str | None) -> dict[st
 def cmd_claves_generar(a) -> int:
     kid = llaves.kid_valido(a.kid)
     salida = Path(archivos.limpiar(a.salida))
-    ruta_privada, ruta_publica = salida / f"{kid}.avkey", salida / f"{kid}.pub"
-    for ruta in (ruta_privada, ruta_publica):
+    ruta_privada, ruta_publica, ruta_nodo = salida / f"{kid}.avkey", salida / f"{kid}.pub", salida / f"{kid}.produccion.json"
+    for ruta in (ruta_privada, ruta_publica, ruta_nodo):
         if ruta.exists():
             raise ErrorDeUso(f"Ya existe «{ruta}»: una llave no se sobrescribe. Elige otro nombre (kid) u otra carpeta.")
     frase = _frase(f"Elige la frase de paso (mínimo {llaves.MIN_FRASE} caracteres): ")
@@ -128,13 +142,15 @@ def cmd_claves_generar(a) -> int:
     salida.mkdir(parents=True, exist_ok=True)
     archivos.escribir(ruta_privada, avkey)
     archivos.escribir(ruta_publica, texto_publica.encode("utf-8"))
+    archivos.escribir(ruta_nodo, llaves.entrada_para_el_nodo(kid, publica).encode("utf-8"))
     _p(f"Llave creada: {kid}")
     _p(f"  Privada (cifrada) .. {ruta_privada}")
     _p(f"  Pública ............ {ruta_publica}")
+    _p(f"  Para el nodo ....... {ruta_nodo}   (el formato de backend/licenciamiento/claves/produccion.json)")
     _p(f"  Huella pública ..... {llaves.huella_de_publica(publica)}")
     _p("")
     _p("Ahora: 1) comprueba la llave con «claves ver»; 2) guarda DOS copias de la privada en memorias distintas y lugares distintos;")
-    _p("       3) guarda la frase de paso APARTE; 4) entrega sólo la pública al equipo de desarrollo.")
+    _p("       3) guarda la frase de paso APARTE; 4) entrega sólo la pública (el .pub y el .produccion.json) al equipo de desarrollo.")
     return 0
 
 
@@ -443,8 +459,8 @@ def _parser() -> argparse.ArgumentParser:
 
     ve = sub.add_parser("verificar", help="Comprueba una licencia con las llaves públicas")
     ve.add_argument("archivo", help="Ruta del .avlic o su texto AVL1.…")
-    ve.add_argument("--publica", action="append", help="Llave pública (.pub); se puede repetir")
-    ve.add_argument("--publicas", help="Carpeta con llaves públicas (*.pub)")
+    ve.add_argument("--publica", action="append", help="Llave pública: un .pub o un archivo en el formato de produccion.json del nodo; se puede repetir")
+    ve.add_argument("--publicas", help="Carpeta con llaves públicas (*.pub y *.json; el desarrollo.json del nodo se ignora siempre)")
     ve.add_argument("--solicitud", help="Comprueba además que la huella corresponde a esa solicitud")
     ve.set_defaults(func=cmd_verificar)
 
