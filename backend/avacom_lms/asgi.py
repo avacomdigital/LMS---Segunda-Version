@@ -33,6 +33,19 @@ application = ProtocolTypeRouter({
     "websocket": URLRouter(websocket_urlpatterns),
 })
 
+# MOD-015: las anclas de la secuencia y del reloj (una restauración no repite una secuencia, INV-002), la fila de este arranque (apagado sucio = la anterior sin cerrar) y el estado del
+# nodo. Nunca lanza (R-01): si algo falla, se registra y el nodo sigue. La parada limpia cierra la fila y deja el ancla al día.
+try:
+    import atexit
+
+    from nodo import servicios as nodo
+
+    nodo.arrancar()
+    atexit.register(nodo.parar)
+except Exception:   # noqa: BLE001 — R-01
+    import logging
+    logging.getLogger("avacom.nodo").exception("El arranque de la cola única no se pudo registrar: el nodo sigue")
+
 programador.iniciar()
 # MOD-010: pausa a quien dejó de dar señal, entrega por tiempo o plazo y restaura los exámenes abiertos tras un reinicio del nodo.
 programador_evaluacion.iniciar()

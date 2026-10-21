@@ -1,4 +1,5 @@
 using Avacom.Lms.Core.Licencia;
+using Avacom.Lms.Core.Nodo;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Acceso;
 using Avacom.Lms.Ops.Licencia.Ui;
@@ -13,6 +14,7 @@ public partial class DashboardPage : ContentPage
 {
     private int _versionAviso;
     private int _versionLicencia;
+    private int _versionNodo;
 
     public DashboardPage() => InitializeComponent();
 
@@ -42,6 +44,8 @@ public partial class DashboardPage : ContentPage
         // MOD-018: «Licencia» para la administración y el soporte técnico (sin sesión, se deja ver y el nodo decide), y su banda, nunca con una clase abierta en este equipo.
         LicenciaButton.IsVisible = ReglasDeLicencia.VeLaLicencia(Sesion.Usuario);
         _ = PintarAvisoDeLicenciaAsync();
+        // MOD-015: la banda del estado del nodo (restringido o en recuperación) para la administración y el técnico, nunca con una clase abierta en este equipo.
+        _ = PintarAvisoDelNodoAsync();
         // Sólo con el perfil de pruebas de tests/Avacom.Lms.Ops.Uia (las teselas no se pueden tocar por UI Automation); sin él, nada.
         if (Ajustes.TomarRutaDePrueba() is { } ruta) Dispatcher.Dispatch(async () => await Shell.Current.GoToAsync(ruta));
     }
@@ -103,6 +107,42 @@ public partial class DashboardPage : ContentPage
     {
         try { await Shell.Current.GoToAsync("licencia"); }
         catch (Exception ex) { RegistroDeFallos.Escribir("ops", "DashboardPage.Licencia", ex); }
+    }
+
+    /// <summary>
+    /// MOD-015 · P-18: la banda del estado del nodo, molde de la del PIN. Sólo para quien ve el nodo (administración y técnico) y NUNCA con una clase abierta en este equipo. Se calcula
+    /// al aparecer el menú leyendo el campo <c>nodo</c> de <c>/health/</c> (público, sin permiso y sin tocar la base) y sólo se muestra con «restringido» o «en recuperación»: si el
+    /// nodo no contesta o está operativo, no se pinta nada (no se inventa un aviso).
+    /// </summary>
+    private async Task PintarAvisoDelNodoAsync()
+    {
+        var version = ++_versionNodo;
+        try
+        {
+            if (!ReglasDeNodo.MostrarBanner(Sesion.Usuario, Sesion.ClaseAbiertaId is not null)) { NodoBanner.IsVisible = false; return; }
+            using var limite = new CancellationTokenSource(TimeSpan.FromSeconds(4));
+            var salud = await Sesion.Nodo.SaludAsync(limite.Token);
+            if (version != _versionNodo) return;
+            if (Sesion.ClaseAbiertaId is not null || ReglasDeNodo.Banner(salud) is not { } banda) { NodoBanner.IsVisible = false; return; }
+            var (fondo, tinta, filo) = LicenciaUi.ColoresDelBanner(banda.Tono);
+            NodoBanner.BackgroundColor = fondo;
+            NodoBanner.Stroke = new SolidColorBrush(filo);
+            NodoBannerLabel.Text = banda.Texto;
+            NodoBannerLabel.TextColor = tinta;
+            NodoBannerButton.TextColor = tinta;
+            NodoBanner.IsVisible = true;
+        }
+        catch (Exception ex)
+        {
+            NodoBanner.IsVisible = false;
+            RegistroDeFallos.Escribir("ops", "DashboardPage.AvisoDelNodo", ex);
+        }
+    }
+
+    private async void OnNodoClicked(object? sender, EventArgs e)
+    {
+        try { await Shell.Current.GoToAsync("logs-bitacora"); }
+        catch (Exception ex) { RegistroDeFallos.Escribir("ops", "DashboardPage.Nodo", ex); }
     }
 
     /// <summary>Con sesión de usuario (007-10) la cabecera muestra a quien entró; sin ella, la profesora de siempre del prototipo.</summary>

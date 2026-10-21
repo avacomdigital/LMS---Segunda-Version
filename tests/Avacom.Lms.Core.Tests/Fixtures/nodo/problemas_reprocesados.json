@@ -1,0 +1,21 @@
+{
+  "problemas": [
+    {
+      "apartado_en": 1790000000000,
+      "consumidor": "reportes",
+      "estado": "reprocesado",
+      "evento_id": "cc717b0f1cef472e80ae16bdb53eca17",
+      "fuente": "evaluacion",
+      "id": 1,
+      "intentos": 1,
+      "intentos_reproceso": 0,
+      "resuelto_en": 1790000000000,
+      "resuelto_por": "71af9221-1556-473f-8f43-e8a2bd233289",
+      "secuencia": 3,
+      "tipo": "evaluacion.intento_abierto.v1",
+      "ultimo_error": ""
+    }
+  ],
+  "servidor_en": 1790000000000,
+  "total": 1
+}

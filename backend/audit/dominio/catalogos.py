@@ -20,12 +20,13 @@ M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS = "auditoria", "instalacion"
 M_BUSQUEDA = "busqueda"
 M_REPORTES = "reportes"
 M_LICENCIA = "licencia"
-MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES, M_LICENCIA)
+M_NODO = "nodo"
+MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES, M_LICENCIA, M_NODO)
 
 ETIQUETAS_MODULO = {
     M_ACCESO: "Acceso e identidad", M_AULA: "Aula (clase en vivo)", M_DISPOSITIVOS: "Dispositivos", M_ESTUDIO: "Modo estudio",
     M_EVALUACION: "Evaluaciones", M_AUDITORIA: "Auditoría", M_INSTALACION: "Instalación", M_EXPEDIENTE: "Expediente",
-    M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes", M_LICENCIA: "Licencia",
+    M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes", M_LICENCIA: "Licencia", M_NODO: "Plataforma del nodo",
 }
 
 
@@ -214,6 +215,21 @@ _LISTA: tuple[Accion, ...] = (
     _a("licencia.firma_invalida", M_LICENCIA, "Archivo de licencia rechazado: firma, llave o equipo no válidos"),
     _a("licencia.evaluacion_iniciada", M_LICENCIA, "Ventana de evaluación iniciada (primer arranque con licenciamiento)", evento_origen="licencia.evaluacion_iniciada.v1"),
     _a("licencia.reloj_confirmado", M_LICENCIA, "Fecha del nodo confirmada por el administrador tras un salto sospechoso del reloj"),
+    # ---- nodo (MOD-015): el transporte de la cola única, nunca el contenido de un evento. Lo que merece asiento: apartar y reprocesar un evento, reproducir o registrar un consumidor,
+    # cortar un módulo, una restauración detectada por las anclas, un evento fuera de norma aceptado en producción, la purga, un intento de operar la cola sin permiso y el modo restringido.
+    _a("nodo.evento_apartado", M_NODO, "Evento apartado a la cola de problemas tras agotar los reintentos (FUN-163)", evento_origen="nodo.evento_apartado.v1"),
+    _a("nodo.evento_reprocesado", M_NODO, "Evento apartado reprocesado (FUN-164)", evento_origen="nodo.evento_reprocesado.v1"),
+    _a("nodo.reproceso_fallido", M_NODO, "Reproceso de un evento apartado que volvió a fallar"),
+    _a("nodo.consumidor_reproducido", M_NODO, "Consumidor reproducido desde una marca anterior (BR-007)"),
+    _a("nodo.consumidor_registrado", M_NODO, "Consumidor registrado o actualizado en la cola (P-06)"),
+    _a("nodo.consumidor_desregistrado", M_NODO, "Consumidor desinstalado: dejó de bloquear la purga (BR-018)"),
+    _a("nodo.modulo_cortado", M_NODO, "Módulo cortado a la cola única; su cola antigua queda como historia (P-05)", evento_origen="nodo.modulo_cortado.v1"),
+    _a("nodo.modulo_incompatible", M_NODO, "Contrato incompatible declarado por un consumidor o módulo (INV-007)"),
+    _a("nodo.restauracion_detectada", M_NODO, "Restauración de la base detectada por las anclas: la secuencia saltó para no repetirse (INV-002)", evento_origen="nodo.recuperacion_completada.v1"),
+    _a("nodo.evento_no_catalogado", M_NODO, "Evento fuera de norma aceptado en producción: tipo no catalogado o carga omitida (R-06)"),
+    _a("nodo.purga_ejecutada", M_NODO, "Purga de eventos de la cola ejecutada (BR-017…019)"),
+    _a("nodo.acceso_denegado", M_NODO, "Intento de operar la cola del nodo sin permiso"),
+    _a("nodo.modo_restringido", M_NODO, "El nodo entró o salió del modo restringido", evento_origen="nodo.modo_restringido.v1"),
     # ---- expediente (lo que hoy escribe `expediente/servicios.py`) ----
     _a("inscripcion.creada", M_EXPEDIENTE, "Inscripción creada"),
     _a("inscripcion.retirada", M_EXPEDIENTE, "Inscripción retirada"),
@@ -276,7 +292,7 @@ def modulo_de(clave: str) -> str:
     prefijo = clave.split(".", 1)[0]
     return {"identidad": M_ACCESO, "identity": M_ACCESO, "acceso": M_ACCESO, "aula": M_AULA, "dispositivos": M_DISPOSITIVOS,
             "estudio": M_ESTUDIO, "evaluacion": M_EVALUACION, "calificacion": M_EVALUACION, "auditoria": M_AUDITORIA,
-            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES, "licencia": M_LICENCIA}.get(prefijo, M_EXPEDIENTE)
+            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES, "licencia": M_LICENCIA, "nodo": M_NODO}.get(prefijo, M_EXPEDIENTE)
 
 
 def como_lista() -> list[dict]:

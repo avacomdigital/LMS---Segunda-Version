@@ -119,6 +119,12 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("license.activate", "licencia", "Pedir la solicitud, activar, reactivar o liberar la licencia del nodo sin internet, y confirmar la fecha del equipo (FUN-188, FUN-194, JRN-020)", O, False),
     ("license.renew", "licencia", "Renovar o ampliar la licencia con un archivo posterior (FUN-191)", O, False),
     ("license.read", "licencia", "Ver el estado, los límites y el consumo de la licencia, sin datos de personas (CAP-112; extensión técnica propuesta)", O, False),
+    # --- MOD-015 · Node Platform (sección J de su ficha: `node.queue.replay`). `node.queue.read` y `node.health.read` son EXTENSIONES TÉCNICAS PROPUESTAS: ver la cola por consumidor,
+    # los eventos apartados (nunca su carga) y el estado del nodo. El técnico reprocesa SÓLO por escalada temporal de la administración (PAN-241). Los evalúa
+    # `nodo.infraestructura.autorizacion.AutorizacionNodo`; el profesor, Reportes y el alumno no reciben ninguno.
+    ("node.queue.replay", "nodo", "Reprocesar un evento apartado de la cola de salida o reproducir un consumidor desde una marca anterior (FUN-164)", O, False),
+    ("node.queue.read", "nodo", "Ver el estado de la cola de salida por consumidor y los eventos apartados, sin su carga (CAP-097; extensión técnica propuesta)", O, False),
+    ("node.health.read", "nodo", "Ver el estado del nodo, sus servicios y su salud (FUN-167, PAN-242; extensión técnica propuesta)", O, False),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
@@ -228,6 +234,8 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "reports.usage.view": O, "reports.rebuild": O,
         # Activa la licencia del nodo (con el archivo que entrega AVACOM), la libera y la consulta; NO la renueva (eso es de la administración).
         "license.activate": O, "license.read": O,
+        # Ve el estado del nodo y la cola de salida por consumidor (sin la carga de ningún evento); reprocesar exige una escalada temporal de la administración.
+        "node.queue.read": O, "node.health.read": O,
         "identity.password.change_own": S, "identity.session.revoke_own": S,
     }),
 }

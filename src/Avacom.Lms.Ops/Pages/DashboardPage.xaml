@@ -64,6 +64,14 @@
                     <Button x:Name="LicenciaBannerButton" Grid.Column="1" Text="Ver la licencia" AutomationId="licencia-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#0B4F70" FontSize="14" Clicked="OnLicenciaClicked" />
                 </Grid>
             </Border>
+            <!-- MOD-015 · P-18: banda del estado del nodo, molde de la del PIN, SÓLO para «restringido» y «en recuperación», para la administración y el técnico, y NUNCA con una clase
+                 abierta en este equipo (ningún aviso de plataforma interrumpe una clase, R-01). Lee el campo `nodo` de /health/ (público, sin tocar la base). -->
+            <Border x:Name="NodoBanner" IsVisible="False" AutomationId="nodo-banner" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <Label x:Name="NodoBannerLabel" AutomationId="nodo-banner-texto" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button x:Name="NodoBannerButton" Grid.Column="1" Text="Ver el equipo" AutomationId="nodo-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnNodoClicked" />
+                </Grid>
+            </Border>
             <Border x:Name="AvisoBanner" IsVisible="False" HorizontalOptions="Center" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label x:Name="AvisoLabel" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />

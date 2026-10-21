@@ -21,6 +21,8 @@ urlpatterns = [
     path("api/licencia/", include("licenciamiento.interfaces.urls")),
     # Cola de medios: estado de los recursos que el nodo trae de AVACOM Contenido y reparte a las tabletas.
     path("api/medios/", include("cola_medios.interfaces.urls")),
+    # MOD-015: el estado del nodo, la cola única por consumidor (sin carga útil), los eventos apartados y su reproceso. Rutas NÚCLEO: el modo restringido nunca las rechaza.
+    path("api/nodo/", include("nodo.interfaces.urls")),
     # MOD-019: bitácora (sólo lectura, audit.read/audit.export) y logs de diagnóstico (diagnostics.read; entrega de OPS/Student).
     path("api/auditoria/", include("audit.interfaces.urls")),
     path("api/logs/", include("audit.interfaces.urls_logs")),

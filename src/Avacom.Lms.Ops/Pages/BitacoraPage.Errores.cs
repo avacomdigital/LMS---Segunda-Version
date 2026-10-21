@@ -136,6 +136,9 @@ public partial class BitacoraPage
         datos.Add(estadoAcciones);
         pila.Add(Ds.Tarjeta(datos, Ds.RadioTarjeta, new Thickness(20, 16), Colors.White));
 
+        // MOD-015 (P-18): el estado del nodo, la cola por consumidor, el último punto de recuperación y los eventos apartados con [Reintentar] / [Reprocesar].
+        pila.Add(await SeccionDelNodoAsync());
+
         pila.Add(Ds.Cuerpo("Últimos avisos de este equipo", 16));
         var locales = RegistroLocal.Leer(soloErrores: true, ultimos: 20);
         if (locales.Count == 0) pila.Add(Vacio("Sin avisos en este equipo", "Cuando falle una escritura, la red o el aparato, quedará aquí y se entregará al nodo."));

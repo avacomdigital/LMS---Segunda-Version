@@ -1,0 +1,5 @@
+{
+  "codigo": "sin_permiso",
+  "detail": "Tu rol no tiene concedido node.queue.replay. El técnico lo recibe por una escalada temporal de la administración.",
+  "permiso": "node.queue.replay"
+}

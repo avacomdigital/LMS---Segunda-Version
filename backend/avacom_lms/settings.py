@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "search",
     "reporting",
     "licenciamiento",
+    "nodo",
 ]
 
 MIDDLEWARE = [
@@ -247,6 +248,34 @@ AVACOM_LMS_AUDITORIA_ESTRICTA = os.environ.get("AVACOM_LMS_AUDITORIA_ESTRICTA", 
 # Tope de renglones por entrega y por minuto que acepta POST /api/logs/clientes/ de cada equipo (§4.2).
 AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES", "200"))
 AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO", "1000"))
+
+# ------------------------------------------------ Node Platform y Cola de Salida (MOD-015)
+# App `nodo` (`/api/nodo/`, tablas m15_*): la cola única con secuencia global (`m15_evento`), el registro de consumidores con sus marcas, la cola de problemas, el corte de cada
+# módulo y el estado del nodo. NUNCA detiene una clase (R-01).
+# AVACOM_NODO_DIR: carpeta de las anclas de la secuencia y del reloj (fuera de la base) SÓLO en desarrollo (por defecto %TEMP%\avacom-nodo-dev); en pruebas cada corrida usa una
+# temporal y en producción es siempre %ProgramData%\AVACOM\OPS Master\Config\nodo\ (esta variable se ignora).
+AVACOM_NODO_DIR = os.environ.get("AVACOM_NODO_DIR", "")
+# Estricto (pruebas y desarrollo): un tipo fuera del catálogo o una carga con datos que no pueden viajar FALLAN. En un nodo instalado el hecho no se pierde: el evento entra marcado
+# (`catalogado=0` / `carga_omitida=1`), se registra con ERROR y queda un asiento (R-06).
+AVACOM_NODO_ESTRICTO = os.environ.get("AVACOM_NODO_ESTRICTO", "0" if AVACOM_LMS_ENTORNO == "instalado" else "1") == "1"
+# La purga (BR-017…019) está construida y APAGADA: sin MOD-016 ningún evento está en un respaldo verificado, así que nada sería elegible. "1" enciende la rutina (que seguirá sin
+# borrar hasta que el respaldo exista).
+AVACOM_NODO_PURGA = os.environ.get("AVACOM_NODO_PURGA", "0") == "1"
+# Publicar los eventos técnicos nodo.* agregados por lote y consumidor (marca avanzada, reintento, apartado, reproceso, salud al cambiar). "0" los apaga (Q-N6).
+AVACOM_NODO_EVENTOS_TECNICOS = os.environ.get("AVACOM_NODO_EVENTOS_TECNICOS", "1") == "1"
+# Consumidores: tamaño del lote, intentos antes de apartar un evento, espera base y tope de la espera creciente (ms), rezago a partir del cual un consumidor se declara suspendido.
+AVACOM_NODO_LOTE = int(os.environ.get("AVACOM_NODO_LOTE", "200"))
+AVACOM_NODO_MAX_INTENTOS = int(os.environ.get("AVACOM_NODO_MAX_INTENTOS", "5"))
+AVACOM_NODO_ESPERA_BASE_MS = int(os.environ.get("AVACOM_NODO_ESPERA_BASE_MS", "1000"))
+AVACOM_NODO_ESPERA_TOPE_MS = int(os.environ.get("AVACOM_NODO_ESPERA_TOPE_MS", "60000"))
+AVACOM_NODO_REZAGO_LIMITE = int(os.environ.get("AVACOM_NODO_REZAGO_LIMITE", "10000"))
+# Retención: la mínima de BR-017 (7 días) y cuánto dura un ciclo (Q-N4: «5 ciclos» de la clase aprendizaje; MOD-002 no existe).
+AVACOM_NODO_RETENCION_MIN_DIAS = int(os.environ.get("AVACOM_NODO_RETENCION_MIN_DIAS", "7"))
+AVACOM_NODO_CICLO_MESES = int(os.environ.get("AVACOM_NODO_CICLO_MESES", "12"))
+# Umbrales del modo restringido (Q-N1, propuesta): disco libre mínimo (GB y %), tamaño del WAL sin volcar (MB).
+AVACOM_NODO_DISCO_MIN_GB = float(os.environ.get("AVACOM_NODO_DISCO_MIN_GB", "2"))
+AVACOM_NODO_DISCO_MIN_PCT = float(os.environ.get("AVACOM_NODO_DISCO_MIN_PCT", "5"))
+AVACOM_NODO_WAL_MAX_MB = float(os.environ.get("AVACOM_NODO_WAL_MAX_MB", "512"))
 
 # ---------------------------------------------------------- Modo Estudio (MOD-008)
 # App `modo_estudio` (`/api/modo-estudio/`, tablas m08_*). Lee la lección en vivo por los casos de uso del aula, así que usa la misma

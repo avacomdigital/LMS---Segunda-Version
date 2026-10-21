@@ -58,6 +58,13 @@
     <None Include="..\Avacom.Lms.Core.Tests\Fixtures\reportes\*.json" Link="Fixtures\reportes\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- MOD-015 · Nodo: lo que la pestaña «Estado del equipo» calcula sin interfaz (las líneas del nodo, la cola del peor al mejor) y el reproceso con una sola confirmación y un solo envío.
+       Lógica pura, sin MAUI (la pestaña con interfaz vive en Pages\BitacoraPage.Equipo.cs y NO entra aquí). Las respuestas REALES del backend que ya capturó Core, vinculadas y no copiadas. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Nodo\*.cs" LinkBase="Ops\Nodo" />
+    <None Include="..\Avacom.Lms.Core.Tests\Fixtures\nodo\*.json" Link="Fixtures\nodo\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- MOD-018 · Licencia: cómo se encuentran los .avlic en las memorias y carpetas, el flujo de tres pasos, la liberación, la copia de custodia y su escritura segura. Lógica pura, sin MAUI:
        las piezas con interfaz viven en Licencia\Ui y NO entran aquí. Las respuestas y los archivos REALES del backend que ya capturó Core, vinculados y no copiados. -->
   <ItemGroup>

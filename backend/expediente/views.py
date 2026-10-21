@@ -60,7 +60,17 @@ class HealthView(VistaExpediente):
             "acceso": self._estado_acceso(),
             # MOD-018 · campo ADITIVO: sólo el estado de la licencia (sin detalles). Nunca falla: `estado_resumido` no lanza.
             "licencia": self._estado_licencia(),
+            # MOD-015 · campo ADITIVO: el estado del nodo (operativo, restringido…) y sus motivos, sin tocar la base. Nunca falla: `estado_resumido` no lanza.
+            "nodo": self._estado_nodo(),
         })
+
+    @staticmethod
+    def _estado_nodo() -> dict:
+        try:
+            from nodo import servicios as nodo
+            return nodo.estado_resumido()
+        except Exception as error:  # el health nunca falla por el nodo (R-01)
+            return {"estado": "desconocido", "motivos": [], "restringido": False, "error": str(error)}
 
     @staticmethod
     def _estado_licencia() -> dict:

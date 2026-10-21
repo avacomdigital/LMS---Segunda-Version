@@ -1,0 +1,21 @@
+{
+  "problemas": [
+    {
+      "apartado_en": 1790000000000,
+      "consumidor": "reportes",
+      "estado": "apartado",
+      "evento_id": "cc717b0f1cef472e80ae16bdb53eca17",
+      "fuente": "evaluacion",
+      "id": 1,
+      "intentos": 1,
+      "intentos_reproceso": 0,
+      "resuelto_en": null,
+      "resuelto_por": "",
+      "secuencia": 3,
+      "tipo": "evaluacion.intento_abierto.v1",
+      "ultimo_error": "RuntimeError: no puedo con la 3 (prueba)"
+    }
+  ],
+  "servidor_en": 1790000000000,
+  "total": 1
+}

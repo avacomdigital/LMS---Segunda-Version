@@ -1,0 +1,50 @@
+{
+  "arranque": {
+    "apagado_sucio_previo": false,
+    "id": null,
+    "restauracion": null
+  },
+  "base": {
+    "integra": true,
+    "transaccion_inmediata": true,
+    "wal_bytes": 0
+  },
+  "cola": {
+    "consumidores": [
+      {
+        "estado": "al_dia",
+        "nombre": "libro",
+        "pendientes": 0,
+        "problemas": 0
+      },
+      {
+        "estado": "rezagado",
+        "nombre": "reportes",
+        "pendientes": 5,
+        "problemas": 1
+      }
+    ],
+    "contador": 11,
+    "eventos": 11,
+    "problemas": 1,
+    "ultima_secuencia": 11
+  },
+  "disco": {
+    "libre_bytes": null,
+    "total_bytes": null
+  },
+  "estado": "operativo",
+  "motivos": [],
+  "purga": {
+    "habilitada": false,
+    "respaldo_verificado_hasta": 0
+  },
+  "reloj": {
+    "ahora": 1790000000000,
+    "marca_alta": 1790000000000,
+    "retroceso_ms": 0
+  },
+  "restringido": false,
+  "servidor_en": 1790000000000,
+  "version": "2.9.1"
+}

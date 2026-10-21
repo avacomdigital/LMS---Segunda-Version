@@ -2,6 +2,7 @@ using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Gradebook;
 using Avacom.Lms.Core.Licencia;
+using Avacom.Lms.Core.Nodo;
 using Avacom.Lms.Core.Reporting;
 using Avacom.Lms.Core.Search;
 using Avacom.Lms.Core.Models;
@@ -230,6 +231,27 @@ public static class Sesion
                 _baseLicencia = actual;
             }
             return _licencia;
+        }
+    }
+
+    private static NodoApi? _nodo;
+    private static Uri? _baseNodo;
+
+    /// <summary>
+    /// El cliente de <c>/api/nodo/</c> (MOD-015 · Node Platform y Cola de Salida), una instancia por dirección: el estado del nodo, la cola por consumidor, los eventos apartados y su
+    /// reproceso. Lo usan la pestaña «Estado del equipo» de la bitácora y el banner del menú principal (administración y técnico), que sólo lee el campo <c>nodo</c> de <c>/health/</c>.
+    /// </summary>
+    public static NodoApi Nodo
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_nodo is null || _baseNodo != actual)
+            {
+                _nodo = new NodoApi(Http, actual);
+                _baseNodo = actual;
+            }
+            return _nodo;
         }
     }
 

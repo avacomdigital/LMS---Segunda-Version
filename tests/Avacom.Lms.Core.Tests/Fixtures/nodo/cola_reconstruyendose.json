@@ -1,0 +1,56 @@
+{
+  "consumidores": [
+    {
+      "actualizado_en": 1790000000000,
+      "estado": "al_dia",
+      "fuentes": [
+        {
+          "actualizada_en": 1790000000000,
+          "estado": "al_dia",
+          "fuente": "evaluacion",
+          "marca": 8,
+          "pendientes": 0,
+          "reintento": null,
+          "ultima_secuencia": 8
+        }
+      ],
+      "modulo": "pruebas",
+      "nombre": "libro",
+      "pendientes": 0,
+      "problemas": 0,
+      "registrado_en": 1790000000000,
+      "version_contrato": 1
+    },
+    {
+      "actualizado_en": 1790000000000,
+      "estado": "reconstruyendose",
+      "fuentes": [
+        {
+          "actualizada_en": 1790000000000,
+          "estado": "reconstruyendose",
+          "fuente": "evaluacion",
+          "marca": 0,
+          "pendientes": 8,
+          "reintento": null,
+          "ultima_secuencia": 8
+        }
+      ],
+      "modulo": "pruebas",
+      "nombre": "reportes",
+      "pendientes": 8,
+      "problemas": 0,
+      "registrado_en": 1790000000000,
+      "version_contrato": 1
+    }
+  ],
+  "contador": 13,
+  "cortes": [],
+  "eventos": 13,
+  "problemas": 0,
+  "purga": {
+    "habilitada": false,
+    "respaldo_verificado_hasta": 0
+  },
+  "servidor_en": 1790000000000,
+  "ultima_secuencia": 13
+}

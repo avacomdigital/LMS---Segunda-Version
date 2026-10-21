@@ -1,0 +1,5 @@
+{
+  "codigo": "sin_permiso",
+  "detail": "Tu rol no tiene concedido node.queue.read.",
+  "permiso": "node.queue.read"
+}
