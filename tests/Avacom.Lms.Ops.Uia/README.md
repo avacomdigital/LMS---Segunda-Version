@@ -6,12 +6,14 @@ Prueba de punta a punta de las pantallas de acceso de AVACOM OPS Master contra u
 | Archivo | Para qué |
 |---|---|
 | `recorrido_acceso.py` | El recorrido completo: levanta el nodo, abre OPS, recorre las pantallas, comprueba y captura |
-| `ui-ops.ps1` | Lista controles, invoca botones por nombre, escribe en campos, marca un PIN en el teclado propio, espera un texto, captura el área de contenido |
+| `ui-ops.ps1` | Lista controles, invoca botones por nombre (**una sola vez**), escribe en campos, marca un PIN en el teclado propio, espera un texto, cuenta elementos, mira si hay un control, hace un doble toque y captura el área de contenido |
 | `tercios.ps1` | Dibuja la cuadrícula de tercios sobre una captura (así se juzga la composición de las pantallas de tarjeta) |
 | `recorrido_licencia.py` | La pantalla **Licencia** (MOD-018) de punta a punta: ver más abajo |
 | `licencia_en_vivo.py` | Las rutas del backend con la licencia en cada estado y el cupo, por HTTP, sin ventanas: ver más abajo |
 | `licencia_paquete.py` | El backend empaquetado del instalador y el emisor portátil trabajando juntos, como producción: ver más abajo |
 | `recorrido_fecha.py` | La **fecha adelantada** (Q-L13) de punta a punta, con el reloj de la licencia movible: ver más abajo |
+| `estabilidad_ops.py` | La **estabilidad** de OPS bajo la UI Automation (Bugfix 03): la regresión del «Menú principal» activado dos veces (`doble`), ir y volver de Licencia con contadores por vuelta (`vueltas`) y la carga que reprodujo la caída de `Microsoft.UI.Xaml.dll` (`estres`): ver más abajo |
+| `ui-carga.ps1` | Los clientes de UI Automation de esa carga: uno que invoca ir y volver de Licencia y otros que sólo leen el árbol |
 
 ## Cómo se corre
 
@@ -50,6 +52,30 @@ Tarda unos 6 minutos. Sale con 0 si todo se cumplió y lista lo que falló si no
 - Si una OPS del usuario está abierta, compila con `-p:OutDir=` a otra carpeta (la suya bloquea `bin\`); el guion sólo cierra las instancias que abre.
 - UI Automation no ve lo que queda debajo de una WebView; en estas pantallas no hay ninguna.
 
+## Estabilidad de OPS bajo UI Automation (Bugfix 03)
+
+Dos fallas que parecían una («OPS no sobrevive a la UI Automation») y no lo eran; el detalle, con la pila y los números, está en `spec-driven/qa/bugfix/bugfix-03-estabilidad-ops-uia.md`.
+
+```powershell
+backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\estabilidad_ops.py doble   --ops C:\temp\ops-uia\Avacom.Lms.Ops.exe --salida C:\temp\ops-uia\estab [--puerto 8018] [--repeticiones 3]
+backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\estabilidad_ops.py vueltas --ops ... --salida ... [--vueltas 60]
+backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\estabilidad_ops.py estres  --ops ... --salida ... [--vueltas 600 --lectores 2 --asentar 0 --completo]
+```
+
+| Subcomando | Qué comprueba | Cuánto tarda |
+|---|---|---|
+| `doble` | **La regresión.** Desde Licencia, dos «Menú principal» seguidos (`ui-ops.ps1 doble`) y dos toques seguidos en «Licencia» del menú: OPS debe quedar siempre en el menú, con una sola pantalla de Licencia. Con una OPS anterior al arreglo falla en la primera repetición con «quedó en acceso» | ≈ 1 min |
+| `vueltas` | Ir y volver de Licencia con el patrón endurecido; por vuelta, memoria privada, manejadores, GDI/USER, hilos de OPS y elementos del árbol de UI Automation del menú y de Licencia (`vueltas.jsonl`). Falla si OPS se cae, vuelve al acceso o GDI, USER, los manejadores o el árbol de UI Automation crecen sin parar. Imprime la pendiente de la memoria (con clientes de UI Automation de larga vida sube sola; sin ellos llega a una meseta) | ≈ 4 s por vuelta |
+| `estres` | La carga que tumbó a OPS: un cliente que invoca ir y volver sin pausas + N lectores que recorren el árbol sin parar. Sale con 1 si OPS se cae y dice el código de salida, el «Application Error» del Visor de eventos y las líneas de `fallos-ops.log` de ese pid; con 3 si alguien cerró la ventana (código de salida 0: no es una caída). Es la prueba más pesada y la ventana se ve lenta mientras corre: mejor con el equipo libre. **Una caída por cada ≈ 200–600 vueltas es lo normal con esta carga**: el resultado de un solo intento no prueba nada; sirve para comparar `--asentar` (pausa tras cada toque), `--lectores` y `--completo` con miles de vueltas | ≈ 1,3 s por vuelta |
+
+**Reglas del arnés** (las que dejó este trabajo; cumplirlas en cualquier guion nuevo):
+
+- **Un toque se hace UNA vez.** `ui-ops.ps1` sale con **4** («invocación dudosa») si `Invoke()` lanza: el toque pudo llegar igual y repetirlo activaba dos veces el mismo botón. Buscar el control otra vez mientras no aparece sí es seguro (todavía no se tocó nada). Quien llama confirma por el efecto (la pantalla que debe aparecer) antes de volver a tocar; `rl.toque` lo hace y anota el toque en `ops.dudosas`.
+- **Se toca por `AutomationId`, no por nombre**, cuando el nombre se repite: «Menú principal» es también el botón decorativo del dock del menú, sin acción; el de Licencia es `licencia-volver`. `rl.volver_al_menu` y `rl.donde_estoy` (menú, licencia, acceso u otra) existen para eso.
+- **Lecturas baratas.** Cada elemento se lee con una `CacheRequest` (una llamada entre procesos, no cuatro) y la pregunta de «¿dónde estoy?» es un `FindFirst` por `AutomationId` (`ui-ops.ps1 existe`), no un recorrido de todo el árbol cada 400 ms. Cada llamada de UI Automation la atiende el hilo de interfaz de OPS.
+- **Sin clientes de larga vida ni lectores en paralelo** fuera de `estres`: cada elemento que un cliente mantiene referenciado mantiene vivo su proveedor en OPS (≈ 0,6 MB por vuelta).
+- **Mirar cómo muere OPS.** Visor de eventos → Application, filtrando por `ProviderName` (con `Level=2` y `-First` se pierde entre eventos de otros programas); «Application Error» 1000 trae el módulo y el desplazamiento. `estabilidad_ops.py` los imprime.
+
 ## Licencia (MOD-018)
 
 Tres guiones que comprueban la licencia **desde fuera**, contra un nodo aislado (puerto propio, base y carpeta de estado temporales, sesión obligatoria): los dos primeros con `AVACOM_LICENCIA_MODO=firmada`; el tercero con el
@@ -84,8 +110,10 @@ primero · la pantalla Licencia y el menú principal lo dicen como un error, con
 quita solo · de nuevo adelantada: la administración **confirma** y sólo entonces el aula guarda esa fecha · devolver el reloj después es otro aviso (`reloj_sospechoso`). Escribe `30-…` a `35-…` (con su versión de tercios).
 
 **Va en cuatro fases cortas** (la fecha se adelanta · la hoja de confirmación · la fecha se corrige · la administración confirma), cada una con una OPS recién abierta, y **repite la fase si OPS se cae o vuelve al acceso**
-(lo dice en la salida y descarta lo anotado en ese intento; una falla con OPS viva sigue siendo una falla). Es por una fragilidad previa de OPS bajo la UI Automation, que **no** es de esta pantalla: se reproduce yendo y
-viniendo de «Licencia» con la fecha en orden (`APPCRASH` de `Avacom.Lms.Ops.exe` con 0xc0000005 dentro de `Microsoft.UI.Xaml.dll`, o la vuelta al acceso, hacia la novena vuelta). La última fase cambia lo que el nodo guardó
+(lo dice en la salida y descarta lo anotado en ese intento; una falla con OPS viva sigue siendo una falla). Es por dos fallas que **no** son de esta pantalla (se reproducen con la fecha en orden) y que se investigaron en el
+Bugfix 03 (`spec-driven/qa/bugfix/bugfix-03-estabilidad-ops-uia.md`): la vuelta al acceso era un fallo de OPS (un «Menú principal» activado dos veces sacaba también el menú) y **ya está corregida**; el
+`APPCRASH` de `Avacom.Lms.Ops.exe` con 0xc0000005 dentro de `Microsoft.UI.Xaml.dll` es un fallo raro de Windows App SDK 1.7 con la UI Automation activa (una vez cada ≈ 800 vueltas con la carga máxima), y
+esta repetición de fase es su red de seguridad. La última fase cambia lo que el nodo guardó
 (la fecha confirmada), así que cada intento suyo levanta un nodo nuevo. Además, el campo de contraseña a veces no recibe la clave si se escribe antes de que la pantalla esté lista: el ingreso se repite hasta tres veces y sólo
 sigue al PIN cuando la pantalla del PIN aparece de verdad.
 
