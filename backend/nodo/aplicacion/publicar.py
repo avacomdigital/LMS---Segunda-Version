@@ -28,7 +28,7 @@ class Publicar(_CasoDeUso):
         if catalogado:
             clase, sensibilidad = definicion.clase, definicion.sensibilidad
             version_efectiva = int(version or definicion.version)
-            if definicion.modulo != modulo:
+            if modulo not in definicion.autores:
                 mensaje = f"El tipo «{tipo}» lo publica «{definicion.modulo}», no «{modulo}» (R-09: un hecho tiene un solo autor)."
                 if cfg.estricto:
                     raise DatosInvalidos(mensaje, tipo=tipo, modulo=modulo)

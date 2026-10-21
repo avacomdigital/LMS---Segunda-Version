@@ -10,3 +10,11 @@ class ReportingConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "reporting"
     verbose_name = "Reporting (MOD-013) · reportes y exportación"
+
+    def ready(self) -> None:
+        # MOD-015 (Fase 3): la historia de la cola antigua (`m13_evento_salida`) la sirve este módulo detrás de la fachada de la cola única; la cola no lee tablas ajenas (R-09).
+        from nodo import servicios as nodo
+
+        from . import servicios
+
+        nodo.registrar_lector_legado(self.name, servicios.eventos_legados)

@@ -32,6 +32,13 @@ def contador_tras_corte(contador_actual: int, ultima_legada: int) -> int:
     return max(int(contador_actual or 0), int(ultima_legada or 0))
 
 
+def piso_del_contador(cortes) -> int:
+    """Por debajo de qué valor NUNCA puede quedar el contador de `m15_evento` mientras haya módulos cortados: el mayor `ultima_legada` (D-28). Una reconstrucción de la tabla (SQLite
+    la hace al alterar una columna) devuelve el AUTOINCREMENT a `max(secuencia)`; si eso queda por debajo de un corte, el siguiente evento de ese módulo saldría bajo su corte y la
+    fachada no lo serviría. Lo reponen toda migración que reconstruya la tabla y el arranque del nodo."""
+    return max((int(c.ultima_legada) for c in cortes), default=0)
+
+
 def planear(desde: int, limite: int, corte: Corte | None) -> PlanDeLectura:
     """
     Qué pedir a cada tabla para servir `limite` eventos con secuencia > `desde`:

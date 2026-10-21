@@ -23,6 +23,7 @@ from classroom_engine.infraestructura.contenedor import ruta_ejemplo
 from classroom_engine.infraestructura.fuente_ejemplo import FuenteEjemplo
 from tools.host_contenido_v2_pruebas import HostContenidoV2Pruebas, calificar
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..infraestructura.contenedor import RelojNodo
 
@@ -142,7 +143,7 @@ class BaseEstudio(BaseAcceso):
 
     # ---------------------------------------------------------------------------------------- eventos
     def eventos(self, *tipos: str) -> list[str]:
-        filas = m.EventoSalida.objects.order_by("id")
+        filas = cola("modo_estudio").order_by("id")
         if tipos:
             filas = filas.filter(tipo_evento__in=tipos)
         return list(filas.values_list("tipo_evento", flat=True))

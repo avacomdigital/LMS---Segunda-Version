@@ -12,6 +12,7 @@ from django.test import override_settings
 from audit import models as maudit
 from evaluacion import models as m10
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..aplicacion.consumidor import ConsumirEventos
 from ..dominio import catalogos as cat
@@ -34,11 +35,11 @@ class EstadoSimpleTests(BaseGradebook):
         self.assertEqual(self.eventos_gb("calificacion.estado_simple_calculado.v1"), [])         # nadie ha empezado: no hay novedad que avisar
         apertura = self.abrir(a["id"])
         self.sincronizar()
-        evento = m.EventoSalida.objects.filter(tipo_evento="calificacion.estado_simple_calculado.v1").get()
+        evento = cola("gradebook").filter(tipo_evento="calificacion.estado_simple_calculado.v1").get()
         self.assertEqual((evento.carga["estado"], evento.carga["anterior"], evento.carga["alumno_id"]), ("en_progreso", None, self.estudiante_id))
         self.entregar(apertura["intento"]["id"], confirmar=True)
         self.sincronizar()
-        estados = [(e.carga["anterior"], e.carga["estado"]) for e in m.EventoSalida.objects.filter(tipo_evento="calificacion.estado_simple_calculado.v1").order_by("id")]
+        estados = [(e.carga["anterior"], e.carga["estado"]) for e in cola("gradebook").filter(tipo_evento="calificacion.estado_simple_calculado.v1").order_by("id")]
         self.assertEqual(estados, [(None, "en_progreso"), ("en_progreso", "completado")])
         fila = m.ResultadoAsignacion.objects.get(asignacion_id=a["id"], alumno_id=self.estudiante_id)
         self.assertEqual(fila.estado_simple, "completado")
@@ -76,7 +77,7 @@ class AgregadosTests(BaseGradebook):
         self.gb(f"/calificaciones/{c1.id}/publicar/", {})
         self.assertEqual(self.agregado().publicadas, 1)
         self.assertGreater(len(self.eventos_gb("calificacion.agregados_recalculados.v1")), antes)
-        evento = m.EventoSalida.objects.filter(tipo_evento="calificacion.agregados_recalculados.v1").order_by("-id").first()
+        evento = cola("gradebook").filter(tipo_evento="calificacion.agregados_recalculados.v1").order_by("-id").first()
         self.assertEqual((evento.carga["oficial"], evento.carga["alumno_id"]), (False, self.estudiante_id))
 
     def test_lo_provisional_o_pendiente_no_entra_al_promedio_pero_se_cuenta(self):

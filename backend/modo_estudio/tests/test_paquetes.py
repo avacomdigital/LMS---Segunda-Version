@@ -14,6 +14,7 @@ from django.test import override_settings
 
 from classroom_engine.dominio import curso as curso_aula
 
+from nodo.pruebas import cola
 from .. import models as m
 from .. import servicios
 from .base import BASE, CURSO, LECCION_1, BaseEstudio
@@ -136,7 +137,7 @@ class DescargaDenegadaTests(BasePaquetes):
                          ("denegado", "dispositivo_compartido", [], None))
         fila = m.Paquete.objects.get(asignacion_id=self.a["id"])
         self.assertEqual((fila.estado, fila.motivo, fila.dispositivo_id, fila.alumno_id), ("denegado", "dispositivo_compartido", self.compartida["id"], self.estudiante_id))
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.descarga.denegada.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.descarga.denegada.v1").carga
         self.assertEqual((carga["paquete_id"], carga["asignacion_id"], carga["alumno_id"], carga["dispositivo_id"], carga["motivo"]),
                          (fila.id, self.a["id"], self.estudiante_id, self.compartida["id"], "dispositivo_compartido"))
         self.assertEqual(m.Tarea.objects.filter(asignacion_id=self.a["id"]).count(), 1)     # la petición cuenta como contacto
@@ -165,7 +166,7 @@ class DescargaDenegadaTests(BasePaquetes):
         self.assertEqual((r.json()["paquete"]["estado"], r.json()["paquete"]["motivo"]), ("denegado", "dispositivo_ajeno"))
         fila = m.Paquete.objects.get(asignacion_id=self.a["id"])
         self.assertEqual((fila.alumno_id, fila.dispositivo_id, fila.estado, fila.motivo), (ana_id, self.propia["id"], "denegado", "dispositivo_ajeno"))
-        self.assertEqual(m.EventoSalida.objects.get(tipo_evento="estudio.descarga.denegada.v1").carga["motivo"], "dispositivo_ajeno")
+        self.assertEqual(cola("modo_estudio").get(tipo_evento="estudio.descarga.denegada.v1").carga["motivo"], "dispositivo_ajeno")
         # y a Juan, dueño del aparato, no se le niega nada
         self.assertEqual(self.solicitar().status_code, 201)
 
@@ -292,7 +293,7 @@ class ConfirmarYRetirarTests(BasePaquetes):
         with self.reloj(T0 + 60_000):
             r = self.json_ok(self.confirmar(p["id"], man["huella"], p["bytes_total"]))
         self.assertEqual((r["estado"], r["disponible_en"], r["huella"], r["paquete"]["estado"]), ("disponible", T0 + 60_000, p["huella"], "disponible"))
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.paquete.descargado.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.paquete.descargado.v1").carga
         self.assertEqual((carga["paquete_id"], carga["asignacion_id"], carga["alumno_id"], carga["dispositivo_id"], carga["bytes"], carga["huella"]),
                          (p["id"], self.a["id"], self.estudiante_id, self.propia["id"], p["bytes_total"], p["huella"]))
         self.json_ok(self.confirmar(p["id"], man["huella"], p["bytes_total"]))                # idempotente: no repite el evento

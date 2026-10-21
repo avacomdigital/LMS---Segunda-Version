@@ -20,6 +20,7 @@ from xml.etree import ElementTree as ET
 
 from django.test import SimpleTestCase, override_settings
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..dominio import catalogos as cat
 from ..dominio import documento as doc
@@ -250,7 +251,7 @@ class DosTiemposTests(BaseExportacion):
         self.assertEqual((e.estado, e.huella_verificada, e.destino_tipo), ("entregada", huella, "extraible"))
         self.assertIsNotNone(e.confirmada_en)
         self.assertEqual(self.eventos_rp("reporte.exportado.v1"), ["reporte.exportado.v1"])
-        carga = m.EventoSalida.objects.get(tipo_evento="reporte.exportado.v1").carga
+        carga = cola("reporting").get(tipo_evento="reporte.exportado.v1").carga
         self.assertEqual((carga["exportacion_id"], carga["tipo"], carga["formato"], carga["filas"], carga["huella"], carga["destino_tipo"], carga["nominal"], carga["por"]),
                          (eid, "grupo", "xlsx", 6, huella, "extraible", True, self.docente_id))
         self.assertNotIn("Alumno", str(carga))
@@ -354,7 +355,7 @@ class DosTiemposTests(BaseExportacion):
         eid, huella = r["X-Avacom-Export-Id"], r["X-Avacom-Export-Huella"]
         self.confirmar(eid, {"resultado": "guardado", "destino_tipo": "extraible", "huella_verificada": huella, "ruta": "E:\\Reportes\\Alumno 01 notas.xlsx", "contenido": "secreto"})
         todo = "".join(str(a.valor_nuevo) + str(a.valor_anterior) for a in self.asientos("reporte.exportacion_autorizada") + self.asientos("reporte.exportado"))
-        todo += str(list(m.Exportacion.objects.values())) + str(list(m.EventoSalida.objects.values()))
+        todo += str(list(m.Exportacion.objects.values())) + str(list(cola("reporting").values()))
         for prohibido in ("E:\\", "Reportes\\", "secreto", c["alumnos"][0][1], c["alumnos"][1][1], "Prof. Gómez"):
             self.assertNotIn(prohibido, todo, prohibido)
         nombre = m.Exportacion.objects.get(pk=eid).nombre_archivo                      # sí queda el nombre PROPUESTO (código del grupo y fecha), sin ruta y sin personas

@@ -15,6 +15,7 @@ from classroom_engine.dominio import curso as curso_aula
 from expediente.models import Intento as IntentoExpediente
 from tools.host_contenido_v2_pruebas import HostContenidoV2Pruebas
 
+from nodo.pruebas import cola
 from .. import models as m
 from .base import BASE, CORRECTAS, CURSO, INCORRECTA_Q2, LECCION_2, BaseEstudio
 
@@ -62,7 +63,7 @@ class AbrirPracticaTests(BasePractica):
         self.assertEqual((otra["id"], otra["numero"], otra["reanudada"], sorted(otra["respondidas"])), (p["id"], 1, True, ["l1-act-q1"]))
         self.assertEqual(otra["respondidas"]["l1-act-q1"]["respuesta"], CORRECTAS["l1-act-q1"])
         self.assertEqual(m.Practica.objects.filter(tarea__asignacion_id=self.a["id"]).count(), 1)
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.actividad.reanudada.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.actividad.reanudada.v1").carga
         self.assertEqual((carga["asignacion_id"], carga["alumno_id"], carga["practica_id"], carga["numero"], carga["respondidas"]),
                          (self.a["id"], self.estudiante_id, p["id"], 1, 1))
 
@@ -167,7 +168,7 @@ class ResponderYCalificarTests(BasePractica):
             p = self.abrir()["practica"]
             self.json_ok(self.responder(p["id"], self.correctas("l1-act-q1", "l1-act-q2")))
             self.json_ok(self.responder(p["id"], self.correctas("l1-act-q1")))            # duplicada: no emite otra vez
-        eventos = list(m.EventoSalida.objects.filter(tipo_evento="evaluacion.respuesta_registrada.v1").order_by("id"))
+        eventos = list(cola("modo_estudio").filter(tipo_evento="evaluacion.respuesta_registrada.v1").order_by("id"))
         self.assertEqual(len(eventos), 2)
         for e in eventos:
             self.assertEqual((e.carga["practica_id"], e.carga["asignacion_id"], e.carga["alumno_id"], e.carga["modo"]), (p["id"], self.a["id"], self.estudiante_id, "estudio"))
@@ -248,7 +249,7 @@ class TerminarYResultadoTests(BasePractica):
         self.assertIn("l1-activity", tarea.bloques_vistos)                          # práctica terminada al menos una vez (D-4)
         self.assertEqual((tarea.practica_intentos, tarea.practica_mejor, tarea.practica_ultima, tarea.practica_total), (1, 2, 2, 6))
         self.assertEqual(self.eventos("estudio.practica.terminada.v1"), ["estudio.practica.terminada.v1"])
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.practica.terminada.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.practica.terminada.v1").carga
         self.assertEqual((carga["practica_id"], carga["numero"], carga["respondidas"], carga["aciertos"]), (p["id"], 1, 2, 2))
         resumen = self.json_ok(self.ver("/asignaciones/"))["asignaciones"][0]["practica"]
         self.assertEqual((resumen["intentos"], resumen["mejor_correctas"], resumen["ultima_correctas"], resumen["en_curso"]), (1, 2, 2, False))

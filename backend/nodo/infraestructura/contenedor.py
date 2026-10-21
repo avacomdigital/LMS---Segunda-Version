@@ -22,6 +22,7 @@ from django.conf import settings
 from evaluacion.infraestructura.contenedor import RelojNodo      # UN solo reloj del nodo (INV-017)
 
 from ..aplicacion.base import ConfigNodo, Servicios
+from ..aplicacion.puertos import LectorLegado
 from ..dominio import catalogos as cat
 from ..dominio.estado import Umbrales
 from .anclas import AnclasEnCarpeta
@@ -110,6 +111,16 @@ def configuracion() -> ConfigNodo:
 
 _candado = threading.Lock()
 _cache: dict[tuple, Servicios] = {}
+# Módulo cortado → el lector de su tabla antigua (P-05, R-09). Vive FUERA de la caché: cada módulo se registra UNA vez por proceso (su `apps.ready`), y `reiniciar()` —que las pruebas
+# llaman antes de cada prueba— no puede olvidarlo. Cada `Servicios` nuevo nace con una copia, así que lo que una prueba borre de `s.legados` no toca el registro.
+_lectores_legados: dict[str, LectorLegado] = {}
+
+
+def registrar_lector_legado(modulo: str, lector: LectorLegado) -> None:
+    with _candado:
+        _lectores_legados[modulo] = lector
+        for servicios_ in _cache.values():
+            servicios_.legados[modulo] = lector
 
 
 def servicios() -> Servicios:
@@ -125,7 +136,8 @@ def servicios() -> Servicios:
                 _cache.clear()
             carpeta = carpeta_de_anclas()
             _cache[llave] = Servicios(uow=FabricaUoWNodo(), reloj=RelojDelNodo(), contexto=ContextoDeAuditoria(), anclas=AnclasEnCarpeta(carpeta), autorizacion=AutorizacionNodo(),
-                                      respaldo=RespaldoAusente(), sincronizacion=SincronizacionAusente(), salud=SaludDelEquipo(), config=configuracion())
+                                      respaldo=RespaldoAusente(), sincronizacion=SincronizacionAusente(), salud=SaludDelEquipo(), config=configuracion(),
+                                      legados=dict(_lectores_legados))
         return _cache[llave]
 
 

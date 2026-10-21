@@ -12,6 +12,7 @@ from rest_framework.test import APIClient
 
 from evaluacion.tests.base import BaseEvaluacion, respuesta_correcta, respuesta_incorrecta
 
+from nodo.pruebas import cola, nodo_limpio
 from .. import models as m
 
 GB = "/api/gradebook"
@@ -25,6 +26,7 @@ class BaseGradebook(BaseEvaluacion):
     def setUp(self):
         super().setUp()
         contexto = self.examen_de_banco_fijo()
+        nodo_limpio()                                       # MOD-015: la marca alta del reloj del nodo no viaja de una prueba a otra
         contexto.__enter__()
         self.addCleanup(contexto.__exit__, None, None, None)
         self.poner_nivel(self.grupo["id"], self.nivel)
@@ -146,7 +148,7 @@ class BaseGradebook(BaseEvaluacion):
                        cliente=cliente)
 
     def eventos_gb(self, *tipos: str) -> list[str]:
-        filas = m.EventoSalida.objects.order_by("id")
+        filas = cola("gradebook").order_by("id")
         if tipos:
             filas = filas.filter(tipo_evento__in=tipos)
         return list(filas.values_list("tipo_evento", flat=True))

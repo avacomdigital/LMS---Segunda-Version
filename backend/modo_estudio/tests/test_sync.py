@@ -10,6 +10,7 @@ from unittest import mock
 from acceso.models import Usuario
 from expediente.models import Auditoria, ProgresoLeccion
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..aplicacion import sincronizacion
 from .base import BASE, BLOQUES_L1, CORRECTAS, LECCION_1, BaseEstudio
@@ -73,7 +74,7 @@ class IntegrarEventosTests(BaseSync):
     def test_un_evento_por_envio_resume_lo_integrado(self):
         with self.reloj(T0):
             self.ok([self.vistos(4, BLOQUES_L1[:1]), self.vistos(5, BLOQUES_L1[:2])])
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.trabajo.integrado.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.trabajo.integrado.v1").carga
         self.assertEqual({k: carga[k] for k in ("alumno_id", "dispositivo_id", "emisor_id", "integrados", "duplicados", "rechazados", "pendientes_decision",
                                                 "desde_secuencia", "hasta_secuencia")},
                          {"alumno_id": self.estudiante_id, "dispositivo_id": self.propia["id"], "emisor_id": EMISOR, "integrados": 2, "duplicados": 0,
@@ -119,7 +120,7 @@ class IntegrarEventosTests(BaseSync):
         r = self.ok([self.vistos(3, BLOQUES_L1), self.completada(4)])
         self.assertEqual(self.estados(r), [(3, "integrado", ""), (4, "integrado", "")])
         self.assertEqual(r["asignaciones"][0]["tarea"]["estado"], "completada")
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.leccion.completada.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.leccion.completada.v1").carga
         self.assertEqual((carga["origen"], carga["alumno_id"], carga["fuera_de_plazo"]), ("cola", self.estudiante_id, False))
         self.assertEqual(ProgresoLeccion.objects.get(persona_id=self.estudiante_id).estado, "completada")
         self.assertTrue(Auditoria.objects.filter(accion="estudio.leccion.completada").exists())
@@ -128,7 +129,7 @@ class IntegrarEventosTests(BaseSync):
         r = self.ok([self.terminada(3), self.respuesta(2, "l1-act-q1", CORRECTAS["l1-act-q1"]), self.vistos(1, BLOQUES_L1[:1])])
         self.assertEqual(self.estados(r), [(1, "integrado", ""), (2, "integrado", ""), (3, "integrado", "")])      # la práctica se termina DESPUÉS de crearse
         self.assertEqual(m.Practica.objects.get().estado, "terminada")
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.trabajo.integrado.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.trabajo.integrado.v1").carga
         self.assertEqual((carga["desde_secuencia"], carga["hasta_secuencia"]), (1, 3))
 
 

@@ -9,6 +9,17 @@ from __future__ import annotations
 
 # tipo: (modulo, clase, sensibilidad, clave_dedup, retencion, versiones)
 TIPOS: dict[str, tuple[str, str, str, tuple[str, ...], str | int | None, tuple[int, ...]]] = {
+    'actualizacion.bloqueada.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.disponible_detectada.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.migracion_ejecutada.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.modulo_aplicada.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.paquete_importado.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.paquete_rechazado.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.paquete_verificado.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.resultado_registrado.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.reversion_fallida.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.revertida.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
+    'actualizacion.ventana_programada.v1': ('actualizacion', 'tecnico', 'interna', ('agregado_id',), 'clase', (1,)),
     'auditoria.bitacora_rotada.v1': ('audit', 'auditoria', 'interna', ('agregado_id',), 'clase', (1,)),
     'auditoria.cadena_verificada.v1': ('audit', 'auditoria', 'interna', ('agregado_id',), 'clase', (1,)),
     'auditoria.registro_creado.v1': ('audit', 'auditoria', 'interna', ('agregado_id',), 'clase', (1,)),

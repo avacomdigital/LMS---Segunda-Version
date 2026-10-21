@@ -16,6 +16,7 @@ from django.test import override_settings
 from classroom_engine.dominio import curso as curso_aula
 from expediente.models import Auditoria, ProgresoLeccion
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..dominio.errores import FuenteNoDisponible
 from ..infraestructura.contenedor import ContenidoAula
@@ -40,7 +41,7 @@ class AbrirLeccionTests(BaseEstudio):
         fila = m.Tarea.objects.get(asignacion_id=a["id"], alumno_id=self.estudiante_id)
         self.assertEqual((fila.estado, float(fila.avance_pct), fila.abierta_en is not None), ("en_curso", 0.0, True))
         self.assertEqual(self.eventos("estudio.leccion.abierta.v1"), ["estudio.leccion.abierta.v1"])
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.leccion.abierta.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.leccion.abierta.v1").carga
         self.assertEqual((carga["asignacion_id"], carga["alumno_id"], carga["curso_ref"], carga["leccion_ref"]), (a["id"], self.estudiante_id, CURSO, LECCION_1))
 
     def test_abrir_otra_vez_no_repite_el_evento_ni_duplica_la_tarea(self):
@@ -220,7 +221,7 @@ class CompletarTests(BaseEstudio):
         tarea = r["tarea"]
         self.assertEqual((tarea["estado"], tarea["avance_pct"], tarea["completada_en"], tarea["bloques_atendidos"], tarea["fuera_de_plazo"]), ("completada", 100.0, 5_000_000, 7, False))
         self.assertEqual(self.eventos("estudio.leccion.completada.v1"), ["estudio.leccion.completada.v1"])
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.leccion.completada.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.leccion.completada.v1").carga
         self.assertEqual((carga["asignacion_id"], carga["alumno_id"], carga["leccion_ref"], carga["fuera_de_plazo"], carga["origen"]),
                          (self.a["id"], self.estudiante_id, LECCION_1, False, "directo"))
         fila = ProgresoLeccion.objects.get(curso_ref=CURSO, persona_id=self.estudiante_id, leccion_codigo=LECCION_1)
@@ -248,7 +249,7 @@ class CompletarTests(BaseEstudio):
         with self.reloj(3_000_000):
             r = self.json_ok(self.enviar("post", f"/lecciones/{con_fecha['id']}/completar/"))
         self.assertEqual((r["tarea"]["estado"], r["tarea"]["fuera_de_plazo"]), ("completada", True))
-        carga = m.EventoSalida.objects.filter(tipo_evento="estudio.leccion.completada.v1").latest("id").carga
+        carga = cola("modo_estudio").filter(tipo_evento="estudio.leccion.completada.v1").latest("id").carga
         self.assertTrue(carga["fuera_de_plazo"])
 
 

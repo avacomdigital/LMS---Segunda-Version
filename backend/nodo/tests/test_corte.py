@@ -1,7 +1,9 @@
 """
-El corte de un módulo y la fachada de lectura (P-05) con un lector legado FALSO (ningún módulo se corta en la Fase 2): el contador salta, una marca previa al corte sigue valiendo sin
-perder ni repetir, un consumidor reconstruido reproduce toda la historia, el corte es de una sola vía y va en una transacción, y un módulo cortado sin lector en este proceso no se sirve a
-medias.
+El corte de un módulo y la fachada de lectura (P-05) con un lector legado FALSO: el contador salta, una marca previa al corte sigue valiendo sin perder ni repetir, un consumidor
+reconstruido reproduce toda la historia, el corte es de una sola vía y va en una transacción, y un módulo cortado sin lector en este proceso no se sirve a medias.
+
+Se simula sobre `licenciamiento`, el único módulo con cola propia que la Fase 3 no corta (en la Fase 2 se simulaba sobre `device_manager`, que desde su migración 0006 ya está cortado
+de verdad y por eso no se puede volver a cortar aquí). La paridad con los módulos REALES cortados está en `<modulo>/tests/test_paridad_cola.py`.
 """
 from __future__ import annotations
 
@@ -14,8 +16,9 @@ from ..dominio import catalogos as cat
 from ..dominio.errores import FueraDeTransaccion, ModuloYaCortado
 from .base import BaseNodo, BaseNodoTransaccional
 
-MODULO = "device_manager"
-TIPO_DM = "dispositivo.registrado.v1"
+MODULO = "licenciamiento"
+TIPO_DM = "licencia.activada.v1"
+TIPO_OTRO = "licencia.aviso_emitido.v1"
 
 
 def _legado(n: int) -> list[dict]:
@@ -66,9 +69,9 @@ class CorteTests(BaseNodo):
         legado = servicios.leer(MODULO, 0, 1)[0][0]
         self.assertEqual((legado["modulo"], legado["evento_id"], legado["version"], legado["actor"]), (MODULO, f"{MODULO}:1", 1, ""))
         # y los tipos filtran en los dos lados
-        self.publicar("dispositivo.bloqueado.v1", modulo=MODULO, agregado=("Dispositivo", "d-x"), carga={"dispositivo_id": "d-x"})
-        eventos, _ = servicios.leer(MODULO, 25, 50, ("dispositivo.bloqueado.v1",))
-        self.assertEqual([e["tipo"] for e in eventos], ["dispositivo.bloqueado.v1"])
+        self.publicar(TIPO_OTRO, modulo=MODULO, agregado=("Dispositivo", "d-x"), carga={"dispositivo_id": "d-x"})
+        eventos, _ = servicios.leer(MODULO, 25, 50, (TIPO_OTRO,))
+        self.assertEqual([e["tipo"] for e in eventos], [TIPO_OTRO])
 
     def test_una_marca_previa_al_corte_sigue_valiendo_y_marca_cero_reproduce_toda_la_historia(self):
         self.cortar(30)
@@ -114,6 +117,36 @@ class CorteTests(BaseNodo):
             r = servicios.reprocesar(problema.id, Actor(id="admin"))
             self.assertEqual(r["estado"], cat.PR_REPROCESADO)
             self.assertEqual(c.aplicados, [1, 2, 4, 5, 3])
+
+    def test_d28_una_reconstruccion_de_la_tabla_tras_el_corte_no_deja_el_contador_bajo_el_corte(self):
+        """Hallazgo 1 de la revisión independiente de la Fase 3: SQLite devuelve el AUTOINCREMENT a max(secuencia) al reconstruir `m15_evento`; con un corte por encima, el siguiente
+        evento del módulo saldría bajo su corte y la fachada no lo serviría nunca. Lo reponen toda migración que reconstruya la tabla (`SQL_REPARAR_CONTADOR`) y el arranque."""
+        from django.db import connection
+
+        from ..infraestructura import triggers
+
+        servicios.registrar_lector_legado(MODULO, lector_de(_legado(30)))
+        servicios.cortar(MODULO, 30, asentar=False)                                   # como la migración: sin evento técnico, la tabla sigue vacía y el contador en 30
+        self.assertEqual(servicios.cola()["contador"], 30)
+
+        def reconstruir():                                                            # lo que deja una reconstrucción de la tabla vacía: sin fila en sqlite_sequence
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM sqlite_sequence WHERE name = 'm15_evento'")
+
+        reconstruir()
+        self.assertEqual(servicios.cola()["contador"], 0)
+        with connection.cursor() as cursor:                                           # 1) lo que toda migración que reconstruya la tabla debe ejecutar al final
+            for sentencia in triggers.SQL_REPARAR_CONTADOR:
+                cursor.execute(sentencia)
+        self.assertEqual(servicios.cola()["contador"], 30)
+        reconstruir()                                                                 # 2) y si una migración lo olvidó, el arranque lo repone sin confundirlo con una restauración
+        with self.assertLogs("avacom.nodo", level="ERROR"):
+            r = servicios.arrancar()
+        self.assertEqual((r["restauracion"], r["contador"] >= 30), (None, True))
+        sobre = self.publicar(TIPO_DM, modulo=MODULO, agregado=("Dispositivo", "d-31"), carga={"dispositivo_id": "d-31"})
+        self.assertGreater(sobre["secuencia"], 30)
+        self.assertEqual([e["secuencia"] for e in servicios.leer(MODULO, 30, 10)[0]], [sobre["secuencia"]])
+        self.assertEqual([e["secuencia"] for e in servicios.leer(MODULO, 0, 50)[0]], list(range(1, 31)) + [sobre["secuencia"]])
 
     def test_un_modulo_sin_corte_se_lee_solo_de_la_cola_nueva(self):
         self.assertEqual(servicios.leer("classroom_engine", 0, 10), ([], 0))

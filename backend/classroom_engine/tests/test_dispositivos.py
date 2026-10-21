@@ -8,6 +8,7 @@ from __future__ import annotations
 from acceso.models import Organizacion
 from device_manager import models as m9
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..dominio import sesion as dom
 from .test_sesiones import ConSesionDeClase
@@ -117,7 +118,7 @@ class LanzamientoTests(ConNodoInstalado):
         self.assertEqual(d["entregas"]["detalle"][0]["participante_id"], ana["id"])
         estado_luis = self.api.get(f"/api/aula/sesiones/{s['id']}/estado/?participante={luis['id']}").json()
         self.assertEqual(estado_luis["pendientes"], [])
-        carga = m.EventoSalida.objects.get(agregado_id=s["id"], tipo_evento=dom.EV_ACTIVIDAD_LANZADA).carga
+        carga = cola("classroom_engine").get(agregado_id=s["id"], tipo_evento=dom.EV_ACTIVIDAD_LANZADA).carga
         self.assertEqual((carga["destinatarios"], carga["excluidos_bloqueados"], carga["intentos_permitidos"]), (1, 1, 2))
         # una selección que sólo trae tabletas bloqueadas no lanza nada
         r = self.api.post(ruta, {"clase": "actividad", "objeto_ref": "l1-activity", "alcance": "seleccion", "participantes": [luis["id"]]}, format="json")

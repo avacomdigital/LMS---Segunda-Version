@@ -56,16 +56,20 @@ def ultima_secuencia(modulo: str | None = None) -> int:
 
 
 def registrar_lector_legado(modulo: str, lector: LectorLegado) -> None:
-    """Lo que un módulo cortado registra al cargar: la función que lee SU tabla antigua (`id ≤ hasta`). La cola no lee tablas ajenas (R-09)."""
-    _s().legados[modulo] = lector
+    """Lo que un módulo cortado registra al cargar (su `apps.ready`): la función que lee SU tabla antigua (`desde < id ≤ hasta`). La cola no lee tablas ajenas (R-09). El registro
+    sobrevive a `contenedor.reiniciar()` (las pruebas): un módulo se registra una vez por proceso."""
+    from .infraestructura import contenedor
+    contenedor.registrar_lector_legado(modulo, lector)
 
 
-def cortar(modulo: str, ultima_legada: int, *, actor: str = cat.SISTEMA, version_contrato: int = 1) -> dict:
-    """El corte de un módulo (Fase 3, P-05): una transacción propia con la fila del corte y el salto del contador."""
+def cortar(modulo: str, ultima_legada: int, *, actor: str = cat.SISTEMA, version_contrato: int = 1, asentar: bool = True) -> dict:
+    """El corte de un módulo (Fase 3, P-05): una transacción propia con la fila del corte y el salto del contador. Con `asentar` deja el asiento `nodo.modulo_cortado` y publica
+    `nodo.modulo_cortado.v1`; la migración de datos de cada módulo corta SIN asentar (D-24): su huella es la propia fila de `m15_corte`, y una migración no deja secuencias ni asientos
+    en cada base recién creada."""
     from .aplicacion.leer import Cortar
     s = _s()
     with s.uow() as uow:
-        corte = Cortar(s).ejecutar(uow, modulo, ultima_legada, actor=actor, version_contrato=version_contrato)
+        corte = Cortar(s).ejecutar(uow, modulo, ultima_legada, actor=actor, version_contrato=version_contrato, asentar=asentar)
         return {"modulo": corte.modulo, "ultima_legada": corte.ultima_legada, "cortado_en": corte.cortado_en, "contador": uow.eventos.contador()}
 
 

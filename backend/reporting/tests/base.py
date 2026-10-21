@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 
 from evaluacion.tests.base import CURSO, BaseEvaluacion, respuesta_correcta, respuesta_incorrecta
 
+from nodo.pruebas import cola, nodo_limpio
 from .. import models as m
 
 R = "/api/reportes"
@@ -45,6 +46,7 @@ class BaseReporting(BaseEvaluacion):
     def setUp(self):
         super().setUp()
         self.arbol = ArbolFalso()
+        nodo_limpio()                                       # MOD-015: la marca alta del reloj del nodo no viaja de una prueba a otra
         parche = mock.patch("reporting.infraestructura.unidad_trabajo.ArbolBiblioteca", side_effect=lambda: self.arbol)
         parche.start()
         self.addCleanup(parche.stop)
@@ -214,7 +216,7 @@ class BaseReporting(BaseEvaluacion):
         return self.rp_post("/actualizar/", {}, cliente=cliente or self.admin, esperado=esperado)
 
     def eventos_rp(self, *tipos: str) -> list[str]:
-        filas = m.EventoSalida.objects.order_by("id")
+        filas = cola("reporting").order_by("id")
         if tipos:
             filas = filas.filter(tipo_evento__in=tipos)
         return list(filas.values_list("tipo_evento", flat=True))

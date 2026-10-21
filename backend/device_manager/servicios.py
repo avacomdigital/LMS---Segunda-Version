@@ -19,6 +19,21 @@ def _ahora(momento: int | None) -> int:
     return momento if momento is not None else int(time.time() * 1000)
 
 
+# ------------------------------------------------------------------------------------------------- la cola antigua (MOD-015 · Fase 3)
+
+def eventos_legados(desde: int, limite: int, tipos: tuple[str, ...] | None, hasta: int) -> tuple[list[dict], int]:
+    """El lector de la cola ANTIGUA de este módulo (`m09_evento_salida`, intacta desde el corte a la cola única, BR-016), que MOD-015 llama por su fachada: los eventos con
+    `desde < id ≤ hasta` (y de esos `tipos`, o todos), en orden, y hasta dónde se miró. Lo registra `apps.ready` (R-09: la cola no lee tablas ajenas). Lectura pura."""
+    from . import models as m
+
+    filas = m.EventoSalida.objects.filter(id__gt=int(desde), id__lte=int(hasta))
+    if tipos is not None:
+        filas = filas.filter(tipo_evento__in=list(tipos))
+    filas = list(filas.order_by("id")[: int(limite)])
+    return [{"secuencia": f.id, "tipo": f.tipo_evento, "agregado_tipo": f.agregado_tipo, "agregado_id": f.agregado_id, "carga": f.carga, "creado_en": f.creado_en}
+            for f in filas], (filas[-1].id if len(filas) >= int(limite) else int(hasta))
+
+
 def resolver(identificador_hw: str, nombre: str = "", tipo: str = dom.TABLETA, plataforma: str = "",
              version_app: str = "", momento: int | None = None, actor: str = "", capacidad_control: str | None = None) -> dict | None:
     """Reconoce (o registra la primera vez) la tableta que se presenta con su huella. None si no

@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 
 from evaluacion.tests.base import CURSO, BaseEvaluacion
 
+from nodo.pruebas import cola, nodo_limpio
 from .. import models as m
 from ..infraestructura.contenedor import servicios
 from .falsos import CatalogoFalso
@@ -27,6 +28,7 @@ class BaseSearch(BaseEvaluacion):
     def setUp(self):
         super().setUp()
         self.catalogo = CatalogoFalso()
+        nodo_limpio()                                       # MOD-015: la marca alta del reloj del nodo no viaja de una prueba a otra
         parche = mock.patch("search.infraestructura.contenedor.CatalogoBiblioteca", side_effect=lambda: self.catalogo)
         parche.start()
         self.addCleanup(parche.stop)
@@ -115,7 +117,7 @@ class BaseSearch(BaseEvaluacion):
         return r.json()
 
     def eventos_search(self, *tipos: str) -> list[str]:
-        filas = m.EventoSalida.objects.order_by("id")
+        filas = cola("search").order_by("id")
         if tipos:
             filas = filas.filter(tipo_evento__in=tipos)
         return list(filas.values_list("tipo_evento", flat=True))

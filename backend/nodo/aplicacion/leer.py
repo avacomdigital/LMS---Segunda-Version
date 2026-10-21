@@ -63,7 +63,8 @@ def _version_de(tipo: str) -> int:
 class Cortar(_CasoDeUso):
     """El corte de un módulo (Fase 3): una fila en `m15_corte` y el salto del contador global, en la MISMA transacción (P-05). De una sola vía."""
 
-    def ejecutar(self, uow: UnidadDeTrabajo, modulo: str, ultima_legada: int, *, actor: str = cat.SISTEMA, version_contrato: int = 1) -> Corte:
+    def ejecutar(self, uow: UnidadDeTrabajo, modulo: str, ultima_legada: int, *, actor: str = cat.SISTEMA, version_contrato: int = 1, asentar: bool = True) -> Corte:
+        """`asentar=False` es para la migración de datos de un módulo (D-24): la fila del corte y el salto del contador, sin asiento ni evento técnico."""
         if not uow.en_transaccion():
             raise FueraDeTransaccion("El corte de un módulo va en una transacción: la fila del corte y el salto del contador se confirman juntos.", modulo=modulo)
         if uow.cortes.get(modulo) is not None:
@@ -73,6 +74,9 @@ class Cortar(_CasoDeUso):
         uow.cortes.crear(corte, version_contrato)
         contador = uow.eventos.asegurar_contador(contador_tras_corte(uow.eventos.contador(), corte.ultima_legada))
         self.s.vivo.emitida(contador)
+        if not asentar:
+            log.info("Módulo %s cortado a la cola única por su migración (última legada %s, contador %s)", modulo, corte.ultima_legada, contador, extra={"evento": "nodo.modulo_cortado"})
+            return corte
         uow.auditoria.registrar(actor, cat.A_MODULO_CORTADO, "m15_corte", modulo, nuevo={"ultima_legada": corte.ultima_legada, "contador": contador, "version_contrato": version_contrato})
         if self.s.config.eventos_tecnicos:
             from .publicar import Publicar

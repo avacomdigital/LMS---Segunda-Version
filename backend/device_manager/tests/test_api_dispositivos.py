@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 from acceso.tests.base import BaseAcceso
 from expediente.models import Auditoria
 
+from nodo.pruebas import cola
 from .. import models as m
 from .. import servicios
 from ..dominio import dispositivo as dom
@@ -28,7 +29,7 @@ class RegistroYLatidoTests(BaseAcceso):
         otra = self.api.post("/api/dispositivos/", {"identificador": "hw-android-01", "nombre": "Tableta 01 renombrada"}, format="json")
         self.assertEqual((otra.status_code, otra.json()["id"], otra.json()["nombre"]), (200, d["id"], "Tableta 01 renombrada"))
         self.assertEqual(m.Dispositivo.objects.filter(identificador_hw="hw-android-01").count(), 1)
-        self.assertEqual(m.EventoSalida.objects.filter(tipo_evento=dom.EV_REGISTRADO, agregado_id=d["id"]).count(), 1)
+        self.assertEqual(cola("device_manager").filter(tipo_evento=dom.EV_REGISTRADO, agregado_id=d["id"]).count(), 1)
         self.assertTrue(Auditoria.objects.filter(accion="dispositivos.registrado", objeto_id=d["id"]).exists())
 
     def test_sin_huella_o_con_plataforma_desconocida_es_400(self):
@@ -47,7 +48,7 @@ class RegistroYLatidoTests(BaseAcceso):
         self.assertTrue(r.json()["bloqueado"])
         self.assertGreater(m.Dispositivo.objects.get(pk=d.id).ultimo_latido_en, 1)
         # volver tras un silencio largo publica «reconectado»
-        self.assertTrue(m.EventoSalida.objects.filter(tipo_evento=dom.EV_RECONECTADO, agregado_id=d.id).exists())
+        self.assertTrue(cola("device_manager").filter(tipo_evento=dom.EV_RECONECTADO, agregado_id=d.id).exists())
 
     def test_sin_organizacion_no_hay_inventario(self):
         from acceso.models import Organizacion
@@ -74,7 +75,7 @@ class InventarioYBloqueoTests(BaseAcceso):
         r = self.docente.post(f"{ruta}/bloquear/", {"motivo": "uso indebido"}, format="json")
         self.assertEqual((r.status_code, r.json()["bloqueado"]), (200, True), r.content)
         self.assertTrue(self.docente.post(f"{ruta}/bloquear/", {}, format="json").json()["bloqueado"])   # idempotente
-        self.assertEqual(m.EventoSalida.objects.filter(tipo_evento=dom.EV_BLOQUEADO, agregado_id=self.tableta["id"]).count(), 1)
+        self.assertEqual(cola("device_manager").filter(tipo_evento=dom.EV_BLOQUEADO, agregado_id=self.tableta["id"]).count(), 1)
         asiento = Auditoria.objects.get(accion="dispositivos.bloqueado", objeto_id=self.tableta["id"])
         self.assertEqual((asiento.actor_id, asiento.valor_nuevo["motivo"]), (self.docente_id, "uso indebido"))
         # con la tableta bloqueada nadie abre sesión de login desde ella (regla del equipo, no de la persona)
@@ -115,7 +116,7 @@ class SesionDeAlumnoTests(BaseAcceso):
         self.assertEqual((cerrada.motivo_cierre, cerrada.finalizada_en is not None), ("relevo", True))
         self.assertEqual(m.DimSesionAlumno.objects.filter(dispositivo_id=self.tableta["id"], finalizada_en__isnull=True).count(), 1)
         self.assertEqual(self.api.get(f"/api/dispositivos/{self.tableta['id']}/").json()["sesion_abierta"]["alumno_id"], "luis")
-        self.assertEqual([e.tipo_evento for e in m.EventoSalida.objects.filter(agregado_tipo="DimSesionAlumno").order_by("id")],
+        self.assertEqual([e.tipo_evento for e in cola("device_manager").filter(agregado_tipo="DimSesionAlumno").order_by("id")],
                          [dom.EV_SESION_ABIERTA, dom.EV_SESION_CERRADA, dom.EV_SESION_ABIERTA])
         self.assertEqual(luis["dispositivo_id"], self.tableta["id"])
 

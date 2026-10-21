@@ -280,10 +280,16 @@ class RecientesDjango:
 
 
 class OutboxDjango:
+    """Desde el corte a la cola única (MOD-015, migración 0003) cada evento se escribe UNA sola vez, en `m15_evento`, dentro de la transacción del hecho (`nodo.servicios.publicar`
+    la exige); `m13_evento_salida` queda intacta como historia de sólo lectura (BR-016), que sirve `reporting.servicios.eventos_legados`."""
+
+    MODULO = "reporting"
+
     def publicar(self, agregado_tipo: str, agregado_id: str, tipo_evento: str, carga: dict) -> None:
         if tipo_evento not in cat.EVENTOS or tipo_evento in cat.EVENTOS_RESERVADOS:
             raise ValueError(f"Evento fuera del catálogo de MOD-013 (o reservado y sin emitir): {tipo_evento}")
-        m.EventoSalida.objects.create(agregado_tipo=agregado_tipo, agregado_id=str(agregado_id)[:64], tipo_evento=tipo_evento, carga=carga)
+        from nodo import servicios as nodo   # frontera entre módulos: sólo en el adaptador
+        nodo.publicar(self.MODULO, agregado_tipo, str(agregado_id)[:64], tipo_evento, carga)
 
 
 class AuditoriaReporting:

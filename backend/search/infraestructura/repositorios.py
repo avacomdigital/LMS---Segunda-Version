@@ -175,13 +175,18 @@ class SinonimosDjango:
 
 
 class OutboxDjango:
+    """Desde el corte a la cola única (MOD-015, migración 0003) cada evento se escribe UNA sola vez, en `m15_evento`, dentro de la transacción del hecho (`nodo.servicios.publicar`
+    la exige); `m21_evento_salida` queda intacta como historia de sólo lectura (BR-016), que sirve `search.servicios.eventos_legados`."""
+
+    MODULO = "search"
     _AGREGADO = {cat.EV_ENTIDAD_INDEXADA: "Documento", cat.EV_ENTRADAS_PURGADAS: "Documento", cat.EV_REINDEXACION_INCREMENTAL: "Fuente",
                  cat.EV_INDICE_RECONSTRUIDO: "Indice"}
 
     def publicar(self, tipo_evento: str, agregado_id: str, carga: dict) -> None:
         if tipo_evento not in cat.EVENTOS_QUE_SE_EMITEN:
             raise ValueError(f"Evento que MOD-021 no emite todavía o fuera de su catálogo: {tipo_evento}")
-        m.EventoSalida.objects.create(agregado_tipo=self._AGREGADO[tipo_evento], agregado_id=str(agregado_id)[:80], tipo_evento=tipo_evento, carga=carga)
+        from nodo import servicios as nodo   # frontera entre módulos: sólo en el adaptador
+        nodo.publicar(self.MODULO, self._AGREGADO[tipo_evento], str(agregado_id)[:80], tipo_evento, carga)
 
 
 class AuditoriaBusqueda:

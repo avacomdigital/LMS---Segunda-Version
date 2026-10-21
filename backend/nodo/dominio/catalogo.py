@@ -63,6 +63,12 @@ def validar_nombre(tipo: str, exigir_participio: bool = True) -> Nombre:
     return nombre
 
 
+# Un tipo tiene UN autor (R-09)… salvo el caso que el repo ya traía al cortar (Fase 3, D-25): el modo de estudio publica `evaluacion.respuesta_registrada.v1` (FUN-083) por cada
+# respuesta de PRÁCTICA, con el nombre del tipo de MOD-010 y una carga propia (práctica y asignación de estudio, no intento). Se declara aquí como COAUTOR para que el corte no lo rechace
+# ni lo marque; el sobre lleva `modulo = modo_estudio`, así que quien lea la fuente `evaluacion` no lo recibe y nadie lo confunde con el de un examen. Hallazgo 7 de `01-diseno.md`.
+COAUTORES: dict[str, tuple[str, ...]] = {"evaluacion.respuesta_registrada.v1": ("modo_estudio",)}
+
+
 @dataclass(frozen=True)
 class Definicion:
     tipo: str
@@ -73,16 +79,21 @@ class Definicion:
     retencion_dias: int | None          # None = permanente
     versiones: tuple[int, ...]
     inmutable: bool
+    coautores: tuple[str, ...] = ()     # los otros módulos que también lo publican (D-25); casi siempre ninguno
 
     @property
     def version(self) -> int:
         return max(self.versiones)
 
+    @property
+    def autores(self) -> tuple[str, ...]:
+        return (self.modulo, *self.coautores)
+
 
 def _definicion(tipo: str, ciclo_meses: int) -> Definicion:
     modulo, clase, sensibilidad, clave, retencion, versiones = TIPOS[tipo]
     dias = cat.retencion_dias(clase, ciclo_meses) if retencion == "clase" else retencion
-    return Definicion(tipo, modulo, clase, sensibilidad, tuple(clave), dias, tuple(versiones), clase in cat.INMUTABLES)
+    return Definicion(tipo, modulo, clase, sensibilidad, tuple(clave), dias, tuple(versiones), clase in cat.INMUTABLES, COAUTORES.get(tipo, ()))
 
 
 def resolver(tipo: str, ciclo_meses: int = cat.CICLO_MESES_POR_DEFECTO) -> Definicion | None:

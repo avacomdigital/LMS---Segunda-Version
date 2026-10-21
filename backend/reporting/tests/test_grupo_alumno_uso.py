@@ -4,6 +4,7 @@ qué, y lo que NO dice (el dominio por objetivo, un promedio general como dato p
 """
 from __future__ import annotations
 
+from nodo.pruebas import cola
 from .. import models as m
 from .base import CURSO, BaseReporting
 
@@ -64,7 +65,7 @@ class ReporteDeGrupoTests(BaseReporting):
         self.clase_cerrada([(5, 5), (3, 5)])
         self.rp(f"/grupos/{self.grupo['id']}/")
         self.assertEqual(self.eventos_rp("reporte.grupo_generado.v1"), ["reporte.grupo_generado.v1"])
-        carga = m.EventoSalida.objects.get(tipo_evento="reporte.grupo_generado.v1").carga
+        carga = cola("reporting").get(tipo_evento="reporte.grupo_generado.v1").carga
         self.assertEqual((carga["tipo"], carga["grupo_id"], carga["nominal"], carga["por"]), ("grupo", self.grupo["id"], True, self.docente_id))
         self.assertNotIn("Alumno", str(carga))
         asiento, = self.asientos("reporte.generado")

@@ -68,7 +68,9 @@ SENSIBILIDADES = (S_PUBLICA, S_INTERNA, S_PERSONAL, S_PERSONAL_MENOR)
 # --------------------------------------------------------------------------------------------------------------------------- el sobre (BR-002, Parte XI)
 CAMPOS_DEL_SOBRE = ("evento_id", "tipo", "version", "modulo", "secuencia", "creado_en", "agregado_tipo", "agregado_id", "actor", "dispositivo_id", "correlacion_id", "clase",
                     "sensibilidad")
-MAX_TIPO, MAX_MODULO, MAX_AGREGADO_TIPO, MAX_AGREGADO_ID, MAX_ACTOR, MAX_DISPOSITIVO, MAX_CORRELACION = 96, 32, 48, 96, 96, 96, 64
+MAX_TIPO, MAX_MODULO, MAX_AGREGADO_TIPO, MAX_AGREGADO_ID, MAX_ACTOR, MAX_DISPOSITIVO, MAX_CORRELACION = 96, 32, 48, 256, 96, 96, 64
+# MAX_AGREGADO_ID: 256 desde la Fase 3 (D-26, migracion nodo 0003): el libro compone el agregado de sus agregados por periodo como alumno:grupo:periodo:curso_ref, que con
+# una referencia de curso de AVACOM Biblioteca pasa de los 96 que la Fase 2 habia propuesto; con 96 el corte del libro perdia esos eventos.
 CARGA_MAX_BYTES = 16 * 1024                        # R-13: tope de la carga serializada (propuesta: 16 KB; la carga más grande vista en el inventario cabe de sobra)
 
 # R-13 · BR-127: claves que NUNCA van en una carga (comparación exacta y en minúsculas sobre cada clave del JSON, a cualquier profundidad). Credenciales, tokens, PIN, textos de respuestas

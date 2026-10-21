@@ -12,6 +12,7 @@ from django.db import IntegrityError, transaction
 from acceso.tests.base import BaseAcceso
 from expediente.models import Auditoria
 
+from nodo.pruebas import cola
 from .. import models as m
 from .. import servicios
 from ..dominio import dispositivo as dom
@@ -65,7 +66,7 @@ class AsignarTests(BaseAsignacion):
         self.assertEqual((d["asignado_a_id"], d["asignado_en"] is not None), (self.estudiante_id, True))
         fila = m.Dispositivo.objects.get(pk=self.did)
         self.assertEqual((fila.perfil, fila.asignado_a_id), ("asignado", self.estudiante_id))
-        evento = m.EventoSalida.objects.get(tipo_evento=dom.EV_ASIGNADO, agregado_id=self.did)
+        evento = cola("device_manager").get(tipo_evento=dom.EV_ASIGNADO, agregado_id=self.did)
         self.assertEqual((evento.carga["dispositivo_id"], evento.carga["alumno_id"]), (self.did, self.estudiante_id))
         asiento = Auditoria.objects.get(accion="dispositivos.asignado", objeto_id=self.did)
         self.assertEqual((asiento.actor_id, asiento.valor_nuevo["asignado_a_id"], asiento.valor_anterior["perfil"]), (self.admin_id, self.estudiante_id, "compartido"))
@@ -74,7 +75,7 @@ class AsignarTests(BaseAsignacion):
     def test_asignar_a_la_misma_persona_es_idempotente(self):
         self.asignar()
         self.assertEqual(self.asignar().status_code, 200)
-        self.assertEqual(m.EventoSalida.objects.filter(tipo_evento=dom.EV_ASIGNADO).count(), 1)
+        self.assertEqual(cola("device_manager").filter(tipo_evento=dom.EV_ASIGNADO).count(), 1)
 
     def test_un_equipo_de_otra_persona_no_se_reasigna_primero_se_libera(self):
         self.asignar()
@@ -128,14 +129,14 @@ class LiberarTests(BaseAsignacion):
         self.assertEqual(r.status_code, 200, r.content)
         d = r.json()
         self.assertEqual((d["perfil"], d["asignado_a"], d["asignado_a_id"], d["asignado_en"]), ("compartido", None, None, None))
-        evento = m.EventoSalida.objects.get(tipo_evento=dom.EV_LIBERADO, agregado_id=self.did)
+        evento = cola("device_manager").get(tipo_evento=dom.EV_LIBERADO, agregado_id=self.did)
         self.assertEqual((evento.carga["dispositivo_id"], evento.carga["alumno_id"]), (self.did, self.estudiante_id))
         asiento = Auditoria.objects.get(accion="dispositivos.liberado", objeto_id=self.did)
         self.assertEqual((asiento.actor_id, asiento.valor_anterior["asignado_a_id"], asiento.valor_nuevo["perfil"]), (self.admin_id, self.estudiante_id, "compartido"))
 
     def test_liberar_un_equipo_compartido_no_hace_nada(self):
         self.assertEqual(self.liberar().status_code, 200)
-        self.assertEqual(m.EventoSalida.objects.filter(tipo_evento=dom.EV_LIBERADO).count(), 0)
+        self.assertEqual(cola("device_manager").filter(tipo_evento=dom.EV_LIBERADO).count(), 0)
 
     def test_con_un_paquete_de_estudio_activo_no_se_libera(self):
         self.asignar()
@@ -143,7 +144,7 @@ class LiberarTests(BaseAsignacion):
             r = self.liberar()
         self.assertEqual((r.status_code, r.json()["codigo"], r.json()["paquetes"]), (409, "paquete_sin_integrar", 2))
         self.assertEqual(m.Dispositivo.objects.get(pk=self.did).perfil, "asignado")
-        self.assertEqual(m.EventoSalida.objects.filter(tipo_evento=dom.EV_LIBERADO).count(), 0)
+        self.assertEqual(cola("device_manager").filter(tipo_evento=dom.EV_LIBERADO).count(), 0)
         self.assertEqual(self.liberar().status_code, 200)                            # sin paquetes, se libera
 
     def test_liberar_cierra_la_sesion_de_su_dueno_en_el_equipo(self):

@@ -7,28 +7,38 @@ Sólo lectura: devuelve dicts planos, no abre ninguna transacción de escritura 
 from __future__ import annotations
 
 
+MODULO = "gradebook"             # el nombre con que este módulo firma sus eventos en la cola única (MOD-015, desde la migración 0004)
+
+
 def ultima_secuencia() -> int:
-    from django.db.models import Max
+    """La última secuencia que este módulo emitió en la cola única (o, si no publicó nada desde el corte, el último id de su cola antigua)."""
+    from nodo import servicios as nodo
 
-    from . import models as m
-
-    return int(m.EventoSalida.objects.aggregate(u=Max("id"))["u"] or 0)
+    corte = nodo.corte_de(MODULO)
+    return max(nodo.ultima_secuencia(MODULO), int(corte["ultima_legada"]) if corte else 0)
 
 
 def eventos_desde(secuencia: int, limite: int, tipos: tuple[str, ...]) -> tuple[list[dict], int]:
-    """`(eventos, hasta_donde_se_miró)`: los eventos de esos `tipos` con secuencia MAYOR a la dada, en orden. LECTURA de la cola de salida: no marca nada como publicado."""
-    from django.db.models import Max
+    """`(eventos, hasta_donde_se_miró)`: los eventos de esos `tipos` con secuencia MAYOR a la dada, en orden, por la fachada de MOD-015 (P-05): primero lo que quedó en la cola
+    antigua (`m11_evento_salida`, por `eventos_legados`) y después `m15_evento`, como un flujo continuo. LECTURA: no marca nada como publicado."""
+    from nodo import servicios as nodo
 
+    if not tipos:
+        return [], int(secuencia)
+    return nodo.leer(MODULO, int(secuencia), int(limite), tuple(tipos))
+
+
+def eventos_legados(desde: int, limite: int, tipos: tuple[str, ...] | None, hasta: int) -> tuple[list[dict], int]:
+    """El lector de la cola ANTIGUA de este módulo (`m11_evento_salida`, intacta desde el corte a la cola única, BR-016), que MOD-015 llama por su fachada: los eventos con
+    `desde < id ≤ hasta` (y de esos `tipos`, o todos), en orden, y hasta dónde se miró. Lo registra `apps.ready` (R-09: la cola no lee tablas ajenas). Lectura pura."""
     from . import models as m
 
-    base = m.EventoSalida.objects.filter(id__gt=secuencia)
-    ultimo = base.aggregate(u=Max("id"))["u"]
-    if ultimo is None:
-        return [], secuencia
-    filas = list(base.filter(id__lte=ultimo, tipo_evento__in=tipos).order_by("id")[:limite])
-    hasta = filas[-1].id if len(filas) >= limite else ultimo
+    filas = m.EventoSalida.objects.filter(id__gt=int(desde), id__lte=int(hasta))
+    if tipos is not None:
+        filas = filas.filter(tipo_evento__in=list(tipos))
+    filas = list(filas.order_by("id")[: int(limite)])
     return [{"secuencia": f.id, "tipo": f.tipo_evento, "agregado_tipo": f.agregado_tipo, "agregado_id": f.agregado_id, "carga": f.carga, "creado_en": f.creado_en}
-            for f in filas], hasta
+            for f in filas], (filas[-1].id if len(filas) >= int(limite) else int(hasta))
 
 
 def boletin_de_alumno(alumno_id: str, grupo_id: str, materia: dict | None = None) -> dict | None:

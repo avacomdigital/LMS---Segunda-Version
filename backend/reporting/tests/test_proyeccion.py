@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from unittest import mock
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..aplicacion.consumidor import ConsumirEventos, Reconstruir
 from ..aplicacion.puertos import Actor
@@ -62,15 +63,15 @@ class ReconstruccionTests(SemillaDeReportes):
         self.reconstruir()
         self.assertTrue(m.Config.objects.get(pk="nodo").umbral_privacidad)                    # la configuración es una decisión, no una proyección
         self.assertEqual(list(m.Reciente.objects.values_list("tipo", flat=True)), reciente_antes)
-        self.assertGreaterEqual(m.EventoSalida.objects.count(), 1)
+        self.assertGreaterEqual(cola("reporting").count(), 1)
         self.assertEqual(s["a"]["sesion"]["id"] in [c["sesion_id"] for c in self.rp("/clases/")["clases"]], True)
 
     def test_reconstruir_no_repite_los_avisos_ni_los_eventos_de_generacion(self):
         s = self.sembrar()
         self.foto(s)
-        antes = m.EventoSalida.objects.count()
+        antes = cola("reporting").count()
         self.reconstruir()
-        nuevos = list(m.EventoSalida.objects.order_by("id").values_list("tipo_evento", flat=True)[antes:])
+        nuevos = list(cola("reporting").order_by("id").values_list("tipo_evento", flat=True)[antes:])
         self.assertEqual(nuevos, ["reporte.agregados_reconstruidos.v1"])
 
     def test_no_se_reconstruye_con_una_clase_abierta(self):
@@ -139,11 +140,11 @@ class ConsumidorTests(SemillaDeReportes):
     def test_aplicar_dos_veces_el_mismo_evento_no_duplica_ni_cambia_nada(self):
         s = self.sembrar()
         ConsumirEventos(servicios()).hasta_vaciar()
-        antes = (list(m.Clase.objects.order_by("sesion_id").values()), list(m.ClaseAlumno.objects.order_by("id").values_list("alumno_id", "porcentaje_aciertos")), m.EventoSalida.objects.count())
+        antes = (list(m.Clase.objects.order_by("sesion_id").values()), list(m.ClaseAlumno.objects.order_by("id").values_list("alumno_id", "porcentaje_aciertos")), cola("reporting").count())
         m.MarcaConsumidor.objects.all().delete()                  # el consumidor vuelve a leer TODA la cola
         r = ConsumirEventos(servicios()).hasta_vaciar()
         self.assertGreater(r["procesados"], 0)
-        despues = (list(m.Clase.objects.order_by("sesion_id").values()), list(m.ClaseAlumno.objects.order_by("id").values_list("alumno_id", "porcentaje_aciertos")), m.EventoSalida.objects.count())
+        despues = (list(m.Clase.objects.order_by("sesion_id").values()), list(m.ClaseAlumno.objects.order_by("id").values_list("alumno_id", "porcentaje_aciertos")), cola("reporting").count())
         self.assertEqual(antes, despues)
         self.assertEqual(m.ClaseAlumno.objects.count(), 7)
 
@@ -226,12 +227,14 @@ class ActualizacionPeriodicaTests(SemillaDeReportes):
 
     def test_el_estado_muestra_antiguedad_si_la_cola_va_por_detras(self):
         self.clase_cerrada([(5, 5)])
-        from classroom_engine import models as m7
-        m7.EventoSalida.objects.update(creado_en=self.t - 600_000)                  # esos eventos se publicaron hace diez minutos y nadie los ha leído
+        from ..dominio import catalogos as cat
+        self.avanzar(minutos=10)                                                    # esos eventos se publicaron hace diez minutos y nadie los ha leído (la cola única es inmutable: se mueve el reloj)
+        mas_viejo = min(e.creado_en for e in cola("classroom_engine").filter(tipo_evento__in=cat.EVENTOS_CONSUMIDOS["aula"]))
         e = self.rp("/estado/", cliente=self.admin)
         self.assertEqual(e["estado"], "rezagada")
-        self.assertEqual(e["corte_en"], self.t - 600_000 - 1)                       # lo que el reporte sabe es lo anterior al evento más viejo sin aplicar
-        self.assertEqual(e["antiguedad_ms"], 600_001)
+        self.assertEqual(e["corte_en"], mas_viejo - 1)                              # lo que el reporte sabe es lo anterior al evento más viejo sin aplicar
+        self.assertEqual(e["antiguedad_ms"], self.t - mas_viejo + 1)
+        self.assertGreaterEqual(e["antiguedad_ms"], 600_001)
 
 
 class IntegracionTests(BaseReporting):
@@ -257,7 +260,7 @@ class IntegracionTests(BaseReporting):
         for _ in range(3):
             self.reporte_de_clase(s["id"])
         self.assertEqual(len(self.eventos_rp("reporte.marcado_incompleto.v1")), 1)           # una vez por cambio, no por lectura
-        carga = m.EventoSalida.objects.get(tipo_evento="reporte.marcado_incompleto.v1").carga
+        carga = cola("reporting").get(tipo_evento="reporte.marcado_incompleto.v1").carga
         self.assertEqual((carga["ambito"], carga["sin_sincronizar"], carga["motivos"]), ("clase", 1, ["conexion_perdida"]))
         self.assertNotIn("alumno_id", str(carga))
         # pasada la gracia del nodo (15 min) ya no espera nada de esa tableta: el reporte es completo sin que ocurra ningún evento
@@ -292,16 +295,15 @@ class IntegracionTests(BaseReporting):
         r = self.rp(f"/grupos/{self.grupo['id']}/")
         self.assertEqual((r["corte"]["incompleto"], r["corte"]["integracion"]["sin_sincronizar"]), (True, 1))
         self.assertEqual([x["codigo"] for x in r["corte"]["integracion"]["motivos"]], ["cola_de_estudio"])
-        avisos = m.EventoSalida.objects.filter(tipo_evento="reporte.marcado_incompleto.v1")
+        avisos = cola("reporting").filter(tipo_evento="reporte.marcado_incompleto.v1")
         self.assertEqual(avisos.count(), 1)
         self.assertEqual(avisos.get().carga["ambito"], "grupo")
         # el informe de ese alumno también lo declara
         ra = self.rp(f"/alumnos/{self.estudiante_id}/")
         self.assertTrue(ra["corte"]["incompleto"])
         # cuando el nodo integra su trabajo (`estudio.trabajo.integrado.v1`), el reporte vuelve a ser completo
-        from modo_estudio import models as m8
-        m8.EventoSalida.objects.create(agregado_tipo="Sincronizacion", agregado_id="e1", tipo_evento="estudio.trabajo.integrado.v1",
-                                       carga={"alumno_id": self.estudiante_id, "dispositivo_id": sesion.json()["dispositivo"]["id"], "integrados": 2}, creado_en=self.t)
+        cola("modo_estudio").create(agregado_tipo="Sincronizacion", agregado_id="e1", tipo_evento="estudio.trabajo.integrado.v1",
+                                    carga={"alumno_id": self.estudiante_id, "dispositivo_id": sesion.json()["dispositivo"]["id"], "integrados": 2}, creado_en=self.t)
         r = self.rp(f"/grupos/{self.grupo['id']}/")
         self.assertEqual((r["corte"]["incompleto"], r["corte"]["integracion"]["estado"]), (False, "completa"))
         self.assertEqual(s["sesion"]["id"] is not None, True)

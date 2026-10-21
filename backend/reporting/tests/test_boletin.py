@@ -14,6 +14,7 @@ from django.test import SimpleTestCase
 
 from gradebook.tests.base import BaseGradebook
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..dominio import boletin as bol
 from ..dominio import catalogos as cat
@@ -47,7 +48,7 @@ class _ConExamenCalificado(BaseGradebook):
         return list(Bitacora.objects.filter(accion=accion).order_by("secuencia"))
 
     def eventos_rp(self, *tipos: str) -> list[str]:
-        filas = m.EventoSalida.objects.order_by("id")
+        filas = cola("reporting").order_by("id")
         if tipos:
             filas = filas.filter(tipo_evento__in=tipos)
         return list(filas.values_list("tipo_evento", flat=True))

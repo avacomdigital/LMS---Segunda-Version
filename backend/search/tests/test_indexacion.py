@@ -11,6 +11,7 @@ from audit.models import Bitacora
 from evaluacion import models as m10
 from evaluacion.dominio import catalogos as ev
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..aplicacion.indexar import Sincronizar
 from ..dominio import catalogos as cat
@@ -77,7 +78,7 @@ class IncrementalTests(BaseSearch):
         emitidos = self.eventos_search()
         self.assertEqual(emitidos.count("busqueda.entidad_indexada.v1"), 1)
         self.assertEqual(emitidos.count("busqueda.reindexacion_incremental.v1"), 1)
-        carga = m.EventoSalida.objects.get(tipo_evento="busqueda.entidad_indexada.v1").carga
+        carga = cola("search").get(tipo_evento="busqueda.entidad_indexada.v1").carga
         self.assertEqual((carga["tipo"], carga["entidad_id"], carga["resultado"]), ("assessment", a["id"], "nuevo"))
         self.assertEqual(self.buscar("fracciones")["total"], 1)
 
@@ -110,7 +111,7 @@ class IncrementalTests(BaseSearch):
         doc = self.documentos("assessment")[0]
         self.assertEqual((doc.titulo, doc.descripcion), ("Fracciones y decimales", "Nueva guía"))
         self.assertEqual(self.buscar("decimales")["total"], 1)
-        resultados = list(m.EventoSalida.objects.filter(tipo_evento="busqueda.entidad_indexada.v1").values_list("carga__resultado", flat=True))
+        resultados = list(cola("search").filter(tipo_evento="busqueda.entidad_indexada.v1").values_list("carga__resultado", flat=True))
         self.assertEqual(resultados, ["nuevo", "actualizado"])
 
     def test_una_entidad_cerrada_o_archivada_se_purga_con_su_evento(self):
@@ -122,7 +123,7 @@ class IncrementalTests(BaseSearch):
         r = self.sincronizar()
         self.assertEqual(r["purgados"], 1)
         self.assertEqual(self.documentos("assessment"), [])
-        purga = m.EventoSalida.objects.get(tipo_evento="busqueda.entradas_purgadas.v1").carga
+        purga = cola("search").get(tipo_evento="busqueda.entradas_purgadas.v1").carga
         self.assertEqual((purga["tipo"], purga["entradas"], purga["causa"]), ("assessment", 1, "evento"))
 
     def test_una_clase_se_actualiza_al_cerrarse(self):
@@ -227,7 +228,7 @@ class ReconstruccionTests(BaseSearch):
     def test_reconstruir_emite_su_evento_y_deja_asiento(self):
         self.sembrar()
         self.reconstruir()
-        carga = m.EventoSalida.objects.filter(tipo_evento="busqueda.indice_reconstruido.v1").order_by("-id").first().carga
+        carga = cola("search").filter(tipo_evento="busqueda.indice_reconstruido.v1").order_by("-id").first().carga
         self.assertEqual((carga["total"], carga["inicial"]), (3, False))
         asiento = Bitacora.objects.filter(accion="busqueda.indice_reconstruido").order_by("-secuencia").first()
         self.assertEqual(asiento.usuario_id, self.admin_id)

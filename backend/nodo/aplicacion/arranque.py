@@ -17,6 +17,7 @@ import os
 
 from ..dominio import catalogos as cat
 from ..dominio.anclas import Ancla, al_arrancar, marca_siguiente
+from ..dominio.corte import piso_del_contador
 from .base import _CasoDeUso
 from .publicar import Publicar
 
@@ -44,13 +45,20 @@ class Arrancar(_CasoDeUso):
             ahora = vivo.marca_alta
             max_en_base = uow.eventos.ultima_secuencia()
             contador = uow.eventos.contador()
+            piso_de_cortes = piso_del_contador(uow.cortes.todos())        # P-05 / D-28: ningún módulo cortado publica por debajo de su corte
             decision = al_arrancar(max(max_en_base, contador), ancla.secuencia if ancla else None, cfg.margen_secuencia)
             restauracion = None
             if decision.restauracion:
-                contador = uow.eventos.asegurar_contador(decision.contador_minimo)
+                contador = uow.eventos.asegurar_contador(max(decision.contador_minimo, piso_de_cortes))
                 restauracion = {"max_en_base": decision.max_en_base, "ancla": decision.ancla, "sin_ancla": decision.sin_ancla, "contador": contador, "detectada_en": ahora}
                 log.error("Restauración detectada: la base trae hasta la secuencia %s y el ancla recordaba %s; el contador salta a %s para no repetir ninguna (INV-002)",
                           decision.max_en_base, decision.ancla, contador, extra={"evento": "nodo.restauracion_detectada", "ruta": "bad"})
+            elif contador < piso_de_cortes:
+                # Una reconstrucción de `m15_evento` (SQLite la hace al alterar una columna) devuelve el AUTOINCREMENT a max(secuencia): si una migración olvidó reponer el piso,
+                # el siguiente evento de un módulo cortado saldría por debajo de su corte y la fachada no lo serviría jamás. Se repone aquí, antes de publicar nada.
+                contador = uow.eventos.asegurar_contador(piso_de_cortes)
+                log.error("El contador de la cola estaba por debajo del corte de un módulo (%s < %s): se repuso al arrancar para que ningún módulo publique bajo su corte (D-28)",
+                          decision.max_en_base, piso_de_cortes, extra={"evento": "nodo.contador_bajo_el_corte", "ruta": "bad"})
             vivo.emitida(contador)
             ultimo = uow.arranques.ultimo()
             vivo.apagado_sucio = bool(ultimo and ultimo.get("cerrado_en") is None)

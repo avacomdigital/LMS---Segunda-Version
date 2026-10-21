@@ -9,6 +9,7 @@ from unittest import mock
 
 from expediente.models import Auditoria
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..aplicacion import casos_uso as cu
 from ..aplicacion import casos_uso_actividad as ca
@@ -89,7 +90,7 @@ class GuardarRespuestasTests(ConActividad):
         self.assertEqual((f.puntaje, f.puntaje_maximo, f.respuestas[0]["veredicto"]["correcta"]), (1.0, 1.0, True))
         self.assertEqual(f.respuestas[0]["secuencia"], 1)
         self.assertIn(dom.EV_RESPUESTA_REGISTRADA, self.eventos(self.s["id"]))
-        carga = m.EventoSalida.objects.get(tipo_evento=dom.EV_RESPUESTA_REGISTRADA).carga
+        carga = cola("classroom_engine").get(tipo_evento=dom.EV_RESPUESTA_REGISTRADA).carga
         self.assertNotIn("respuesta", carga)            # BR-127: la carga del evento no lleva el contenido
 
     def test_sin_biblioteca_la_respuesta_se_guarda_igual_sin_calificar(self):

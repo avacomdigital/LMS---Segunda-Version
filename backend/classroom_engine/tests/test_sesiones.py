@@ -11,6 +11,7 @@ from rest_framework.test import APIClient
 from acceso.tests.base import BaseAcceso
 from expediente.models import Auditoria
 
+from nodo.pruebas import cola
 from .. import models as m
 from ..dominio import sesion as dom
 
@@ -35,7 +36,7 @@ class ConSesionDeClase(TestCase):
         return r.json()
 
     def eventos(self, sesion_id):
-        return list(m.EventoSalida.objects.filter(agregado_id=sesion_id).order_by("id").values_list("tipo_evento", flat=True))
+        return list(cola("classroom_engine").filter(agregado_id=sesion_id).order_by("id").values_list("tipo_evento", flat=True))
 
 
 class IniciarTests(ConSesionDeClase):
@@ -281,7 +282,7 @@ class ContinuidadTests(ConSesionDeClase):
         self.assertEqual(r.json()["selector"]["objeto_ref"], "l1-lecture")
         self.assertEqual(len(r.json()["participantes"]), 1)
         self.assertIn(dom.EV_SESION_REANUDADA, self.eventos(s["id"]))
-        carga = m.EventoSalida.objects.get(agregado_id=s["id"], tipo_evento=dom.EV_SESION_REANUDADA).carga
+        carga = cola("classroom_engine").get(agregado_id=s["id"], tipo_evento=dom.EV_SESION_REANUDADA).carga
         self.assertEqual((carga["causa"], carga["dispositivos_por_recuperar"]), ("caida_nodo", 1))
         r = self.api.post(f"/api/aula/sesiones/{s['id']}/reanudar/", {}, format="json")
         self.assertEqual(r.status_code, 409)

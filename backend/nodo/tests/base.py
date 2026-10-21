@@ -120,6 +120,10 @@ class BaseNodo(_Nodo, TestCase):
 class BaseNodoTransaccional(_Nodo, TransactionTestCase):
     """Sin la transacción que `TestCase` abre alrededor de cada prueba: para lo que necesita ver `in_atomic_block` de verdad."""
 
+    # El vaciado entre `TransactionTestCase` borra las filas pero no el AUTOINCREMENT: desde la Fase 3 otras suites transaccionales (el WebSocket del aula) publican en `m15_evento`
+    # antes que éstas, y una prueba que espera «la secuencia 1» recibía la 100. Con esto Django reinicia `sqlite_sequence` antes de cada una.
+    reset_sequences = True
+
     def setUp(self):
         super().setUp()
         self._preparar_nodo()

@@ -11,6 +11,7 @@ from acceso.models import Grupo, Organizacion, Usuario
 from device_manager import models as m9
 from expediente.models import Auditoria
 
+from nodo.pruebas import cola
 from .. import models as m
 from .base import BASE, LECCION_2, BaseEstudio
 
@@ -205,10 +206,10 @@ class EstudiantesTests(BaseEstudio):
             self.assertEqual(self.ver("/estudiantes/", cliente=cliente).status_code, 200)
 
     def test_es_solo_lectura_no_registra_la_tableta_ni_abre_sesiones(self):
-        antes = (m9.Dispositivo.objects.count(), m9.DimSesionAlumno.objects.count(), m.EventoSalida.objects.count())
+        antes = (m9.Dispositivo.objects.count(), m9.DimSesionAlumno.objects.count(), cola("modo_estudio").count())
         r = self.lista("hw-recien-llegada")
         self.assertEqual(r["motivo"], "dispositivo_desconocido")
-        self.assertEqual((m9.Dispositivo.objects.count(), m9.DimSesionAlumno.objects.count(), m.EventoSalida.objects.count()), antes)
+        self.assertEqual((m9.Dispositivo.objects.count(), m9.DimSesionAlumno.objects.count(), cola("modo_estudio").count()), antes)
 
 
 class AbrirYCerrarSesionTests(BaseEstudio):
@@ -219,7 +220,7 @@ class AbrirYCerrarSesionTests(BaseEstudio):
         self.assertEqual((abierta.alumno_id, abierta.dispositivo_id, abierta.finalizada_en), (self.estudiante_id, self.propia["id"], None))
         self.assertEqual(m9.Dispositivo.objects.get(pk=self.propia["id"]).plataforma, "android")
         self.assertEqual(self.eventos("estudio.sesion.abierta.v1"), ["estudio.sesion.abierta.v1"])
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.sesion.abierta.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.sesion.abierta.v1").carga
         self.assertEqual((carga["alumno_id"], carga["dispositivo_id"], carga["sesion_id"], carga["perfil"]),
                          (self.estudiante_id, self.propia["id"], s["sesion_id"], "asignado"))
         # abrir de nuevo no abre otra ni repite el evento
@@ -270,7 +271,7 @@ class AbrirYCerrarSesionTests(BaseEstudio):
         for cliente in (self.docente, self.admin):
             r = self.enviar("post", "/sesion/", cliente=cliente)
             self.assertEqual((r.status_code, r.json()["codigo"]), (403, "sin_permiso"))
-        self.assertEqual(m.EventoSalida.objects.filter(tipo_evento="estudio.sesion.abierta.v1").count(), 0)
+        self.assertEqual(cola("modo_estudio").filter(tipo_evento="estudio.sesion.abierta.v1").count(), 0)
 
     def test_cerrar_la_sesion_la_cierra_en_mod_009_con_lo_que_queda_por_enviar_y_es_idempotente(self):
         s = self.json_ok(self.enviar("post", "/sesion/"))
@@ -278,7 +279,7 @@ class AbrirYCerrarSesionTests(BaseEstudio):
         self.assertEqual(r, {"cerrada": True})
         cerrada = m9.DimSesionAlumno.objects.get(pk=s["sesion_id"])
         self.assertEqual((cerrada.motivo_cierre, cerrada.finalizada_en is not None), ("usuario", True))
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.sesion.cerrada.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.sesion.cerrada.v1").carga
         self.assertEqual((carga["alumno_id"], carga["sesion_id"], carga["motivo"], carga["cola_pendiente"], carga["limpieza"]),
                          (self.estudiante_id, s["sesion_id"], "usuario", 3, "pendiente"))
         self.assertEqual(self.json_ok(self.enviar("post", "/sesion/cerrar/")), {"cerrada": True})    # idempotente: sin otra sesión ni otro evento
@@ -295,7 +296,7 @@ class AbrirYCerrarSesionTests(BaseEstudio):
     def test_avisar_que_el_aparato_termino_de_limpiarse_deja_constancia(self):
         r = self.json_ok(self.enviar("post", "/sesion/limpieza/", {"resultado": "completa"}))
         self.assertEqual(r, {"ok": True})
-        carga = m.EventoSalida.objects.get(tipo_evento="estudio.limpieza.reintentada.v1").carga
+        carga = cola("modo_estudio").get(tipo_evento="estudio.limpieza.reintentada.v1").carga
         self.assertEqual((carga["alumno_id"], carga["dispositivo_id"], carga["resultado"]), (self.estudiante_id, self.propia["id"], "completa"))
         self.assertEqual(self.enviar("post", "/sesion/limpieza/", {"resultado": "quizas"}).status_code, 400)
         # en un aparato compartido sin nadie identificado también se puede avisar

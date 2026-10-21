@@ -43,7 +43,7 @@ class SobreTests(TestCase):
         with self.assertRaises(SobreIncompleto):
             _sobre(clase="otra")
         with self.assertRaises(SobreIncompleto):
-            _sobre(agregado_id="x" * 200)
+            _sobre(agregado_id="x" * (cat.MAX_AGREGADO_ID + 1))          # el tope es dato (96 en la Fase 2, 256 desde la Fase 3: D-26)
 
     def test_r13_una_carga_con_credenciales_o_datos_personales_falla_en_pruebas_y_se_omite_en_produccion(self):
         for carga in ({"password": "x"}, {"intento_id": "i", "alumno": {"nombres": "Juan"}}, {"respuestas": [{"texto_respuesta": "…"}]}, {"Token": "abc"}, {"ruta": "C:\\x"}):
