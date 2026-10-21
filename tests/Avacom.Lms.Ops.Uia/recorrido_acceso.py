@@ -112,6 +112,7 @@ class Ops:
         if ruta:
             env["AVACOM_OPS_RUTA"] = ruta
         self.salida = salida
+        self.dudosas: list[str] = []     # toques cuyo Invoke() lanzó (salida 4 de ui-ops.ps1): pudieron llegar igual y nunca se repiten a ciegas
         self.proceso = subprocess.Popen([str(exe)], env=env)
         self.pid = self.proceso.pid
         time.sleep(6)
@@ -133,9 +134,12 @@ class Ops:
         return self.ui("esperar", valor=texto, espera=ms)[0] == 0
 
     def invocar(self, boton: str) -> bool:
+        """Un toque a un botón por su nombre, UNA vez. Con salida 4 (Invoke() lanzó: pudo llegar igual) devuelve False y no repite: quien llama mira la pantalla."""
         codigo, salida = self.ui("invoke", nombre=boton)
         if codigo != 0:
             print(f"     ({salida})", flush=True)
+        if codigo == 4:
+            self.dudosas.append(f"{boton}: {salida}")
         return codigo == 0
 
     def escribir(self, campo: str, valor: str) -> bool:

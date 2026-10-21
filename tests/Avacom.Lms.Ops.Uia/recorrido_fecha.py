@@ -11,9 +11,11 @@ degrada ni apaga ningún módulo y avisa con las dos fechas · la pantalla Licen
 habla de la fecha del equipo; (3) al corregir la fecha el error se quita solo; (4) de nuevo adelantada, la administración confirma que es la correcta: el aviso se quita y sólo entonces el
 aula guarda esa fecha · y volver atrás después es otro aviso.
 
-Por qué en fases: OPS (WinUI) se cae a veces —0xc0000005 dentro de Microsoft.UI.Xaml.dll— o vuelve al acceso cuando la UI Automation la maneja, SIN que esta pantalla tenga nada que ver
-(se reproduce yendo y viniendo de Licencia con la fecha en orden). Si pasa a mitad de una fase, se ve en el código de salida o en la pantalla de acceso, la fase se repite con otra OPS y
-sus anotaciones se descartan (queda dicho en la salida); una falla con OPS viva sigue siendo una falla. La fase 4 cambia lo que el nodo guardó, así que corre sobre un nodo propio.
+Por qué en fases: OPS (WinUI) se cae muy de vez en cuando —0xc0000005 dentro de Microsoft.UI.Xaml.dll, un fallo de Windows App SDK 1.7 con la UI Automation activa— sin que esta pantalla tenga
+nada que ver (Bugfix 03: spec-driven/qa/bugfix/bugfix-03-estabilidad-ops-uia.md). Volver al acceso con el proceso vivo era OTRA cosa, y ésa ya está corregida: era un fallo de OPS (un «Menú principal»
+activado dos veces sacaba también el menú), y el arnés ya no repite a ciegas un toque cuyo Invoke() lanzó. Si OPS se cae a mitad de una fase, se ve en el código de salida o en la pantalla de acceso,
+la fase se repite con otra OPS y sus anotaciones se descartan (queda dicho en la salida); una falla con OPS viva sigue siendo una falla. La fase 4 cambia lo que el nodo guardó, así que corre sobre
+un nodo propio.
 
 Uso (desde la raíz del repositorio, con OPS compilado para Windows):
     backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\recorrido_fecha.py --ops <Avacom.Lms.Ops.exe> --salida <carpeta> [--puerto 8017]
@@ -197,7 +199,7 @@ class Nodo:
 # ------------------------------------------------------------------------------------------------------------------------ las fases
 
 class OpsCaida(Exception):
-    """OPS se cerró o volvió al acceso a mitad de una fase: es ruido del arnés (WinUI con la UI Automation), no un resultado del producto; la fase se repite."""
+    """OPS se cerró (fallo raro de Windows App SDK con la UI Automation) o volvió al acceso a mitad de una fase: no es un resultado del producto que se prueba aquí; la fase se repite."""
 
 
 def verificar(ops) -> None:
@@ -292,7 +294,7 @@ def fase_adelanta(ops, nodo: Nodo) -> None:
     comprobar(ops, "la píldora dice «Fecha adelantada» y la pantalla sigue en «Licencia activa»", rl.hay(ops, "Fecha adelantada") and rl.hay(ops, "Licencia activa"))
     comprobar(ops, "ofrece «Confirmar la fecha de hoy»", any("Confirmar la fecha de hoy" in b for b in rl.botones(ops)))          # es un botón (con su descripción como nombre), no un texto
     ops.captura("31-licencia-fecha-adelantada")
-    comprobar(ops, "vuelve al menú principal", ops.invocar("Menú principal"))
+    comprobar(ops, "vuelve al menú principal", rl.volver_al_menu(ops))
     comprobar(ops, "el menú principal lo dice como un error, con «Ver la licencia»", ops.esperar("está adelantada", 20000) and "Ver la licencia" in rl.botones(ops))
     ops.captura("32-menu-fecha-adelantada")
 
@@ -313,7 +315,7 @@ def fase_se_corrige(ops, nodo: Nodo) -> None:
     comprobar(ops, "la pantalla Licencia abre", rl.ir_a_licencia(ops) and ops.esperar("Licencia activa", 15000))
     comprobar(ops, "la pantalla ya no muestra el error ni ofrece confirmar", not rl.hay(ops, "está adelantada") and not any("Confirmar la fecha de hoy" in b for b in rl.botones(ops)))
     ops.captura("34-licencia-fecha-corregida")
-    comprobar(ops, "vuelve al menú principal", ops.invocar("Menú principal"))
+    comprobar(ops, "vuelve al menú principal", rl.volver_al_menu(ops))
     comprobar(ops, "el menú principal tampoco", esperar_boton(ops, "Licencia", 15000) and not rl.hay(ops, "adelantada"))
 
 

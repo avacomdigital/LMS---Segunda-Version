@@ -131,10 +131,18 @@ def hay(ops, fragmento: str) -> bool:
 
 
 def toque(ops, ident: str, intentos: int = 8) -> bool:
-    """Un toque a un control por su AutomationId (no por su nombre: la página y la hoja tienen botones que se llaman igual)."""
+    """
+    Un toque a un control por su AutomationId (no por su nombre: la página y la hoja tienen botones que se llaman igual). Se repite SÓLO mientras el control todavía no está (no se tocó nada).
+    Si `Invoke()` lanzó (salida 4: UI Automation se rindió, pero el toque PUDO llegar igual) no se repite: repetirlo a ciegas activaba dos veces «Menú principal» y sacaba también el menú, y OPS
+    volvía al acceso con el proceso vivo y sin 401. Se da por tocado y quien llama lo confirma por el efecto (la pantalla que debe aparecer); queda anotado en `ops.dudosas`.
+    """
     for _ in range(intentos):
-        codigo, _ = ops.ui("tecla", nombre=ident)
+        codigo, salida = ops.ui("tecla", nombre=ident)
         if codigo == 0:
+            return True
+        if codigo == 4:
+            ops.dudosas.append(f"{ident}: {salida}")
+            print(f"     (toque dudoso en «{ident}»: no se repite, se confirma por la pantalla · {salida[:140]})", flush=True)
             return True
         time.sleep(0.8)
     print(f"     (no hay un control con AutomationId «{ident}»)", flush=True)
@@ -162,6 +170,31 @@ def cerrar_sesion(ops) -> None:
 
 def ir_a_licencia(ops) -> bool:
     return toque(ops, "dashboard-licencia") and ops.esperar("Licencia de este equipo", 15000)
+
+
+def donde_estoy(ops) -> str:
+    """En qué pantalla está OPS, por los controles que hay (una sola lectura): «licencia», «menu», «acceso» u «otra»."""
+    filas = [l.split("\t") for l in ops.ui("list")[1].splitlines()]
+    ids = {f[2] for f in filas if len(f) > 2 and f[2]}
+    if "licencia-volver" in ids:
+        return "licencia"
+    if "dashboard-licencia" in ids:
+        return "menu"
+    if any(f[0] == "Text" and "Escribe tu documento y tu contraseña" in f[1] for f in filas if len(f) > 1):
+        return "acceso"
+    return "otra"
+
+
+def volver_al_menu(ops, milisegundos: int = 25000) -> bool:
+    """«Menú principal» desde Licencia con UN toque (por su AutomationId: el botón del dock del menú también se llama así) y espera el menú con una lectura barata."""
+    if not toque(ops, "licencia-volver"):
+        return False
+    fin = time.time() + milisegundos / 1000
+    while time.time() < fin:
+        if ops.ui("existe", nombre="dashboard-licencia")[0] == 0:
+            return True
+        time.sleep(0.5)
+    return False
 
 
 def guardar_solicitud(ops, letra: str) -> bool:
@@ -283,7 +316,7 @@ def recorrido(exe: Path, salida: Path, token: str, memoria: Path, letra: str) ->
         ops.captura("12-licencia-funciones-en-pausa")
         e = estado_api(token)
         anotar("el nodo coincide: degradada y ningún módulo licenciable", e.get("estado") == "degradada" and e.get("capacidades", {}).get("habilitadas") == [], str(e.get("estado")))
-        ops.invocar("Menú principal")
+        volver_al_menu(ops)
         anotar("el menú principal muestra el aviso de funciones en pausa con «Ver la licencia»", ops.esperar("en pausa", 15000) and "Ver la licencia" in botones(ops))
         ops.captura("13-menu-funciones-en-pausa")
 
@@ -300,7 +333,7 @@ def recorrido(exe: Path, salida: Path, token: str, memoria: Path, letra: str) ->
         ops.captura("14-tecnico-no-renueva")
         anotar("tras el rechazo no se cambió nada: sigue en pausa", estado_api(token).get("estado") == "degradada")
         toque(ops, "licencia-hoja-cerrar")
-        ops.invocar("Menú principal")
+        volver_al_menu(ops)
         cerrar_sesion(ops)
 
         # 7 · la administración renueva con la serie 5
