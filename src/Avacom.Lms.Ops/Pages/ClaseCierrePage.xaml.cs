@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
+using Avacom.Lms.Ops.Navegacion;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Layouts;
 using RoundRectangle = Microsoft.Maui.Controls.Shapes.RoundRectangle;
@@ -105,8 +106,8 @@ public partial class ClaseCierrePage : ContentPage
             if (sesion is null && !string.IsNullOrWhiteSpace(SesionId))
                 AccionesHost.Add(Ds.Boton("Reintentar", Ds.Rango.Secondary, async (_, _) => await CargarAsync(), 64, 320));
             // Las salidas cuentan las páginas que hay encima de «Clase de hoy» (con «Continuar» hay una menos que si se llegó por el curso).
-            AccionesHost.Add(Ds.Boton("Volver a Clase de hoy", Ds.Rango.Primary, async (_, _) => await Shell.Current.GoToAsync(RutaHasta<ClaseHoyPage>("../../..")), 64, 320));
-            AccionesHost.Add(Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(RutaHasta<DashboardPage>("../../../..")), 64, 320));
+            AccionesHost.Add(Ds.Boton("Volver a Clase de hoy", Ds.Rango.Primary, async (_, _) => { if (RutaHasta<ClaseHoyPage>("../../..") is { } ruta) await Shell.Current.GoToAsync(ruta); }, 64, 320));
+            AccionesHost.Add(Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => { if (RutaHasta<DashboardPage>("../../../..") is { } ruta) await Shell.Current.GoToAsync(ruta); }, 64, 320));
             // El tema se pide al final: las salidas ya están a mano y la pantalla nunca espera por él.
             if (temaHost is not null && sesion is not null) await CargarTemaAsync(sesion, temaHost);
         }
@@ -146,18 +147,12 @@ public partial class ClaseCierrePage : ContentPage
         return await tarea;
     }
 
-    /// <summary>Ruta relativa para volver hasta la página indicada, contando cuántas hay encima en la pila; <paramref name="porDefecto"/> si no está.</summary>
-    private static string RutaHasta<TPagina>(string porDefecto) where TPagina : Page
-    {
-        var pila = Shell.Current.Navigation.NavigationStack;
-        for (var i = pila.Count - 1; i >= 0; i--)
-        {
-            if (pila[i] is not TPagina) continue;
-            var saltos = pila.Count - 1 - i;
-            return saltos > 0 ? string.Join("/", Enumerable.Repeat("..", saltos)) : porDefecto;
-        }
-        return porDefecto;
-    }
+    /// <summary>
+    /// Ruta relativa para volver hasta la página indicada, contando cuántas hay encima en la pila; <paramref name="porDefecto"/> si no está. <c>null</c> si ya está a la vista (el segundo
+    /// toque de un doble toque, o el reintento de una prueba de UI Automation): la ruta por defecto, de varios saltos, sacaría páginas de más hasta el acceso.
+    /// </summary>
+    private static string? RutaHasta<TPagina>(string porDefecto) where TPagina : Page =>
+        RutasDeVuelta.Hasta(Shell.Current.Navigation.NavigationStack.Select(p => p is TPagina).ToList(), porDefecto);
 
     // ------------------------------------------------------------------ secciones (007-09)
 

@@ -40,6 +40,11 @@
     <None Include="..\Avacom.Lms.Core.Tests\Fixtures\gradebook\*.json" Link="Fixtures\gradebook\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Navegación de OPS: la guardia contra el doble toque (un «Menú principal» repetido sacaba también el menú y dejaba a OPS en el acceso) y las rutas de vuelta. Lógica pura, sin MAUI. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Navegacion\*.cs" LinkBase="Ops\Navegacion" />
+  </ItemGroup>
+
   <!-- MOD-021 · Buscar: quién puede abrirla y adónde lleva cada resultado (sin MAUI; las piezas con interfaz viven en BusquedaUi.cs y no entran aquí). -->
   <ItemGroup>
     <Compile Include="..\..\src\Avacom.Lms.Ops\Busqueda\ReglasDeBusqueda.cs" Link="Ops\Busqueda\ReglasDeBusqueda.cs" />

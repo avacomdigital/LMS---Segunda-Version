@@ -1,9 +1,15 @@
+using Avacom.Lms.Core.Services;
+using Avacom.Lms.Ops.Navegacion;
+
 namespace Avacom.Lms.Ops;
 public partial class AppShell : Shell
 {
+    private readonly GuardiaDeNavegacion _guardia = new();
+
     public AppShell()
     {
         InitializeComponent();
+        Navigating += AlNavegar;
         Routing.RegisterRoute("dashboard", typeof(Pages.DashboardPage));
         // MOD-001 · acceso (requisitos 2026-10-05): primer arranque y hoja de acceso, alta y recuperación del profesor con el PIN maestro, la contraseña
         // propia tras la provisional y la seguridad del aula (sólo administración)
@@ -56,5 +62,22 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(Reportes.RutasDeReportes.Estado, typeof(Pages.ReportesEstadoPage));
         Routing.RegisterRoute(Reportes.RutasDeReportes.Boletin, typeof(Pages.ReporteBoletinPage));
         Routing.RegisterRoute(Reportes.RutasDeReportes.Boletines, typeof(Pages.ReporteBoletinesPage));
+    }
+
+    /// <summary>
+    /// Un doble toque (o el reintento de una prueba de UI Automation) repite una petición de navegación. Shell resuelve cada «..» contra el estado del momento en que le toca: el segundo
+    /// «Menú principal» sacaba también el menú y dejaba a OPS en el acceso, con el proceso vivo y la sesión abierta (sin ningún 401). La regla está en <see cref="GuardiaDeNavegacion"/>;
+    /// aquí sólo se le pregunta y se cancela lo que ella ignora. Cubre de una vez todos los botones «Menú principal» y «Volver», que usan <c>GoToAsync("..")</c> pelado.
+    /// </summary>
+    private void AlNavegar(object? sender, ShellNavigatingEventArgs e)
+    {
+        if (!e.CanCancel) return;
+        var destino = e.Target?.Location?.OriginalString;
+        var veredicto = _guardia.Evaluar(destino, CurrentPage is Pages.DashboardPage);
+        if (veredicto == GuardiaDeNavegacion.Veredicto.Pasa) return;
+        e.Cancel();
+        RegistroLocal.Info(Canal.Aplicacion, "navegacion.ignorada", veredicto == GuardiaDeNavegacion.Veredicto.YaEstaEnElMenu
+            ? "Un «volver» pedido con el menú principal ya a la vista se ignoró (habría llevado al acceso)."
+            : "Una petición de navegación repetida dentro del doble toque se ignoró.", new { destino, motivo = veredicto.ToString() });
     }
 }

@@ -3,6 +3,7 @@ using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Examen;
 using Avacom.Lms.Ops.Licencia;
 using Avacom.Lms.Ops.Licencia.Ui;
+using Avacom.Lms.Ops.Navegacion;
 using Avacom.Lms.Ops.Reportes;
 using Avacom.Lms.Ui.Design;
 
@@ -95,19 +96,13 @@ public sealed class LicenciaPage : ContentPage
 
     /// <summary>
     /// «Menú principal» lleva al menú aunque se haya llegado por otro camino (desde Reportes, con «Ver la licencia» del aviso de módulo en pausa): se cuentan las pantallas que hay
-    /// encima del menú, como en el cierre de la clase. Si el menú no está en la pila, se vuelve una pantalla atrás.
+    /// encima del menú, como en el cierre de la clase. Si el menú no está en la pila, se vuelve una pantalla atrás. Si el menú YA está a la vista (el segundo toque de un doble toque, o el
+    /// reintento de una prueba de UI Automation, llegó tarde) no hay nada que sacar: la ruta de reserva «..» sacaba el propio menú y dejaba a OPS en el acceso, con la sesión abierta.
     /// </summary>
     private static Task AlMenuPrincipalAsync()
     {
-        var pila = Shell.Current.Navigation.NavigationStack;
-        for (var i = pila.Count - 1; i >= 0; i--)
-        {
-            if (pila[i] is not DashboardPage) continue;
-            var saltos = pila.Count - 1 - i;
-            if (saltos > 0) return Shell.Current.GoToAsync(string.Join("/", Enumerable.Repeat("..", saltos)));
-            break;
-        }
-        return Shell.Current.GoToAsync("..");
+        var ruta = RutasDeVuelta.Hasta(Shell.Current.Navigation.NavigationStack.Select(p => p is DashboardPage).ToList(), porDefecto: "..");
+        return ruta is null ? Task.CompletedTask : Shell.Current.GoToAsync(ruta);
     }
 
     // =============================================================================================================== leer
