@@ -114,7 +114,7 @@ internal static class LicenciaUi
         var texto = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
         texto.Add(new Label { Text = LicenciaTexto.Capacidad(codigo), FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.Tinta });
         texto.Add(Ds.Secundario(LicenciaTexto.DescripcionDeCapacidad(codigo), 13));
-        var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12, Margin = new Thickness(0, 0, 0, 10) };
+        var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12, Margin = new Thickness(0, 0, 0, 6) };
         fila.Add(texto, 0, 0);
         fila.Add(ExamenUi.Pildora(habilitado ? "✓  Disponible" : "En pausa", habilitado ? Tono.Exito : Tono.AmbarFuerte, 13), 1, 0);
         return fila;

@@ -190,8 +190,11 @@ public partial class DashboardPage : ContentPage
     private void OnPageSizeChanged(object? sender, EventArgs e)
     {
         if (Width <= 0 || Height <= 0) return;
+        // MOD-018 · U-2: las bandas persistentes (PIN, licencia, nodo) van en su propia fila encima del panal, así que lo que queda para el panal es la ventana menos ellas.
+        // La fila mide 0 sin bandas; cuando una aparece, su SizeChanged vuelve a llamar aquí.
+        var bandas = BandasPersistentes.Height > 0 ? BandasPersistentes.Height : 0;
         var widthScale = Math.Max(0.55, (Width - 32) / 780d);
-        var heightScale = Math.Max(0.55, (Height - 155) / 714d);
+        var heightScale = Math.Max(0.55, (Height - 155 - bandas) / 714d);
         MenuStage.Scale = Math.Min(1, Math.Min(widthScale, heightScale));
     }
 

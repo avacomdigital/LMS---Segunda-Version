@@ -1,5 +1,11 @@
 {
   "version": 1,
-  "nota": "Llaves PUBLICAS de produccion: la vigente y la siguiente. Vacio hasta la ceremonia de llaves del CTO (Q-L3); la privada NUNCA va en el repositorio.",
-  "claves": []
+  "nota": "Llaves PUBLICAS de produccion: la vigente y la siguiente. prod-2026-1 es la vigente desde la ceremonia de llaves del 2026-10-22 (huella SHA-256 de la publica e255ca3a451b17817b8ca9163f42872e98f31b77657e2138fcb1ab67e2d06435); la privada NUNCA va en el repositorio (vive cifrada fuera de el, con su frase de paso aparte). Para rotar: la nueva entra como siguiente en un instalador ANTES de emitir con ella (spec-driven/15-licenciamiento/05-emision.md, seccion 7).",
+  "claves": [
+    {
+      "kid": "prod-2026-1",
+      "publica": "78a53652fd857d974ca3c2bd40a2cbc09dcc972809fceebe833ec0fba269f463",
+      "estado": "vigente"
+    }
+  ]
 }

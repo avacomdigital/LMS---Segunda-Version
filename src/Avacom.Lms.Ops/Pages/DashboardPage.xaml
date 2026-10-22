@@ -8,13 +8,13 @@
     BackgroundColor="#F1F1F1"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
-    <Grid RowDefinitions="86,*">
+    <Grid RowDefinitions="86,Auto,*">
         <!-- Fondo decorativo (capa más baja, bajo cabecera, menú y dock): retícula de hexágonos grandes con las
              puntas redondeadas, en un solo GraphicsView que se adapta solo al tamaño de la ventana y la orientación.
              Se declara primero y sin ZIndex para quedar debajo de todo lo existente; InputTransparent: es 100 %
              decorativa y nunca captura toques, clics ni gestos. La tinta translúcida (negro al 10 %) da sobre el
              #F1F1F1 de la página el mismo contraste que el gris #E6E6E6 de la referencia sobre blanco. -->
-        <GraphicsView Grid.RowSpan="2" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+        <GraphicsView Grid.RowSpan="3" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
             <GraphicsView.Drawable>
                 <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#1A000000" StrokeWidth="1.25" />
             </GraphicsView.Drawable>
@@ -46,12 +46,13 @@
             </HorizontalStackLayout>
         </Grid>
 
-        <!-- MSG-021: aviso no bloqueante tras entrar (la entrada cerró la clase que esta persona tenía abierta en otro equipo). Se ve
-             unos segundos sobre el tablero y se quita solo o con «Entendido»; nada espera una confirmación. -->
-        <VerticalStackLayout Grid.Row="1" ZIndex="7" Spacing="8" HorizontalOptions="Center" VerticalOptions="Start" Margin="24,10,24,0" MaximumWidthRequest="860">
+        <!-- Las bandas PERSISTENTES (PIN maestro, licencia y estado del nodo) tienen su propia fila (Auto) ENCIMA del panal, no sobre él: antes se superponían
+             y la banda de la licencia tapaba la mitad alta de «Reportes» durante los 30 días de evaluación (MOD-018, U-2). Sin ninguna banda la fila mide 0 y el
+             panal queda donde siempre; con una, el panal baja lo que mida la banda y, si la ventana no da, se reescala (OnPageSizeChanged la descuenta). -->
+        <VerticalStackLayout x:Name="BandasPersistentes" Grid.Row="1" ZIndex="7" Spacing="0" HorizontalOptions="Center" VerticalOptions="Start" Margin="24,0,24,0" MaximumWidthRequest="860" SizeChanged="OnPageSizeChanged">
             <!-- RF-09 · RN-08: banda del PIN maestro para administración y técnico (a 30 días o menos, vencido o sin configurar). Se queda mientras dure: no
                  se descarta, porque lo que avisa sigue pendiente. Al profesorado nunca se le muestra. -->
-            <Border x:Name="PinBanner" IsVisible="False" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+            <Border x:Name="PinBanner" IsVisible="False" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label x:Name="PinBannerLabel" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
                     <Button x:Name="PinBannerButton" Grid.Column="1" Text="Cambiar ahora" HeightRequest="40" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnSeguridadClicked" />
@@ -60,7 +61,7 @@
             <!-- MOD-018 · R-01: banda de la licencia (evaluación, por vencer, gracia, funciones en pausa, cupo, fecha, huella, programa modificado) para quien ve la licencia.
                  Persistente como la del PIN: no se descarta mientras lo que avisa siga pendiente. Vive SÓLO en el menú principal y NO se muestra con una clase abierta en este equipo
                  (ninguna alerta administrativa interrumpe una sesión activa). El tono y el texto los pone el código (ReglasDeLicencia.Banner). -->
-            <Border x:Name="LicenciaBanner" IsVisible="False" AutomationId="licencia-banner" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+            <Border x:Name="LicenciaBanner" IsVisible="False" AutomationId="licencia-banner" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label x:Name="LicenciaBannerLabel" AutomationId="licencia-banner-texto" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />
                     <Button x:Name="LicenciaBannerButton" Grid.Column="1" Text="Ver la licencia" AutomationId="licencia-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#0B4F70" FontSize="14" Clicked="OnLicenciaClicked" />
@@ -68,12 +69,18 @@
             </Border>
             <!-- MOD-015 · P-18: banda del estado del nodo, molde de la del PIN, SÓLO para «restringido» y «en recuperación», para la administración y el técnico, y NUNCA con una clase
                  abierta en este equipo (ningún aviso de plataforma interrumpe una clase, R-01). Lee el campo `nodo` de /health/ (público, sin tocar la base). -->
-            <Border x:Name="NodoBanner" IsVisible="False" AutomationId="nodo-banner" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+            <Border x:Name="NodoBanner" IsVisible="False" AutomationId="nodo-banner" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label x:Name="NodoBannerLabel" AutomationId="nodo-banner-texto" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
                     <Button x:Name="NodoBannerButton" Grid.Column="1" Text="Ver el equipo" AutomationId="nodo-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnNodoClicked" />
                 </Grid>
             </Border>
+        </VerticalStackLayout>
+
+        <!-- MSG-021: aviso no bloqueante tras entrar (la entrada cerró la clase que esta persona tenía abierta en otro equipo). Se ve
+             unos segundos SOBRE el tablero y se quita solo o con «Entendido»; nada espera una confirmación. Es transitorio: por eso se superpone
+             en vez de mover el panal. -->
+        <VerticalStackLayout Grid.Row="2" ZIndex="7" HorizontalOptions="Center" VerticalOptions="Start" Margin="24,10,24,0" MaximumWidthRequest="860">
             <Border x:Name="AvisoBanner" IsVisible="False" HorizontalOptions="Center" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <Label x:Name="AvisoLabel" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />
@@ -85,7 +92,7 @@
         <AbsoluteLayout
             x:Name="MenuStage"
             AnchorY="0"
-            Grid.Row="1"
+            Grid.Row="2"
             HeightRequest="714"
             HorizontalOptions="Center"
             VerticalOptions="Start"
@@ -157,7 +164,7 @@
                 IconGeometry="M229.66,218.34 L179.59,168.28 A88.11,88.11 0 1 0 168.28,179.59 L218.34,229.66 A8,8 0 0 0 229.66,218.34 Z M40,112 A72,72 0 1 1 112,184 A72.08,72.08 0 0 1 40,112 Z" />
         </AbsoluteLayout>
 
-        <Border Grid.RowSpan="2" Margin="0,0,0,28" Padding="8,4" BackgroundColor="#5A5A56" HeightRequest="60" HorizontalOptions="Center" StrokeThickness="0" VerticalOptions="End" WidthRequest="750" ZIndex="5">
+        <Border Grid.RowSpan="3" Margin="0,0,0,28" Padding="8,4" BackgroundColor="#5A5A56" HeightRequest="60" HorizontalOptions="Center" StrokeThickness="0" VerticalOptions="End" WidthRequest="750" ZIndex="5">
             <Border.Shadow><Shadow Brush="#35000000" Offset="0,5" Radius="10" /></Border.Shadow>
             <Grid ColumnDefinitions="54,*,*,*,*,*,*,*,42" ColumnSpacing="0">
                 <Border Margin="0" BackgroundColor="White" HeightRequest="48" StrokeThickness="0" WidthRequest="48"><Image HeightRequest="35" Source="avacom_mark.png" WidthRequest="31" /></Border>
@@ -172,7 +179,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.RowSpan="2" Margin="0,0,18,18" Padding="4" BackgroundColor="White" HeightRequest="42" HorizontalOptions="End" StrokeThickness="0" VerticalOptions="End" WidthRequest="82" ZIndex="6">
+        <Border Grid.RowSpan="3" Margin="0,0,18,18" Padding="4" BackgroundColor="White" HeightRequest="42" HorizontalOptions="End" StrokeThickness="0" VerticalOptions="End" WidthRequest="82" ZIndex="6">
             <Grid ColumnDefinitions="*,*"><Border BackgroundColor="#18181B" StrokeThickness="0"><Label FontAttributes="Bold" FontSize="12" HorizontalOptions="Center" Text="ES" TextColor="White" VerticalOptions="Center" /></Border><Label Grid.Column="1" FontAttributes="Bold" FontSize="12" HorizontalOptions="Center" Text="EN" TextColor="#52525B" VerticalOptions="Center" /></Grid>
         </Border>
     </Grid>

@@ -173,6 +173,15 @@ public static class BusquedaTexto
         string.Join(" ", new[] { "Se muestran sólo tus evaluaciones, estudios y clases; los cursos, lecciones y recursos vuelven cuando la biblioteca esté abierta.", r.Fuentes?.Catalogo?.Sugerencia }
             .Where(x => !string.IsNullOrWhiteSpace(x))), false);
 
+    /// <summary>El título de la tarjeta de «Buscar» en pausa por la licencia: el mismo que usa Reportes (MOD-018, U-3).</summary>
+    public const string EnPausaTitulo = "No disponible con la licencia de este equipo";
+
+    /// <summary>
+    /// MOD-018 · U-3: la búsqueda está EN PAUSA por la licencia (402 <c>no_disponible_por_licencia</c>). No es un fallo de carga ni de conexión: la pantalla muestra su tarjeta propia
+    /// (como Reportes), con «Ver la licencia» para quien la administra, en vez del recuadro genérico «No se pudo cargar todo».
+    /// </summary>
+    public static bool EnPausaPorLicencia(ErrorAula? error) => error is { EsModuloNoDisponible: true };
+
     /// <summary>Qué decir cuando la búsqueda NO se pudo hacer (distinto de no encontrar nada): sin conexión, sin permiso, consulta inválida o un fallo del nodo.</summary>
     public static AvisoDeBusqueda Error(ErrorAula? error, string? motivo)
     {
@@ -185,6 +194,7 @@ public static class BusquedaTexto
             "consulta_invalida" or "datos_invalidos" => new AvisoDeBusqueda("Esa búsqueda no se puede hacer", string.IsNullOrWhiteSpace(error.Detalle) ? "Prueba con otras palabras." : error.Detalle, false),
             "no_disponible" => new AvisoDeBusqueda("Ese resultado ya no está disponible", "Se retiró o ya no tienes acceso. Vuelve a buscar para ver lo que hay ahora.", false),
             "catalogo_no_disponible" => new AvisoDeBusqueda("AVACOM Biblioteca no está disponible", "Sin ella no se puede abrir el contenido. Abre la aplicación de contenido y vuelve a intentarlo.", true),
+            _ when error.EsModuloNoDisponible => new AvisoDeBusqueda(EnPausaTitulo, Licencia.LicenciaTexto.ParaError(error) ?? Licencia.LicenciaTexto.NucleoSigue, true),
             _ when error.SesionPerdida => new AvisoDeBusqueda("Tu sesión terminó", "Vuelve a entrar para seguir buscando.", true),
             _ => new AvisoDeBusqueda("No se pudo buscar", string.IsNullOrWhiteSpace(motivo) ? "El nodo no contestó lo esperado. Se puede volver a intentar." : motivo!, true),
         };

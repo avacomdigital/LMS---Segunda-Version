@@ -23,6 +23,26 @@ public sealed class BusquedaTextoTests
     public void ConsultaValida_UsaLasReglasDelNodo(string texto, bool esperado) => Assert.Equal(esperado, BusquedaTexto.ConsultaValida(texto));
 
     [Fact]
+    public void EnPausaPorLicencia_EsSoloEl402DeModuloNoDisponible_YSuAvisoEsElDeLaLicencia()
+    {
+        // MOD-018 · U-3: Buscar en pausa por la licencia no es un fallo de carga: la tarjeta propia, con el título de Reportes y el texto común de la licencia.
+        var enPausa = Error(402, "no_disponible_por_licencia");
+        Assert.True(BusquedaTexto.EnPausaPorLicencia(enPausa));
+        Assert.False(BusquedaTexto.EnPausaPorLicencia(Error(403, "sin_permiso")));
+        Assert.False(BusquedaTexto.EnPausaPorLicencia(Error(402, "cupo_agotado")));
+        Assert.False(BusquedaTexto.EnPausaPorLicencia(Error(0, null)));
+        Assert.False(BusquedaTexto.EnPausaPorLicencia(null));
+
+        var aviso = BusquedaTexto.Error(enPausa, "motivo que puso el cliente");
+        Assert.Equal(BusquedaTexto.EnPausaTitulo, aviso.Titulo);
+        Assert.Equal("No disponible con la licencia de este equipo", aviso.Titulo);
+        Assert.Contains("licencia de este equipo", aviso.Detalle);
+        Assert.Contains("«Licencia»", aviso.Detalle);
+        Assert.True(aviso.Grave);
+        Assert.DoesNotContain("No se pudo buscar", aviso.Titulo);
+    }
+
+    [Fact]
     public void ConsultaValida_RechazaLoDemasiadoLargo()
     {
         Assert.True(BusquedaTexto.ConsultaValida(new string('x', 120)));

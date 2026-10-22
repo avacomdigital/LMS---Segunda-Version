@@ -62,7 +62,12 @@ class ContenidoTests(unittest.TestCase):
             self.assertEqual(plan.gracia_dias, 30, plan.nombre)
             self.assertLessEqual(plan.equipos, 60, plan.nombre)
             self.assertLessEqual(plan.usuarios, 1200, plan.nombre)
+            # D-21 (Q-L18): los concurrentes son rendimiento por clase (BR-063) y el tope duro no puede quedar por debajo del tamaño contratado, o una clase se
+            # «llenaría» antes de los equipos que el colegio pagó.
+            self.assertGreaterEqual(plan.concurrentes_pico, plan.equipos, plan.nombre)
+            self.assertLessEqual(plan.concurrentes_normal, plan.concurrentes_pico, plan.nombre)
         self.assertEqual((planes["anual-aula"].equipos, planes["anual-aula"].usuarios), (60, 1200))
+        self.assertEqual((planes["anual-aula"].concurrentes_normal, planes["anual-aula"].concurrentes_pico), (50, 100))   # D-21: se quedan
 
     def test_las_reglas_del_cto_son_un_dato_y_se_comprueban(self):
         with tempfile.TemporaryDirectory() as carpeta:

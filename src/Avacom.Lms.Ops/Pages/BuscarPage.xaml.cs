@@ -1,7 +1,10 @@
+using Avacom.Lms.Core.Licencia;
 using Avacom.Lms.Core.Search;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Busqueda;
 using Avacom.Lms.Ops.Examen;
+using Avacom.Lms.Ops.Licencia.Ui;
+using Avacom.Lms.Ops.Reportes.Ui;
 using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
@@ -168,7 +171,8 @@ public partial class BuscarPage : ContentPage
                 _mostrados.Clear();
                 _avisoDelCatalogo = _avisoDeFiltros = null;           // lo que se dijo de la consulta anterior ya no vale: no se pudo hacer ésta
                 RepintarAvisos();
-                PintarError(BusquedaTexto.Error(Api.UltimoError, Api.UltimoMotivo));
+                if (BusquedaTexto.EnPausaPorLicencia(Api.UltimoError)) PintarPausaPorLicencia();
+                else PintarError(BusquedaTexto.Error(Api.UltimoError, Api.UltimoMotivo));
                 return;
             }
             _ultima = consulta;
@@ -210,6 +214,14 @@ public partial class BuscarPage : ContentPage
         var opciones = await Api.FiltrosAsync(Actor);
         if (opciones is null)
         {
+            // MOD-018 · U-3: con la búsqueda en pausa por la licencia no es «no se pudo cargar todo»: la tarjeta propia, y nada de sugerencias que no se podrían buscar.
+            if (BusquedaTexto.EnPausaPorLicencia(Api.UltimoError))
+            {
+                _avisoPuntual = null;
+                RepintarAvisos();
+                PintarPausaPorLicencia();
+                return;
+            }
             // Sin las opciones se puede buscar igual (el texto no las necesita); se avisa y se reintenta al volver.
             var error = BusquedaTexto.Error(Api.UltimoError, Api.UltimoMotivo);
             _avisoPuntual = $"{error.Titulo}. {error.Detalle}".Trim();
@@ -368,6 +380,28 @@ public partial class BuscarPage : ContentPage
         var reintentar = ExamenUi.Accion("Reintentar", Ds.Rango.Secondary, () => { Programar(inmediata: true); return Task.CompletedTask; }, 200, "buscar-reintentar", margen: false);
         reintentar.Vista.HorizontalOptions = LayoutOptions.Start;
         ResultadosHost.Add(reintentar.Vista);
+    }
+
+    /// <summary>
+    /// MOD-018 · U-3: «Buscar» en pausa por la licencia (402 <c>no_disponible_por_licencia</c>) no es un fallo de carga: la misma tarjeta que Reportes («No disponible con la licencia de
+    /// este equipo», el texto común de la licencia), con «Ver la licencia» para quien la administra y «Reintentar» para cuando se haya renovado. Sin sugerencias: no se podrían buscar.
+    /// </summary>
+    private void PintarPausaPorLicencia()
+    {
+        SugerenciasHost.IsVisible = false;
+        ResumenLabel.IsVisible = false;
+        ResultadosHost.Clear();
+        var aviso = BusquedaTexto.Error(Api.UltimoError, Api.UltimoMotivo);
+        var acciones = new List<View>();
+        if (ReglasDeLicencia.VeLaLicencia(Sesion.Usuario))
+            acciones.Add(ExamenUi.Accion("Ver la licencia", Ds.Rango.Secondary, ReportesUi.Seguro(nameof(BuscarPage), "VerLicencia", () => Shell.Current.GoToAsync("licencia")),
+                200, "buscar-licencia-ver", LicenciaUi.AltoTactil, margen: false).Vista);
+        acciones.Add(ExamenUi.Accion("Reintentar", Ds.Rango.Quiet, ReportesUi.Seguro(nameof(BuscarPage), "ReintentarConLicencia", async () =>
+        {
+            await CargarFiltrosAsync();                                   // si la licencia ya se renovó, vuelven las opciones y la pantalla inicial
+            if (_filtrosCargados) Programar(inmediata: true);
+        }), 170, "buscar-reintentar", LicenciaUi.AltoTactil, margen: false).Vista);
+        ResultadosHost.Add(ReportesUi.Estado(aviso.Titulo, aviso.Detalle, [.. acciones]));
     }
 
     private static Tono TonoDelEstado(Hallazgo h) => (h.Tipo, h.Estado) switch

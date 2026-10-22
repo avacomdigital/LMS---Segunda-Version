@@ -91,6 +91,13 @@ class NodoDeProduccionConElTextoEditadoTests(BaseLicencia):
     def test_la_llave_de_desarrollo_no_se_carga_en_produccion(self):
         from licenciamiento.infraestructura.claves import ClavesPublicas
         carpeta = contenedor.CARPETA_DE_CLAVES
-        self.assertEqual(sorted(ClavesPublicas(carpeta, entorno.PRUEBAS).publicas()), ["dev-1", "dev-2"])
-        self.assertEqual(sorted(ClavesPublicas(carpeta, entorno.DESARROLLO).publicas()), ["dev-1", "dev-2"])
-        self.assertEqual(ClavesPublicas(carpeta, entorno.PRODUCCION).publicas(), {})         # hasta la ceremonia de llaves del CTO (Q-L3) un nodo de producción no acepta ninguna licencia
+        # Fuera de producción valen las dos de desarrollo más las de producción; en producción, SÓLO las de producción (desde la ceremonia del 2026-10-22, D-22,
+        # `produccion.json` trae `prod-2026-1` como vigente; antes estaba vacío y un nodo de producción no aceptaba ninguna licencia).
+        en_pruebas = ClavesPublicas(carpeta, entorno.PRUEBAS).publicas()
+        self.assertLessEqual({"dev-1", "dev-2"}, set(en_pruebas))
+        self.assertEqual(sorted(ClavesPublicas(carpeta, entorno.DESARROLLO).publicas()), sorted(en_pruebas))
+        en_produccion = ClavesPublicas(carpeta, entorno.PRODUCCION).publicas()
+        self.assertEqual(sorted(en_produccion), ["prod-2026-1"])
+        self.assertNotIn("dev-1", en_produccion)
+        self.assertNotIn("dev-2", en_produccion)
+        self.assertEqual(en_produccion["prod-2026-1"].hex(), "78a53652fd857d974ca3c2bd40a2cbc09dcc972809fceebe833ec0fba269f463")   # la pública del acta (07-ceremonia-de-llaves.md)

@@ -223,7 +223,9 @@ public sealed class LicenciaPage : ContentPage
 
     private static View TarjetaDeUso(EstadoLicencia e, ConsumoDeLicencia? consumo)
     {
-        var pila = new VerticalStackLayout { Spacing = 10 };
+        // U-4: la tarjeta tiene que caber ENTERA en su tercio también con «Funciones en pausa» (antes su última nota quedaba cortada por abajo): aire de 8, la
+        // concurrencia y la nota del cupo en un solo párrafo, y con módulos en pausa el aviso ámbar sustituye a la nota final (dicen lo mismo: el núcleo sigue).
+        var pila = new VerticalStackLayout { Spacing = 8 };
         pila.Add(LicenciaUi.Eyebrow("USO DE LO CONTRATADO"));
         pila.Add(new Label { Text = "Equipos y usuarios", FontFamily = Ds.FuenteMedia, FontSize = 22, TextColor = Ds.Tinta });
         var equipos = consumo?.Equipos ?? DelEstado(e.Consumo?.Equipos, e.Limites?.Equipos);
@@ -232,8 +234,7 @@ public sealed class LicenciaPage : ContentPage
         pila.Add(LicenciaUi.Barra("Usuarios", usuarios, "usuarios"));
         var normal = consumo?.Concurrentes?.Normal ?? e.Limites?.ConcurrentesNormal;
         var pico = consumo?.Concurrentes?.Pico ?? e.Limites?.ConcurrentesPico;
-        pila.Add(Ds.Secundario(LicenciaTexto.Concurrencia(normal, pico), 15));
-        pila.Add(Ds.Secundario("El cupo sólo cuenta al crear algo nuevo: lo que ya existe sigue funcionando aunque se llegue al límite.", 13));
+        pila.Add(Ds.Secundario(LicenciaTexto.Concurrencia(normal, pico) + " El cupo sólo cuenta al crear algo nuevo: lo que ya existe sigue funcionando aunque se llegue al límite.", 13));
         pila.Add(Ds.Separador());
 
         pila.Add(LicenciaUi.Eyebrow("MÓDULOS CON LICENCIA"));
@@ -241,7 +242,7 @@ public sealed class LicenciaPage : ContentPage
         var habilitadas = e.Habilitadas;
         foreach (var codigo in CapacidadesLicenciables.Todas)
             pila.Add(LicenciaUi.Modulo(codigo, habilitadas.Contains(codigo)));
-        pila.Add(Ds.Secundario(LicenciaTexto.NuncaSePausa, 13));
+        if (!e.Restringe) pila.Add(Ds.Secundario(LicenciaTexto.NuncaSePausa, 13));
         return LicenciaUi.Tarjeta(pila);
     }
 

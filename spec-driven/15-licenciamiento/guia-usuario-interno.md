@@ -182,6 +182,8 @@ El plan **`anual-aula`** (el de producción) trae 60 equipos y 1200 usuarios. El
 
 ## 6 · La ceremonia de claves (sólo la primera vez, y al rotar)
 
+> **Ya se hizo la primera vez (2026-10-22):** la llave vigente es `prod-2026-1` y viaja en los instaladores desde la 2.14.0. Para emitir hoy usas esa privada (`--privada …\prod-2026-1.avkey`) y su frase de paso; dónde está cada cosa y qué quedó por hacer lo dice `07-ceremonia-de-llaves.md`. Lo que sigue vale para la **rotación**.
+
 Se hace **una vez**, con el CTO presente, en un equipo **sin red**.
 
 1. Genera el par: `avacom-licencias claves generar --kid prod-2026-1 --salida F:\claves`. Elige la frase de paso (mínimo 16 caracteres) y escríbela **dos veces**. Se crean `prod-2026-1.avkey` (la privada, **cifrada**), `prod-2026-1.pub` (la pública) y `prod-2026-1.produccion.json` (la misma pública en el formato que lee el nodo). El nombre de la llave (kid) admite hasta 32 caracteres.

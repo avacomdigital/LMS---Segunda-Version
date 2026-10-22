@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | **Construido y probado** (2026-10-20): `tools/licencias/` con 105 pruebas en verde y la carpeta portátil armada y ensayada. **Aplica las decisiones del CTO del 2026-10-20** (gracia de 30 días corridos exactos, Q-L16; un aula de hasta 60 equipos y 1200 usuarios, Q-L1): ver §3.1. **Sin llave de producción todavía**: la ceremonia la hace el CTO (Q-L3) |
+| Estado | **Construido y probado** (2026-10-20): `tools/licencias/` con 105 pruebas en verde y la carpeta portátil armada y ensayada. **Aplica las decisiones del CTO del 2026-10-20** (gracia de 30 días corridos exactos, Q-L16; un aula de hasta 60 equipos y 1200 usuarios, Q-L1): ver §3.1. **Llave de producción `prod-2026-1` desde el 2026-10-22** (ceremonia de llaves, Q-L3; acta y desviaciones en `07-ceremonia-de-llaves.md`) |
 | Qué es | El «keygen» interno de AVACOM: lee la solicitud (`.avreq`) de un colegio y firma su licencia (`.avlic`). Es una herramienta de consola; **jamás viaja en el instalador ni en el APK** |
 | Quién lo usa | Personal de AVACOM que emite licencias. La guía paso a paso es [guia-usuario-interno.md](guia-usuario-interno.md) |
 | Requisitos que cumple | `LIC-E-01…15` de [requerimientos.md](requerimientos.md) §8 |
@@ -168,7 +168,7 @@ Se corren con `backend\.venv\Scripts\python.exe -m unittest discover -s tools/li
 
 ## 10 · Lo que no se pudo comprobar
 
-- **Una ceremonia real**: no existe la llave de producción; todo se probó con llaves generadas por las pruebas.
+- **Una ceremonia con el procedimiento de §7 al pie de la letra**: la llave de producción `prod-2026-1` existe desde el 2026-10-22, pero nació en el equipo de desarrollo **con red** y por una sesión de Claude Code, no en un equipo sin red con el CTO presente (las desviaciones y lo que falta —dos copias en memorias distintas, el sobre con la frase— están en `07-ceremonia-de-llaves.md`). Las pruebas automáticas siguen usando llaves generadas por ellas mismas.
 - **Un equipo de emisión realmente sin red**: se probó que la herramienta **no abre sockets**, no que el equipo esté desconectado.
 - **Un cliente real que active con un instalador real.** Hasta que la otra sesión termine las fases 2 y 3, la activación se probó con el **lector del nodo** (`licencia.leer`) y su función de estado, no con OPS; ver `03-pruebas.md` para la prueba integrada.
 - **Una memoria USB física** para el `.avkey` (se usó una carpeta).
@@ -179,7 +179,7 @@ Se corren con `backend\.venv\Scripts\python.exe -m unittest discover -s tools/li
 
 | Pregunta | Qué se hizo mientras tanto |
 |---|---|
-| **Q-L3** ¿Dónde vive la privada de producción, quién emite, cada cuánto se rota, cómo se atiende una liberación? | Llave en archivo cifrado con frase de paso; rotación por `kid`; liberaciones con `.avrel` o `--liberacion-pendiente` |
+| **Q-L3** ¿Dónde vive la privada de producción, quién emite, cada cuánto se rota, cómo se atiende una liberación? | **Ceremonia hecha el 2026-10-22** (`07-ceremonia-de-llaves.md`): `prod-2026-1` en un archivo cifrado con frase de paso fuera del repositorio; rotación por `kid`; liberaciones con `.avrel` o `--liberacion-pendiente`. La custodia definitiva (HSM, YubiKey, equipo sin red) sigue siendo del CTO |
 | **Q-L1** Planes, días y límites | **Decidido por el CTO (2026-10-20), provisional:** un aula tiene como máximo **60 equipos y 1200 usuarios** «en una misma pantalla» (`planes/reglas.json`). Dos planes en `planes/*.json` (`anual-aula` con 60 y 1200, `evaluacion`); el plan `anual-sin-tope` se retiró. Cambiar un plan o una regla no toca código. Abierto: los concurrentes (50 y 100) no se tocaron |
 | **Q-L16** Días de gracia | **Decidido por el CTO (2026-10-20): 30 días corridos exactos** (`gracia_dias` en `planes/reglas.json`): el emisor no emite otra gracia y el nodo degrada en el instante exacto, sin histéresis |
 | ¿Dos personas para emitir en producción (cuatro ojos)? | Una sola persona con la privada y su frase; el registro queda para la conciliación. Se puede exigir una segunda confirmación (un segundo operador) si el CTO lo pide |
