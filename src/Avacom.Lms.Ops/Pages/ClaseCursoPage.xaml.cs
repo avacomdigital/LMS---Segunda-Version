@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
@@ -197,6 +198,12 @@ public partial class ClaseCursoPage : ContentPage
                 return;
             }
             AvisoHost.Clear();
+            // MOD-017 (R-01 · R-02): con el aula actualizándose no es un fallo ni una alarma: el nodo no inicia clases unos minutos y las abiertas siguen. Se dice en calma y con las palabras de siempre.
+            if (ActualizacionTexto.SiEstaActualizando(error) is { } actualizando)
+            {
+                AvisoHost.Add(Ds.Alerta_(actualizando.Titulo, actualizando.Completo, Ds.AlertaSuave, Color.FromArgb("#806600")));
+                return;
+            }
             AvisoHost.Add(Ds.Alerta_("No se pudo iniciar la clase", string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))), Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
         }
         finally

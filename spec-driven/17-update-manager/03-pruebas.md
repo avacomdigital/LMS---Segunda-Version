@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Fases 0 a 2 verificadas el **2026-10-21** sobre el código final, sin commit. Lo que **no** se pudo comprobar está en el [§5](#5--lo-que-no-se-probó): léelo antes de dar el tramo por cerrado. |
+| Estado | Fases 0 a 5 verificadas el **2026-10-21** sobre el código final, sin commit (las fases 3 a 5 están en el §6). Lo que **no** se pudo comprobar está en el [§5](#5--lo-que-no-se-probó): léelo antes de dar el tramo por cerrado. |
 | Qué dice cada documento | Diseño y decisiones: [01-diseno.md](01-diseno.md) · contrato: [02-api.md](02-api.md). |
 
 ## 1 · En una mirada
@@ -50,3 +50,30 @@
 - El canal por internet (sólo la variable).
 - La ceremonia de llaves: `claves/produccion.json` está vacío; un nodo de producción no acepta ningún paquete hasta entonces.
 - La concurrencia entre el vigilante y una acción del administrador se protege con un `RLock` del proceso y con el `orden.json` que no se sobrescribe; no se midió con dos procesos.
+
+## 6 · Fases 3 a 5 (clientes, Host y emisor) · verificadas el 2026-10-21
+
+| Qué | Resultado |
+|---|---|
+| Backend · **toda** la suite tras las fases 3 y 4 (`manage.py test`) | **2512 pruebas, OK, 17 omitidas, 1064 s**, sin ningún fallo (las dos de `nodo.tests.test_publicar` de la corrida anterior pasaron). `makemigrations --check`: sin cambios. Ninguna prueba existente cambió. |
+| Core · OPS · Student (`dotnet test`) | **Core 2242 OK** (45 nuevas: contrato con 36 respuestas reales capturadas del backend y la prueba de que un 503 `actualizacion_en_curso` conserva la cola de respuestas) · **Ops.Tests 528 OK** (27 nuevas: flujo, textos y reglas de botones) · **Student.Tests 102 OK**. OPS compila sin advertencias nuevas (2 previas en `ReporteBoletinPage`); Student para Windows, sin advertencias. |
+| En vivo (nodo aislado 8010, OPS con perfil propio, UI Automation + `PrintWindow`) | **56 de 56** comprobaciones (`tests/Avacom.Lms.Ops.Uia/recorrido_actualizacion.py`): paquete alterado rechazado sin guardar nada; importar, programar y desprogramar; aplicar con una sola orden y un solo envío; 503 al iniciar clase mientras dura; el Host simulado termina y la pantalla lo dice sola; con una clase abierta, 409 explicado; reversión con motivo; historial; técnico sin Aplicar ni Programar; profesor sin acceso. Capturas con la cuadrícula de tercios. Hallazgo propio corregido: la hoja cancelaba la confirmación al abrirse. |
+| Host · ensayo F (`Ensayar-Paquete.ps1 -SoloActualizaciones`, última corrida) | **127 comprobaciones, 0 fallas, 1004 s** (tres corridas anteriores fallaron por errores del script del ensayo, no del Host). |
+| **TST-061** (fallo inyectado, reversión automática) | La 3.ª de 5 migraciones falla de verdad: el aula vuelve sola a la versión anterior en **38–43 s** en total (límite 5 min). Fallo al 60 % de la copia: **14,7 s**. Fallo al verificar: **28,5 s**. |
+| Corte del Host en cada checkpoint | Probado en `respaldar`, `instantanea:50`, `copiar:60`, `migrar:60`, `verificar` y en medio de una reversión: reanuda o revierte al arrancar en **6–32 s**. |
+| Rechazos | 7 órdenes rechazadas sin escribir nada ni parar el backend: staging alterado, `.avupd` alterado, `..`, `biblioteca\`, otra app, `backend.env`, letra de unidad. Una orden con una clase abierta: `aplazada`, backend vivo. |
+| Instantánea | Sobrevive a una instalación completa; el Host se niega a volver a código de otra versión; a los 14 días se retira. |
+| De punta a punta con Django real | El emisor firma, se importa desde una carpeta que hace de USB, se aplica (recibido → verificado → aplicando → aplicado) y se revierte por la API con nota hasta `revertido`. |
+| Emisor | 13 pruebas OK; `test_arquitectura` (23) OK. `Build-Installer.ps1` ya excluía `actualizacion	ests` y `claves\desarrollo.json` y falla si viajan (de la Fase 2: no hubo que cambiarlo). |
+| Instalador | `installer/version.json` sube a **2.13.0** y se reconstruye `installer/latest` (resultado en `installer/latest/LEEME.txt` y `SHA256.txt`). |
+
+### Lo que NO se probó (las fases 3 a 5; la lista del §5 sigue vigente salvo lo ya cubierto arriba)
+
+- **El servicio real de Windows con elevación y el instalador Inno real aplicando un paquete.** El Host se ensayó en modo consola sobre copias; no se puede elevar desde la sesión.
+- Un **antivirus** que bloquee un archivo durante la copia; una **memoria USB física**; una **base grande** (cientos de MB: el límite de minutos no se midió con ella).
+- **NFR-022 (30 ensayos con 100 % de reversiones correctas):** se hicieron **cuatro corridas completas** del bloque F con varias reversiones cada una, no 30. Es una foto, no un certificado.
+- El **APK de Android** (sólo se compiló Student para Windows) y el **panel de 86"** real.
+- La **ceremonia de llaves**: `claves/produccion.json` vacío; un nodo instalado rechaza todo paquete (`kid_desconocido`).
+- No hay **proyecto de pruebas del Host** (sin sistema de archivos falso): todo se cubre con el ensayo F.
+- El técnico sin escalada no ve Aplicar/Revertir/Programar (D-25, Q-U12).
+

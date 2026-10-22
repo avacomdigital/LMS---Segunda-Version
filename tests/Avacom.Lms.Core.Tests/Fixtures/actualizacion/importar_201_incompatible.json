@@ -1,0 +1,128 @@
+{
+  "cuerpo": {
+    "accion": null,
+    "aplicado_en": null,
+    "archivo": "incompatible.avupd",
+    "bytes": 1817,
+    "en_curso": false,
+    "estado": "incompatible",
+    "historial": [
+      {
+        "actor": "f222c6cd-86ec-4fcd-9ef6-5ebf42113872",
+        "detalle": {
+          "bytes": 1817,
+          "kid": "upd-dev-1",
+          "modulos": [
+            "reporting"
+          ],
+          "nombre": "Reportes 1.4.0 · corrección del boletín",
+          "origen": "unidad",
+          "sha256": "558e5ef8027fc2c94c8ecba16e867365cbc5973a7b0d5742d2ef61e06339316e"
+        },
+        "en": 1792639079333,
+        "id": 4,
+        "paquete_id": "17171717-0009-4000-8000-000000000009",
+        "serie": 7,
+        "tipo": "recibido",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "f222c6cd-86ec-4fcd-9ef6-5ebf42113872",
+        "detalle": {
+          "bytes": 1817,
+          "compatibilidad": {
+            "avisos": [],
+            "espacio_libre": 538684919808,
+            "espacio_requerido": 67111179,
+            "ok": false,
+            "problemas": [
+              {
+                "codigo": "contrato_biblioteca",
+                "detalle": "El paquete habla el contrato 3 de AVACOM Biblioteca y este nodo el 2.",
+                "modulo": ""
+              }
+            ]
+          },
+          "incompatibilidades": [
+            {
+              "codigo": "contrato_biblioteca",
+              "detalle": "El paquete habla el contrato 3 de AVACOM Biblioteca y este nodo el 2.",
+              "modulo": ""
+            }
+          ],
+          "kid": "upd-dev-1",
+          "modulos": [
+            "reporting"
+          ],
+          "nombre": "Reportes 1.4.0 · corrección del boletín",
+          "origen": "unidad",
+          "sha256": "558e5ef8027fc2c94c8ecba16e867365cbc5973a7b0d5742d2ef61e06339316e"
+        },
+        "en": 1792639079333,
+        "id": 5,
+        "paquete_id": "17171717-0009-4000-8000-000000000009",
+        "serie": 7,
+        "tipo": "incompatible",
+        "version_producto": "2.12.1"
+      }
+    ],
+    "importado_por": "f222c6cd-86ec-4fcd-9ef6-5ebf42113872",
+    "incompatibilidades": [
+      {
+        "codigo": "contrato_biblioteca",
+        "detalle": "El paquete habla el contrato 3 de AVACOM Biblioteca y este nodo el 2.",
+        "modulo": ""
+      }
+    ],
+    "kid": "upd-dev-1",
+    "manifiesto": {
+      "archivos": 2,
+      "bytes": 249,
+      "emitido_en": 1789740800000,
+      "modulos": [
+        {
+          "cambia_contrato": false,
+          "migraciones": [
+            "0004_parche_de_ejemplo"
+          ],
+          "nombre": "reporting",
+          "requiere": {
+            "nodo": 1
+          },
+          "serie": 7,
+          "version": "1.4.0",
+          "version_contrato": 1,
+          "version_datos": 4
+        }
+      ],
+      "nombre": "Reportes 1.4.0 · corrección del boletín",
+      "nota": "Paquete de pruebas.",
+      "paquete_id": "17171717-0009-4000-8000-000000000009",
+      "requisitos": {
+        "cliente_minimo": null,
+        "contrato_biblioteca": 3,
+        "contrato_red": null,
+        "espacio_bytes": 0
+      },
+      "serie": 7,
+      "version_minima": "2.12.0",
+      "version_producto": "2.12.1"
+    },
+    "modulos": [
+      "reporting"
+    ],
+    "nombre": "Reportes 1.4.0 · corrección del boletín",
+    "orden_id": null,
+    "origen": "unidad",
+    "paquete_id": "17171717-0009-4000-8000-000000000009",
+    "recibido_en": 1792639079333,
+    "revertible": false,
+    "revertible_hasta": null,
+    "serie": 7,
+    "sha256": "558e5ef8027fc2c94c8ecba16e867365cbc5973a7b0d5742d2ef61e06339316e",
+    "ultima_en": 1792639079333,
+    "ventana": null,
+    "version_producto": "2.12.1"
+  },
+  "status": 201
+}

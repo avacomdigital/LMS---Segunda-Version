@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Gradebook;
@@ -252,6 +253,27 @@ public static class Sesion
                 _baseNodo = actual;
             }
             return _nodo;
+        }
+    }
+
+    private static ActualizacionApi? _actualizacion;
+    private static Uri? _baseActualizacion;
+
+    /// <summary>
+    /// El cliente de <c>/api/actualizacion/</c> (MOD-017 · Update Manager), una instancia por dirección: el estado y los módulos del nodo, los paquetes de las memorias, su importación,
+    /// programación, aplicación y reversión, y el historial. Sólo lo usa la pantalla «Actualizaciones» (administración y técnico).
+    /// </summary>
+    public static ActualizacionApi Actualizacion
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_actualizacion is null || _baseActualizacion != actual)
+            {
+                _actualizacion = new ActualizacionApi(Http, actual);
+                _baseActualizacion = actual;
+            }
+            return _actualizacion;
         }
     }
 

@@ -1,0 +1,21 @@
+{
+  "accion": "aplicar",
+  "detalle": "simulado por la prueba",
+  "duracion_ms": 95000,
+  "error": null,
+  "formato": 1,
+  "iniciado_en": 1792639077799,
+  "migraciones": [
+    {
+      "modulo": "reporting",
+      "nombre": "0004_parche_de_ejemplo",
+      "ok": true
+    }
+  ],
+  "orden_id": "4cf9ea11-78ae-4734-97d2-4f72ae06727f",
+  "paquete_id": "17171717-0001-4000-8000-000000000001",
+  "paso": "verificar",
+  "respaldo": "C:\\Users\\AVACOM\\AppData\\Local\\Temp\\avacom-actualizacion-prueba-wjmmgzf7\\Respaldos\\x",
+  "resultado": "aplicado",
+  "terminado_en": 1792639172799
+}

@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "sesion_activa",
+    "detail": "Hay una clase en curso: la actualización se difiere (FUN-183, R-01).",
+    "sesiones_activas": 1
+  },
+  "status": 409
+}

@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "no_encontrado",
+    "detail": "No hay un paquete con ese identificador.",
+    "paquete_id": "no-existe"
+  },
+  "status": 404
+}

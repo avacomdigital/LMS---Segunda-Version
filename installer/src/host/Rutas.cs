@@ -49,6 +49,16 @@ internal static class Rutas
     public static string CarpetaRespaldos => Path.Combine(RaizDatos, "Respaldos");
 
     /// <summary>
+    /// MOD-017 (Update Manager): paquetes, staging, orden.json, resultado.json y las instantaneas de 14 dias. El backend la calcula por su lado
+    /// (%ProgramData%\AVACOM\OPS Master\Actualizaciones): las dos puntas tienen que coincidir. En un ensayo del instalador el backend usa la variable
+    /// ProgramData que el ensayo mueve, y el host lo imita; en un nodo real es siempre la de ProgramData. Como Respaldos, la desinstalacion no la borra.
+    /// </summary>
+    public static string CarpetaActualizaciones { get; } =
+        EsEnsayo && Environment.GetEnvironmentVariable("ProgramData") is { Length: > 0 } programData
+            ? Path.Combine(programData, "AVACOM", "OPS Master", "Actualizaciones")
+            : Path.Combine(RaizDatos, "Actualizaciones");
+
+    /// <summary>
     /// La cache de medios del nodo: los videos, audios, imagenes, PDF y paginas html que el nodo trae de AVACOM Contenido una sola vez y reparte a las
     /// tabletas. Es REGENERABLE (si se borra, se vuelve a llenar sola), asi que no entra en las copias de seguridad y se borra al desinstalar. Solo el
     /// servicio (SYSTEM) y los administradores la leen: lo que hay ahi son medios de examen, y no deben quedar a la mano de cualquier usuario del equipo.
@@ -92,13 +102,16 @@ internal static class Rutas
         Directory.CreateDirectory(CarpetaRespaldos);
         Directory.CreateDirectory(CarpetaCacheMedios);
         RestringirALaAdministracion(CarpetaCacheMedios);
+        // La orden de actualizacion es lo unico que el host obedece sin que nadie lo vea: solo SYSTEM y los administradores pueden escribirla.
+        Directory.CreateDirectory(CarpetaActualizaciones);
+        RestringirALaAdministracion(CarpetaActualizaciones);
     }
 
     /// <summary>
     /// Quita los permisos heredados de ProgramData (donde los usuarios pueden leer) y deja control total solo a SYSTEM y a los administradores. Si no se
     /// puede (un ensayo sin privilegios, un disco sin permisos), la cache sigue funcionando con los permisos que tenga: no es motivo para no arrancar.
     /// </summary>
-    private static void RestringirALaAdministracion(string carpeta)
+    internal static void RestringirALaAdministracion(string carpeta)
     {
         if (!OperatingSystem.IsWindows()) return;
         try

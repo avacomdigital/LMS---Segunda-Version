@@ -3,7 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Estado | **Implementado** (2026-10-21) en `backend/actualizacion/`. El diseño y lo pendiente están en [01-diseno.md](01-diseno.md). |
-| Respuestas reales | Las captura `backend/actualizacion/tests/test_capturar_contrato.py` contra el backend de verdad (`AVACOM_CAPTURAR_CONTRATO=<carpeta>`): 36 archivos (`estado_*.json`, `importar_*.json`, `aplicar_*.json`, `orden_json.json`, `resultado_json.json`, `ejemplo.avupd`…). Los cuerpos de abajo salen de esa captura. Para OPS (Fase 3) se guardan en `tests/Avacom.Lms.Core.Tests/Fixtures/actualizacion/`. |
+| Respuestas reales | Las captura `backend/actualizacion/tests/test_capturar_contrato.py` contra el backend de verdad (`AVACOM_CAPTURAR_CONTRATO=<carpeta>`): 36 archivos (`estado_*.json`, `importar_*.json`, `aplicar_*.json`, `orden_json.json`, `resultado_json.json`, `ejemplo.avupd`…). Los cuerpos de abajo salen de esa captura. Para OPS (Fase 3, hecho) se guardan en `tests/Avacom.Lms.Core.Tests/Fixtures/actualizacion/`. |
 
 ## 0 · Convenciones
 
@@ -121,9 +121,9 @@ Carpeta: `%ProgramData%\AVACOM\OPS Master\Actualizaciones\` (en desarrollo, `AVA
  "pasos": ["comprobar", "respaldar", "instantanea", "copiar", "migrar", "verificar"]}
 ```
 
-En una reversión: `"accion": "revertir"`, `nota` con lo que escribió la administración, las migraciones en orden inverso (se migra a cada `reverso`) y `pasos` sin `instantanea` (se restaura desde ella).
+En una reversión: `"accion": "revertir"`, `nota` con lo que escribió la administración, las migraciones en orden inverso (se migra a cada `reverso`) y `pasos` sin `instantanea` (se restaura desde ella). **Orden real en el Host (D-20):** `comprobar → respaldar → migrar → copiar → verificar`: se migra hacia atrás *antes* de devolver el código, porque el reverso necesita el código que define la migración.
 
-Lo que el `Host` debe hacer (Fase 4), con un `checkpoint.json` antes de cada paso: **comprobar** (firma y SHA del `.avupd` otra vez, espacio, cero sesiones: si hay una, `aplazada`), **respaldar** (`Datos.Respaldar`: base, `-wal`, `-shm` y `backend.env`, con el servicio parado), **instantanea** (copiar a `versiones\<id>\anterior\` cada archivo de `archivos[]` que exista en `Backend\`), **copiar** (desde `staging\` verificando el SHA-256 de cada archivo al escribirlo), **migrar** (`preparar` con `check` y `migrate` por módulo, en orden de dependencias), **verificar** (arrancar, `/health/` con los módulos en la versión nueva). Fallo en 2 a 6: reversión automática a la instantánea y a la copia, verificada, dentro de `limite_minutos`. Si la reversión falla: no borrar nada y `reversion_fallida`.
+Lo que el `Host` hace (Fase 4, implementado en `installer/src/host/Actualizacion/`), con un `checkpoint.json` antes de cada paso: **comprobar** (firma y SHA del `.avupd` otra vez, espacio, cero sesiones: si hay una, `aplazada`), **respaldar** (`Datos.Respaldar`: base, `-wal`, `-shm` y `backend.env`, con el servicio parado), **instantanea** (copiar a `versiones\<id>\anterior\` cada archivo de `archivos[]` que exista en `Backend\`), **copiar** (desde `staging\` verificando el SHA-256 de cada archivo al escribirlo), **migrar** (`preparar` con `check` y `migrate` por módulo, en orden de dependencias), **verificar** (arrancar, `/health/` con los módulos en la versión nueva). Fallo en 2 a 6: reversión automática a la instantánea y a la copia, verificada, dentro de `limite_minutos`. Si la reversión falla: no borrar nada y `reversion_fallida`.
 
 **`resultado.json`** (lo escribe el `Host`; Django lo lee al arrancar y en cada tick, lo registra y lo archiva; real, simulado por la prueba):
 

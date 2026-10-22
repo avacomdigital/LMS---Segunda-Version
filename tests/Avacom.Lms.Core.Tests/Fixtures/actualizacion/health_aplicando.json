@@ -1,0 +1,58 @@
+{
+  "cuerpo": {
+    "acceso": {
+      "claves_derivadas": true,
+      "instalado": true,
+      "pin_maestro": "configurado"
+    },
+    "actualizacion": {
+      "en_curso": {
+        "accion": "aplicar",
+        "desde": 1792639077799,
+        "nombre": "Reportes 1.4.0 · corrección del boletín",
+        "orden_id": "4cf9ea11-78ae-4734-97d2-4f72ae06727f",
+        "paquete_id": "17171717-0001-4000-8000-000000000001"
+      },
+      "estado": "aplicando",
+      "orden_pendiente": true,
+      "programados": 0
+    },
+    "administra_cursos": false,
+    "biblioteca": {
+      "capacidades": [],
+      "componente": "",
+      "conteos": {
+        "cursos": 0,
+        "elementos": 0,
+        "paquetes": 0,
+        "politicas": 0
+      },
+      "contrato": null,
+      "disponible": false,
+      "huella_catalogo": "",
+      "huella_derivada": false,
+      "motivo": "AVACOM Biblioteca no está encendida en este equipo (no hay nota de enlace).",
+      "proceso": null,
+      "proceso_vivo": null,
+      "puerto": null,
+      "sugerencia": "Abre AVACOM Biblioteca en el equipo maestro y entra en la pestaña «Contenido AVACOM» con la licencia cargada."
+    },
+    "componente": "avacom-lms-backend",
+    "dueno_de_los_cursos": "AVACOM Biblioteca",
+    "licencia": {
+      "dias_restantes": null,
+      "estado": "activa",
+      "modo": "ilimitada",
+      "restringe": false
+    },
+    "nodo": {
+      "apagado_sucio_previo": false,
+      "estado": "arrancando",
+      "motivos": [],
+      "restringido": false,
+      "version": "2.12.0"
+    },
+    "status": "ok"
+  },
+  "status": 200
+}

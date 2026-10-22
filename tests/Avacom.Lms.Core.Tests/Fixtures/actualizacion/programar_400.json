@@ -1,0 +1,7 @@
+{
+  "cuerpo": {
+    "codigo": "datos_invalidos",
+    "detail": "La ventana empieza en el pasado."
+  },
+  "status": 400
+}

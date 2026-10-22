@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | **Fases 0 a 2 implementadas** (2026-10-21): reconocimiento, núcleo puro (`backend/actualizacion/dominio/`, `aplicacion/`) y la app Django `actualizacion` integrada (tablas `m17_*`, `/api/actualizacion/`, permisos `update.*`, bitácora, eventos en la cola única, vigilante, middleware del 503 y campo `actualizacion` de `/health/`). **Sin commit.** **Pendiente:** la pantalla de OPS y el texto de Student (Fase 3), la aplicación real en el `Host` y el instalador (Fase 4), el ensayo de reversión repetido y `04-operacion.md` / `05-emision.md` (Fase 5). El prompt está en [00-introduccion.md](00-introduccion.md). |
+| Estado | **Fases 0 a 5 implementadas** (2026-10-21), **sin commit**: el núcleo y el backend (`backend/actualizacion/`, fases 0 a 2), los clientes (Core, página Actualizaciones de OPS y el texto de Student, fase 3), la aplicación real en el `Host`, el emisor y el ensayo (fase 4) y la documentación de operación y emisión (fase 5). Lo que sigue **sin comprobarse** (servicio real con elevación, USB física, antivirus, 30 ensayos, ceremonia de llaves) está en [03-pruebas.md](03-pruebas.md) §5. El prompt está en [00-introduccion.md](00-introduccion.md). |
 | Módulo | **MOD-017 · Update Manager** (DOM-009 · Plataforma y Continuidad). CAP-105, CAP-106, CAP-107 y CAP-109 en lo que decide el backend; CAP-108 como ventana única (C-2). FUN-179 a FUN-187; los nueve eventos `actualizacion.*.v1`; permisos `update.apply`, `update.package.import`, `update.schedule` y la extensión `update.read`. |
 | Contrato | [02-api.md](02-api.md) — rutas, cuerpos y errores **reales capturados**, el contrato de `orden.json` / `resultado.json` con el `Host` y la interfaz `actualizacion.servicios`. |
 | Pruebas | [03-pruebas.md](03-pruebas.md) — qué se probó con qué resultado y **qué no se pudo comprobar**. |
@@ -27,7 +27,7 @@
 | API `/api/actualizacion/`, permisos `update.*` (migración `acceso/0020`), acciones de bitácora, los 9 + 2 eventos en el catálogo de la cola única, `/health/` aditivo, variables `AVACOM_ACTUALIZACION_*` | `interfaces/` · `acceso/dominio/plantillas.py` · `audit/dominio/catalogos.py` · `nodo/dominio/catalogo_datos.py` · `expediente/views.py` · `settings.py` · `README.md` |
 | El emisor de **pruebas** (llaves de desarrollo derivadas de una semilla pública) y las llaves públicas de publicación (`claves/produccion.json` **vacío** hasta la ceremonia) | `tests/emisor.py` · `claves/` |
 
-| NO entra (queda preparado y dicho) | Por qué |
+| NO entra (queda preparado y dicho) — **las filas de Fase 3 y 4 se construyeron después: ver §16** | Por qué |
 |---|---|
 | **Aplicar de verdad**: copiar a `backend/`, migrar, verificar, revertir, la instantánea de 14 días, el verbo del `Host`, el bloque E del ensayo (TST-061) | Fase 4. Sólo SYSTEM escribe en `Program Files` (P-06): el backend decide y deja la orden; el `Host` aplica con el servicio parado. Hoy nadie lee `orden.json`: un paquete `aplicando` se queda ahí hasta que exista el `Host` (o diez minutos sin orden en disco, §6). |
 | La pantalla **Actualizaciones** de OPS, `Core/Actualizacion/` y el texto de Student | Fase 3. El contrato ya está capturado para los clientes de C# (`test_capturar_contrato.py`). |
@@ -212,3 +212,23 @@ Ninguna clave foránea sale del módulo; ninguna columna guarda personas ni ruta
 ## 15 · Preguntas para el CTO (`Q-U`)
 
 Las respuestas por defecto del prompt se adoptaron tal cual: Q-U1 ventana única; Q-U2 3 y 5 min; Q-U3 import técnico y administración, schedule administración; Q-U4 reversión manual por la administración con `update.apply` y nota (el procedimiento del técnico, Fase 5); Q-U5 diferido; Q-U6 sólo detección (declarada); Q-U7 AVACOM Contenido; Q-U8 llaves distintas con el mismo procedimiento; Q-U9 15 min (el nodo no conoce el horario); Q-U10 no en MVP. Una pregunta nueva: **Q-U11** ¿el paquete debe aceptar compresión (D-4 lo descarta: un paquete de código mide pocos MB y así cada byte queda determinado por el contenido)?
+
+## 16 · Fases 3 a 5 (clientes, Host, emisor y operación)
+
+**Fase 3 · clientes.** `src/Avacom.Lms.Core/Actualizacion/` (modelos, `ActualizacionApi`, `ActualizacionTexto` y las reglas puras de qué botón se ofrece según rol, clase abierta, plazo de 14 días y orden en curso); `src/Avacom.Lms.Ops/Pages/ActualizacionesPage.cs` y `Ops/Actualizacion/` (flujo puro, selector táctil de ventana, hoja de confirmación única); botón «Actualizaciones» en el menú, sólo para administración y técnico (un profesor nunca lo ve); texto de `actualizacion_en_curso` en Student (`ClaseUnirsePage`) y en OPS (`ClaseCursoPage`), sin bloquear tabletas ya registradas y con la cola de respuestas intacta (un 503 no la descarta). Fixtures reales de 36 respuestas en `tests/Avacom.Lms.Core.Tests/Fixtures/actualizacion/`.
+
+**Fase 4 · Host.** `installer/src/host/Actualizacion/` (`Orden`, `Aplicador`, `Instantanea`, `Soporte`, `VigilanteDeActualizaciones`) y el verbo `aplicar-actualizacion`. El servicio mira `orden.json` cada 3 s, escribe `checkpoint.json` antes de cada paso, aplaza si ve una clase (con el backend aún vivo), revierte solo, retoma o deshace tras un corte al arrancar y deja `resultado.json`. Emisor interno en `tools/actualizacion/` (llaves cifradas, `emitir`, `verificar`, `ver`, `plantilla`); ver [05-emision.md](05-emision.md). Bloque F de `Ensayar-Paquete.ps1`.
+
+| # | Decisión |
+|---|---|
+| D-20 | **Orden de los pasos en una reversión manual**: `comprobar → respaldar → migrar → copiar → verificar` (no `copiar` antes de `migrar` como decía el primer borrador de `02-api.md` §3): el reverso de una migración necesita el código que la define, así que se migra hacia atrás **antes** de devolver el código. |
+| D-21 | Los ganchos `AVACOM_ACTUALIZACION_FALLO` y `AVACOM_ACTUALIZACION_CORTE` (fallar o matar al Host en un paso) sólo actúan con `AVACOM_OPS_ENSAYO=1` y una carpeta de estado de pruebas. Son código permanente, no temporal. |
+| D-22 | `limite_minutos` acota el avance hacia adelante; la duración de la reversión se mide y se informa aparte en el `detalle` del resultado. |
+| D-23 | La instantánea anota la versión del producto: tras una instalación completa el Host **no vuelve** a código de otra versión (lo dice y no toca nada). `Actualizaciones\` está declarada `uninsneveruninstall`, como `Respaldos` (P-17). |
+| D-24 | La pantalla de OPS pide el motivo de una reversión de una **lista cerrada** (no hay teclado, R-10); el texto elegido es la nota que exige el nodo. |
+| D-25 | Aplicar, programar y revertir sólo se ofrecen a la administración: la pantalla no concede la escalada temporal ESC-01 del técnico (el nodo igual decide el permiso). |
+
+**Preguntas nuevas:** **Q-U12** ¿el técnico debe poder pedir la escalada ESC-01 desde la propia pantalla Actualizaciones, o sigue siendo la administración quien aplica? **Q-U4** sigue abierta: no hay reversión sin técnico en sitio cuando la propia reversión automática falla ([04-operacion.md](04-operacion.md) §4).
+
+**Qué falta y se sabe:** la ceremonia de llaves (`claves/produccion.json` vacío: un nodo de producción rechaza todo paquete con `kid_desconocido`); el paquete portátil del emisor (`Build-Emisor.ps1`); la instalación del servicio real con elevación; los 30 ensayos de NFR-022 (hechos 4 corridas completas, ver [03-pruebas.md](03-pruebas.md)).
+

@@ -1,0 +1,9 @@
+{
+  "cuerpo": {
+    "codigo": "firma_invalida",
+    "detail": "El paquete fue firmado con una llave que este equipo no reconoce.",
+    "kid": "prod-2030-1",
+    "motivo": "kid_desconocido"
+  },
+  "status": 422
+}

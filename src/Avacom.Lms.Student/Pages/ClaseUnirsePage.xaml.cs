@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
@@ -130,6 +131,8 @@ public partial class ClaseUnirsePage : ContentPage
     {
         { Frenado: true } => ("Demasiados códigos equivocados", "Espera un momento y vuelve a intentarlo."),
         { AulaLlena: true } => ("El aula está llena ahora mismo", "Avisa a tu profesor; tu lugar no se pierde."),
+        // MOD-017 (P-20): el aula se actualiza. Sólo se le pide esperar: nada de lo que hizo se pierde y esto nunca bloquea una tableta ya registrada.
+        { ActualizacionEnCurso: true } => (ActualizacionTexto.EnCursoParaTableta, ActualizacionTexto.EnCursoDetalleTableta),
         _ => error?.Codigo switch
         {
             "codigo_invalido" => ("Ese código no es", "Pídele a tu profesor que lo muestre en la pantalla."),

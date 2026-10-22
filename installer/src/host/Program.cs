@@ -28,6 +28,7 @@ internal static class Program
             "validar" => Validar(argumentos),
             "respaldar" => Respaldar(argumentos),
             "restaurar-datos" => RestaurarDatos(),
+            "aplicar-actualizacion" => new Actualizacion.VigilanteDeActualizaciones().AplicarAhora(),
             "vaciar-datos" => VaciarDatos(),
             "puerto-libre" => PuertoLibre(),
             "instalar-servicio" => Servicio.Instalar(new Registro("instalacion.log")),

@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "estado_invalido",
+    "detail": "Sólo se revierte un paquete aplicado; éste está «verificado».",
+    "estado": "verificado"
+  },
+  "status": 409
+}

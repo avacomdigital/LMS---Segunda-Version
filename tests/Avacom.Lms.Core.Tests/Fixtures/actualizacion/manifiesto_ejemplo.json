@@ -1,0 +1,48 @@
+{
+  "archivos": [
+    {
+      "bytes": 95,
+      "ruta": "reporting/dominio/parche_de_ejemplo.py",
+      "sha256": "801a4dfd3a9c3a2e33297599533a44c49dc5f11ab5bc022ebda9e04f16f8546f"
+    },
+    {
+      "bytes": 154,
+      "ruta": "reporting/migrations/0004_parche_de_ejemplo.py",
+      "sha256": "e90a33e7adcfcbfc9fdcb102368c219d4b6825699160b6f749c1af641ae6380d"
+    }
+  ],
+  "criticas": [],
+  "emitido_en": 1789740800000,
+  "formato": 1,
+  "modulos": [
+    {
+      "cambia_contrato": false,
+      "migraciones": [
+        {
+          "nombre": "0004_parche_de_ejemplo",
+          "reverso": "0003_corte_cola_unica"
+        }
+      ],
+      "nombre": "reporting",
+      "requiere": {
+        "nodo": 1
+      },
+      "serie": 7,
+      "version": "1.4.0",
+      "version_contrato": 1,
+      "version_datos": 4
+    }
+  ],
+  "nombre": "Reportes 1.4.0 · corrección del boletín",
+  "nota": "Paquete de pruebas.",
+  "paquete_id": "17171717-0001-4000-8000-000000000001",
+  "producto": "AVACOM LMS",
+  "requisitos": {
+    "cliente_minimo": "2.10.0",
+    "contrato_biblioteca": 2,
+    "contrato_red": null,
+    "espacio_bytes": 0
+  },
+  "version_minima": "2.12.0",
+  "version_producto": "2.12.1"
+}

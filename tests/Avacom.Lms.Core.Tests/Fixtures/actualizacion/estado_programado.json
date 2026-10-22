@@ -1,0 +1,466 @@
+{
+  "cuerpo": {
+    "canal": null,
+    "contrato_biblioteca": 2,
+    "dias_reversion": 14,
+    "en_curso": null,
+    "espacio_libre": 538685075456,
+    "estado": "programado",
+    "modulos": [
+      {
+        "actualizable": true,
+        "consume": {
+          "audit": [
+            1,
+            1
+          ],
+          "licenciamiento": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-001",
+        "nombre": "acceso",
+        "produce": [
+          "identidad",
+          "acceso"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 20
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ],
+          "classroom_engine": [
+            1,
+            1
+          ],
+          "nodo": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-017",
+        "nombre": "actualizacion",
+        "produce": [
+          "actualizacion"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 2
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-019",
+        "nombre": "audit",
+        "produce": [
+          "auditoria"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 1
+      },
+      {
+        "actualizable": false,
+        "consume": {},
+        "modulo": "frontera AVACOM Contenido",
+        "nombre": "biblioteca",
+        "produce": [],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 2,
+        "version_datos": 0
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ],
+          "device_manager": [
+            1,
+            1
+          ],
+          "nodo": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-007",
+        "nombre": "classroom_engine",
+        "produce": [
+          "aula"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 4
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ]
+        },
+        "modulo": "cola de medios (MOD-007 / MOD-009, sin ficha propia)",
+        "nombre": "cola_medios",
+        "produce": [
+          "medios"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 1
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "licenciamiento": [
+            1,
+            1
+          ],
+          "nodo": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-009",
+        "nombre": "device_manager",
+        "produce": [
+          "dispositivo"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 6
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ],
+          "classroom_engine": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-010",
+        "nombre": "evaluacion",
+        "produce": [
+          "evaluacion"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 2
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ]
+        },
+        "modulo": "MOD-012",
+        "nombre": "expediente",
+        "produce": [
+          "progreso"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 3
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ],
+          "evaluacion": [
+            1,
+            1
+          ],
+          "nodo": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-011",
+        "nombre": "gradebook",
+        "produce": [
+          "calificacion"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 4
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "device_manager": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-018",
+        "nombre": "licenciamiento",
+        "produce": [
+          "licencia"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 2
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ],
+          "classroom_engine": [
+            1,
+            1
+          ],
+          "nodo": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-008",
+        "nombre": "modo_estudio",
+        "produce": [
+          "estudio"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 2
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-015",
+        "nombre": "nodo",
+        "produce": [
+          "nodo"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 3
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ],
+          "classroom_engine": [
+            1,
+            1
+          ],
+          "device_manager": [
+            1,
+            1
+          ],
+          "evaluacion": [
+            1,
+            1
+          ],
+          "gradebook": [
+            1,
+            1
+          ],
+          "modo_estudio": [
+            1,
+            1
+          ],
+          "nodo": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-013",
+        "nombre": "reporting",
+        "produce": [
+          "reporte"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 3
+      },
+      {
+        "actualizable": true,
+        "consume": {
+          "acceso": [
+            1,
+            1
+          ],
+          "audit": [
+            1,
+            1
+          ],
+          "biblioteca": [
+            1,
+            2
+          ],
+          "classroom_engine": [
+            1,
+            1
+          ],
+          "evaluacion": [
+            1,
+            1
+          ],
+          "modo_estudio": [
+            1,
+            1
+          ],
+          "nodo": [
+            1,
+            1
+          ]
+        },
+        "modulo": "MOD-021",
+        "nombre": "search",
+        "produce": [
+          "busqueda"
+        ],
+        "serie": 1,
+        "version": "1.0.0",
+        "version_contrato": 1,
+        "version_datos": 3
+      }
+    ],
+    "orden_pendiente": false,
+    "paquetes": {
+      "programado": 1
+    },
+    "programados": [
+      {
+        "nombre": "Reportes 1.4.0 · corrección del boletín",
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "ventana": {
+          "desde": 1792640877799,
+          "hasta": 1792644477799
+        }
+      }
+    ],
+    "revertibles": [],
+    "servidor_en": 1792639077799,
+    "version": "2.12.0"
+  },
+  "status": 200
+}

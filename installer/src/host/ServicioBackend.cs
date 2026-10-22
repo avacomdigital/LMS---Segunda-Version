@@ -1,3 +1,4 @@
+using Avacom.Ops.Host.Actualizacion;
 using Microsoft.Extensions.Hosting;
 
 namespace Avacom.Ops.Host;
@@ -17,13 +18,21 @@ internal sealed class ServicioBackend : BackgroundService
 {
     private static readonly int[] EsperasSegundos = [2, 5, 10, 20, 30, 60];
 
+    private static readonly TimeSpan MiraLaOrdenCada = TimeSpan.FromSeconds(3);
+
     private readonly Registro _registro = new("servicio.log");
+
+    // MOD-017: obedece la orden de actualizacion que el backend deja en Actualizaciones\orden.json. Es el UNICO que para el backend a proposito.
+    private readonly VigilanteDeActualizaciones _actualizaciones = new();
 
     protected override async Task ExecuteAsync(CancellationToken cancelacion)
     {
         var puerto = Configuracion.PuertoConfigurado();
         _registro.Escribir($"Servicio {Servicio.Nombre} iniciado. Instalacion: {Rutas.RaizInstalacion}");
         _registro.Escribir($"Escucha prevista: {Configuracion.HostPorDefecto}:{puerto}");
+
+        // Un corte a mitad de una actualizacion se retoma o se deshace ANTES de levantar el backend: nunca arranca sobre un codigo a medias.
+        _actualizaciones.Arrancar();
 
         var intento = 0;
         while (!cancelacion.IsCancellationRequested)
@@ -50,6 +59,14 @@ internal sealed class ServicioBackend : BackgroundService
                 continue;
             }
 
+            // Con el backend caido tambien se atiende la orden (sin nada que parar).
+            if (_actualizaciones.HayOrdenNueva())
+            {
+                await Task.Run(() => _actualizaciones.Atender(() => { }), CancellationToken.None).ConfigureAwait(false);
+                intento = 0;
+                continue;
+            }
+
             if (!Salud.PuertoLibre(puerto) && !await Salud.EsNuestroBackendAsync(puerto).ConfigureAwait(false))
             {
                 _registro.Escribir(
@@ -67,8 +84,39 @@ internal sealed class ServicioBackend : BackgroundService
 
                 if (salud.Correcto) intento = 0;
 
-                var codigo = await backend.EsperarSalidaAsync(cancelacion).ConfigureAwait(false);
+                var salida = backend.EsperarSalidaAsync(cancelacion);
+                var actualizado = false;
+                while (!salida.IsCompleted && !cancelacion.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await Task.WhenAny(salida, Task.Delay(MiraLaOrdenCada, cancelacion)).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    if (salida.IsCompleted || cancelacion.IsCancellationRequested) break;
+
+                    _actualizaciones.Mantener();
+                    if (!_actualizaciones.HayOrdenNueva()) continue;
+
+                    // Hay una orden: se atiende con el backend vivo (para ver si hay clase) y solo si no la hay se para. El resto, sin esperar a nadie ni a la cancelacion:
+                    // un servicio que se detiene a mitad de una actualizacion la deja en su checkpoint y el siguiente arranque la retoma.
+                    _registro.Escribir("Hay una orden de actualizacion: se atiende (el backend se para solo si no hay ninguna clase).");
+                    actualizado = await Task.Run(() => _actualizaciones.Atender(backend.Detener), CancellationToken.None).ConfigureAwait(false);
+                    if (actualizado) break;
+                }
+
+                if (actualizado)
+                {
+                    _registro.Escribir("La actualizacion termino con el backend parado: se vuelve a levantar.");
+                    intento = 0;
+                    continue;
+                }
+
                 if (cancelacion.IsCancellationRequested) break;
+                var codigo = await salida.ConfigureAwait(false);
                 _registro.Escribir($"El backend termino con codigo {codigo}. Se reintentara.");
             }
 

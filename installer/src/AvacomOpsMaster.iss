@@ -155,6 +155,11 @@ Name: "{commonappdata}\AVACOM\{#NombreCorto}\Config"; Permissions: system-full a
 Name: "{commonappdata}\AVACOM\{#NombreCorto}\Data"; Permissions: system-full admins-full; Flags: uninsneveruninstall
 ; Copias de seguridad previas a cada actualizacion (las ultimas cinco).
 Name: "{commonappdata}\AVACOM\{#NombreCorto}\Respaldos"; Permissions: system-full admins-full; Flags: uninsneveruninstall
+; Update Manager (MOD-017): los paquetes .avupd importados, el staging, orden.json / resultado.json y la instantanea del codigo que un paquete cambio (14 dias, para poder
+; volver atras). Es estado del nodo, como Respaldos: una actualizacion COMPLETA no la borra (ni este [Dirs] ni [InstallDelete]) y la desinstalacion tampoco. Solo SYSTEM y los
+; administradores la escriben: orden.json es lo unico que el servicio obedece sin que nadie lo vea. Ojo: tras una instalacion completa la instantanea de un paquete queda
+; guardada pero ya no sirve para volver atras (el host lo comprueba con la version del producto que anoto en su indice y lo dice).
+Name: "{commonappdata}\AVACOM\{#NombreCorto}\Actualizaciones"; Permissions: system-full admins-full; Flags: uninsneveruninstall
 ; Registros del nodo (JSON Lines del backend, auditoria en archivo, y los del
 ; instalador y el lanzador). El lanzador escribe su diagnostico como el usuario
 ; del aula, no como administrador: necesita poder escribir aqui.

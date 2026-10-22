@@ -114,6 +114,7 @@ Y fuera de la carpeta del programa, porque cambia con el uso:
 %ProgramData%\AVACOM\OPS Master\Config      backend.env (claves de este nodo)
 %ProgramData%\AVACOM\OPS Master\Data        ops-master.sqlite3 (+ -wal y -shm): la base del nodo
 %ProgramData%\AVACOM\OPS Master\Respaldos   copias previas a cada actualización (las últimas 5)
+%ProgramData%\AVACOM\OPS Master\Actualizaciones  paquetes de módulo, orden y resultado del Update Manager y las instantáneas de 14 días (ver «Paquetes de módulo»)
 %ProgramData%\AVACOM\OPS Master\Logs        registros del nodo (ver «Registros»)
 %ProgramData%\AVACOM\OPS Master\CacheMedios  caché de medios (ver «Caché de medios»)
 %LOCALAPPDATA%\AVACOM\OPS Master\WebView2   perfil de WebView2 de cada usuario (lo crea el icono)
@@ -204,6 +205,7 @@ El nodo se configura **únicamente** con `%ProgramData%\AVACOM\OPS Master\Config
 | `preparar` | El instalador | Configuración (crea o normaliza `backend.env`), claves, comprobación del runtime, configuración efectiva, migraciones (según la política de datos) |
 | `validar [seg]` | El instalador | `/health/` responde, el WebSocket acepta conexiones, el módulo de acceso lee su base y el backend escribe sus registros; escribe `Logs\resumen-nodo.txt` (incluye el estado de AVACOM Contenido) |
 | `salud [seg]` | Diagnóstico | Espera a que `/health/` responda |
+| `aplicar-actualizacion` | Un técnico, con el servicio **parado** | Retoma lo que un corte dejó a medias y atiende `Actualizaciones\orden.json` (el servicio lo hace solo). 0 aplicado/revertido · 30 aplazada · 31 rechazada · 32 reversión fallida |
 | `puerto-libre` | Diagnóstico | 0 libre · 12 nuestro backend · 13 ajeno |
 | `instalar-servicio`, `quitar-servicio` | El instalador | Registro en el SCM |
 | `iniciar-servicio`, `detener-servicio` | El instalador | Control del servicio |
@@ -678,6 +680,30 @@ y, si se quiere, de ancho de banda. El diseño completo está en `spec-driven/11
   técnico haya cambiado.
 - **El ensayo del paquete** (`Ensayar-Paquete.ps1`) comprueba que las claves están, que la caché es la del nodo y no la de un entorno ajeno, y que `/api/medios/cola/` responde.
 - **El verificador** (`Verificar-Instalador.ps1`) avisa si la cola está apagada y cuánto ocupa la caché.
+
+## Paquetes de módulo (MOD-017 · Update Manager)
+
+El instalador completo sigue siendo la única ruta para el producto entero (el host, el Python embebido, OPS y Student). Un **paquete `.avupd`** actualiza sólo módulos
+del backend, sin internet y sin reinstalar. El backend (Django) verifica la firma y la compatibilidad y deja una **orden** en `Actualizaciones\orden.json`; el **host**
+(el servicio, SYSTEM: el único que escribe en Program Files) la obedece, y Django registra el resultado (`resultado.json`) al volver a arrancar.
+
+```text
+comprobar → respaldar → instantanea → copiar → migrar → verificar        (revertir: comprobar → respaldar → migrar → copiar → verificar)
+```
+
+- **Antes de parar nada** se comprueba la orden (formas, rutas confinadas a `Backend\`, huella del `.avupd` y de cada archivo del staging, espacio) y que **no haya una clase**: con una clase
+  abierta el resultado es `aplazada` y el backend sigue vivo. El host nunca detiene una clase (R-01).
+- **Un checkpoint antes de cada paso** (`Actualizaciones\checkpoint.json`). Si el host muere, al arrancar el servicio —antes de levantar el backend— reanuda (si aún no se cambió nada o sólo faltaba
+  verificar) o vuelve atrás (si el código o la base quedaron a medias).
+- **Reversión automática** (INV-008): si falla `copiar`, `migrar` o `verificar`, el código vuelve desde `versiones\<paquete>\anterior\` (con su `_indice.json`: qué existía y con qué huella) y, si la migración llegó a empezar,
+  la base y `backend.env` vuelven desde la copia de `Datos.Respaldar`; se arranca el backend viejo y se comprueba. Si ni eso se logra, **no se borra nada** y el resultado es `reversion_fallida`.
+- **Manual** (14 días): la orden `revertir` migra hacia atrás con el reverso que declara cada migración y devuelve el código desde la instantánea. La instantánea se retira a los 14 días (salvo la de una reversión fallida).
+- **Después de una instalación completa** la carpeta `Actualizaciones\` se conserva (no la borran ni el instalador ni la desinstalación, como `Respaldos`), pero la instantánea anota la versión del producto y el host
+  **no vuelve a un código de otra versión**: lo dice y no toca nada.
+- **Lo que un paquete nunca toca**: el host, el Python embebido, `backend.env`, las claves de datos y `backend\biblioteca\`; sólo archivos de las apps que la orden declara (más `avacom_lms/modulos.json`).
+- **El emisor** (`tools/actualizacion/`, llaves privadas fuera del repositorio) no viaja en el instalador; `Build-Installer.ps1` falla si `actualizacion\tests` o `desarrollo.json` entran en el paquete.
+- **El ensayo** (`Ensayar-Paquete.ps1`, bloque F; `-SoloActualizaciones` corre únicamente ése) aplica, revierte, falla de verdad al 60 %, mata al host en cada checkpoint, abre una clase y rechaza órdenes con rutas que se salen.
+  En él, y sólo en él (`AVACOM_OPS_ENSAYO=1` + carpeta de estado de pruebas), `AVACOM_ACTUALIZACION_FALLO=paso[:%]` y `AVACOM_ACTUALIZACION_CORTE=paso[:%]` hacen fallar o matar al host en ese punto.
 
 ## Desinstalar
 

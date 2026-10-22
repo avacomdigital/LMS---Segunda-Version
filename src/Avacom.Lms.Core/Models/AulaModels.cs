@@ -938,6 +938,9 @@ public sealed record ErrorAula(int Estado, string? Codigo, string Detalle, strin
     public bool EsCupoAgotado => Estado == 402 && Codigo == "cupo_agotado";
     /// <summary>Un error de licencia (uno de los dos 402 de MOD-018).</summary>
     public bool PorLicencia => EsModuloNoDisponible || EsCupoAgotado;
+    // --- MOD-017 · Update Manager (R-01 · R-02): el aula se está actualizando. Es un 503 (nunca un 4xx: un 5xx conserva las colas del cliente) y sólo en el inicio de clases. ---
+    /// <summary>503 <c>actualizacion_en_curso</c> (extra <c>reintentar_en_s</c>): el nodo aplica una actualización y no inicia clases hasta terminar; las clases abiertas y las colas no se tocan.</summary>
+    public bool ActualizacionEnCurso => Codigo == "actualizacion_en_curso";
     public long? ReintentarEnSeg => Numero("reintentar_en_seg");
     public long? IntentosRestantes => Numero("intentos_restantes");
     /// <summary>Las reglas que una clave no cumplió (<c>secreto_debil</c>), en palabras del nodo.</summary>

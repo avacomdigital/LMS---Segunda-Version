@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "actualizacion_en_curso",
+    "detail": "El aula se está actualizando; vuelve a intentarlo en unos minutos.",
+    "reintentar_en_s": 60
+  },
+  "status": 503
+}

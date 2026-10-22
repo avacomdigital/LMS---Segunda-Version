@@ -1,0 +1,15 @@
+{
+  "nombre": "Reportes 1.4.0 · corrección del boletín",
+  "version_producto": "2.13.0",
+  "version_minima": "2.12.0",
+  "nota": "Qué cambia, en una frase que el administrador entienda.",
+  "requisitos": {"contrato_biblioteca": 2, "cliente_minimo": "2.12.0", "espacio_bytes": 0, "contrato_red": null},
+  "modulos": [
+    {
+      "nombre": "reporting", "version": "1.4.0", "version_datos": 4, "version_contrato": 1, "serie": 7, "cambia_contrato": false, "requiere": {"nodo": 1},
+      "migraciones": [{"nombre": "0004_boletin", "reverso": "0003_corte_cola_unica"}],
+      "archivos": ["reporting/dominio/boletin.py", "reporting/migrations/0004_boletin.py"]
+    }
+  ],
+  "archivos_extra": ["avacom_lms/modulos.json"]
+}

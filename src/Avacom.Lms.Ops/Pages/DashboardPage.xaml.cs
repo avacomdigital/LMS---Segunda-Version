@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Licencia;
 using Avacom.Lms.Core.Nodo;
 using Avacom.Lms.Core.Services;
@@ -43,6 +44,8 @@ public partial class DashboardPage : ContentPage
         _ = PintarAvisoDelPinAsync();
         // MOD-018: «Licencia» para la administración y el soporte técnico (sin sesión, se deja ver y el nodo decide), y su banda, nunca con una clase abierta en este equipo.
         LicenciaButton.IsVisible = ReglasDeLicencia.VeLaLicencia(Sesion.Usuario);
+        // MOD-017: «Actualizaciones» para la administración y el soporte técnico (update.read); el profesorado nunca la ve.
+        ActualizacionesButton.IsVisible = ReglasDeActualizacion.VeLasActualizaciones(Sesion.Usuario);
         _ = PintarAvisoDeLicenciaAsync();
         // MOD-015: la banda del estado del nodo (restringido o en recuperación) para la administración y el técnico, nunca con una clase abierta en este equipo.
         _ = PintarAvisoDelNodoAsync();
@@ -101,6 +104,12 @@ public partial class DashboardPage : ContentPage
             LicenciaBanner.IsVisible = false;
             RegistroDeFallos.Escribir("ops", "DashboardPage.AvisoDeLicencia", ex);
         }
+    }
+
+    private async void OnActualizacionesClicked(object? sender, EventArgs e)
+    {
+        try { await Shell.Current.GoToAsync("actualizaciones"); }
+        catch (Exception ex) { RegistroDeFallos.Escribir("ops", "DashboardPage.Actualizaciones", ex); }
     }
 
     private async void OnLicenciaClicked(object? sender, EventArgs e)

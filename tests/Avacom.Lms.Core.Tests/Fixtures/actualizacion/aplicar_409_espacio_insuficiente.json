@@ -1,0 +1,16 @@
+{
+  "cuerpo": {
+    "codigo": "espacio_insuficiente",
+    "detail": "No hay espacio libre para la copia de la base, la instantánea y el paquete.",
+    "espacio_libre": 10,
+    "espacio_requerido": 67111183,
+    "incompatibilidades": [
+      {
+        "codigo": "espacio_insuficiente",
+        "detalle": "Hacen falta 64 MB libres y hay 0 MB.",
+        "modulo": ""
+      }
+    ]
+  },
+  "status": 409
+}

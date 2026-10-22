@@ -1,0 +1,7 @@
+{
+  "cuerpo": {
+    "codigo": "datos_invalidos",
+    "detail": "Indica qué paquete importar (`candidato`)."
+  },
+  "status": 400
+}

@@ -65,6 +65,13 @@
     <None Include="..\Avacom.Lms.Core.Tests\Fixtures\nodo\*.json" Link="Fixtures\nodo\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- MOD-017 · Actualizaciones: el flujo de la pantalla (leer, elegir, importar, programar, aplicar y revertir con UNA confirmación y UN envío) y el selector táctil de la ventana. Lógica pura,
+       sin MAUI (la pantalla con interfaz vive en Pages\ActualizacionesPage.cs y Actualizacion\Ui, que NO entran aquí). Las respuestas REALES del backend que ya capturó Core, vinculadas y no copiadas. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Avacom.Lms.Ops\Actualizacion\*.cs" Exclude="..\..\src\Avacom.Lms.Ops\Actualizacion\Ui\**" LinkBase="Ops\Actualizacion" />
+    <None Include="..\Avacom.Lms.Core.Tests\Fixtures\actualizacion\*.json" Link="Fixtures\actualizacion\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- MOD-018 · Licencia: cómo se encuentran los .avlic en las memorias y carpetas, el flujo de tres pasos, la liberación, la copia de custodia y su escritura segura. Lógica pura, sin MAUI:
        las piezas con interfaz viven en Licencia\Ui y NO entran aquí. Las respuestas y los archivos REALES del backend que ya capturó Core, vinculados y no copiados. -->
   <ItemGroup>

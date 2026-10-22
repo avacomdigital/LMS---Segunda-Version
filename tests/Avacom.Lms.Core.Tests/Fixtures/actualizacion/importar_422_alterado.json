@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "paquete_invalido",
+    "detail": "El archivo no tiene la forma de un paquete de actualización de AVACOM.",
+    "motivo": "estructura"
+  },
+  "status": 422
+}

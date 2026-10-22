@@ -1,11 +1,11 @@
 """
 El EMISOR DE PRUEBAS de paquetes `.avupd`: fabrica paquetes firmados con llaves de DESARROLLO que sólo existen aquí. No es el emisor de producción (ése vivirá fuera del nodo,
-en `tools/actualizacion/`, Fase 4; su llave privada nunca está en este repositorio).
+en `tools/actualizacion/`; su llave privada nunca está en este repositorio).
 
   · Las llaves de desarrollo se DERIVAN de una semilla pública (`SEMILLA`) y un `kid` reservado (`upd-dev-1`, `upd-dev-2`): cualquiera que lea este archivo puede firmar un
     paquete de desarrollo, y por eso el nodo sólo las acepta cuando el entorno es de desarrollo o de pruebas POR CONSTRUCCIÓN (el mismo criterio de MOD-018, P-12).
-  · El instalador debe EXCLUIR esta carpeta (`backend\\actualizacion\\tests`) y `actualizacion\\claves\\desarrollo.json`, como hace con los de licenciamiento (pendiente de la Fase 4:
-    `Build-Installer.ps1` todavía no los nombra; `test_arquitectura` lo deja dicho).
+  · El instalador EXCLUYE esta carpeta (`backend/actualizacion/tests`) y `actualizacion/claves/desarrollo.json` y falla si viajan, como hace con los de licenciamiento (`Build-Installer.ps1`,
+    P-03). El emisor de AVACOM (producción) vive fuera del nodo, en `tools/actualizacion/`, y sólo trae llaves generadas con la ceremonia de llaves: nunca una semilla derivada.
 """
 from __future__ import annotations
 

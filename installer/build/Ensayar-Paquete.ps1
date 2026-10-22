@@ -24,6 +24,12 @@
           base vacia dentro de la carpeta del programa.
       D · El lanzador: abre la aplicacion con el perfil de WebView2 en la carpeta del
           usuario (la causa de que OPS se cerrara al abrir una leccion).
+      E · Datos protegidos: una migracion que falla no pierde nada y la copia se restaura.
+      F · Update Manager (MOD-017): el host aplica un paquete de modulo con el backend parado,
+          lo verifica y, si algo falla (una migracion de verdad al 60 %, un fallo inyectado, el
+          host que muere en cada checkpoint), vuelve atras solo; una clase abierta aplaza la
+          aplicacion sin detener nada; las ordenes con rutas que se salen se rechazan; la
+          instantanea dura 14 dias y no la borra una instalacion completa.
 
     El puerto 8000 no se usa: se busca uno libre. Las claves, contrasenas y bases de
     estas pruebas son de usar y tirar.
@@ -38,7 +44,10 @@
 param(
     [Parameter(Mandatory)] [string] $Staging,
     [string] $VersionAnterior = '',
-    [switch] $Conservar
+    [switch] $Conservar,
+    # MOD-017: el bloque F (el host aplica y revierte paquetes de modulo) tarda; -SinActualizaciones lo omite y -SoloActualizaciones corre unicamente ese bloque.
+    [switch] $SinActualizaciones,
+    [switch] $SoloActualizaciones
 )
 
 $ErrorActionPreference = 'Stop'
@@ -224,6 +233,168 @@ function Poner-Valor([string] $config, [string] $clave, [string] $valor) {
     [IO.File]::WriteAllText($config, $texto, (New-Object Text.UTF8Encoding($false)))
 }
 
+# ---------------------------------------------------------------- bloque F · MOD-017 (Update Manager) · utilidades
+# El backend (Django) deja una ORDEN en Actualizaciones\orden.json y el host la aplica; en el ensayo la orden, el staging y el .avupd los arma ESTE script con el mismo formato que
+# el backend (spec-driven\17-update-manager\02-api.md §3), porque el nodo del paquete es de PRODUCCION y no acepta ningun paquete firmado con una llave de desarrollo. Lo que se
+# ensaya es el HOST: comprobar, respaldar, instantanea, copiar, migrar, verificar y la reversion automatica, con migraciones y archivos de verdad sobre el backend empaquetado.
+function Sha-De([string] $ruta) { return (Get-FileHash -LiteralPath $ruta -Algorithm SHA256).Hash.ToLowerInvariant() }
+
+function Escribir-Texto([string] $ruta, [string] $texto) {
+    New-Item -ItemType Directory -Force (Split-Path $ruta) | Out-Null
+    [IO.File]::WriteAllText($ruta, $texto, (New-Object Text.UTF8Encoding($false)))
+}
+
+function Ultima-Migracion([string] $instalacion) {
+    $m = Get-ChildItem (Join-Path $instalacion 'Backend\reporting\migrations') -Filter '*.py' | Where-Object { $_.Name -match '^\d{4}_' } | Sort-Object Name | Select-Object -Last 1
+    return [IO.Path]::GetFileNameWithoutExtension($m.Name)
+}
+
+# Una huella de lo que el paquete puede tocar: cada archivo de reporting\ con su SHA-256, todo en un solo SHA-256.
+function Huella-De-Codigo([string] $instalacion) {
+    $backend = Join-Path $instalacion 'Backend'
+    $lineas = foreach ($a in (Get-ChildItem (Join-Path $backend 'reporting') -Recurse -File | Sort-Object FullName)) { "$($a.FullName.Substring($backend.Length)):$(Sha-De $a.FullName)" }
+    $sha = [Security.Cryptography.SHA256]::Create()
+    return ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes(($lineas -join "`n")))) -replace '-', '').ToLowerInvariant()
+}
+
+$script:ContadorDeMigraciones = 900
+
+# Un paquete de modulo con el formato del backend: un archivo EXISTENTE que cambia (para probar que la instantanea lo devuelve tal cual), archivos nuevos y N migraciones encadenadas
+# (cada una crea una tabla ensayo_*; la numero $Falla, si se pide, lanza un error de verdad). Deja el staging y el .avupd donde los dejaria el backend; NO escribe la orden.
+function Nuevo-Paquete {
+    param([string] $Instalacion, [string] $ActDir, [string] $Etiqueta, [int] $Migraciones = 3, [int] $Falla = 0, [int] $ArchivosNuevos = 2, [int] $Limite = 5)
+    $paqueteId = [guid]::NewGuid().ToString('D')
+    $ordenId = [guid]::NewGuid().ToString('D')
+    $backend = Join-Path $Instalacion 'Backend'
+    $staging = Join-Path $ActDir "staging\$paqueteId"
+    $archivos = New-Object System.Collections.Generic.List[object]
+    $agregar = {
+        param([string] $ruta, [string] $contenido)
+        $destino = Join-Path $staging ($ruta -replace '/', '\')
+        Escribir-Texto $destino $contenido
+        $archivos.Add([ordered]@{ ruta = $ruta; bytes = (Get-Item -LiteralPath $destino).Length; sha256 = (Sha-De $destino) })
+    }
+    $existente = 'reporting/__init__.py'
+    $original = [IO.File]::ReadAllText((Join-Path $backend 'reporting\__init__.py'), [Text.Encoding]::UTF8)
+    & $agregar $existente ($original + "`n# ensayo $Etiqueta`n")
+    for ($i = 1; $i -le $ArchivosNuevos; $i++) { & $agregar "reporting/dominio/ensayo_${Etiqueta}_$i.py" "VALOR = $i`n" }
+
+    $listaMig = New-Object System.Collections.Generic.List[object]
+    $previa = Ultima-Migracion $Instalacion
+    for ($i = 1; $i -le $Migraciones; $i++) {
+        $nombre = ('{0:D4}_ensayo_{1}_{2}' -f $script:ContadorDeMigraciones, $Etiqueta, $i)
+        $script:ContadorDeMigraciones++
+        if ($i -eq $Falla) {
+            $cuerpo = "def falla(apps, schema_editor):`n    raise RuntimeError('Migracion de ensayo que falla a proposito')`n`n`nclass Migration(migrations.Migration):`n    dependencies = [('reporting', '$previa')]`n    operations = [migrations.RunPython(falla, migrations.RunPython.noop)]`n"
+        } else {
+            $tabla = "ensayo_${Etiqueta}_$i"
+            $cuerpo = "class Migration(migrations.Migration):`n    dependencies = [('reporting', '$previa')]`n    operations = [migrations.RunSQL('CREATE TABLE $tabla (id integer)', 'DROP TABLE $tabla')]`n"
+        }
+        & $agregar "reporting/migrations/$nombre.py" ("from django.db import migrations`n`n`n" + $cuerpo)
+        $listaMig.Add([ordered]@{ nombre = $nombre; reverso = $previa })
+        $previa = $nombre
+    }
+
+    $paquete = Join-Path $ActDir "paquetes\$paqueteId.avupd"
+    New-Item -ItemType Directory -Force (Split-Path $paquete) | Out-Null
+    $azar = New-Object byte[] 4096
+    (New-Object Random).NextBytes($azar)
+    [IO.File]::WriteAllBytes($paquete, $azar)
+    return [pscustomobject]@{
+        PaqueteId = $paqueteId; OrdenId = $ordenId; Etiqueta = $Etiqueta; Archivos = $archivos; Migraciones = $listaMig; Existente = $existente; Limite = $Limite
+        PaqueteSha = (Sha-De $paquete); PaqueteBytes = $azar.Length; Staging = $staging; ArchivoPaquete = $paquete
+    }
+}
+
+# Escribe orden.json como lo hace el backend: a un temporal y renombrado (el archivo aparece completo o no aparece).
+function Escribir-Orden($p, [string] $accion = 'aplicar', [string] $ActDir, [hashtable] $Cambios = @{}) {
+    $migraciones = $p.Migraciones.ToArray()
+    if ($accion -eq 'revertir') { [array]::Reverse($migraciones) }
+    $orden = [ordered]@{
+        formato = 1; orden_id = $p.OrdenId; paquete_id = $p.PaqueteId; accion = $accion; emitida_en = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()); emitida_por = 'ensayo'
+        limite_minutos = $p.Limite; ventana = $null; nota = 'ensayo'
+        paquete = [ordered]@{ nombre = "Ensayo $($p.Etiqueta)"; version_producto = '9.9.9'; serie = 99; sha256 = $p.PaqueteSha; bytes = $p.PaqueteBytes; kid = 'ensayo' }
+        modulos = @([ordered]@{ nombre = 'reporting'; version = '9.9.9'; version_datos = 9; version_contrato = 1; serie = 99; migraciones = $migraciones })
+        archivos = $p.Archivos.ToArray()
+        carpetas = [ordered]@{ staging = "staging/$($p.PaqueteId)"; instantanea = "versiones/$($p.PaqueteId)/anterior" }
+        pasos = @('comprobar', 'respaldar', 'instantanea', 'copiar', 'migrar', 'verificar')
+    }
+    foreach ($k in $Cambios.Keys) { $orden[$k] = $Cambios[$k] }
+    $json = ConvertTo-Json -InputObject $orden -Depth 10
+    $temporal = Join-Path $ActDir 'orden.json.tmp'
+    Escribir-Texto $temporal $json
+    Move-Item -LiteralPath $temporal -Destination (Join-Path $ActDir 'orden.json')
+}
+
+# El resultado del host: resultado.json, o ya archivado por el backend en resultados\<orden>.json. $null si no llega a tiempo.
+function Esperar-Resultado([string] $ActDir, [string] $ordenId, [int] $segundos) {
+    $limite = (Get-Date).AddSeconds($segundos)
+    while ((Get-Date) -lt $limite) {
+        foreach ($ruta in @((Join-Path $ActDir 'resultado.json'), (Join-Path $ActDir "resultados\$ordenId.json"))) {
+            if (Test-Path $ruta) {
+                try {
+                    $r = [IO.File]::ReadAllText($ruta, [Text.Encoding]::UTF8) | ConvertFrom-Json
+                    if ($r.orden_id -eq $ordenId) { return $r }
+                } catch { }
+            }
+        }
+        Start-Sleep -Milliseconds 300
+    }
+    return $null
+}
+
+# Lo que haria el backend al registrar el resultado: archivarlo y retirar la orden. Si el backend de verdad lo hace (en los 90 s), mejor; si no, lo hace el ensayo y lo dice.
+function Cerrar-Orden([string] $ActDir, [string] $ordenId, [switch] $Silencioso) {
+    $limite = (Get-Date).AddSeconds(90)
+    while ((Get-Date) -lt $limite) {
+        if (-not (Test-Path (Join-Path $ActDir 'orden.json'))) { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    if (-not $Silencioso) { Write-Host '  [info]   el backend no archivo el resultado en 90 s: lo archiva el ensayo' -ForegroundColor DarkGray }
+    New-Item -ItemType Directory -Force (Join-Path $ActDir 'resultados') | Out-Null
+    if (Test-Path (Join-Path $ActDir 'resultado.json')) { Move-Item -LiteralPath (Join-Path $ActDir 'resultado.json') -Destination (Join-Path $ActDir "resultados\$ordenId.json") -Force }
+    Remove-Item -LiteralPath (Join-Path $ActDir 'orden.json') -Force -ErrorAction SilentlyContinue
+    return $false
+}
+
+# Lanza el host como lo hace el servicio, con (o sin) los ganchos de ensayo FALLO y CORTE.
+function Iniciar-Host-De-Ensayo([string] $instalacion, [string] $fallo = '', [string] $corte = '') {
+    if ($fallo) { $env:AVACOM_ACTUALIZACION_FALLO = $fallo }
+    if ($corte) { $env:AVACOM_ACTUALIZACION_CORTE = $corte }
+    try { return (Host-Servir $instalacion) } finally {
+        Remove-Item Env:\AVACOM_ACTUALIZACION_FALLO -ErrorAction SilentlyContinue
+        Remove-Item Env:\AVACOM_ACTUALIZACION_CORTE -ErrorAction SilentlyContinue
+    }
+}
+
+function Matar-Host($proceso) {
+    if ($null -eq $proceso) { return }
+    foreach ($h in (Hijos-De $proceso.Id)) { Stop-Process -Id $h.ProcessId -Force -ErrorAction SilentlyContinue }
+    Stop-Process -Id $proceso.Id -Force -ErrorAction SilentlyContinue
+    $null = $proceso.WaitForExit(20000)
+    # Un backend que quedo huerfano tiene el puerto: se espera a que lo suelte.
+    Start-Sleep -Seconds 2
+}
+
+# Estado de la base de datos y de los archivos del ensayo, con un solo arranque de Python.
+function Estado-De-Ensayo([string] $instalacion, [string] $datos, [string] $carpeta) {
+    $archivo = Join-Path $carpeta 'estado-act.py'
+    Escribir-Texto $archivo @'
+import json, os, sqlite3
+c = sqlite3.connect(os.environ['AVACOM_LMS_DB'], timeout=20)
+tablas = sorted(r[0] for r in c.execute("select name from sqlite_master where type='table' and name like 'ensayo_%'"))
+migs = sorted(r[0] for r in c.execute("select name from django_migrations where app='reporting' and name like '09%'"))
+print(json.dumps({'tablas': tablas, 'migs': migs, 'integridad': c.execute('PRAGMA integrity_check').fetchone()[0], 'sesiones': c.execute("select count(*) from m07_sesion").fetchone()[0]}))
+c.close()
+'@
+    $salida = Python-Del-Nodo $instalacion $datos @($archivo)
+    Limpiar-Entorno
+    Fijar-Datos $datos
+    $linea = @($salida.Salida -split "`r?`n" | Where-Object { $_.Trim().StartsWith('{') }) | Select-Object -Last 1
+    if (-not $linea) { return [pscustomobject]@{ tablas = @('?'); migs = @('?'); integridad = '?'; sesiones = -1 } }
+    return ($linea | ConvertFrom-Json)
+}
+
 try {
     Write-Host ''
     Write-Host "  Ensayo del paquete en $Raiz" -ForegroundColor White
@@ -234,6 +405,7 @@ try {
         if (-not (Test-Path $necesario)) { throw "El paquete esta incompleto: falta $necesario." }
     }
 
+    if (-not $SoloActualizaciones) {
     # ========================================================== A · instalacion nueva
     Titulo 'A · Instalacion nueva, con el entorno de Windows envenenado'
     $instA = Join-Path $Raiz 'A\AVACOM\OPS Master'
@@ -695,6 +867,294 @@ print(c.execute("select count(*) from django_migrations where app = 'acceso' and
         }
     } elseif ($VersionAnterior) {
         Write-Host '  (E se omite: la version anterior no tiene Backend\ y Runtime\Python)' -ForegroundColor Yellow
+    }
+    }  # fin de A..E (-SoloActualizaciones los omite)
+
+    # ======================================== F · MOD-017 Update Manager: el host aplica, verifica y revierte (TST-061, NFR-022)
+    # El host (servicio SYSTEM) obedece Actualizaciones\orden.json con el backend PARADO, con un checkpoint antes de cada paso (comprobar, respaldar, instantanea, copiar, migrar,
+    # verificar), y si algo falla vuelve atras SOLO (codigo desde la instantanea, base desde la copia). Aqui se ensaya sobre el backend empaquetado, con migraciones y archivos de verdad.
+    if (-not $SinActualizaciones) {
+        Titulo 'F · Update Manager (MOD-017): el host aplica, verifica y revierte un paquete de modulo'
+        $instF = Join-Path $Raiz 'F\AVACOM\OPS Master'
+        $datosF = Join-Path $Raiz 'F\datos'
+        $carpetaF = Join-Path $Raiz 'F'
+        $actF = Join-Path $datosF 'ProgramData\AVACOM\OPS Master\Actualizaciones'
+        Armar-Instalacion $backendNuevo $runtimeNuevo $instF
+        Copy-Item (Join-Path $Staging 'manifiesto.json') (Join-Path $instF 'manifiesto.json') -ErrorAction SilentlyContinue
+        Limpiar-Entorno
+        Fijar-Datos $datosF
+        $codigo = Host-Ejecutar $instF @('preparar')
+        Comprobar ($codigo -eq 0) 'F · El nodo de ensayo se prepara (configuracion, claves, migraciones)' "F · preparar devolvio $codigo`: $(Leer-Texto (Join-Path $datosF 'Logs\preparacion-estado.txt'))"
+        $configF = Join-Path $datosF 'Config\backend.env'
+        $puertoF = Puerto-Libre
+        Poner-Valor $configF 'AVACOM_OPS_BACKEND_PORT' $puertoF
+        $versionDelNodo = Leer-Texto (Join-Path $instF 'manifiesto.json')
+
+        $servicioF = Iniciar-Host-De-Ensayo $instF
+        $arrancoF = Esperar-Salud $puertoF 120
+        Comprobar $arrancoF "F · El nodo de ensayo arranca (puerto $puertoF)" "F · El nodo de ensayo no respondio: $(Leer-Texto (Join-Path $datosF 'Logs\servicio.log'))"
+
+        if ($arrancoF) {
+            Comprobar (Test-Path $actF) 'F · El host creo Actualizaciones\ (la misma carpeta que usa el backend)' "F · No existe $actF"
+            $huellaInicial = Huella-De-Codigo $instF
+            $estado0 = Estado-De-Ensayo $instF $datosF $carpetaF
+            Comprobar ($estado0.integridad -eq 'ok' -and @($estado0.tablas).Count -eq 0) 'F · Punto de partida: la base esta integra y sin tablas de ensayo' "F · Estado inicial: $($estado0 | ConvertTo-Json -Compress)"
+
+            function Aplicar-Y-Esperar($p, [string] $accion = 'aplicar', [int] $espera = 480) {
+                $reloj = [Diagnostics.Stopwatch]::StartNew()
+                Escribir-Orden $p $accion $actF
+                $r = Esperar-Resultado $actF $p.OrdenId $espera
+                return [pscustomobject]@{ Resultado = $r; Segundos = [math]::Round($reloj.Elapsed.TotalSeconds, 1) }
+            }
+            function Archivos-Aplicados($p) {
+                foreach ($a in $p.Archivos) {
+                    $ruta = Join-Path $instF ('Backend\' + ($a.ruta -replace '/', '\'))
+                    if (-not (Test-Path $ruta) -or (Sha-De $ruta) -ne $a.sha256) { return $false }
+                }
+                return $true
+            }
+            function Todo-Como-Antes([string] $huella) { return ((Huella-De-Codigo $instF) -eq $huella) }
+            function Nuevo-Id($p) { $p.OrdenId = [guid]::NewGuid().ToString('D') }
+
+            # ---------------------------------------------------------------- F1 · una aplicacion correcta
+            Write-Host '  -- F1 · aplicar un paquete (1 archivo que cambia, 2 nuevos, 3 migraciones)' -ForegroundColor DarkCyan
+            $p1 = Nuevo-Paquete $instF $actF 'a' 3 0 2
+            $hijosAntes = @(Hijos-De $servicioF.Id | ForEach-Object { $_.ProcessId })
+            $e1 = Aplicar-Y-Esperar $p1
+            $r1 = $e1.Resultado
+            Comprobar ($null -ne $r1 -and $r1.resultado -eq 'aplicado') "F1 · El host aplica el paquete (resultado aplicado en $($e1.Segundos) s)" "F1 · Resultado inesperado tras $($e1.Segundos) s: $(if ($r1) { $r1 | ConvertTo-Json -Compress } else { 'ninguno' }). Mira $(Join-Path $datosF 'Logs\actualizacion.log')"
+            if ($r1 -and $r1.resultado -eq 'aplicado') {
+                Comprobar (Archivos-Aplicados $p1) 'F1 · Los archivos del paquete estan en Backend\ con su huella' 'F1 · Un archivo de Backend\ no coincide con el del paquete'
+                Comprobar (@($r1.migraciones).Count -eq 3 -and @($r1.migraciones | Where-Object { -not $_.ok }).Count -eq 0) 'F1 · Las 3 migraciones corrieron y el resultado las lista' "F1 · Migraciones del resultado: $($r1.migraciones | ConvertTo-Json -Compress)"
+                $estado = Estado-De-Ensayo $instF $datosF $carpetaF
+                Comprobar (@($estado.tablas).Count -eq 3 -and @($estado.migs).Count -eq 3 -and $estado.integridad -eq 'ok') 'F1 · La base tiene las 3 tablas y las 3 migraciones aplicadas' "F1 · Estado de la base: $($estado | ConvertTo-Json -Compress)"
+                Comprobar (-not (Test-Path (Join-Path $actF 'checkpoint.json'))) 'F1 · El checkpoint se retiro al terminar' 'F1 · Quedo checkpoint.json'
+                Comprobar (Test-Path (Join-Path $actF "versiones\$($p1.PaqueteId)\anterior\_indice.json")) 'F1 · La instantanea del codigo anterior se conserva (14 dias)' 'F1 · No hay instantanea'
+                Comprobar (-not $servicioF.HasExited) 'F1 · El servicio sigue vivo y levanta el backend de nuevo' 'F1 · El host se cerro'
+                Comprobar (Esperar-Salud $puertoF 120) 'F1 · /health/ responde con el codigo nuevo' 'F1 · El backend no volvio a responder'
+                $hijosDespues = @(Hijos-De $servicioF.Id | ForEach-Object { $_.ProcessId })
+                Comprobar ((@($hijosDespues | Where-Object { $hijosAntes -contains $_ }).Count -eq 0) -and $hijosDespues.Count -ge 1) 'F1 · El backend se paro para aplicar y volvio a levantarse (otro proceso)' "F1 · Procesos hijos antes $($hijosAntes -join ',') y despues $($hijosDespues -join ',')"
+                $archivado = Cerrar-Orden $actF $p1.OrdenId
+                Comprobar $true "F1 · El backend lee el resultado al arrancar (archivado por el: $archivado)" ''
+            }
+
+            # ---------------------------------------------------------------- F2 · revertir a mano (instantanea dentro de los 14 dias)
+            Write-Host '  -- F2 · revertir el paquete a mano (migrar hacia atras, volver al codigo anterior)' -ForegroundColor DarkCyan
+            if ($r1 -and $r1.resultado -eq 'aplicado') {
+                Nuevo-Id $p1
+                $e2 = Aplicar-Y-Esperar $p1 'revertir'
+                $r2 = $e2.Resultado
+                Comprobar ($null -ne $r2 -and $r2.resultado -eq 'revertido') "F2 · El host revierte el paquete (resultado revertido en $($e2.Segundos) s)" "F2 · Resultado inesperado: $(if ($r2) { $r2 | ConvertTo-Json -Compress } else { 'ninguno' })"
+                Comprobar (Todo-Como-Antes $huellaInicial) 'F2 · El codigo vuelve a ser, byte a byte, el de antes del paquete' 'F2 · El codigo no volvio a ser el de antes'
+                $estado = Estado-De-Ensayo $instF $datosF $carpetaF
+                Comprobar (@($estado.tablas).Count -eq 0 -and @($estado.migs).Count -eq 0 -and $estado.integridad -eq 'ok') 'F2 · Las migraciones se deshicieron con su reverso (sin tablas ni filas de ensayo)' "F2 · Estado de la base: $($estado | ConvertTo-Json -Compress)"
+                Comprobar (-not (Test-Path (Join-Path $actF "versiones\$($p1.PaqueteId)"))) 'F2 · Revertido con exito, la instantanea ya no hace falta' 'F2 · La instantanea sigue ahi'
+                Comprobar (Esperar-Salud $puertoF 120) 'F2 · /health/ responde con el codigo de antes' 'F2 · El backend no volvio a responder'
+                $null = Cerrar-Orden $actF $p1.OrdenId -Silencioso
+            }
+
+            # ---------------------------------------------------------------- F3 · TST-061: un fallo al 60 % se revierte solo
+            Write-Host '  -- F3 · TST-061: la tercera de CINCO migraciones falla de verdad (60 %): el aula vuelve sola a la version anterior' -ForegroundColor DarkCyan
+            $p3 = Nuevo-Paquete $instF $actF 'f' 5 3 2 5
+            $e3 = Aplicar-Y-Esperar $p3
+            $r3 = $e3.Resultado
+            Comprobar ($null -ne $r3 -and $r3.resultado -eq 'revertido') "F3 · El host revierte SOLO (revertido en $($e3.Segundos) s desde la orden)" "F3 · Resultado inesperado: $(if ($r3) { $r3 | ConvertTo-Json -Compress } else { 'ninguno' })"
+            if ($r3) {
+                Comprobar ($r3.paso -eq 'migrar' -and "$($r3.error)" -match 'migracion') 'F3 · El resultado dice en que paso fallo (migrar) y por que' "F3 · paso=$($r3.paso) error=$($r3.error)"
+                Comprobar (Todo-Como-Antes $huellaInicial) 'F3 · El codigo (el archivo cambiado y los nuevos) vuelve a ser el de antes' 'F3 · El codigo no volvio a ser el de antes'
+                $estado = Estado-De-Ensayo $instF $datosF $carpetaF
+                Comprobar (@($estado.tablas).Count -eq 0 -and @($estado.migs).Count -eq 0 -and $estado.integridad -eq 'ok') 'F3 · La base se restauro de la copia (las 2 migraciones que si corrieron se deshicieron)' "F3 · Estado de la base: $($estado | ConvertTo-Json -Compress)"
+                Comprobar (Esperar-Salud $puertoF 120) 'F3 · El aula responde con la version anterior' 'F3 · El backend no volvio a responder'
+                Comprobar ($e3.Segundos -le ($p3.Limite * 60)) "F3 · NFR-022 / AC-077: toda la operacion (aplicar, fallar y volver atras) en $($e3.Segundos) s, dentro del limite de $($p3.Limite) min" "F3 · Tardo $($e3.Segundos) s: supera el limite de $($p3.Limite) min"
+                Write-Host "  [info]   $($r3.detalle)" -ForegroundColor DarkGray
+                $null = Cerrar-Orden $actF $p3.OrdenId -Silencioso
+            }
+
+            # ---------------------------------------------------------------- F3b · fallos inyectados en otros pasos (host de ensayo con AVACOM_ACTUALIZACION_FALLO)
+            foreach ($caso in @(
+                    @{ Fallo = 'copiar:60'; Paso = 'copiar'; Migraciones = 2; Nuevos = 5; Rotulo = 'al 60 % de la copia de archivos' },
+                    @{ Fallo = 'verificar:50'; Paso = 'verificar'; Migraciones = 2; Nuevos = 2; Rotulo = 'al verificar, con TODO ya copiado y migrado' })) {
+                Write-Host "  -- F3b · fallo inyectado $($caso.Rotulo)" -ForegroundColor DarkCyan
+                Matar-Host $servicioF
+                $servicioF = Iniciar-Host-De-Ensayo $instF $caso.Fallo
+                Comprobar (Esperar-Salud $puertoF 120) 'F3b · El nodo de ensayo arranca con el gancho de fallo' 'F3b · No arranco'
+                $pb = Nuevo-Paquete $instF $actF 'b' $caso.Migraciones 0 $caso.Nuevos 5
+                $eb = Aplicar-Y-Esperar $pb
+                $rb = $eb.Resultado
+                Comprobar ($null -ne $rb -and $rb.resultado -eq 'revertido' -and $rb.paso -eq $caso.Paso) "F3b · Revertido solo, con el paso «$($caso.Paso)» como causa ($($eb.Segundos) s)" "F3b · Resultado: $(if ($rb) { $rb | ConvertTo-Json -Compress } else { 'ninguno' })"
+                Comprobar (Todo-Como-Antes $huellaInicial) 'F3b · Codigo identico al de antes' 'F3b · El codigo no volvio a ser el de antes'
+                $estado = Estado-De-Ensayo $instF $datosF $carpetaF
+                Comprobar (@($estado.tablas).Count -eq 0 -and @($estado.migs).Count -eq 0 -and $estado.integridad -eq 'ok') 'F3b · Base identica a la de antes (sin tablas ni migraciones)' "F3b · Estado de la base: $($estado | ConvertTo-Json -Compress)"
+                Comprobar (Esperar-Salud $puertoF 120) 'F3b · El aula responde con la version anterior' 'F3b · El backend no volvio a responder'
+                $null = Cerrar-Orden $actF $pb.OrdenId -Silencioso
+            }
+            Matar-Host $servicioF
+            $servicioF = Iniciar-Host-De-Ensayo $instF
+            $null = Esperar-Salud $puertoF 120
+
+            # ---------------------------------------------------------------- F4 · el host muere en cada checkpoint (A4)
+            Write-Host '  -- F4 · el host muere a mitad (corte de energia) en cada checkpoint: al volver reanuda o revierte' -ForegroundColor DarkCyan
+            $cortes = @(
+                @{ Corte = 'respaldar'; Fallo = ''; Esperado = 'aplicado'; Migraciones = 2; Nuevos = 2; Quien = 'reanuda desde el principio' },
+                @{ Corte = 'instantanea:50'; Fallo = ''; Esperado = 'aplicado'; Migraciones = 2; Nuevos = 4; Quien = 'reanuda: la instantanea a medias se rehace' },
+                @{ Corte = 'copiar:60'; Fallo = ''; Esperado = 'revertido'; Migraciones = 2; Nuevos = 5; Quien = 'revierte: el codigo estaba a medias' },
+                @{ Corte = 'migrar:60'; Fallo = ''; Esperado = 'revertido'; Migraciones = 5; Nuevos = 2; Quien = 'revierte: la base estaba a medias' },
+                @{ Corte = 'verificar'; Fallo = ''; Esperado = 'aplicado'; Migraciones = 2; Nuevos = 2; Quien = 'repite la verificacion' },
+                @{ Corte = 'deshacer'; Fallo = 'migrar:60'; Esperado = 'revertido'; Migraciones = 5; Nuevos = 2; Quien = 'repite la reversion que se corto' })
+            foreach ($caso in $cortes) {
+                Write-Host "  -- F4 · corte en «$($caso.Corte)» (se espera $($caso.Esperado): $($caso.Quien))" -ForegroundColor DarkCyan
+                $huellaAntesDelCorte = Huella-De-Codigo $instF
+                Matar-Host $servicioF
+                $servicioF = Iniciar-Host-De-Ensayo $instF $caso.Fallo $caso.Corte
+                Comprobar (Esperar-Salud $puertoF 120) 'F4 · El nodo de ensayo arranca con el gancho de corte' 'F4 · No arranco'
+                $pc = Nuevo-Paquete $instF $actF 'c' $caso.Migraciones 0 $caso.Nuevos 5
+                Escribir-Orden $pc 'aplicar' $actF
+                $murio = $servicioF.WaitForExit(300000)
+                Comprobar $murio "F4 · El host murio en «$($caso.Corte)», como un corte de energia" "F4 · El host no murio en 5 min"
+                Comprobar (Test-Path (Join-Path $actF 'checkpoint.json')) 'F4 · Quedo checkpoint.json: se sabe en que paso murio' 'F4 · No quedo checkpoint.json'
+                Matar-Host $servicioF
+                Comprobar (-not (Test-Path (Join-Path $actF 'resultado.json'))) 'F4 · Todavia no hay resultado: la orden sigue pendiente' 'F4 · Ya habia un resultado'
+                $reloj = [Diagnostics.Stopwatch]::StartNew()
+                $servicioF = Iniciar-Host-De-Ensayo $instF
+                $rc = Esperar-Resultado $actF $pc.OrdenId 480
+                Comprobar ($null -ne $rc -and $rc.resultado -eq $caso.Esperado) "F4 · Al volver el host $($caso.Quien): $($caso.Esperado) en $([math]::Round($reloj.Elapsed.TotalSeconds, 1)) s" "F4 · Resultado: $(if ($rc) { $rc | ConvertTo-Json -Compress } else { 'ninguno' })"
+                if ($rc) {
+                    Comprobar (Esperar-Salud $puertoF 120) 'F4 · El aula responde' 'F4 · El backend no volvio a responder'
+                    Comprobar (-not (Test-Path (Join-Path $actF 'checkpoint.json'))) 'F4 · El checkpoint se retiro' 'F4 · Sigue checkpoint.json'
+                    $estado = Estado-De-Ensayo $instF $datosF $carpetaF
+                    if ($caso.Esperado -eq 'aplicado') {
+                        Comprobar ((Archivos-Aplicados $pc) -and $estado.integridad -eq 'ok' -and @($estado.migs).Count -ge $caso.Migraciones) 'F4 · El paquete quedo aplicado entero (archivos y migraciones)' "F4 · Estado: $($estado | ConvertTo-Json -Compress)"
+                        # Se deja el aula como estaba para el caso siguiente: revertido a mano, con otra orden.
+                        $null = Cerrar-Orden $actF $pc.OrdenId -Silencioso
+                        Nuevo-Id $pc
+                        $er = Aplicar-Y-Esperar $pc 'revertir'
+                        Comprobar ($null -ne $er.Resultado -and $er.Resultado.resultado -eq 'revertido') 'F4 · (limpieza) revertido a mano para el caso siguiente' "F4 · La limpieza no revirtio: $(if ($er.Resultado) { $er.Resultado | ConvertTo-Json -Compress })"
+                    } else {
+                        Comprobar ((Huella-De-Codigo $instF) -eq $huellaAntesDelCorte) 'F4 · El codigo vuelve a ser, byte a byte, el de antes' 'F4 · El codigo no volvio a ser el de antes'
+                        Comprobar (@($estado.tablas).Count -eq 0 -and @($estado.migs).Count -eq 0 -and $estado.integridad -eq 'ok') 'F4 · La base vuelve a ser la de antes (sin tablas ni migraciones)' "F4 · Estado: $($estado | ConvertTo-Json -Compress)"
+                    }
+                }
+                $null = Cerrar-Orden $actF $pc.OrdenId -Silencioso
+            }
+
+            # ---------------------------------------------------------------- F5 · una clase abierta aplaza la aplicacion y NO se detiene nada (R-01)
+            Write-Host '  -- F5 · con una clase abierta la aplicacion se aplaza y el backend sigue en pie' -ForegroundColor DarkCyan
+            Matar-Host $servicioF
+            $servicioF = Iniciar-Host-De-Ensayo $instF
+            Comprobar (Esperar-Salud $puertoF 120) 'F5 · El nodo de ensayo arranca' 'F5 · No arranco'
+            $claveClase = Join-Path $carpetaF 'clase-act.py'
+            Escribir-Texto $claveClase @'
+import os, sys, django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'avacom_lms.settings')
+django.setup()
+from classroom_engine import models as m
+from classroom_engine.dominio import sesion as dom
+if sys.argv[1] == 'crear':
+    m.SesionDeClase.objects.create(id='ensayo-clase-1', profesor_id='ensayo', via_origen='libre', codigo_union='ENS123', estado=dom.ABIERTA)
+else:
+    m.SesionDeClase.objects.filter(id='ensayo-clase-1').delete()
+print('listo')
+'@
+            $crear = Python-Del-Nodo $instF $datosF @($claveClase, 'crear')
+            Limpiar-Entorno; Fijar-Datos $datosF
+            Comprobar ($crear.Codigo -eq 0) 'F5 · Se abrio una clase en la base del nodo' "F5 · No se pudo abrir la clase: $($crear.Salida)"
+            $hijosAntes = @(Hijos-De $servicioF.Id | ForEach-Object { $_.ProcessId })
+            $huellaAntes = Huella-De-Codigo $instF
+            $pk = Nuevo-Paquete $instF $actF 'k' 2 0 1
+            $ek = Aplicar-Y-Esperar $pk
+            $rk = $ek.Resultado
+            Comprobar ($null -ne $rk -and $rk.resultado -eq 'aplazada' -and $rk.paso -eq 'comprobar') "F5 · El host responde «aplazada» en el paso comprobar ($($ek.Segundos) s)" "F5 · Resultado: $(if ($rk) { $rk | ConvertTo-Json -Compress } else { 'ninguno' })"
+            Start-Sleep -Seconds 2
+            $hijosDespues = @(Hijos-De $servicioF.Id | ForEach-Object { $_.ProcessId })
+            Comprobar ($hijosAntes.Count -ge 1 -and (@($hijosAntes) -join ',') -eq (@($hijosDespues) -join ',')) 'F5 · El backend NO se paro: es el mismo proceso (la clase sigue)' "F5 · Procesos antes $($hijosAntes -join ',') y despues $($hijosDespues -join ',')"
+            Comprobar ((Huella-De-Codigo $instF) -eq $huellaAntes -and -not (Test-Path (Join-Path $actF "versiones\$($pk.PaqueteId)"))) 'F5 · No se toco ningun archivo ni se tomo instantanea' 'F5 · El host toco algo con una clase abierta'
+            Comprobar (-not (Test-Path (Join-Path $actF 'checkpoint.json'))) 'F5 · Sin checkpoint pendiente' 'F5 · Quedo checkpoint.json'
+            $null = Cerrar-Orden $actF $pk.OrdenId -Silencioso
+            $borrar = Python-Del-Nodo $instF $datosF @($claveClase, 'borrar')
+            Limpiar-Entorno; Fijar-Datos $datosF
+            Comprobar ($borrar.Codigo -eq 0) 'F5 · La clase de ensayo se retiro' "F5 · No se pudo retirar la clase: $($borrar.Salida)"
+
+            # ---------------------------------------------------------------- F6 · lo que el host NO obedece
+            Write-Host '  -- F6 · ordenes que el host rechaza sin tocar nada (staging alterado, .avupd alterado, rutas fuera de su sitio)' -ForegroundColor DarkCyan
+            $huellaAntes = Huella-De-Codigo $instF
+            $fueraDeSitio = [ordered]@{ ruta = 'reporting/../../Runtime/ensayo_malo.py'; bytes = 1; sha256 = ('a' * 64) }
+            $malas = @(
+                @{ Rotulo = 'un archivo del staging alterado'; Tipo = 'staging' },
+                @{ Rotulo = 'el .avupd guardado alterado'; Tipo = 'avupd' },
+                @{ Rotulo = 'una ruta con retroceso (..)'; Tipo = 'ruta'; Archivos = @($fueraDeSitio) },
+                @{ Rotulo = 'una ruta de backend\biblioteca (de AVACOM Contenido)'; Tipo = 'ruta'; Archivos = @([ordered]@{ ruta = 'biblioteca/ensayo_malo.py'; bytes = 1; sha256 = ('b' * 64) }) },
+                @{ Rotulo = 'una ruta de otra app que el paquete no declara (acceso)'; Tipo = 'ruta'; Archivos = @([ordered]@{ ruta = 'acceso/ensayo_malo.py'; bytes = 1; sha256 = ('c' * 64) }) },
+                @{ Rotulo = 'un archivo de configuracion (backend.env)'; Tipo = 'ruta'; Archivos = @([ordered]@{ ruta = 'reporting/backend.env'; bytes = 1; sha256 = ('d' * 64) }) },
+                @{ Rotulo = 'una letra de unidad'; Tipo = 'ruta'; Archivos = @([ordered]@{ ruta = 'C:/Windows/ensayo_malo.py'; bytes = 1; sha256 = ('e' * 64) }) })
+            foreach ($mala in $malas) {
+                $pm = Nuevo-Paquete $instF $actF 'm' 1 0 1
+                if ($mala.Tipo -eq 'staging') {
+                    $archivoStaging = Join-Path $pm.Staging 'reporting\dominio\ensayo_m_1.py'
+                    [IO.File]::AppendAllText($archivoStaging, "`n# alterado`n")
+                } elseif ($mala.Tipo -eq 'avupd') {
+                    [IO.File]::AppendAllText($pm.ArchivoPaquete, 'X')
+                }
+                $cambios = @{}
+                if ($mala.ContainsKey('Archivos')) { $cambios['archivos'] = $mala.Archivos }
+                $hijosAntes = @(Hijos-De $servicioF.Id | ForEach-Object { $_.ProcessId })
+                $reloj = [Diagnostics.Stopwatch]::StartNew()
+                $json = $null
+                Escribir-Orden $pm 'aplicar' $actF $cambios
+                $rm = Esperar-Resultado $actF $pm.OrdenId 120
+                Comprobar ($null -ne $rm -and $rm.resultado -eq 'rechazada') "F6 · $($mala.Rotulo): el host la rechaza ($([math]::Round($reloj.Elapsed.TotalSeconds, 1)) s)" "F6 · $($mala.Rotulo): resultado $(if ($rm) { $rm | ConvertTo-Json -Compress } else { 'ninguno' })"
+                Comprobar ((Huella-De-Codigo $instF) -eq $huellaAntes -and -not (Test-Path (Join-Path $instF 'Runtime\ensayo_malo.py')) -and -not (Test-Path (Join-Path $instF 'Backend\biblioteca\ensayo_malo.py')) -and -not (Test-Path (Join-Path $instF 'Backend\acceso\ensayo_malo.py'))) `
+                    "F6 · $($mala.Rotulo): no se escribio ni un archivo" "F6 · $($mala.Rotulo): el codigo cambio"
+                Comprobar ((@(Hijos-De $servicioF.Id | ForEach-Object { $_.ProcessId }) -join ',') -eq ($hijosAntes -join ',')) "F6 · $($mala.Rotulo): el backend no se paro" 'F6 · El backend se paro con una orden rechazada'
+                $null = Cerrar-Orden $actF $pm.OrdenId -Silencioso
+            }
+
+            # ---------------------------------------------------------------- F7 · tras una instalacion completa la instantanea se conserva, pero ya no sirve para volver atras
+            Write-Host '  -- F7 · una instalacion completa no borra la instantanea (P-17) y el host no vuelve a un codigo de otra version' -ForegroundColor DarkCyan
+            $p7 = Nuevo-Paquete $instF $actF 'g' 2 0 2
+            $e7 = Aplicar-Y-Esperar $p7
+            Comprobar ($null -ne $e7.Resultado -and $e7.Resultado.resultado -eq 'aplicado') 'F7 · Se aplica un paquete (queda su instantanea)' "F7 · Resultado: $(if ($e7.Resultado) { $e7.Resultado | ConvertTo-Json -Compress } else { 'ninguno' })"
+            $null = Cerrar-Orden $actF $p7.OrdenId -Silencioso
+            Matar-Host $servicioF
+            # Lo que hace el asistente de una actualizacion completa: aparta el programa viejo y pone el nuevo (otra version). Actualizaciones\ vive en ProgramData y no se toca.
+            Remove-Item (Join-Path $instF 'Backend') -Recurse -Force
+            Remove-Item (Join-Path $instF 'Runtime') -Recurse -Force
+            Copiar-Carpeta $backendNuevo (Join-Path $instF 'Backend')
+            Copiar-Carpeta $runtimeNuevo (Join-Path $instF 'Runtime')
+            $manifiestoNuevo = (Leer-Texto (Join-Path $Staging 'manifiesto.json')) -replace '"version":\s*"[^"]*"', '"version":  "9.9.9"'
+            Escribir-Texto (Join-Path $instF 'manifiesto.json') $manifiestoNuevo
+            Comprobar (Test-Path (Join-Path $actF "versiones\$($p7.PaqueteId)\anterior\_indice.json")) 'F7 · La instalacion completa dejo la instantanea intacta' 'F7 · La instantanea desaparecio'
+            $servicioF = Iniciar-Host-De-Ensayo $instF
+            Comprobar (Esperar-Salud $puertoF 120) 'F7 · El nodo arranca con el programa nuevo' 'F7 · No arranco'
+            Nuevo-Id $p7
+            $e7b = Aplicar-Y-Esperar $p7 'revertir' 180
+            Comprobar ($null -ne $e7b.Resultado -and $e7b.Resultado.resultado -eq 'rechazada' -and "$($e7b.Resultado.error)" -match 'instalacion completa') 'F7 · Revertir se rechaza: el programa cambio de version y la instantanea ya no es de este producto' "F7 · Resultado: $(if ($e7b.Resultado) { $e7b.Resultado | ConvertTo-Json -Compress } else { 'ninguno' })"
+            Comprobar (Test-Path (Join-Path $actF "versiones\$($p7.PaqueteId)\anterior\_indice.json")) 'F7 · Y no se borro nada' 'F7 · La instantanea desaparecio'
+            $null = Cerrar-Orden $actF $p7.OrdenId -Silencioso
+
+            # ---------------------------------------------------------------- F8 · 14 dias
+            Write-Host '  -- F8 · a los 14 dias la instantanea se retira, salvo la de una reversion fallida' -ForegroundColor DarkCyan
+            Matar-Host $servicioF
+            $vieja = (Get-Date).AddDays(-15).ToUniversalTime()
+            $viejaMs = [int64]([DateTimeOffset]$vieja).ToUnixTimeMilliseconds()
+            $indiceDeP7 = Join-Path $actF "versiones\$($p7.PaqueteId)\anterior\_indice.json"
+            $textoIndice = [IO.File]::ReadAllText($indiceDeP7, [Text.Encoding]::UTF8)
+            Escribir-Texto $indiceDeP7 ($textoIndice -replace '"creado_en":\s*\d+', "`"creado_en`": $viejaMs")
+            $guardada = [guid]::NewGuid().ToString('D')
+            Escribir-Texto (Join-Path $actF "versiones\$guardada\anterior\_indice.json") "{`"formato`": 1, `"paquete_id`": `"$guardada`", `"producto`": `"2.0.0`", `"creado_en`": $viejaMs, `"archivos`": []}"
+            Escribir-Texto (Join-Path $actF 'resultados\ensayo-fallida.json') "{`"formato`": 1, `"orden_id`": `"ensayo-fallida`", `"paquete_id`": `"$guardada`", `"accion`": `"revertir`", `"resultado`": `"reversion_fallida`"}"
+            $codigo = Host-Ejecutar $instF @('aplicar-actualizacion') 120
+            Comprobar ($codigo -eq 0) 'F8 · El verbo aplicar-actualizacion (con el servicio parado) termina bien sin orden' "F8 · aplicar-actualizacion devolvio $codigo"
+            Comprobar (-not (Test-Path (Join-Path $actF "versiones\$($p7.PaqueteId)"))) 'F8 · La instantanea de mas de 14 dias se retiro' 'F8 · La instantanea vieja sigue ahi'
+            Comprobar (Test-Path (Join-Path $actF "versiones\$guardada\anterior\_indice.json")) 'F8 · La de una reversion fallida se conserva aunque sea vieja (nadie borra nada)' 'F8 · Se borro la instantanea de una reversion fallida'
+
+            # ---------------------------------------------------------------- F9 · el instalador no toca Actualizaciones\
+            Write-Host '  -- F9 · el instalador completo y la desinstalacion no borran Actualizaciones\' -ForegroundColor DarkCyan
+            $iss = Leer-Texto (Join-Path $PSScriptRoot '..\src\AvacomOpsMaster.iss')
+            if ($iss) {
+                Comprobar ($iss -match '(?m)^Name:\s*"\{commonappdata\}\\AVACOM\\\{#NombreCorto\}\\Actualizaciones";[^\r\n]*uninsneveruninstall') 'F9 · El instalador declara Actualizaciones\ como estado del nodo que la desinstalacion nunca borra (como Respaldos)' 'F9 · AvacomOpsMaster.iss no declara Actualizaciones\ con uninsneveruninstall'
+                Comprobar ($iss -notmatch '(?m)^Type:\s*filesandordirs;\s*Name:\s*"[^"]*Actualizaciones') 'F9 · Ni [InstallDelete] ni [UninstallDelete] mencionan Actualizaciones\' 'F9 · Una regla de borrado alcanza Actualizaciones\'
+            } else { Falla 'F9 · No se encontro AvacomOpsMaster.iss' }
+        }
     }
 } catch {
     Falla "El ensayo se interrumpio: $($_.Exception.Message)"

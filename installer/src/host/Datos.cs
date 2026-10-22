@@ -73,10 +73,14 @@ internal static class Datos
     }
 
     /// <summary>Deja los datos como estaban en el ultimo respaldo (base, -wal, -shm y backend.env juntos).</summary>
-    public static bool Restaurar(Registro registro)
+    public static bool Restaurar(Registro registro) => RestaurarDesde(registro, UltimoRespaldo());
+
+    /// <summary>
+    /// Lo mismo, desde una copia concreta (la que tomo MOD-017 antes de aplicar un paquete: otra copia posterior no puede ser la que se restaure).
+    /// </summary>
+    public static bool RestaurarDesde(Registro registro, string? carpeta)
     {
-        var carpeta = UltimoRespaldo();
-        if (carpeta is null)
+        if (carpeta is null || !Directory.Exists(Path.Combine(carpeta, "Data")))
         {
             registro.Escribir("No hay respaldo que restaurar.");
             return false;

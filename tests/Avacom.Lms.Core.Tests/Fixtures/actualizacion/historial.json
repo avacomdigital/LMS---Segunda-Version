@@ -1,0 +1,168 @@
+{
+  "cuerpo": {
+    "historial": [
+      {
+        "actor": "sistema",
+        "detalle": {
+          "accion": "revertir",
+          "duracion_ms": 95000,
+          "error": null,
+          "iniciado_en": 1792639077799,
+          "migraciones": [
+            {
+              "modulo": "reporting",
+              "nombre": "0004_parche_de_ejemplo",
+              "ok": false
+            }
+          ],
+          "nota": "simulado por la prueba",
+          "orden_id": "6b4a61a7-cf30-4b51-901b-16bdfe2343b9",
+          "paso": "verificar",
+          "respaldo": false,
+          "resultado": "revertido",
+          "terminado_en": 1792639172799
+        },
+        "en": 1792639077799,
+        "id": 8,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "revertido",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+        "detalle": {
+          "accion": "revertir",
+          "limite_minutos": 5,
+          "nota": "el boletín sale en blanco",
+          "orden_id": "6b4a61a7-cf30-4b51-901b-16bdfe2343b9"
+        },
+        "en": 1792639077799,
+        "id": 7,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "aplicando",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "sistema",
+        "detalle": {
+          "accion": "aplicar",
+          "duracion_ms": 95000,
+          "error": null,
+          "iniciado_en": 1792639077799,
+          "migraciones": [
+            {
+              "modulo": "reporting",
+              "nombre": "0004_parche_de_ejemplo",
+              "ok": true
+            }
+          ],
+          "nota": "simulado por la prueba",
+          "orden_id": "4cf9ea11-78ae-4734-97d2-4f72ae06727f",
+          "paso": "verificar",
+          "respaldo": true,
+          "resultado": "aplicado",
+          "terminado_en": 1792639172799
+        },
+        "en": 1792639077799,
+        "id": 6,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "aplicado",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+        "detalle": {
+          "accion": "aplicar",
+          "avisos": [],
+          "desde_ventana": false,
+          "limite_minutos": 5,
+          "orden_id": "4cf9ea11-78ae-4734-97d2-4f72ae06727f"
+        },
+        "en": 1792639077799,
+        "id": 5,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "aplicando",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+        "detalle": {
+          "ventana": {
+            "desde": 1792640877799,
+            "hasta": 1792644477799
+          }
+        },
+        "en": 1792639077799,
+        "id": 4,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "desprogramado",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+        "detalle": {
+          "desde": 1792640877799,
+          "hasta": 1792644477799
+        },
+        "en": 1792639077799,
+        "id": 3,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "programado",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+        "detalle": {
+          "bytes": 1821,
+          "compatibilidad": {
+            "avisos": [],
+            "espacio_libre": 538685136896,
+            "espacio_requerido": 67111183,
+            "ok": true,
+            "problemas": []
+          },
+          "kid": "upd-dev-1",
+          "modulos": [
+            "reporting"
+          ],
+          "nombre": "Reportes 1.4.0 · corrección del boletín",
+          "origen": "unidad",
+          "sha256": "2a175d14da64ec877e66ed9881e2ad7ac517387077b5904ccf05dd5f9a40d5fe"
+        },
+        "en": 1792639077799,
+        "id": 2,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "verificado",
+        "version_producto": "2.12.1"
+      },
+      {
+        "actor": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+        "detalle": {
+          "bytes": 1821,
+          "kid": "upd-dev-1",
+          "modulos": [
+            "reporting"
+          ],
+          "nombre": "Reportes 1.4.0 · corrección del boletín",
+          "origen": "unidad",
+          "sha256": "2a175d14da64ec877e66ed9881e2ad7ac517387077b5904ccf05dd5f9a40d5fe"
+        },
+        "en": 1792639077799,
+        "id": 1,
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "serie": 7,
+        "tipo": "recibido",
+        "version_producto": "2.12.1"
+      }
+    ],
+    "servidor_en": 1792639077799
+  },
+  "status": 200
+}

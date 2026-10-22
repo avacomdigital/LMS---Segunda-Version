@@ -1,0 +1,78 @@
+{
+  "cuerpo": {
+    "candidatos": [
+      {
+        "bytes": 1821,
+        "fuente": "avacom-usb-prueba-2vc7ni1m",
+        "id": "d18bb9ec0f9bfa22643c0e2b",
+        "importado": "17171717-0001-4000-8000-000000000001",
+        "modificado_en": 1792639077835,
+        "nombre": "reportes-1.4.0.avupd",
+        "origen": "unidad"
+      }
+    ],
+    "paquetes": [
+      {
+        "accion": null,
+        "aplicado_en": null,
+        "archivo": "reportes-1.4.0.avupd",
+        "bytes": 1821,
+        "en_curso": false,
+        "estado": "verificado",
+        "importado_por": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+        "incompatibilidades": [],
+        "kid": "upd-dev-1",
+        "manifiesto": {
+          "archivos": 2,
+          "bytes": 249,
+          "emitido_en": 1789740800000,
+          "modulos": [
+            {
+              "cambia_contrato": false,
+              "migraciones": [
+                "0004_parche_de_ejemplo"
+              ],
+              "nombre": "reporting",
+              "requiere": {
+                "nodo": 1
+              },
+              "serie": 7,
+              "version": "1.4.0",
+              "version_contrato": 1,
+              "version_datos": 4
+            }
+          ],
+          "nombre": "Reportes 1.4.0 · corrección del boletín",
+          "nota": "Paquete de pruebas.",
+          "paquete_id": "17171717-0001-4000-8000-000000000001",
+          "requisitos": {
+            "cliente_minimo": "2.10.0",
+            "contrato_biblioteca": 2,
+            "contrato_red": null,
+            "espacio_bytes": 0
+          },
+          "serie": 7,
+          "version_minima": "2.12.0",
+          "version_producto": "2.12.1"
+        },
+        "modulos": [
+          "reporting"
+        ],
+        "nombre": "Reportes 1.4.0 · corrección del boletín",
+        "orden_id": null,
+        "origen": "unidad",
+        "paquete_id": "17171717-0001-4000-8000-000000000001",
+        "recibido_en": 1792639077799,
+        "revertible": false,
+        "revertible_hasta": null,
+        "serie": 7,
+        "sha256": "2a175d14da64ec877e66ed9881e2ad7ac517387077b5904ccf05dd5f9a40d5fe",
+        "ultima_en": 1792639077799,
+        "ventana": null,
+        "version_producto": "2.12.1"
+      }
+    ],
+    "servidor_en": 1792639077799
+  },
+  "status": 200
+}

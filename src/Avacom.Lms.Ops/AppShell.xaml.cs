@@ -20,6 +20,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("seguridad-aula", typeof(Pages.SeguridadAulaPage));
         // MOD-018 · Licensing: el estado de la licencia del nodo, su activación y renovación sin internet en tres pasos, la copia de custodia y la liberación (administración y técnico)
         Routing.RegisterRoute("licencia", typeof(Pages.LicenciaPage));
+        // MOD-017 · Update Manager: los paquetes .avupd de las memorias USB, traerlos al aula, programarlos, aplicarlos y volver a la versión anterior sin teclado (administración y técnico)
+        Routing.RegisterRoute("actualizaciones", typeof(Pages.ActualizacionesPage));
         Routing.RegisterRoute("course-editor", typeof(Pages.CourseEditorPage));
         Routing.RegisterRoute("activity-monitor", typeof(Pages.ActivityMonitorPage));
         Routing.RegisterRoute("asignaturas", typeof(Pages.AsignaturasPage));

@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "estado_invalido",
+    "detail": "Sólo se aplica un paquete verificado; éste está «aplicando».",
+    "estado": "aplicando"
+  },
+  "status": 409
+}

@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "candidato": "no-existe",
+    "codigo": "no_encontrado",
+    "detail": "Ese paquete ya no está en la unidad o en la carpeta de entrada."
+  },
+  "status": 404
+}

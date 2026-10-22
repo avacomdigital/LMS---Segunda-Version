@@ -1,0 +1,28 @@
+AVACOM · Emisor de Paquetes de Actualizacion (uso interno de AVACOM)
+====================================================================
+
+Con esta herramienta AVACOM arma y firma los paquetes .avupd que el modulo Update Manager de AVACOM OPS Master (MOD-017) aplica en un aula SIN internet.
+NO se entrega a ningun cliente. NO viaja en el instalador del colegio ni en el APK (Build-Installer.ps1 lo comprueba).
+
+QUE HACE
+  1. Lee una DESCRIPCION (paquete.json): que modulos cambian, su version, serie y contrato, las migraciones con su reverso y los archivos de cada modulo.
+  2. Lee esos archivos de la carpeta backend\, calcula tamano y SHA-256 y escribe el manifiesto.
+  3. Lo firma con la llave PRIVADA de publicacion (Ed25519) y lo empaqueta en el contenedor canonico sin comprimir.
+  4. Lo VERIFICA como lo verificaria un nodo antes de entregarlo: si el nodo lo rechazaria, no lo escribe.
+
+COMO SE USA (desde una consola abierta en esta carpeta; el .bat usa el Python del backend del repositorio)
+  avacom-actualizacion llaves nueva --kid upd-2026-1 --salida F:\claves       crea upd-2026-1.avkey (privada, cifrada) y upd-2026-1.pub
+  avacom-actualizacion llaves nodo --publica F:\claves\upd-2026-1.pub          imprime la entrada que va en backend\actualizacion\claves\produccion.json
+  avacom-actualizacion plantilla > paquete.json                                una descripcion de ejemplo (tambien en ejemplo\paquete.json)
+  avacom-actualizacion emitir --descripcion paquete.json --privada F:\claves\upd-2026-1.avkey --salida reportes-1.4.0.avupd
+  avacom-actualizacion verificar reportes-1.4.0.avupd --publica F:\claves\upd-2026-1.pub
+  avacom-actualizacion ver reportes-1.4.0.avupd                                el manifiesto (sin comprobar la firma)
+  La guia completa esta en spec-driven\17-update-manager\05-emision.md.
+
+REGLAS DE ORO
+  - La llave privada (.avkey) vive en su memoria USB, cifrada con una frase de paso de 16 caracteres o mas. NUNCA en esta carpeta, ni en el repositorio, ni por correo, ni en la nube.
+  - Trabaja en un computador SIN conexion a internet.
+  - La serie de cada modulo SOLO sube: un paquete con una serie menor que la instalada se rechaza (no se degrada). Toda migracion declara su reverso (o «zero»).
+  - Un paquete de modulo NUNCA lleva el Host, el Python embebido, backend.env, las claves de datos ni backend\biblioteca\ (el nodo y el emisor lo rechazan).
+  - El kid de publicacion NO es el de licencias: son otra ceremonia y otras llaves.
+  - Hasta la ceremonia de llaves, backend\actualizacion\claves\produccion.json esta VACIO y ningun nodo de produccion acepta paquetes.

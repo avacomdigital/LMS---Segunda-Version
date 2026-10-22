@@ -1,0 +1,18 @@
+{
+  "cuerpo": {
+    "candidatos": [
+      {
+        "bytes": 1821,
+        "fuente": "avacom-usb-prueba-2vc7ni1m",
+        "id": "d18bb9ec0f9bfa22643c0e2b",
+        "importado": null,
+        "modificado_en": 1792639077835,
+        "nombre": "reportes-1.4.0.avupd",
+        "origen": "unidad"
+      }
+    ],
+    "paquetes": [],
+    "servidor_en": 1792639077799
+  },
+  "status": 200
+}

@@ -1,0 +1,14 @@
+{
+  "cuerpo": {
+    "codigo": "contrato_incompatible",
+    "detail": "El paquete no es compatible con los módulos instalados: la instalación no inicia (BR-013, INV-007).",
+    "incompatibilidades": [
+      {
+        "codigo": "contrato_biblioteca",
+        "detalle": "El paquete habla el contrato 3 de AVACOM Biblioteca y este nodo el 2.",
+        "modulo": ""
+      }
+    ]
+  },
+  "status": 409
+}

@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "sin_permiso",
+    "detail": "Tu rol no tiene concedido update.read.",
+    "permiso": "update.read"
+  },
+  "status": 403
+}

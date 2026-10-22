@@ -1,0 +1,8 @@
+{
+  "cuerpo": {
+    "codigo": "firma_invalida",
+    "detail": "El paquete no está firmado: no se instala nada sin firma.",
+    "motivo": "sin_firma"
+  },
+  "status": 422
+}

@@ -1,0 +1,58 @@
+{
+  "accion": "aplicar",
+  "archivos": [
+    {
+      "bytes": 95,
+      "ruta": "reporting/dominio/parche_de_ejemplo.py",
+      "sha256": "801a4dfd3a9c3a2e33297599533a44c49dc5f11ab5bc022ebda9e04f16f8546f"
+    },
+    {
+      "bytes": 154,
+      "ruta": "reporting/migrations/0004_parche_de_ejemplo.py",
+      "sha256": "e90a33e7adcfcbfc9fdcb102368c219d4b6825699160b6f749c1af641ae6380d"
+    }
+  ],
+  "carpetas": {
+    "instantanea": "versiones/17171717-0001-4000-8000-000000000001/anterior",
+    "staging": "staging/17171717-0001-4000-8000-000000000001"
+  },
+  "emitida_en": 1792639077799,
+  "emitida_por": "56b6a0af-caf1-4acb-a366-5e7aa9b0e4c1",
+  "formato": 1,
+  "limite_minutos": 5,
+  "modulos": [
+    {
+      "migraciones": [
+        {
+          "nombre": "0004_parche_de_ejemplo",
+          "reverso": "0003_corte_cola_unica"
+        }
+      ],
+      "nombre": "reporting",
+      "serie": 7,
+      "version": "1.4.0",
+      "version_contrato": 1,
+      "version_datos": 4
+    }
+  ],
+  "nota": "",
+  "orden_id": "4cf9ea11-78ae-4734-97d2-4f72ae06727f",
+  "paquete": {
+    "bytes": 1821,
+    "kid": "upd-dev-1",
+    "nombre": "Reportes 1.4.0 · corrección del boletín",
+    "serie": 7,
+    "sha256": "2a175d14da64ec877e66ed9881e2ad7ac517387077b5904ccf05dd5f9a40d5fe",
+    "version_producto": "2.12.1"
+  },
+  "paquete_id": "17171717-0001-4000-8000-000000000001",
+  "pasos": [
+    "comprobar",
+    "respaldar",
+    "instantanea",
+    "copiar",
+    "migrar",
+    "verificar"
+  ],
+  "ventana": null
+}
