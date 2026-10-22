@@ -1,5 +1,11 @@
 {
   "version": 1,
-  "nota": "Llaves PUBLICAS de PUBLICACION de paquetes .avupd (MOD-017, P-03). Distintas de las de licencias (Q-U8). VACIA hasta la ceremonia de llaves del CTO: un nodo de produccion no acepta ningun paquete mientras tanto (kid_desconocido). Formato de cada entrada: {\"kid\": \"upd-2026-1\", \"publica\": \"<64 hexadecimales>\", \"estado\": \"vigente|siguiente|retirada\"}.",
-  "claves": []
+  "nota": "Llaves PUBLICAS de PUBLICACION de paquetes .avupd (MOD-017, P-03). Distintas de las de licencias (Q-U8). upd-2026-1 es la vigente desde la ceremonia del 2026-10-22; la privada NUNCA va en el repositorio (vive cifrada fuera de el, con su frase de paso aparte). Para rotar: la nueva entra como siguiente en un instalador ANTES de publicar con ella. Formato de cada entrada: {\"kid\": \"upd-2026-1\", \"publica\": \"<64 hexadecimales>\", \"estado\": \"vigente|siguiente|retirada\"}.",
+  "claves": [
+    {
+      "kid": "upd-2026-1",
+      "publica": "73dc6f442e673af55eb90f90b62313bfb3f32c86c4c04388715308328aab5546",
+      "estado": "vigente"
+    }
+  ]
 }

@@ -95,7 +95,9 @@ class DominioTests(SimpleTestCase):
             self.assertNotRegex(texto, r"avacom-actualizacion-desarrollo", a.name)         # la semilla de la llave de desarrollo sólo existe en las pruebas
             self.assertNotRegex(texto, r"def\s+(emitir|empaquetar|generar_paquete)\b", a.name)
         self.assertNotIn("avacom-actualizacion-desarrollo", (RAIZ / "claves" / "desarrollo.json").read_text(encoding="utf-8"))
-        self.assertEqual(__import__("json").loads((RAIZ / "claves" / "produccion.json").read_text(encoding="utf-8"))["claves"], [])      # vacía hasta la ceremonia (Q-U8)
+        claves = __import__("json").loads((RAIZ / "claves" / "produccion.json").read_text(encoding="utf-8"))["claves"]
+        self.assertEqual([(c["kid"], c["estado"]) for c in claves], [("upd-2026-1", "vigente")])      # ceremonia del 2026-10-22 (Q-U8): sólo la pública de producción
+        self.assertEqual(len(bytes.fromhex(claves[0]["publica"])), 32)
 
     def test_el_dominio_no_usa_azar_inseguro(self):
         for a in fuentes("dominio", "aplicacion"):
