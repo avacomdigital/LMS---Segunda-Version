@@ -495,6 +495,18 @@ if ($llavesDeProduccion -eq 0) {
     Write-Host "  Llaves publicas de produccion en el paquete: $llavesDeProduccion."
 }
 
+$llavesDeActualizacion = 0
+try {
+    $llavesDeActualizacion = @((Get-Content (Join-Path $destinoBackend 'actualizacion\claves\produccion.json') -Raw -Encoding UTF8 | ConvertFrom-Json).claves |
+        Where-Object { $_.estado -in @('vigente', 'siguiente') -and "$($_.publica)".Length -eq 64 }).Count
+} catch { $llavesDeActualizacion = 0 }
+if ($llavesDeActualizacion -eq 0) {
+    if ($ExigirLlaveDeProduccion) { Fallar 'No hay ninguna llave publica de PUBLICACION en backend\actualizacion\claves\produccion.json: este instalador rechazaria todo paquete .avupd (kid_desconocido).' }
+    Write-Warning 'ATENCION: backend\actualizacion\claves\produccion.json NO trae ninguna llave de publicacion: este nodo rechazara todo paquete .avupd.'
+} else {
+    Write-Host "  Llaves publicas de publicacion de paquetes en el paquete: $llavesDeActualizacion."
+}
+
 # Toda app de Django que settings.py instala viaja completa, con sus migraciones: una app
 # nueva (auditoria, evaluacion, modo de estudio...) que no llegara al paquete daria un nodo
 # que arranca y falla en la primera ruta que la usa.
@@ -537,6 +549,7 @@ $manifiesto = [ordered]@{
     modulos_backend     = @($modulosBackend)
     licencias_activables = ($llavesDeProduccion -gt 0)
     llaves_publicas_de_produccion = $llavesDeProduccion
+    llaves_publicas_de_actualizacion = $llavesDeActualizacion
     carpeta_registros   = '%ProgramData%\AVACOM\OPS Master\Logs'
     fuente_de_cursos    = 'AVACOM Contenido (biblioteca); el curso de ejemplo esta apagado'
     administra_cursos   = $false
