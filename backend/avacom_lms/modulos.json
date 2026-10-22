@@ -1,0 +1,21 @@
+{
+  "formato": 1,
+  "nota": "Registro de modulos del backend (MOD-017 P-01, BR-012), provisional hasta que MOD-015 lo absorba. Una entrada por app del LMS: version de MODULO, version de CONTRATO (lo que otros consumen), serie (monotona: la que trae el instalador es la 1), si se actualiza por separado, que prefijos de evento produce y de que modulos consume y con que rango de contratos. La version de DATOS no se escribe aqui: se lee viva de las migraciones aplicadas (D-3). `biblioteca` es la frontera con AVACOM Contenido y NO es actualizable por paquete (R-12).",
+  "modulos": {
+    "acceso": {"modulo": "MOD-001", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["identidad", "acceso"], "consume": {"audit": [1, 1], "licenciamiento": [1, 1]}},
+    "device_manager": {"modulo": "MOD-009", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["dispositivo"], "consume": {"acceso": [1, 1], "audit": [1, 1], "nodo": [1, 1], "licenciamiento": [1, 1]}},
+    "biblioteca": {"modulo": "frontera AVACOM Contenido", "version": "1.0.0", "version_contrato": 2, "serie": 1, "actualizable": false, "produce": [], "consume": {}},
+    "expediente": {"modulo": "MOD-012", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["progreso"], "consume": {"acceso": [1, 1], "biblioteca": [1, 2], "audit": [1, 1]}},
+    "classroom_engine": {"modulo": "MOD-007", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["aula"], "consume": {"acceso": [1, 1], "device_manager": [1, 1], "biblioteca": [1, 2], "audit": [1, 1], "nodo": [1, 1]}},
+    "modo_estudio": {"modulo": "MOD-008", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["estudio"], "consume": {"acceso": [1, 1], "classroom_engine": [1, 1], "biblioteca": [1, 2], "audit": [1, 1], "nodo": [1, 1]}},
+    "evaluacion": {"modulo": "MOD-010", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["evaluacion"], "consume": {"acceso": [1, 1], "classroom_engine": [1, 1], "biblioteca": [1, 2], "audit": [1, 1]}},
+    "cola_medios": {"modulo": "cola de medios (MOD-007 / MOD-009, sin ficha propia)", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["medios"], "consume": {"biblioteca": [1, 2], "audit": [1, 1]}},
+    "audit": {"modulo": "MOD-019", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["auditoria"], "consume": {"acceso": [1, 1]}},
+    "gradebook": {"modulo": "MOD-011", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["calificacion"], "consume": {"acceso": [1, 1], "evaluacion": [1, 1], "biblioteca": [1, 2], "audit": [1, 1], "nodo": [1, 1]}},
+    "search": {"modulo": "MOD-021", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["busqueda"], "consume": {"acceso": [1, 1], "evaluacion": [1, 1], "modo_estudio": [1, 1], "classroom_engine": [1, 1], "biblioteca": [1, 2], "audit": [1, 1], "nodo": [1, 1]}},
+    "reporting": {"modulo": "MOD-013", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["reporte"], "consume": {"acceso": [1, 1], "evaluacion": [1, 1], "classroom_engine": [1, 1], "gradebook": [1, 1], "modo_estudio": [1, 1], "device_manager": [1, 1], "biblioteca": [1, 2], "audit": [1, 1], "nodo": [1, 1]}},
+    "licenciamiento": {"modulo": "MOD-018", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["licencia"], "consume": {"acceso": [1, 1], "device_manager": [1, 1], "audit": [1, 1]}},
+    "nodo": {"modulo": "MOD-015", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["nodo"], "consume": {"acceso": [1, 1], "audit": [1, 1]}},
+    "actualizacion": {"modulo": "MOD-017", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["actualizacion"], "consume": {"acceso": [1, 1], "audit": [1, 1], "nodo": [1, 1], "classroom_engine": [1, 1], "biblioteca": [1, 2]}}
+  }
+}

@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "reporting",
     "licenciamiento",
     "nodo",
+    "actualizacion",
 ]
 
 MIDDLEWARE = [
@@ -70,6 +71,9 @@ MIDDLEWARE = [
     # MOD-018: el ÚNICO sitio donde una licencia puede responder «no disponible por licencia» (402). Va DESPUÉS del pase de medios (ve ya la ruta normal) y por dentro de la
     # auditoría; lee el estado de memoria, deja pasar ante cualquier fallo y nunca toca lo intocable (aula, evaluación en curso, modo estudio, login, latido, /health/).
     "licenciamiento.interfaces.middleware.LicenciaMiddleware",
+    # MOD-017: el ÚNICO sitio donde una actualización responde «el aula se está actualizando» (503 `actualizacion_en_curso`, nunca un 4xx): SÓLO el inicio de una clase
+    # (`POST /api/aula/sesiones/`) y SÓLO desde que el nodo acepta una orden hasta que el Host devuelve su resultado (P-08, R-01, R-02). Lee memoria y deja pasar ante cualquier fallo.
+    "actualizacion.interfaces.middleware.ActualizacionMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -276,6 +280,20 @@ AVACOM_NODO_CICLO_MESES = int(os.environ.get("AVACOM_NODO_CICLO_MESES", "12"))
 AVACOM_NODO_DISCO_MIN_GB = float(os.environ.get("AVACOM_NODO_DISCO_MIN_GB", "2"))
 AVACOM_NODO_DISCO_MIN_PCT = float(os.environ.get("AVACOM_NODO_DISCO_MIN_PCT", "5"))
 AVACOM_NODO_WAL_MAX_MB = float(os.environ.get("AVACOM_NODO_WAL_MAX_MB", "512"))
+
+# ---------------------------------------------------------- Actualizaciones (MOD-017 · Update Manager)
+# App `actualizacion` (`/api/actualizacion/`, tablas m17_*). Verifica paquetes `.avupd` firmados (Ed25519), decide y deja la ORDEN al Host (que es quien aplica, con el backend parado).
+# AVACOM_ACTUALIZACION_DIR: la carpeta de paquetes, staging, orden y resultado SÓLO en desarrollo y pruebas (por defecto una temporal); en producción es siempre
+# %ProgramData%\AVACOM\OPS Master\Actualizaciones. AVACOM_ACTUALIZACION_UNIDADES: carpetas (separadas por `;`) que hacen de unidad extraíble en desarrollo y pruebas (una
+# carpeta montada con `subst` también sirve); en producción las unidades son las reales. AVACOM_ACTUALIZACION_CANAL: el canal por internet (P-18), apagado de fábrica (vacío).
+AVACOM_ACTUALIZACION_DIR = os.environ.get("AVACOM_ACTUALIZACION_DIR", "")
+AVACOM_ACTUALIZACION_UNIDADES = os.environ.get("AVACOM_ACTUALIZACION_UNIDADES", "")
+AVACOM_ACTUALIZACION_CANAL = os.environ.get("AVACOM_ACTUALIZACION_CANAL", "")
+# El vigilante del proceso ASGI (lee el resultado del Host al arrancar, abre ventanas, archiva a los 14 días, anuncia paquetes nuevos) y su cadencia en segundos.
+AVACOM_ACTUALIZACION_VIGILANTE = os.environ.get("AVACOM_ACTUALIZACION_VIGILANTE", "1") == "1"
+AVACOM_ACTUALIZACION_INTERVALO_S = float(os.environ.get("AVACOM_ACTUALIZACION_INTERVALO_S", "30"))
+# Tope del paquete en MB (nunca por encima de los 512 del dominio).
+AVACOM_ACTUALIZACION_MAX_MB = int(os.environ.get("AVACOM_ACTUALIZACION_MAX_MB", "512"))
 
 # ---------------------------------------------------------- Modo Estudio (MOD-008)
 # App `modo_estudio` (`/api/modo-estudio/`, tablas m08_*). Lee la lección en vivo por los casos de uso del aula, así que usa la misma

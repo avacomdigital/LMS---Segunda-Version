@@ -62,6 +62,15 @@ try:
 except Exception:   # noqa: BLE001 — R-04
     import logging
     logging.getLogger("avacom.licenciamiento").exception("El programador de la licencia no arrancó")
+# MOD-017: lee el resultado que dejó el Host (`resultado.json`) ANTES de la primera petición —así el 503 del inicio de clases se levanta en cuanto el nodo vuelve— y después vigila
+# las ventanas programadas, el plazo de reversión y los paquetes nuevos en las unidades. Dentro de un `try/except`, como la cola de medios: si no arranca, el nodo sigue (R-04).
+try:
+    from actualizacion.infraestructura import vigilante as vigilante_actualizacion
+
+    vigilante_actualizacion.iniciar()
+except Exception:   # noqa: BLE001 — R-04
+    import logging
+    logging.getLogger("avacom.actualizacion").exception("El vigilante de actualizaciones no arrancó")
 # MOD-019: verifica la cadena de la bitácora cada hora (fuera de clase no hay diferencia: verifica por bloques) y rota por tamaño.
 verificador.iniciar()
 # Cola de medios: hilos que traen los recursos de AVACOM Contenido a la caché del nodo y la mantienen (al arrancar retoman lo que quedó a medias).

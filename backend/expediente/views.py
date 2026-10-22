@@ -62,7 +62,17 @@ class HealthView(VistaExpediente):
             "licencia": self._estado_licencia(),
             # MOD-015 · campo ADITIVO: el estado del nodo (operativo, restringido…) y sus motivos, sin tocar la base. Nunca falla: `estado_resumido` no lanza.
             "nodo": self._estado_nodo(),
+            # MOD-017 · campo ADITIVO: sólo el estado de la actualización (al día, programado o aplicando). Nunca falla: `estado_resumido` no lanza.
+            "actualizacion": self._estado_actualizacion(),
         })
+
+    @staticmethod
+    def _estado_actualizacion() -> dict:
+        try:
+            from actualizacion import servicios as actualizacion
+            return actualizacion.estado_resumido()
+        except Exception as error:  # el health nunca falla por la actualización (R-04)
+            return {"estado": "desconocido", "en_curso": None, "programados": 0, "orden_pendiente": False, "error": str(error)}
 
     @staticmethod
     def _estado_nodo() -> dict:

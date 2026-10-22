@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "nota": "Llaves PUBLICAS de PUBLICACION de paquetes .avupd (MOD-017, P-03). Distintas de las de licencias (Q-U8). VACIA hasta la ceremonia de llaves del CTO: un nodo de produccion no acepta ningun paquete mientras tanto (kid_desconocido). Formato de cada entrada: {\"kid\": \"upd-2026-1\", \"publica\": \"<64 hexadecimales>\", \"estado\": \"vigente|siguiente|retirada\"}.",
+  "claves": []
+}

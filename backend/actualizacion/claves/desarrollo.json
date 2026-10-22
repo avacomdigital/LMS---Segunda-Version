@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "nota": "Llave PUBLICA de DESARROLLO para paquetes .avupd (MOD-017). Derivada de una semilla publica que vive en actualizacion/tests/emisor.py: cualquiera puede firmar con ella, y por eso el nodo SOLO la acepta en desarrollo y pruebas por construccion. El instalador no debe copiar este archivo (pendiente en Build-Installer.ps1, Fase 4).",
+  "claves": [
+    {
+      "kid": "upd-dev-1",
+      "publica": "16640e1c8ec1be45be68f4c4cd92324a846e369c130d3fb70cdb0c616bfe5fee",
+      "estado": "vigente"
+    },
+    {
+      "kid": "upd-dev-2",
+      "publica": "f813c014c2d528e2dc20cc99f701439abb54fa69c1516e48882a7ff2b2e4ff20",
+      "estado": "siguiente"
+    }
+  ]
+}

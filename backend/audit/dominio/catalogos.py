@@ -21,12 +21,14 @@ M_BUSQUEDA = "busqueda"
 M_REPORTES = "reportes"
 M_LICENCIA = "licencia"
 M_NODO = "nodo"
-MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES, M_LICENCIA, M_NODO)
+M_ACTUALIZACION = "actualizacion"
+MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES, M_LICENCIA, M_NODO,
+           M_ACTUALIZACION)
 
 ETIQUETAS_MODULO = {
     M_ACCESO: "Acceso e identidad", M_AULA: "Aula (clase en vivo)", M_DISPOSITIVOS: "Dispositivos", M_ESTUDIO: "Modo estudio",
     M_EVALUACION: "Evaluaciones", M_AUDITORIA: "Auditoría", M_INSTALACION: "Instalación", M_EXPEDIENTE: "Expediente",
-    M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes", M_LICENCIA: "Licencia", M_NODO: "Plataforma del nodo",
+    M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes", M_LICENCIA: "Licencia", M_NODO: "Plataforma del nodo", M_ACTUALIZACION: "Actualizaciones",
 }
 
 
@@ -230,6 +232,21 @@ _LISTA: tuple[Accion, ...] = (
     _a("nodo.purga_ejecutada", M_NODO, "Purga de eventos de la cola ejecutada (BR-017…019)"),
     _a("nodo.acceso_denegado", M_NODO, "Intento de operar la cola del nodo sin permiso"),
     _a("nodo.modo_restringido", M_NODO, "El nodo entró o salió del modo restringido", evento_origen="nodo.modo_restringido.v1"),
+    # ---- actualización (MOD-017, P-13): sólo id de paquete, versiones, serie, resultado y hash; nunca rutas de personas ----
+    _a("actualizacion.importado", M_ACTUALIZACION, "Paquete de actualización importado desde una unidad o la carpeta de entrada (FUN-180)", evento_origen="actualizacion.paquete_importado.v1"),
+    _a("actualizacion.verificado", M_ACTUALIZACION, "Firma, integridad y compatibilidad del paquete verificadas (FUN-181)", evento_origen="actualizacion.paquete_verificado.v1"),
+    _a("actualizacion.rechazado", M_ACTUALIZACION, "Paquete de actualización rechazado (con motivo y sin escribir archivos)", evento_origen="actualizacion.paquete_rechazado.v1"),
+    _a("actualizacion.programado", M_ACTUALIZACION, "Ventana de actualización programada fuera del horario de clase (FUN-182)", evento_origen="actualizacion.ventana_programada.v1"),
+    _a("actualizacion.aplicado", M_ACTUALIZACION, "Actualización de módulo aplicada por el Host y registrada (FUN-184, FUN-187)", evento_origen="actualizacion.modulo_aplicada.v1"),
+    _a("actualizacion.revertido", M_ACTUALIZACION, "Actualización revertida a la versión anterior (FUN-186)", evento_origen="actualizacion.revertida.v1"),
+    _a("actualizacion.reversion_fallida", M_ACTUALIZACION, "La reversión falló: el aula conserva la copia de la base y nadie borra nada", evento_origen="actualizacion.reversion_fallida.v1"),
+    _a("actualizacion.bloqueada", M_ACTUALIZACION, "Actualización bloqueada o aplazada por una clase en curso (FUN-183)", evento_origen="actualizacion.bloqueada.v1"),
+    _a("actualizacion.firma_invalida", M_ACTUALIZACION, "Paquete rechazado: sin firma, firma inválida o llave desconocida"),
+    _a("actualizacion.integridad_alterada", M_ACTUALIZACION, "Paquete rechazado: estructura, rutas, tamaños o huellas alteradas"),
+    _a("actualizacion.orden_emitida", M_ACTUALIZACION, "Orden de aplicar o revertir dejada al Host (extensión)"),
+    _a("actualizacion.archivado", M_ACTUALIZACION, "Plazo de reversión de 14 días vencido: el registro queda archivado (extensión)"),
+    _a("actualizacion.desprogramado", M_ACTUALIZACION, "Ventana de actualización cancelada o vencida (extensión)"),
+    _a("actualizacion.aplazada", M_ACTUALIZACION, "El Host aplazó la aplicación (una clase apareció o la orden no se pudo empezar) (extensión)"),
     # ---- expediente (lo que hoy escribe `expediente/servicios.py`) ----
     _a("inscripcion.creada", M_EXPEDIENTE, "Inscripción creada"),
     _a("inscripcion.retirada", M_EXPEDIENTE, "Inscripción retirada"),
@@ -292,7 +309,8 @@ def modulo_de(clave: str) -> str:
     prefijo = clave.split(".", 1)[0]
     return {"identidad": M_ACCESO, "identity": M_ACCESO, "acceso": M_ACCESO, "aula": M_AULA, "dispositivos": M_DISPOSITIVOS,
             "estudio": M_ESTUDIO, "evaluacion": M_EVALUACION, "calificacion": M_EVALUACION, "auditoria": M_AUDITORIA,
-            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES, "licencia": M_LICENCIA, "nodo": M_NODO}.get(prefijo, M_EXPEDIENTE)
+            "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES, "licencia": M_LICENCIA, "nodo": M_NODO,
+            "actualizacion": M_ACTUALIZACION}.get(prefijo, M_EXPEDIENTE)
 
 
 def como_lista() -> list[dict]:

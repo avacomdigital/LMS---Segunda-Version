@@ -153,7 +153,7 @@ function Huella-Carpetas {
 # publica) existen solo en el repositorio: no viajan al paquete ni cuentan en su huella.
 $ArchivosDeLog = @('*.log', '*.log.*', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.pyc', '.escritura', '.env', '.env.*', 'desarrollo.json')
 function Huella-Backend([string] $carpeta) {
-    Huella-Carpetas -Raices @($carpeta) -ExcluirArchivos $ArchivosDeLog -ExcluirRutas @((Join-Path $carpeta 'logs'), (Join-Path $carpeta 'licenciamiento\tests'))
+    Huella-Carpetas -Raices @($carpeta) -ExcluirArchivos $ArchivosDeLog -ExcluirRutas @((Join-Path $carpeta 'logs'), (Join-Path $carpeta 'licenciamiento\tests'), (Join-Path $carpeta 'actualizacion\tests'))
 }
 function Huella-App {
     Huella-Carpetas -Raices @(
@@ -419,10 +419,13 @@ New-Item -ItemType Directory -Force $destinoBackend | Out-Null
 #   licenciamiento\tests y licenciamiento\claves\desarrollo.json
 #                el emisor de PRUEBAS de licencias y la llave publica de desarrollo
 #                (MOD-018, P-03): un nodo de produccion no los trae
+#   actualizacion\tests y actualizacion\claves\desarrollo.json
+#                lo mismo para los paquetes .avupd (MOD-017, P-03): el emisor de pruebas
+#                firma con una semilla publica y su llave de desarrollo no viaja
 # robocopy usa 0-7 para exitos (1 = se copiaron archivos) y 8+ para fallos.
 $codigo = Nativo -Ejecutable 'robocopy' -Argumentos @(
     (Join-Path $raiz 'backend'), $destinoBackend, '/E'
-    '/XD', '.venv', '__pycache__', (Join-Path $raiz 'backend\logs'), (Join-Path $raiz 'backend\licenciamiento\tests')
+    '/XD', '.venv', '__pycache__', (Join-Path $raiz 'backend\logs'), (Join-Path $raiz 'backend\licenciamiento\tests'), (Join-Path $raiz 'backend\actualizacion\tests')
     '/XF', 'db.sqlite3', 'db.sqlite3-wal', 'db.sqlite3-shm', '*.sqlite3', '*.sqlite3-wal', '*.sqlite3-shm', '*.sqlite3-journal', '*.db', '*.log', '*.log.*', '*.pyc', '.escritura', '.env', '.env.*', 'desarrollo.json'
     '/NFL', '/NDL', '/NJH', '/NJS', '/NP'
 ) -Silencioso
@@ -471,9 +474,11 @@ $huellaBackendPaquete = Huella-Backend $destinoBackend
 $sospechosos = @()
 if (Test-Path (Join-Path $destinoBackend 'licenciamiento\tests')) { $sospechosos += 'licenciamiento\tests (el emisor de pruebas)' }
 if (Test-Path (Join-Path $destinoBackend 'licenciamiento\claves\desarrollo.json')) { $sospechosos += 'licenciamiento\claves\desarrollo.json (la llave de desarrollo)' }
+if (Test-Path (Join-Path $destinoBackend 'actualizacion\tests')) { $sospechosos += 'actualizacion\tests (el emisor de pruebas de paquetes)' }
+if (Test-Path (Join-Path $destinoBackend 'actualizacion\claves\desarrollo.json')) { $sospechosos += 'actualizacion\claves\desarrollo.json (la llave de desarrollo de paquetes)' }
 $sospechosos += @(Get-ChildItem $destinoBackend -Recurse -File -Include '*.avlic', '*.avreq', '*.avrel', '*.pem', '*.key' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($destinoBackend.Length + 1) })
 foreach ($archivo in (Get-ChildItem $destinoBackend -Recurse -File -Include '*.py', '*.json', '*.txt', '*.md' -ErrorAction SilentlyContinue)) {
-    if (Select-String -Path $archivo.FullName -Pattern 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY', 'avacom-licencia-desarrollo' -Quiet -ErrorAction SilentlyContinue) { $sospechosos += $archivo.FullName.Substring($destinoBackend.Length + 1) }
+    if (Select-String -Path $archivo.FullName -Pattern 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY', 'avacom-licencia-desarrollo', 'avacom-actualizacion-desarrollo' -Quiet -ErrorAction SilentlyContinue) { $sospechosos += $archivo.FullName.Substring($destinoBackend.Length + 1) }
 }
 if (-not (Test-Path (Join-Path $destinoBackend 'licenciamiento\claves\produccion.json'))) { Fallar 'El backend no trae licenciamiento\claves\produccion.json (las llaves publicas de produccion).' }
 if (@($sospechosos).Count -gt 0) { Fallar ("El paquete trae algo que NUNCA debe viajar con el nodo (licencias, claves o el emisor de pruebas): " + ($sospechosos -join '; ')) }

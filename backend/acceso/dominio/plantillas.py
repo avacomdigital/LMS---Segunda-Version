@@ -125,6 +125,14 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("node.queue.replay", "nodo", "Reprocesar un evento apartado de la cola de salida o reproducir un consumidor desde una marca anterior (FUN-164)", O, False),
     ("node.queue.read", "nodo", "Ver el estado de la cola de salida por consumidor y los eventos apartados, sin su carga (CAP-097; extensión técnica propuesta)", O, False),
     ("node.health.read", "nodo", "Ver el estado del nodo, sus servicios y su salud (FUN-167, PAN-242; extensión técnica propuesta)", O, False),
+    # --- MOD-017 · Update Manager (sección J de su ficha: `update.apply`, `update.package.import`, `update.schedule`). Sólo `update.apply` está en la tabla de permisos del Maestro
+    # (administración «sí», técnico «escalada» ESC-01); `update.package.import` y `update.schedule` se proponen como EXTENSIÓN MARCADA (Q-U3) y `update.read` es una EXTENSIÓN TÉCNICA
+    # PROPUESTA: ver el estado, los paquetes y el historial, sin datos de personas. Los evalúa `actualizacion.infraestructura.autorizacion.AutorizacionActualizacion`; el profesor,
+    # Reportes y el alumno no reciben ninguno (nunca ven la pantalla Actualizaciones).
+    ("update.apply", "actualizacion", "Aplicar la actualización de un módulo y revertirla dentro de los 14 días (FUN-184, FUN-186; técnico sólo por escalada ESC-01)", O, False),
+    ("update.package.import", "actualizacion", "Importar un paquete de actualización firmado desde una unidad extraíble o la carpeta de entrada (FUN-180; extensión marcada)", O, False),
+    ("update.schedule", "actualizacion", "Programar o cancelar la ventana de actualización fuera del horario de clase (FUN-182; extensión marcada)", O, False),
+    ("update.read", "actualizacion", "Ver el estado de la actualización, los paquetes y el historial del nodo, sin datos de personas (FUN-187; extensión técnica propuesta)", O, False),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
@@ -236,6 +244,8 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "license.activate": O, "license.read": O,
         # Ve el estado del nodo y la cola de salida por consumidor (sin la carga de ningún evento); reprocesar exige una escalada temporal de la administración.
         "node.queue.read": O, "node.health.read": O,
+        # Importa paquetes de actualización desde el USB y ve su estado e historial; APLICAR o revertir exige una escalada temporal de la administración (ESC-01, 4 h).
+        "update.package.import": O, "update.read": O,
         "identity.password.change_own": S, "identity.session.revoke_own": S,
     }),
 }
