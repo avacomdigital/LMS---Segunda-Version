@@ -2,6 +2,7 @@ using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Gradebook;
 using Avacom.Lms.Core.Models;
+using Avacom.Lms.Core.Nodo;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Student.ModoEstudio.Services;
 
@@ -33,6 +34,8 @@ public static class Sesion
     private static Uri? _baseEvaluacion;
     private static GradebookApi? _gradebook;
     private static Uri? _baseGradebook;
+    private static NodoApi? _nodo;
+    private static Uri? _baseNodo;
     private static ColaExamen? _colaExamen;
     private static AlmacenDePin? _pinDeSalida;
     private static readonly object Candado = new();
@@ -208,6 +211,27 @@ public static class Sesion
                     _baseGradebook = actual;
                 }
                 return _gradebook;
+            }
+        }
+    }
+
+    /// <summary>
+    /// El cliente del estado del nodo (MOD-015). Student sólo lee el campo <c>nodo</c> de <c>/health/</c> (público, sin sesión) para decir, con calma, que el equipo del aula se está
+    /// poniendo al día; nada de <c>/api/nodo/</c> (eso es del técnico en OPS).
+    /// </summary>
+    public static NodoApi Nodo
+    {
+        get
+        {
+            var actual = BaseUri;
+            lock (Candado)
+            {
+                if (_nodo is null || _baseNodo != actual)
+                {
+                    _nodo = new NodoApi(Http, actual);
+                    _baseNodo = actual;
+                }
+                return _nodo;
             }
         }
     }

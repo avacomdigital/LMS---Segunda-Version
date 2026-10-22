@@ -1,3 +1,5 @@
+using Avacom.Lms.Core.Nodo;
+
 namespace Avacom.Lms.Student.Pages;
 public partial class StudentMenuPage : ContentPage
 {
@@ -13,6 +15,48 @@ public partial class StudentMenuPage : ContentPage
         var name = Sesion.Nombre; var primero = name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? name;
         StudentName.Text = primero; WelcomeLabel.Text = $"Bienvenido, {primero}"; Iniciales.Text = Avacom.Lms.Core.Models.Identidad.InicialesDe(name);
         AplicarPermisos();
+    }
+
+    // MOD-015 · P-18: el menú mira /health/ cada 20 s mientras se ve y dice, con calma, si el equipo del aula se está poniendo al día. De mejor esfuerzo: sin respuesta, sin banda.
+    private static readonly TimeSpan CadenciaDelNodo = TimeSpan.FromSeconds(20);
+    private CancellationTokenSource? _vigiaDelNodo;
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _vigiaDelNodo?.Cancel();
+        _vigiaDelNodo = new CancellationTokenSource();
+        _ = VigilarElNodoAsync(_vigiaDelNodo.Token);
+    }
+
+    protected override void OnDisappearing()
+    {
+        _vigiaDelNodo?.Cancel();
+        _vigiaDelNodo = null;
+        base.OnDisappearing();
+    }
+
+    private async Task VigilarElNodoAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                using var limite = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                limite.CancelAfter(TimeSpan.FromSeconds(4));
+                var texto = ReglasDeNodo.BandaParaStudent(await Sesion.Nodo.SaludAsync(limite.Token));
+                if (ct.IsCancellationRequested) return;
+                NodoBandaLabel.Text = texto ?? string.Empty;
+                NodoBanda.IsVisible = texto is not null;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
+            catch (Exception ex)
+            {
+                NodoBanda.IsVisible = false;
+                Avacom.Lms.Core.Services.RegistroDeFallos.Escribir("student", "StudentMenuPage.Nodo", ex);
+            }
+            try { await Task.Delay(CadenciaDelNodo, ct); } catch (OperationCanceledException) { return; }
+        }
     }
 
     /// <summary>

@@ -110,6 +110,16 @@ public partial class BitacoraPage
             foreach (var hijo in fila.Children.OfType<View>()) hijo.VerticalOptions = LayoutOptions.Center;
             pila.Add(FilaPlana(fila));
         }
+        // Fase 3: los módulos que ya escriben sólo en la cola única (su cola antigua queda como historia de sólo lectura).
+        var cortes = ResumenDelEquipo.Cortes(cola);
+        pila.Add(Ds.Cuerpo("Módulos conectados a la cola única", 15));
+        if (cortes.Count == 0) pila.Add(Ds.Secundario("Ninguno todavía: cada módulo sigue con su cola propia hasta que se conecte.", 13));
+        foreach (var corte in cortes)
+        {
+            var texto = Ds.Secundario(corte, 13);
+            texto.LineBreakMode = LineBreakMode.WordWrap;
+            pila.Add(texto);
+        }
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(20, 16), Colors.White);
     }
 

@@ -158,6 +158,16 @@ public static class NodoTexto
         return $"El evento {r.Secuencia.ToString("N0", Es)} falló {veces}; se reintenta a las {Local(r.ProximoEn, zona).ToString("HH:mm:ss", CultureInfo.InvariantCulture)}.";
     }
 
+    /// <summary>
+    /// Un módulo ya conectado a la cola única (P-05): «Aula · escribe en la cola única desde el 12 de octubre, 10:43 · su historia anterior (hasta el evento 380) se conserva».
+    /// Una <c>ultima_legada</c> en cero es un módulo que se cortó sin historia propia.
+    /// </summary>
+    public static string Corte(CorteDeModulo c, TimeZoneInfo? zona = null)
+    {
+        var historia = c.UltimaLegada > 0 ? $"su historia anterior (hasta el evento {c.UltimaLegada.ToString("N0", Es)}) se conserva sólo para leer" : "no tenía historia anterior";
+        return $"{NombreDeFuente(c.Modulo)} · escribe en la cola única desde {FechaYHora(c.CortadoEn, zona)} · {historia}";
+    }
+
     public static string EstadoDeProblema(string? estado) => estado switch
     {
         EstadosDeProblema.Apartado => "Apartado",

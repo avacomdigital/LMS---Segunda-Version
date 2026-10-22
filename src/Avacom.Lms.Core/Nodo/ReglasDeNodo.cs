@@ -42,6 +42,14 @@ public static class ReglasDeNodo
         return new AvisoDelNodo(salud.Estado, texto, salud.Estado == EstadosDelNodo.Restringido ? TonoDeAviso.Fuerte : TonoDeAviso.Atencion);
     }
 
+    // ================================================================================================== Student (P-18)
+
+    /// <summary>
+    /// Lo único que Student dice del nodo: una frase serena cuando <c>/health/</c> declara «en recuperación». Nada para «restringido» (sólo frena trabajos no núcleo, que el alumno
+    /// no hace), ni «arrancando», ni sin respuesta: no se inventa un aviso y nunca se interrumpe una clase ni un examen por la plataforma.
+    /// </summary>
+    public static string? BandaParaStudent(NodoEnSalud? salud) => salud is { EnRecuperacion: true } ? NodoTexto.RecuperacionParaStudent : null;
+
     // ================================================================================================== la pestaña «Estado del equipo»
 
     /// <summary>El orden de importancia de los estados de un consumidor: el peor primero.</summary>

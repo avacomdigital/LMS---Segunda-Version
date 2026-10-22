@@ -152,6 +152,33 @@ public sealed class NodoTextoTests
     }
 
     [Fact]
+    public void Student_SoloDiceAlgoSiElNodoSeEstaRecuperando()
+    {
+        Assert.Null(ReglasDeNodo.BandaParaStudent(null));                                                               // sin respuesta: sin aviso inventado
+        Assert.Null(ReglasDeNodo.BandaParaStudent(new NodoEnSalud(EstadosDelNodo.Operativo, [], false, false, "2.12.0")));
+        Assert.Null(ReglasDeNodo.BandaParaStudent(new NodoEnSalud(EstadosDelNodo.Arrancando, [], false, false, null)));
+        Assert.Null(ReglasDeNodo.BandaParaStudent(new NodoEnSalud(EstadosDelNodo.Restringido, [MotivosDeRestriccion.DiscoEscaso], true, false, null)));   // frena trabajo no núcleo: el alumno no lo nota
+        var frase = ReglasDeNodo.BandaParaStudent(new NodoEnSalud(EstadosDelNodo.EnRecuperacion, [], false, true, null));
+        Assert.Equal(NodoTexto.RecuperacionParaStudent, frase);
+        Assert.Contains("guardado", frase);
+        Assert.DoesNotContain("minuto", frase);                                                                         // sin cuenta regresiva
+    }
+
+    [Fact]
+    public void UnCorte_SeDiceConElModuloLaFechaYLaHistoriaQueSeConserva()
+    {
+        var aula = new CorteDeModulo("classroom_engine", 380, 1790000000000);
+        var dicho = NodoTexto.Corte(aula, Utc);
+        Limpia(dicho);
+        Assert.StartsWith("Aula · escribe en la cola única desde ", dicho);
+        Assert.Contains("hasta el evento 380", dicho);
+        var sinHistoria = NodoTexto.Corte(new CorteDeModulo("search", 0, 1790000000000), Utc);
+        Limpia(sinHistoria);
+        Assert.Contains("no tenía historia anterior", sinHistoria);
+        Assert.DoesNotContain("hasta el evento", sinHistoria);
+    }
+
+    [Fact]
     public void LosConsumidores_SeOrdenanDelPeorAlMejor_YLaColaDiceSiPideAtencion()
     {
         var cola = Fixture<ColaDelNodo>("cola");

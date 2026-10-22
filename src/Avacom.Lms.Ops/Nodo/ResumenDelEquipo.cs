@@ -60,6 +60,10 @@ public static class ResumenDelEquipo
             NodoTexto.TonoDeConsumidor(c.Estado), c.Pendientes, c.Problemas, c.Fuentes.Select(NodoTexto.Fuente).ToList(),
             c.Fuentes.Select(f => f.Reintento).FirstOrDefault(r => r is not null) is { } r ? NodoTexto.Reintento(r, zona) : null)).ToList();
 
+    /// <summary>Los módulos ya conectados a la cola única (Fase 3), por orden alfabético de su nombre visible; vacío si ninguno se cortó todavía.</summary>
+    public static IReadOnlyList<string> Cortes(ColaDelNodo cola, TimeZoneInfo? zona = null) =>
+        cola.Cortes.OrderBy(c => NodoTexto.NombreDeFuente(c.Modulo), StringComparer.CurrentCultureIgnoreCase).Select(c => NodoTexto.Corte(c, zona)).ToList();
+
     /// <summary>El resumen de una línea de la cola: «3 consumidores · 2 al día · 1 rezagado · 1 evento apartado».</summary>
     public static string ResumenDeCola(ColaDelNodo cola)
     {

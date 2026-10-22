@@ -78,6 +78,12 @@
             </VerticalStackLayout>
         </ScrollView>
 
+        <!-- MOD-015 · P-18: la única señal de la plataforma que ve el alumno. Una banda serena abajo del tablero, sólo mientras /health/ declare «en recuperación»; sin cuenta regresiva,
+             sin alarma, y nunca en un examen ni en una clase (esta es la pantalla del menú). Lo que el alumno hizo ya está guardado: el texto sólo lo dice. -->
+        <Border x:Name="NodoBanda" Grid.Row="1" IsVisible="False" VerticalOptions="End" HorizontalOptions="Center" Margin="16,0,16,10" Padding="20,12" BackgroundColor="#FEF9E6" Stroke="#E6D9A8" StrokeThickness="1" StrokeShape="RoundRectangle 14" ZIndex="4" AutomationId="nodo-banda-student">
+            <Label x:Name="NodoBandaLabel" FontSize="15" TextColor="#3A2A00" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+        </Border>
+
         <!-- Dock como el del diseño de referencia: píldora oscura con la marca de AVACOM en un círculo blanco y las opciones con el icono
              sobre la etiqueta. Mismos botones, mismas etiquetas y mismas acciones que antes. Los círculos se dibujan con RoundRectangle
              (un Ellipse degenerado en su primer cuadro tumba los lienzos Win2D de la ventana). -->

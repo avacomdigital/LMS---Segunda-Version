@@ -82,6 +82,20 @@ public sealed class NodoLogicaTests
         Assert.Contains("falló 3 veces", ResumenDelEquipo.Consumidores(conReintento, Utc)[0].Reintento);
     }
 
+    [Fact]
+    public void Cortes_ListanLosModulosConectadosPorNombreVisible()
+    {
+        var cola = Fixture<ColaDelNodo>("cola");
+        Assert.Empty(ResumenDelEquipo.Cortes(cola, Utc));                                     // lo capturado antes de la Fase 3: ninguno
+        var conCortes = cola with { Cortes = [new CorteDeModulo("search", 0, 1_790_000_000_000), new CorteDeModulo("classroom_engine", 380, 1_790_000_000_000), new CorteDeModulo("device_manager", 12, 1_790_000_000_000)] };
+        var lineas = ResumenDelEquipo.Cortes(conCortes, Utc);
+        Assert.Equal(3, lineas.Count);
+        Assert.StartsWith("Aula · ", lineas[0]);
+        Assert.StartsWith("Búsqueda · ", lineas[1]);
+        Assert.StartsWith("Dispositivos · ", lineas[2]);
+        Assert.All(lineas, l => { Assert.DoesNotContain("null", l); Assert.DoesNotContain("{", l); });
+    }
+
     // ---------------------------------------------------------------------------------------------------- reprocesar y reproducir
 
     private sealed class ApiFalsa : INodoApi
