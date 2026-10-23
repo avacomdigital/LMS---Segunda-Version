@@ -65,3 +65,21 @@ class CupoAgotado(ErrorDispositivos):
     """Se alcanzó el cupo de equipos de la licencia (MOD-018): no se pueden registrar más; los que ya están registrados siguen funcionando. 402, no 403: no es un permiso."""
     codigo = "cupo_agotado"
     http = 402
+
+
+class IdentidadRequerida(ErrorDispositivos):
+    """La licencia pide que un equipo nuevo pruebe su clave (nivel mínimo de garantía) y este no lo hizo; los equipos ya registrados siguen funcionando. 402, no 403: no es un permiso."""
+    codigo = "identidad_requerida"
+    http = 402
+
+
+class ClaveDistinta(ErrorDispositivos):
+    """Este equipo ya tiene registrada otra clave: una identidad se enrola una vez. Para cambiarla, el técnico reinicia la identidad del equipo."""
+    codigo = "clave_distinta"
+    http = 409
+
+
+class ClaveEnUso(ErrorDispositivos):
+    """Esa clave ya identifica a otro equipo del aula: una clave no puede contar como dos equipos."""
+    codigo = "clave_en_uso"
+    http = 409

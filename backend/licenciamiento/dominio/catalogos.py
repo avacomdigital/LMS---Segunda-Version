@@ -81,8 +81,9 @@ ARCHIVO_TUMBAS = "liberadas.json"          # las licencias que este nodo liberó
 ARCHIVO_ANCLA = "ancla-reloj.json"         # marca alta del reloj e inicio de la evaluación, con su verificación
 ARCHIVO_SECRETO = "instalacion.bin"        # secreto de instalación (protegido)
 ARCHIVO_LLAVE_NODO = "nodo.key"            # llave Ed25519 del nodo (protegida)
-# Cómo se nombran, en el asiento y la observación de integridad, los secretos propios que hubo que apartar por no poder abrirlos (nunca el nombre del archivo ni su contenido).
-NOMBRES_DE_SECRETO = {ARCHIVO_SECRETO: "secreto_de_instalacion", ARCHIVO_LLAVE_NODO: "llave_del_nodo"}
+# Cómo se nombran, en el asiento y la observación de integridad, los secretos propios que hubo que apartar por no poder abrirlos (nunca el nombre del archivo ni su contenido). `avacom_lic` no es un
+# secreto: es la biblioteca nativa (Fase 4) que la instalación esperaba y no cargó; usa el mismo cauce de novedades.
+NOMBRES_DE_SECRETO = {ARCHIVO_SECRETO: "secreto_de_instalacion", ARCHIVO_LLAVE_NODO: "llave_del_nodo", "avacom_lic": "biblioteca_nativa"}
 
 # Cuánto dura en pantalla una bandera de reloj o de integridad después del hecho que la causó.
 BANDERA_RELOJ_MS = 24 * 3_600_000

@@ -15,4 +15,7 @@ urlpatterns = [
     path("liberar/", views.LiberarView.as_view()),
     # Extensión: confirmar la fecha tras un salto sospechoso del reloj (P-06)
     path("reloj/confirmar/", views.ConfirmarRelojView.as_view()),
+    # Fase 5 · identidad de dispositivo (P-24): públicas, como el latido; el equipo se identifica antes de tener sesión y al abrirla
+    path("identidad/reto/", views.IdentidadRetoView.as_view()),
+    path("identidad/enrolar/", views.IdentidadEnrolarView.as_view()),
 ]

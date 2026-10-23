@@ -16,6 +16,9 @@ class DispositivoEntrada(serializers.Serializer):
     # MOD-010 · BR-075: lo que la tableta DECLARA poder garantizar en un examen (`abierto` · `supervisado` · `controlado`). Ausente = no dice nada.
     capacidad_control = serializers.CharField(max_length=12, required=False, allow_blank=True)
     capacidad_detalle = serializers.JSONField(required=False)
+    # MOD-018 · Fase 5: la prueba de clave que trae un equipo NUEVO al registrarse (nonce del nodo, clave pública, firma del reto, cadena de atestación). Opcional y aditivo: un cliente sin ella
+    # sigue registrándose como siempre (garantía `declarada`). `licenciamiento` la verifica; este módulo sólo la pasa.
+    identidad = serializers.JSONField(required=False, allow_null=True)
 
     def validate(self, datos):
         if not (datos.get("identificador_hw") or datos.get("identificador")):

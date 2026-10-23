@@ -34,6 +34,11 @@ PERFILES = (COMPARTIDO, ASIGNADO)
 ABIERTO, SUPERVISADO, CONTROLADO = "abierto", "supervisado", "controlado"
 NIVELES_CONTROL = (ABIERTO, SUPERVISADO, CONTROLADO)
 
+# MOD-018 · Fase 5 (P-24): el nivel de garantía de la identidad por clave del equipo, de menor a mayor. `declarada` = sólo la huella que el equipo dice; `software` = tiene una clave y
+# probó poseerla; `hardware` = además el nodo comprobó, sin internet, que la clave vive en un entorno seguro del equipo. Lo calcula `licenciamiento`; aquí sólo se guarda.
+DECLARADA, SOFTWARE, HARDWARE = "declarada", "software", "hardware"
+GARANTIAS = (DECLARADA, SOFTWARE, HARDWARE)
+
 # Una tableta se considera viva si dio señal en el último minuto (el sondeo del aula es cada 2 s).
 LATIDO_VIVO_MS = 60_000
 
@@ -100,6 +105,13 @@ def validar_capacidad_control(valor) -> str:
     texto = str(valor or "").strip().lower()
     if texto and texto not in NIVELES_CONTROL:
         raise DatosInvalidos(f"capacidad_control debe ser uno de: {', '.join(NIVELES_CONTROL)}.", capacidad_control=valor)
+    return texto
+
+
+def validar_garantia(valor) -> str:
+    texto = str(valor or "").strip().lower()
+    if texto not in GARANTIAS:
+        raise DatosInvalidos(f"garantia debe ser uno de: {', '.join(GARANTIAS)}.", garantia=valor)
     return texto
 
 

@@ -13,7 +13,8 @@ from ..dominio import catalogos as cat
 from ..dominio import cupo, estado as est, huella as hu
 from ..dominio.licencia import ILIMITADO, Licencia
 from ..dominio.politica import POLITICA_PROVISIONAL, Politica
-from .puertos import (Actor, Almacen, Anclas, Auditoria, Autorizacion, Claves, Conteos, FuenteDeHuella, Instantanea, Nodo, Outbox, Reloj, UnidadDeTrabajo, Vivo)
+from .puertos import (Actor, Almacen, Anclas, Auditoria, Autorizacion, Claves, Conteos, EquiposConIdentidad, FuenteDeAtestacion, FuenteDeHuella, Instantanea, Nodo, Outbox, Reloj,
+                      Retos, UnidadDeTrabajo, Vivo)
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,9 @@ class ConfigLicencia:
     # BR-063: los valores de `settings` que valen cuando no hay licencia (desarrollo y pruebas).
     concurrencia_normal: int = 50
     concurrencia_pico: int = 100
+    # Fase 5 (P-24): la garantía mínima de identidad que exige la licencia para dar de alta un equipo NUEVO (`declarada` = ninguna, lo de siempre; `software`; `hardware`). Nunca afecta a un
+    # equipo que ya existe. `AVACOM_LICENCIA_IDENTIDAD_MINIMA`.
+    identidad_minima: str = "declarada"
 
 
 @dataclass
@@ -44,6 +48,9 @@ class Servicios:
     autorizacion: Autorizacion
     vivo: Vivo
     config: ConfigLicencia = field(default_factory=ConfigLicencia)
+    retos: Retos | None = None
+    atestacion: FuenteDeAtestacion | None = None
+    equipos: EquiposConIdentidad | None = None
     bloqueo: threading.RLock = field(default_factory=threading.RLock)      # el programador y una acción del administrador no se mezclan
 
 

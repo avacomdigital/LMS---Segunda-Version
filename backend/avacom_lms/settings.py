@@ -228,6 +228,8 @@ AVACOM_LICENCIA_MODO = os.environ.get("AVACOM_LICENCIA_MODO", "auto")
 # Carpeta de estado de la licencia SÓLO en desarrollo y pruebas; en producción es siempre %ProgramData%\AVACOM\OPS Master\Config\licencia\ (esta variable se ignora).
 AVACOM_LICENCIA_DIR = os.environ.get("AVACOM_LICENCIA_DIR", "")
 # "0" desactiva el hilo que valida al arrancar y recalcula el estado (por omisión cada 300 s).
+# Fase 5 (P-24): garantía mínima de identidad para dar de alta un equipo NUEVO en un nodo de producción: declarada (ninguna: lo de siempre) · software · hardware. Lo registrado no se toca.
+AVACOM_LICENCIA_IDENTIDAD_MINIMA = os.environ.get("AVACOM_LICENCIA_IDENTIDAD_MINIMA", "declarada")
 AVACOM_LICENCIA_PROGRAMADOR = os.environ.get("AVACOM_LICENCIA_PROGRAMADOR", "1") == "1"
 AVACOM_LICENCIA_INTERVALO_S = float(os.environ.get("AVACOM_LICENCIA_INTERVALO_S", "300"))
 

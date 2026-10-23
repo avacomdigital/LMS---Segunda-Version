@@ -32,7 +32,9 @@ from rest_framework.views import APIView
 from acceso.dominio import errores as errores_acceso
 from acceso.interfaces.permisos import SesionSiSeExige, principal_de
 
-from ..aplicacion import acciones
+from rest_framework.permissions import AllowAny
+
+from ..aplicacion import acciones, identidad
 from ..aplicacion.base import Actor
 from ..dominio import catalogos as cat
 from ..dominio import errores
@@ -148,3 +150,21 @@ class LiberarView(VistaLicencia):
 class ConfirmarRelojView(VistaLicencia):
     def post(self, request):
         return Response(acciones.ConfirmarReloj(servicios()).ejecutar(self._actor(request, _cuerpo(request))))
+
+
+class IdentidadRetoView(VistaLicencia):
+    """Público (como el latido): el equipo pide el reto que va a firmar al abrir sesión. Un reto vale una vez y vence a los 5 minutos."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        return Response(identidad.EmitirReto(servicios()).ejecutar(), status=status.HTTP_201_CREATED)
+
+
+class IdentidadEnrolarView(VistaLicencia):
+    """Público: el equipo trae su clave pública, la firma del reto y, en Android, la cadena de atestación. Se guarda en `device_manager`; nunca se frena a un equipo por esto."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        return Response(identidad.Enrolar(servicios()).ejecutar(_cuerpo(request)))

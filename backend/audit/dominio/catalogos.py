@@ -129,6 +129,8 @@ _LISTA: tuple[Accion, ...] = (
     _a("dispositivos.desbloqueado", M_DISPOSITIVOS, "Equipo desbloqueado"),
     _a("dispositivos.asignado", M_DISPOSITIVOS, "Equipo asignado a una persona"),
     _a("dispositivos.liberado", M_DISPOSITIVOS, "Equipo liberado"),
+    _a("dispositivos.identidad_registrada", M_DISPOSITIVOS, "Identidad por clave del equipo registrada o cambiada de nivel (sin la clave: sólo su huella)"),
+    _a("dispositivos.identidad_reiniciada", M_DISPOSITIVOS, "Identidad por clave del equipo reiniciada por el técnico"),
     _a("dispositivos.borrado_remoto", M_DISPOSITIVOS, "Borrado remoto ordenado", exige_motivo=True),
     _a("dispositivos.limpieza_registrada", M_DISPOSITIVOS, "Limpieza del equipo registrada"),
     # ---- estudio (MOD-008) ----

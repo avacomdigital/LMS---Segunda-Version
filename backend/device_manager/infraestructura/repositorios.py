@@ -15,7 +15,8 @@ from ..dominio.errores import SinPermiso
 
 CAMPOS_DISPOSITIVO = ("id", "organizacion_id", "identificador_hw", "nombre", "tipo", "plataforma", "version_app",
                       "activo", "bloqueado", "registrado_en", "ultimo_latido_en", "espacio_libre_mb", "bateria_pct",
-                      "perfil", "asignado_a_id", "asignado_en", "capacidad_control", "capacidad_detalle", "capacidad_declarada_en")
+                      "perfil", "asignado_a_id", "asignado_en", "capacidad_control", "capacidad_detalle", "capacidad_declarada_en",
+                      "clave_publica", "clave_huella", "garantia", "garantia_detalle", "garantia_en")
 CAMPOS_SESION = ("id", "alumno_id", "dispositivo_id", "iniciada_en", "finalizada_en", "motivo_cierre")
 
 
@@ -33,6 +34,10 @@ class DispositivosDjango:
 
     def por_identificador(self, organizacion_id: str, identificador_hw: str) -> dict | None:
         fila = m.Dispositivo.objects.filter(organizacion_id=organizacion_id, identificador_hw=identificador_hw).first()
+        return _d(fila, CAMPOS_DISPOSITIVO) if fila else None
+
+    def con_clave(self, organizacion_id: str, clave_huella: str) -> dict | None:
+        fila = m.Dispositivo.objects.filter(organizacion_id=organizacion_id, clave_huella=clave_huella).exclude(clave_huella="").first()
         return _d(fila, CAMPOS_DISPOSITIVO) if fila else None
 
     def listar(self, organizacion_id: str, solo_activos: bool = True) -> list[dict]:

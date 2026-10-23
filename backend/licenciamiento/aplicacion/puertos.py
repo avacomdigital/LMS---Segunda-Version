@@ -110,6 +110,34 @@ class Autorizacion(Protocol):
     def puede(self, actor: Actor, permiso: str) -> bool: ...
 
 
+# ------------------------------------------------------------------------------------------------------------------- identidad de dispositivo (Fase 5)
+class Retos(Protocol):
+    """Los retos que el nodo emite a los equipos que se identifican (P-24): uno por activación, de un solo uso y con vencimiento. Viven en memoria del proceso: un reinicio los invalida y el
+    cliente pide otro (no hay estado que restaurar ni que alguien pueda rebobinar)."""
+
+    def entregar(self, ahora_ms: int) -> tuple[bytes, int]:
+        """`(nonce de 32 bytes, vence_ms)`."""
+    def consumir(self, nonce: bytes, ahora_ms: int) -> bool:
+        """True UNA sola vez por reto emitido y vigente; cualquier otra cosa (desconocido, vencido, repetido) es False."""
+
+
+class FuenteDeAtestacion(Protocol):
+    """Lo que viaja en el paquete para verificar sin internet: las raíces de Google, la lista de certificados revocados y la app de AVACOM (paquete y firmas permitidos)."""
+
+    def raices(self) -> list: ...
+    def revocadas(self) -> frozenset[str]: ...
+    def app(self) -> Any: ...
+
+
+class EquiposConIdentidad(Protocol):
+    """La frontera con `device_manager` (R-08): la identidad por clave se guarda allí, por su servicio público."""
+
+    def registrar(self, identificador_hw: str, clave_publica: str, clave_huella: str, garantia: str | None, detalle: dict, momento: int, actor: str) -> dict:
+        """Guarda (o confirma) la identidad del equipo. Lanza `NoEncontrado`, `ClaveDistinta` o `ClaveEnUso` de ESTE módulo."""
+    def de(self, identificador_hw: str) -> dict | None:
+        """`{clave_huella, garantia, …}` del equipo si ya tiene clave; None si no."""
+
+
 # ------------------------------------------------------------------------------------------------------------------- repositorios m18_*
 class RepositorioInstalacion(Protocol):
     def obtener(self) -> dict | None: ...

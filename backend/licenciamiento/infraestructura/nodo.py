@@ -89,6 +89,12 @@ class NodoDeLicencia:
     def clave_publica(self) -> bytes:
         return self._par()[1]
 
+    def anotar_novedad(self, nombre: str) -> None:
+        """Deja una novedad de integridad que no viene de un archivo apartado (la biblioteca nativa que la instalación esperaba y no cargó). Una sola vez por nombre."""
+        with self._candado:
+            if nombre not in self._novedades:
+                self._novedades.append(nombre)
+
     def tomar_novedades(self) -> list[str]:
         """Los archivos que se apartaron desde la última vez (una sola entrega: la evaluación los asienta)."""
         with self._candado:

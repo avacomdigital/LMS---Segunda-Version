@@ -16,7 +16,7 @@ import logging
 
 from .dominio import catalogos as cat
 from .dominio import cupo as dominio_cupo
-from .dominio.errores import CupoAgotado
+from .dominio.errores import CupoAgotado, IdentidadRequerida
 
 log = logging.getLogger("avacom.licenciamiento")
 
@@ -98,9 +98,28 @@ def _exigir_cupo(tipo: str, en_uso: int) -> None:
                       tipo=tipo, limite=int(limite), en_uso=int(en_uso))
 
 
-def exigir_equipo_nuevo(en_uso: int) -> None:
-    """P-08 · FUN-091: un equipo NUEVO cuenta contra el límite de equipos. `en_uso` = cuántos hay ya (sin el equipo maestro). Nunca se llama para uno que ya existe."""
+def exigir_equipo_nuevo(en_uso: int, identidad: dict | None = None, identificador_hw: str = "") -> dict | None:
+    """P-08 · FUN-091: un equipo NUEVO cuenta contra el límite de equipos. `en_uso` = cuántos hay ya (sin el equipo maestro). Nunca se llama para uno que ya existe.
+
+    Fase 5 (P-24): si el equipo trae su prueba de clave (`identidad`), se verifica aquí y se devuelve lo que `device_manager` guarda en el equipo nuevo (`clave_publica`, `clave_huella`,
+    `garantia`, `garantia_detalle`); sin prueba (o con una que no pasa) se devuelve None y el equipo entra como `declarada`. En un nodo de producción la licencia puede pedir un nivel
+    mínimo (`AVACOM_LICENCIA_IDENTIDAD_MINIMA`): sin él, `IdentidadRequerida` (402) y el equipo NUEVO no se da de alta. Nunca afecta a un equipo que ya existe. R-04: un fallo interno
+    de la verificación deja pasar (sin identidad)."""
     _exigir_cupo(dominio_cupo.TIPO_EQUIPOS, en_uso)
+    return _identidad_de_equipo_nuevo(identidad, identificador_hw)
+
+
+def _identidad_de_equipo_nuevo(identidad: dict | None, identificador_hw: str) -> dict | None:
+    try:
+        from .aplicacion.identidad import identidad_de_equipo_nuevo
+        from .infraestructura import contenedor
+        return identidad_de_equipo_nuevo(contenedor.servicios(), identidad, identificador_hw, estricta=contenedor.modo() == "firmada")
+    except IdentidadRequerida:
+        _contar("identidad_requerida")
+        raise
+    except Exception:   # noqa: BLE001 — R-04
+        log.exception("No se pudo verificar la identidad de un equipo nuevo", extra={"evento": "licencia.identidad_fallo", "ruta": "bad"})
+        return None
 
 
 def exigir_usuario_nuevo(en_uso: int) -> None:

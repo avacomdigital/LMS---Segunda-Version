@@ -33,7 +33,7 @@ MAX_CAMPOS = 32
 MAX_KID = 64                     # una licencia usa un kid corto («prod-2026-1»); un archivo firmado por el nodo usa su llave pública en hexadecimal (64 caracteres)
 CRITICA = 0x8000
 
-_KID_VALIDO = re.compile(rb"^[a-z0-9._-]{1,64}$")
+_KID_VALIDO = re.compile(rb"^[a-z0-9._-]{1,64}\Z")        # \Z y no $: con $ un «\n» final también pasaba (lo halló la prueba diferencial contra la nativa, D-32)
 _MINIMO = 4 + 2 + 1 + 1 + TAM_FIRMA
 
 

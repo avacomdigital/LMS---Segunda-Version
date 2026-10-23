@@ -16,9 +16,12 @@ import hashlib
 import hmac
 import json
 import logging
+from pathlib import Path
 
 from ..aplicacion.puertos import LecturaDeAnclas
 from ..dominio import catalogos as cat
+from .integridad import ARCHIVO as ARCHIVO_DE_SENAL
+from .integridad import SenalDeIntegridad
 
 log = logging.getLogger("avacom.licenciamiento")
 
@@ -56,8 +59,11 @@ class RegistroDeWindows:
 
 
 class AnclasDeLicencia:
-    def __init__(self, almacen, nodo, registro: RegistroDeWindows | None = None):
+    def __init__(self, almacen, nodo, registro: RegistroDeWindows | None = None, senal: SenalDeIntegridad | None = None):
         self._almacen, self._nodo, self._registro = almacen, nodo, registro
+        # P-23: la señal de integridad del despliegue (la deja el Host junto a la carpeta de estado: `Config\integridad.json`). Sólo en un nodo instalado de Windows (el que tiene `registro`);
+        # en desarrollo y pruebas no se lee nada salvo que se inyecte.
+        self._senal = senal if senal is not None else (SenalDeIntegridad(Path(almacen.carpeta).parent / ARCHIVO_DE_SENAL) if registro is not None and hasattr(almacen, "carpeta") else None)
 
     def leer(self) -> LecturaDeAnclas:
         secreto = self._nodo.secreto_de_instalacion()
@@ -84,6 +90,8 @@ class AnclasDeLicencia:
                     marcas["registro"] = marca
                 else:
                     alteradas.append("registro")
+        if self._senal is not None:
+            alteradas.extend(self._senal.alteradas())       # `despliegue:<tipo>`: evidencia del Host; recorre el mismo camino que las demás alteraciones y jamás degrada nada
         return LecturaDeAnclas(marcas=marcas, instalada_en=instalada_en, alteradas=tuple(alteradas))
 
     def escribir(self, marca_ms: int, instalada_en: int | None = None) -> None:
