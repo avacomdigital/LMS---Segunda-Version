@@ -1,0 +1,28 @@
+AVACOM · INFORME DE RESTAURACIÓN
+----------------------------------------------------------------
+Institución:            Institución Educativa San José
+Restaurado el:          26/10/2026 10:20
+Respaldo usado:         B8C9DAE0  (Completo, del 25/10/2026 02:00)
+Resultado:              Restauración completa
+
+QUÉ SE RECUPERÓ
+  · La base de datos del aula tal como estaba al hacerse el respaldo.
+  · Archivos de la institución: 1840.
+
+QUÉ SE PIERDE
+  · Todo lo registrado entre el respaldo y la restauración: unas 32.3 horas de actividad.
+  · Eventos de la cola posteriores al respaldo: 1204 (la secuencia del equipo NO retrocede: ninguna secuencia se repite).
+
+QUÉ PASÓ ADEMÁS
+  · Se tomó un respaldo de seguridad ANTES de restaurar (punto de retorno C3357B01).
+  · Se cerraron todas las sesiones abiertas: cada persona entra de nuevo.
+  · Licencia: revalidada contra la huella del equipo.
+  · Índices y reportes: search, reporting, gradebook.
+
+QUÉ HACER AHORA
+  1. Pida a los profesores y a los alumnos que vuelvan a entrar.
+  2. Reinicie el servicio del aula si el personal técnico lo indica.
+  3. Guarde este informe junto con la constancia del respaldo usado.
+
+Este informe no contiene datos de personas.
+----------------------------------------------------------------

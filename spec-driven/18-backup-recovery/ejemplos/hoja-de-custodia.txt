@@ -1,0 +1,21 @@
+AVACOM · HOJA DE CUSTODIA DE LOS RESPALDOS
+----------------------------------------------------------------
+Institución:  Institución Educativa San José
+Equipo:       3F2A9C1E
+Emitida el:   01/10/2026 10:10
+
+CÓDIGO DE CUSTODIA (EJEMPLO: este código no abre ningún respaldo real)
+
+    LLAQU-IGAYV-YM7SV-BIAOO-IQGQG-P2772-KMME
+
+PARA QUÉ SIRVE
+  Los respaldos están cifrados. En el mismo equipo se abren solos; en un equipo NUEVO o reemplazado, el personal técnico de AVACOM necesitará este código para restaurar
+  la información de la institución. Sin él, un respaldo hecho en otro equipo no se puede abrir (BR-102).
+
+CÓMO GUARDARLO
+  1. Imprima esta hoja y guárdela bajo llave (caja fuerte o archivo de la rectoría), separada del equipo y de las memorias con los respaldos.
+  2. No lo fotografíe ni lo envíe por correo o mensajería.
+  3. Anote quién lo custodia y la fecha. Si se pierde, avise al personal técnico de AVACOM: se emite uno nuevo (los respaldos anteriores siguen abriéndose en este equipo).
+
+Esta hoja se muestra UNA sola vez. El equipo no conserva el código.
+----------------------------------------------------------------
