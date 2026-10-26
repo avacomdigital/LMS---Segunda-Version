@@ -133,9 +133,23 @@ PERMISOS: list[tuple[str, str, str, Alcance, bool]] = [
     ("update.package.import", "actualizacion", "Importar un paquete de actualización firmado desde una unidad extraíble o la carpeta de entrada (FUN-180; extensión marcada)", O, False),
     ("update.schedule", "actualizacion", "Programar o cancelar la ventana de actualización fuera del horario de clase (FUN-182; extensión marcada)", O, False),
     ("update.read", "actualizacion", "Ver el estado de la actualización, los paquetes y el historial del nodo, sin datos de personas (FUN-187; extensión técnica propuesta)", O, False),
+    # --- MOD-016 · Backup & Recovery (sección J de su ficha: `backup.schedule`, `backup.verify`, `backup.restore`, `backup.restore.module`, `backup.export`). Respaldar y restaurar son SÓLO del
+    # personal de AVACOM WORLD (D-1): la administración de la institución sólo LEE (`backup.read`, extensión técnica propuesta: el estado, el último respaldo y las constancias) y NO tiene
+    # ninguno de los demás, ni siquiera concedibles. `backup.run` («Respaldar ahora», JRN-018) es una extensión marcada. Exportar y restaurar exigen además un pase de soporte firmado por
+    # AVACOM (D-2) que se verifica en el módulo. Los evalúa `respaldo.infraestructura.autorizacion.AutorizacionRespaldo`; el profesor, Reportes y el alumno no reciben ninguno.
+    ("backup.read", "respaldo", "Ver el estado de los respaldos, el último respaldo verificado y las constancias, sin datos de personas (JRN-018, PAN-231; extensión técnica propuesta)", O, False),
+    ("backup.run", "respaldo", "Respaldar ahora, a mano (JRN-018; extensión marcada; sólo el personal de AVACOM)", O, False),
+    ("backup.schedule", "respaldo", "Programar el respaldo automático y emitir el código de custodia de la institución (FUN-169; sólo el personal de AVACOM)", O, False),
+    ("backup.verify", "respaldo", "Verificar que un respaldo es restaurable (FUN-173; sólo el personal de AVACOM)", O, False),
+    ("backup.export", "respaldo", "Exportar un respaldo a una unidad extraíble (FUN-176; sólo el personal de AVACOM, con pase de soporte)", O, False),
+    ("backup.restore", "respaldo", "Restaurar el equipo del aula a un respaldo (FUN-174; sólo el personal de AVACOM, con pase de soporte)", O, False),
+    ("backup.restore.module", "respaldo", "Restaurar de forma selectiva un módulo (FUN-175, V1; sólo el personal de AVACOM, con pase de soporte)", O, False),
 ]
 
 PERMISOS_POR_CODIGO = {p[0]: p for p in PERMISOS}
+
+# Respaldar y restaurar son del personal de AVACOM, no de la institución (D-1 de MOD-016): la administración recibe `backup.read` y NADA más de `backup.*`.
+PERMISOS_DE_RESPALDO_SOLO_DE_AVACOM = ("backup.run", "backup.schedule", "backup.verify", "backup.export", "backup.restore", "backup.restore.module")
 
 # Calificar y publicar es del profesor sobre SUS grupos; la administración configura el modo y exporta, pero no califica directamente (el Maestro se lo niega).
 PERMISOS_DE_CALIFICACION_DEL_DOCENTE = ("grades.modify", "grades.reopen", "grades.rubric.apply", "grades.publish")
@@ -220,7 +234,7 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         # Todo salvo lo que el Maestro le niega: calificar directamente (también puntuar una revisión), el modo de estudio del alumno y el intento del alumno.
         **{c: a for c, a in _TODOS_ORG.items()
            if c not in ("student.progress.write", "student.exam.attempt", *PERMISOS_DE_ESTUDIO_DEL_ALUMNO, *PERMISOS_DE_EVALUACION_DEL_ALUMNO,
-                        *PERMISOS_DE_CALIFICACION_DEL_DOCENTE, *PERMISOS_DE_EVALUACION_SOLO_DEL_DOCENTE)},
+                        *PERMISOS_DE_CALIFICACION_DEL_DOCENTE, *PERMISOS_DE_EVALUACION_SOLO_DEL_DOCENTE, *PERMISOS_DE_RESPALDO_SOLO_DE_AVACOM)},
     }),
     "REPORTS": ("Reportes", Menu.REPORTS, 2, {
         # Sólo lectura. Ninguna escritura sobre datos académicos, en ninguna circunstancia.
@@ -246,6 +260,8 @@ ROLES_SISTEMA: dict[str, tuple[str, Menu, int, dict[str, Alcance]]] = {
         "node.queue.read": O, "node.health.read": O,
         # Importa paquetes de actualización desde el USB y ve su estado e historial; APLICAR o revertir exige una escalada temporal de la administración (ESC-01, 4 h).
         "update.package.import": O, "update.read": O,
+        # Respalda, programa, verifica, exporta y restaura el equipo (MOD-016): lo hace el personal de AVACOM. Exportar y restaurar exigen además el pase de soporte firmado por AVACOM.
+        "backup.read": O, "backup.run": O, "backup.schedule": O, "backup.verify": O, "backup.export": O, "backup.restore": O, "backup.restore.module": O,
         "identity.password.change_own": S, "identity.session.revoke_own": S,
     }),
 }

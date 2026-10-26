@@ -497,6 +497,11 @@ class SesionesDjango:
         return [self._a_entidad(f) for f in consulta.order_by("-emitida_en")[:500]]
 
     @invalida
+    def revocar_todas(self, motivo: str, ahora: int) -> int:
+        """Cierra TODAS las sesiones abiertas (el nodo se restauró desde un respaldo: ninguna sesión del respaldo sigue siendo de nadie)."""
+        return m.Sesion.objects.filter(revocada_en__isnull=True, expira_en__gt=ahora).update(revocada_en=ahora, motivo_revocacion=motivo)
+
+    @invalida
     def revocar_de_usuario(self, usuario_id: str, motivo: str, ahora: int, excepto: str | None = None) -> int:
         consulta = m.Sesion.objects.filter(usuario_id=usuario_id, revocada_en__isnull=True, expira_en__gt=ahora)
         if excepto:
