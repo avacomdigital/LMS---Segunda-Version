@@ -105,3 +105,31 @@ class AuditoriaRespaldo:
             raise ValueError(f"Acción de bitácora fuera del catálogo de MOD-016: {accion}")
         from audit import servicios as auditoria   # frontera entre módulos: sólo en el adaptador
         auditoria.anexar(actor or cat.SISTEMA, accion, tabla, str(objeto_id or ""), anterior, nuevo, **extra)
+
+    def del_modulo(self) -> list[dict]:
+        """Lo que el módulo ha asentado hasta ahora (para volver a asentar lo que una restauración se lleve)."""
+        from audit import servicios as auditoria
+        return auditoria.asientos_de_modulo(cat.MODULO)
+
+    def cola(self) -> dict:
+        from audit import servicios as auditoria
+        return auditoria.cola_de_la_bitacora()
+
+    def recuperar(self, previos: list[dict]) -> int:
+        """
+        Tras restaurar, vuelve a asentar —con su hora y su autor originales y la marca `recuperado_tras_restauracion`— los asientos del módulo que la base restaurada ya no trae: una
+        restauración devuelve TODA la base al instante del respaldo, y sin esto desaparecerían de la bitácora viva las exportaciones, los pases rechazados y las restauraciones abortadas
+        de ese tramo (el respaldo de seguridad previo los conserva, pero la bitácora es la que se audita). Idempotente. Devuelve cuántos volvió a asentar.
+        """
+        from audit import servicios as auditoria
+        actuales = {(x["accion"], x["ocurrido_en"], x["objeto_id"] or "") for x in auditoria.asientos_de_modulo(cat.MODULO)}
+        n = 0
+        for x in previos:
+            if x["accion"] not in cat.ACCIONES_DE_AUDITORIA or (x["accion"], x["ocurrido_en"], x["objeto_id"] or "") in actuales:
+                continue
+            nuevo = dict(x["valor_nuevo"]) if isinstance(x["valor_nuevo"], dict) else ({} if x["valor_nuevo"] is None else {"valor": x["valor_nuevo"]})
+            nuevo["recuperado_tras_restauracion"] = True
+            auditoria.anexar(x["usuario_id"] or cat.SISTEMA, x["accion"], x["objeto_tabla"] or "", x["objeto_id"] or "", x["valor_anterior"], nuevo, motivo=x["motivo"],
+                             resultado=x["resultado"], ocurrido_en=x["ocurrido_en"])
+            n += 1
+        return n

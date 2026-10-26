@@ -490,3 +490,21 @@ class Endurecimiento(BaseRespaldo):
         r = self.restaurar({"candidato": candidatos[b["archivo"]], "pase": self.pase(cat.P_RESTAURAR)})
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(traidos, [candidatos[b["archivo"]]], "un completo no tiene bases: no se copia nada más de la unidad")
+
+    def test_los_asientos_del_modulo_que_la_restauracion_se_lleva_se_vuelven_a_asentar_una_sola_vez(self):
+        from audit.models import Bitacora
+        previos = [{"accion": "respaldo.exportado", "ocurrido_en": 123, "usuario_id": None, "actor_tipo": "sistema", "resultado": "ok", "objeto_tabla": "m16_respaldo", "objeto_id": "x1",
+                    "valor_anterior": None, "valor_nuevo": {"unidad": "usb"}, "motivo": None},
+                   {"accion": "respaldo.pase_rechazado", "ocurrido_en": 124, "usuario_id": None, "actor_tipo": "sistema", "resultado": "ok", "objeto_tabla": "m16_pase_usado", "objeto_id": "",
+                    "valor_anterior": None, "valor_nuevo": {"motivo": "vencido"}, "motivo": None},
+                   {"accion": "respaldo.accion_que_no_es_nuestra", "ocurrido_en": 125, "usuario_id": None, "actor_tipo": "sistema", "resultado": "ok", "objeto_tabla": "", "objeto_id": "",
+                    "valor_anterior": None, "valor_nuevo": None, "motivo": None}]
+        with self.s.uow() as uow:
+            self.assertEqual(uow.auditoria.recuperar(previos), 2, "lo que no es del catálogo del módulo no se asienta")
+        fila = Bitacora.objects.get(accion="respaldo.exportado", ocurrido_en=123)
+        self.assertEqual((fila.valor_nuevo["unidad"], fila.valor_nuevo["recuperado_tras_restauracion"]), ("usb", True))
+        with self.s.uow() as uow:
+            self.assertEqual(uow.auditoria.recuperar(previos), 0, "idempotente: lo ya asentado no se repite")
+        with self.s.uow(lectura=True) as uow:
+            cola = uow.auditoria.cola()
+        self.assertGreater(cola["secuencia"], 0)

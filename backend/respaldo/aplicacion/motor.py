@@ -581,6 +581,8 @@ class Motor(_CasoDeUso):
         # 3 · aplicar. La base es atómica: si falla, NADA vivo cambió. Un archivo puede fallar después de la base: se sigue (la base ya es la restaurada y lo derivado hay que rehacerlo) y se dice.
         with s.uow(lectura=True) as uow:
             pases_gastados = uow.pases.todos()                  # la base restaurada no sabe de los pases que se gastaron después del respaldo: se vuelven a anotar TODOS
+            asientos_previos = uow.auditoria.del_modulo()       # ni de lo que el módulo asentó en ese tramo (exportaciones, pases rechazados…): se vuelve a asentar
+            cola_previa = uow.auditoria.cola()
         try:
             s.aplicador.aplicar_base(staging / "base.sqlite3")
         except Exception as error:   # noqa: BLE001
@@ -612,6 +614,7 @@ class Motor(_CasoDeUso):
         perdidas = {"horas": round(max(0, fin - int(manifiesto_elegido["creado_en"])) / cat.HORA_MS, 1), "eventos": max(0, secuencia_antes - int(manifiesto_elegido.get("secuencia_global") or 0))}
         with s.uow() as uow:
             uow.pases.reinsertar(pases_gastados)
+            recuperados = uow.auditoria.recuperar(asientos_previos)
             if pase is not None:
                 uow.pases.usar(pase.pase_id, fin, cat.P_RESTAURAR, pase.tecnico, pase.kid, rid)
             # la nota es texto libre del técnico: va a la bitácora (de acceso restringido), no al historial que lee la administración
@@ -620,7 +623,8 @@ class Motor(_CasoDeUso):
             if post.get("reconstruidos"):
                 self._h(uow, rid, cat.H_INDICE, cat.SISTEMA, {"modulos": post["reconstruidos"]})
             uow.auditoria.registrar(actor.id, cat.A_RESTAURADO, "m16_respaldo", rid, nuevo={"motivo": motivo, "nota": nota[:cat.MAX_NOTA], "punto_de_retorno": retorno["respaldo_id"],
-                                                                                               "perdidas": perdidas, "nueva_huella": nueva_huella, "parcial": bool(fallos_archivos)})
+                                                                                               "perdidas": perdidas, "nueva_huella": nueva_huella, "parcial": bool(fallos_archivos),
+                                                                                               "bitacora_previa": cola_previa, "asientos_recuperados": recuperados})
             self._evento(uow, rid, cat.EV_RESTAURADO, {"motivo": motivo, "punto_de_retorno": retorno["respaldo_id"], "perdidas": perdidas, "nueva_huella": nueva_huella,
                                                         "parcial": bool(fallos_archivos)})
             if post.get("reconstruidos"):
