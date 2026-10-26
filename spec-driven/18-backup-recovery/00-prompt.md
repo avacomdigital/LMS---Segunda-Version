@@ -68,4 +68,4 @@ Pantallas de OPS (PAN-231/232) y cliente Core · alertas de MOD-020 (MSG-066: ho
 | Respaldo en caliente consistente con un escritor concurrente; restauración real sobre la conexión de Django | **Comprobado en vivo** (archivo SQLite real, no `TestCase`). |
 | Archivos para el personal administrativo | **Cumplido**: ver [ejemplos/](ejemplos/) y la guía. |
 
-Cifras: 135 pruebas propias; suites vecinas (1131 + 1626) y la revisión independiente, con lo que corrigió y lo que dejó abierto, en [03-pruebas.md](03-pruebas.md) §1 y §6.
+Cifras: 136 pruebas propias y 51 casos de QA por HTTP real con OPS abierta; suites vecinas (1131 + 1626) y la revisión independiente, con lo que corrigió y lo que dejó abierto, en [03-pruebas.md](03-pruebas.md) §1 y §6.

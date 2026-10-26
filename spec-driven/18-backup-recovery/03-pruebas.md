@@ -4,12 +4,12 @@
 
 | Qué | Resultado |
 |---|---|
-| Pruebas propias (`manage.py test respaldo`) | **135 en verde**, ≈ 40 s |
+| Pruebas propias (`manage.py test respaldo`) | **136 en verde**, ≈ 45 s |
 | Suites vecinas que el módulo toca (`acceso audit nodo actualizacion expediente licenciamiento`) | **1131 pruebas, 10 omitidas, 0 fallos** tras un ajuste: `nodo.tests.test_arquitectura.test_sin_dependencias_nuevas` falló porque el adaptador de la purga importa `respaldo` (la dependencia es a propósito y está declarada en esa lista) |
 | Resto del backend (`classroom_engine evaluacion modo_estudio device_manager search reporting gradebook cola_medios logs biblioteca cache_medios expediente`) | **1626 pruebas, 8 omitidas, 1 error AJENO** (§1.1) |
 | Comprobación **en vivo** (SQLite de archivo y la conexión REAL de Django, no un `TestCase`) | respaldo en caliente con un hilo escribiendo parejas de filas · 121 filas = 1 + 60 parejas completas · restauración real: la conexión de Django ve la base restaurada, el modo WAL se restituye, el archivo vuelve a su versión |
 
-Por archivo: `test_formato` 20 · `test_dominio` 31 · `test_infraestructura` 14 · `test_motor` 36 (11 de ellas, `Endurecimiento`, son los hallazgos de la revisión independiente) · `test_acceso` 11 · `test_vigilante` 13 · `test_arquitectura` 10.
+Por archivo: `test_formato` 20 · `test_dominio` 31 · `test_infraestructura` 14 · `test_motor` 37 (12 de ellas, `Endurecimiento`, son los hallazgos de la revisión independiente y del QA) · `test_acceso` 11 · `test_vigilante` 13 · `test_arquitectura` 10.
 
 ### 1.1 · Resto del backend
 
@@ -61,6 +61,30 @@ Un revisor que **no escribió** el módulo lo leyó buscando defectos reales. Di
 | 10 | La nota libre del técnico la leía quien tuviera `backup.read` | **Corregido** y probado (va a la bitácora) |
 
 Lo que el revisor **confirmó sin defecto:** ninguna ruta sin permiso ni anónima; el orden del pase (firma antes de interpretar, puntos de orden pequeño, unicidad por clave primaria); nonces, AAD, truncado y reordenado del `.avbak`; path traversal al extraer y al aplicar; que hasta el paso 5 no se toca nada vivo. Y señaló, con razón, que `aplicar_base` contra la conexión viva de Django no tenía prueba de extremo a extremo: **se comprobó en vivo** (§1).
+
+## 3 ter · QA por HTTP real con AVACOM OPS Master abierta (2026-10-26)
+
+Recorrido de punta a punta contra un nodo **real y aislado** (`runserver` en `127.0.0.1:8010`, base y carpetas temporales, entorno de desarrollo), con **AVACOM OPS Master abierta por `dotnet run`** (`-f net10.0-windows10.0.19041.0`, perfil de pruebas `AVACOM_OPS_PERFIL`, `AVACOM_OPS_SERVIDOR` apuntando al nodo): no toca la OPS ni las preferencias de nadie y al terminar cierra sólo la instancia que abrió. **51 casos, 51 OK** en la corrida final:
+
+| Grupo | Qué se comprobó |
+|---|---|
+| OPS-01…04 | OPS abre con `dotnet run` (10–55 s según la compilación incremental) y muestra el acceso contra el nodo instalado; **sigue abierta y con el árbol de UI Automation respondiendo tras respaldar, exportar y RESTAURAR el nodo al que está conectada**; dos capturas (`qa-ops-01-inicio`, `qa-ops-02-tras-restaurar`) |
+| QA-01…03 | Administración, profesor y anónimo no respaldan; la administración sí lee; custodia sin pase, con pase y sin reemplazar; el estado no revela el código |
+| QA-04…05 | Respaldo completo (0,2–0,3 s, ≈ 1,9 MB), nada en claro en el `.avbak`, constancia y CSV para la administración |
+| **QA-06** | Incremental **exacto**: el archivo modificado hace 10 min **no** va y el nuevo sí (1 archivo); cuelga del completo; verifica |
+| QA-07…08 | Dos respaldos a la vez (409 + 201); respaldo en caliente con otro hilo escribiendo grupos: verificado y sin errores |
+| QA-09 | Exportar: sin pase, con pase, pase reutilizado, vencido y de otra operación |
+| QA-10…11 | Un byte alterado: no verificado, no se descarta, restaurar aborta sin tocar la base; con una clase real abierta, 409 `sesion_activa` |
+| QA-12…13 | **Restauración real con el servidor en marcha**: base y archivos vuelven, sesiones cerradas, esquema/nodo/licencia/índices rehechos sin fallos, el pase no revive, catálogo y informe visibles |
+| **QA-14** | Bitácora por HTTP real: **antes** de restaurar trae los siete asientos del módulo y la cadena es válida (55 asientos); **después**, la restauración queda asentada, **ningún secreto** (código de custodia, pases) en los asientos, el técnico **no** la lee (403, BR-097) y la cadena sigue **válida** tras restaurar (44 asientos) |
+| QA-15 | Integridad de la base viva (WAL) y el log del servidor sin 500 ni excepciones |
+
+**Hallazgos del QA** (los dos casos que el informe anterior había dejado en duda):
+
+- **QA-06**: el caso anterior estaba mal planteado (ambos archivos eran recientes y la holgura de 1 minuto los llevaba a los dos). Con un archivo realmente viejo el incremental lleva exactamente lo nuevo.
+- **QA-14**: el caso anterior pasaba **sin comprobar nada** (ruta equivocada, 404). Escrito de verdad **falló una vez y encontró un defecto real**: al restaurar, los asientos de respaldo ocurridos entre el respaldo y la restauración (`respaldo.exportado`, `respaldo.pase_rechazado`, `respaldo.restauracion_abortada`) **desaparecían de la bitácora viva**. Corregido (D-21) y vuelto a correr: 51/51.
+
+El guion del recorrido no está en el repositorio (no se dejan arneses nuevos; vive en el scratchpad de la sesión). Qué **no** cubre: la UI de OPS para respaldos (no existe todavía), la memoria USB física, un equipo nuevo real y el servicio instalado.
 
 ## 4 · Cómo repetirlo
 
