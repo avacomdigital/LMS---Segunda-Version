@@ -22,13 +22,15 @@ M_REPORTES = "reportes"
 M_LICENCIA = "licencia"
 M_NODO = "nodo"
 M_ACTUALIZACION = "actualizacion"
+M_RESPALDO = "respaldo"
 MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES, M_LICENCIA, M_NODO,
-           M_ACTUALIZACION)
+           M_ACTUALIZACION, M_RESPALDO)
 
 ETIQUETAS_MODULO = {
     M_ACCESO: "Acceso e identidad", M_AULA: "Aula (clase en vivo)", M_DISPOSITIVOS: "Dispositivos", M_ESTUDIO: "Modo estudio",
     M_EVALUACION: "Evaluaciones", M_AUDITORIA: "Auditoría", M_INSTALACION: "Instalación", M_EXPEDIENTE: "Expediente",
     M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes", M_LICENCIA: "Licencia", M_NODO: "Plataforma del nodo", M_ACTUALIZACION: "Actualizaciones",
+    M_RESPALDO: "Respaldo y recuperación",
 }
 
 
@@ -249,6 +251,22 @@ _LISTA: tuple[Accion, ...] = (
     _a("actualizacion.archivado", M_ACTUALIZACION, "Plazo de reversión de 14 días vencido: el registro queda archivado (extensión)"),
     _a("actualizacion.desprogramado", M_ACTUALIZACION, "Ventana de actualización cancelada o vencida (extensión)"),
     _a("actualizacion.aplazada", M_ACTUALIZACION, "El Host aplazó la aplicación (una clase apareció o la orden no se pudo empezar) (extensión)"),
+    # ---- respaldo (MOD-016): sólo ids, tipos, cifras y huellas cortas; nunca rutas, nombres de archivos ni contenido (INV-021) ----
+    _a("respaldo.programado", M_RESPALDO, "Calendario de respaldos programado o cambiado (FUN-169)", evento_origen="respaldo.programado.v1"),
+    _a("respaldo.completo_ejecutado", M_RESPALDO, "Respaldo completo terminado (FUN-170)", evento_origen="respaldo.completo_ejecutado.v1"),
+    _a("respaldo.incremental_ejecutado", M_RESPALDO, "Respaldo incremental terminado (FUN-171)", evento_origen="respaldo.incremental_ejecutado.v1"),
+    _a("respaldo.fallido", M_RESPALDO, "Un respaldo no terminó (con el motivo)", evento_origen="respaldo.fallido.v1"),
+    _a("respaldo.verificado", M_RESPALDO, "Respaldo verificado: restaurable (FUN-173)", evento_origen="respaldo.verificado.v1"),
+    _a("respaldo.no_verificado", M_RESPALDO, "Un respaldo no pasó la verificación (se marca, no se descarta)", evento_origen="respaldo.verificado.v1"),
+    _a("respaldo.exportado", M_RESPALDO, "Respaldo exportado a una unidad extraíble (FUN-176)", evento_origen="respaldo.exportado.v1"),
+    _a("respaldo.restauracion_completada", M_RESPALDO, "El equipo se restauró desde un respaldo (FUN-174)", evento_origen="respaldo.restauracion_completada.v1"),
+    _a("respaldo.restauracion_abortada", M_RESPALDO, "Una restauración se abortó antes de tocar los datos vivos", evento_origen="respaldo.restauracion_abortada.v1"),
+    _a("respaldo.modulo_restaurado", M_RESPALDO, "Un módulo se restauró de forma aislada (FUN-175)", evento_origen="respaldo.modulo_restaurado.v1"),
+    _a("respaldo.reanudado", M_RESPALDO, "Un respaldo interrumpido se reanudó al arrancar (FUN-177)", evento_origen="respaldo.reanudado.v1"),
+    _a("respaldo.caducado", M_RESPALDO, "Un respaldo salió por la política de retención (o su archivo ya no estaba)", evento_origen="respaldo.caducado.v1"),
+    _a("respaldo.custodia_emitida", M_RESPALDO, "Se emitió el código de custodia de la institución (BR-102); el código no se guarda", evento_origen="respaldo.custodia_emitida.v1"),
+    _a("respaldo.pase_rechazado", M_RESPALDO, "Un pase de soporte de AVACOM fue rechazado (con el motivo)"),
+    _a("respaldo.acceso_denegado", M_RESPALDO, "Se intentó respaldar o restaurar sin ser personal de AVACOM"),
     # ---- expediente (lo que hoy escribe `expediente/servicios.py`) ----
     _a("inscripcion.creada", M_EXPEDIENTE, "Inscripción creada"),
     _a("inscripcion.retirada", M_EXPEDIENTE, "Inscripción retirada"),
@@ -312,7 +330,7 @@ def modulo_de(clave: str) -> str:
     return {"identidad": M_ACCESO, "identity": M_ACCESO, "acceso": M_ACCESO, "aula": M_AULA, "dispositivos": M_DISPOSITIVOS,
             "estudio": M_ESTUDIO, "evaluacion": M_EVALUACION, "calificacion": M_EVALUACION, "auditoria": M_AUDITORIA,
             "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES, "licencia": M_LICENCIA, "nodo": M_NODO,
-            "actualizacion": M_ACTUALIZACION}.get(prefijo, M_EXPEDIENTE)
+            "actualizacion": M_ACTUALIZACION, "respaldo": M_RESPALDO}.get(prefijo, M_EXPEDIENTE)
 
 
 def como_lista() -> list[dict]:
