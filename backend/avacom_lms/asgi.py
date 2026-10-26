@@ -71,6 +71,15 @@ try:
 except Exception:   # noqa: BLE001 — R-04
     import logging
     logging.getLogger("avacom.actualizacion").exception("El vigilante de actualizaciones no arrancó")
+# MOD-016: el vigilante de respaldos (calendario, verificación, retención, reanudar lo interrumpido). Su primer ciclo corre en su propio hilo: el aula no espera. Dentro de un
+# `try/except`: si no arranca, el nodo sigue (R-04).
+try:
+    from respaldo.infraestructura import vigilante as vigilante_respaldo
+
+    vigilante_respaldo.iniciar()
+except Exception:   # noqa: BLE001 — R-04
+    import logging
+    logging.getLogger("avacom.respaldo").exception("El vigilante de respaldos no arrancó")
 # MOD-019: verifica la cadena de la bitácora cada hora (fuera de clase no hay diferencia: verifica por bloques) y rota por tamaño.
 verificador.iniciar()
 # Cola de medios: hilos que traen los recursos de AVACOM Contenido a la caché del nodo y la mantienen (al arrancar retoman lo que quedó a medias).

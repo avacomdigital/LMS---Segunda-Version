@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "licenciamiento",
     "nodo",
     "actualizacion",
+    "respaldo",
 ]
 
 MIDDLEWARE = [
@@ -296,6 +297,19 @@ AVACOM_ACTUALIZACION_VIGILANTE = os.environ.get("AVACOM_ACTUALIZACION_VIGILANTE"
 AVACOM_ACTUALIZACION_INTERVALO_S = float(os.environ.get("AVACOM_ACTUALIZACION_INTERVALO_S", "30"))
 # Tope del paquete en MB (nunca por encima de los 512 del dominio).
 AVACOM_ACTUALIZACION_MAX_MB = int(os.environ.get("AVACOM_ACTUALIZACION_MAX_MB", "512"))
+
+# ---------------------------------------------------------- Respaldo y recuperación (MOD-016 · Backup & Recovery)
+# App `respaldo` (`/api/respaldo/`, tablas m16_*). Respalda la base de datos del aula (copia consistente por la API de respaldo de SQLite) y las carpetas de archivos de la institución
+# en un `.avbak` CIFRADO, lo verifica y lo restaura. Respaldar y restaurar son SÓLO del personal de AVACOM (backup.* + pase de soporte firmado; ver spec-driven/18-backup-recovery).
+# AVACOM_RESPALDO_DIR: la carpeta de respaldos SÓLO en desarrollo y pruebas (por defecto una temporal); en producción es siempre %ProgramData%\AVACOM\OPS Master\Respaldos.
+# AVACOM_RESPALDO_UNIDADES: carpetas (separadas por `;`) que hacen de unidad extraíble en desarrollo y pruebas; en producción las unidades son las reales.
+# AVACOM_RESPALDO_CARPETAS: carpetas de archivos de la institución que entran al respaldo, `nombre=ruta` o `nombre:reinstalable=ruta`, separadas por `;`. Vacío = sólo la base de datos.
+AVACOM_RESPALDO_DIR = os.environ.get("AVACOM_RESPALDO_DIR", "")
+AVACOM_RESPALDO_UNIDADES = os.environ.get("AVACOM_RESPALDO_UNIDADES", "")
+AVACOM_RESPALDO_CARPETAS = os.environ.get("AVACOM_RESPALDO_CARPETAS", "")
+# El vigilante del proceso ASGI (respaldos automáticos según el calendario, verificación, retención, reanudar lo interrumpido) y su cadencia en segundos.
+AVACOM_RESPALDO_VIGILANTE = os.environ.get("AVACOM_RESPALDO_VIGILANTE", "1") == "1"
+AVACOM_RESPALDO_INTERVALO_S = float(os.environ.get("AVACOM_RESPALDO_INTERVALO_S", "60"))
 
 # ---------------------------------------------------------- Modo Estudio (MOD-008)
 # App `modo_estudio` (`/api/modo-estudio/`, tablas m08_*). Lee la lección en vivo por los casos de uso del aula, así que usa la misma
