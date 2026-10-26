@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "nota": "Llaves PUBLICAS con las que AVACOM firma los pases de soporte de MOD-016 (respaldo.export / respaldo.restore). VACIO hasta la ceremonia de llaves: mientras tanto un nodo de PRODUCCION no acepta ningun pase y por tanto no exporta ni restaura (respaldar, verificar y programar siguen funcionando). Formato: {\"kid\": \"sop-2026-1\", \"publica\": \"<64 hexadecimales>\", \"estado\": \"vigente|siguiente|retirada\"}. La privada NUNCA va en el repositorio.",
+  "claves": []
+}

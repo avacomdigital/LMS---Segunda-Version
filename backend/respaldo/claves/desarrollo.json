@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "nota": "Llaves PUBLICAS de DESARROLLO para los pases de soporte de MOD-016. Derivadas de una semilla publica (respaldo/tests/emisor.py): cualquiera puede firmar con ellas, y por eso el nodo SOLO las acepta en desarrollo y pruebas por construccion (contenedor.py). El instalador no debe copiar este archivo.",
+  "claves": [
+    {
+      "kid": "sop-dev-1",
+      "publica": "2f46ffb22b5264c0784764442ddab6bef1e5ca7050ccd58a8d26a7feb1e17b88",
+      "estado": "vigente"
+    },
+    {
+      "kid": "sop-dev-2",
+      "publica": "d45a6307c005053c9fd773245322a4c6e5b29d4a0fc06863e1bb9ac447ab9ebe",
+      "estado": "siguiente"
+    }
+  ]
+}
