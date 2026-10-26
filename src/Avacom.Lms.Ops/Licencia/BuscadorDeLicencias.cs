@@ -74,8 +74,8 @@ public sealed class LectorDeArchivosDelSistema : ILectorDeArchivos
     }
 }
 
-/// <summary>De dónde salió un candidato: la raíz de una unidad, una carpeta conocida del usuario o la última carpeta que se usó para la licencia.</summary>
-public enum OrigenDeCandidato { Unidad, Atajo, UltimaCarpeta }
+/// <summary>De dónde salió un candidato: la raíz de una unidad, una carpeta conocida del usuario, la última carpeta que se usó para la licencia o el archivo que la persona señaló en el Explorador.</summary>
+public enum OrigenDeCandidato { Unidad, Atajo, UltimaCarpeta, Explorador }
 
 /// <summary>
 /// Un archivo de licencia que se puede tocar en el paso 3: dónde está (para decirlo en la tarjeta), su forma (binaria o texto), cuándo se escribió y su SHA-256 (con él se reconoce el
@@ -233,7 +233,30 @@ public sealed class BuscadorDeLicencias
         return (candidatos, descartados);
     }
 
-    private CandidatoDeLicencia? Candidato(ArchivoVisto archivo, Lugar lugar)
+    private CandidatoDeLicencia? Candidato(ArchivoVisto archivo, Lugar lugar) => Reconocer(_lector, archivo, lugar.Nombre, lugar.Origen, lugar.Carpeta);
+
+    /// <summary>
+    /// El archivo que la persona señaló en el Explorador de Windows (cualquier carpeta, también las que la búsqueda no mira) convertido en candidato con las MISMAS reglas que los de la
+    /// búsqueda: <c>.avlic</c>, de 5 bytes a 16 KiB y con la marca de licencia. Null si no vale. Nunca lanza.
+    /// </summary>
+    public static CandidatoDeLicencia? DeRuta(ILectorDeArchivos lector, string? ruta)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(ruta)) return null;
+            var completa = Path.GetFullPath(ruta.Trim());
+            var carpeta = Path.GetDirectoryName(completa);
+            if (string.IsNullOrEmpty(carpeta)) return null;
+            var visto = lector.Archivos(carpeta, Path.GetFileName(completa)).FirstOrDefault(a => string.Equals(a.Ruta, completa, StringComparison.OrdinalIgnoreCase));
+            return visto is null ? null : Reconocer(lector, visto, carpeta, OrigenDeCandidato.Explorador, carpeta);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static CandidatoDeLicencia? Reconocer(ILectorDeArchivos lector, ArchivoVisto archivo, string nombreDelLugar, OrigenDeCandidato origen, string carpetaPorOmision)
     {
         try
         {
@@ -241,12 +264,12 @@ public sealed class BuscadorDeLicencias
             if (string.IsNullOrWhiteSpace(nombre) || nombre.StartsWith('.')) return null;                 // los temporales de una escritura a medias empiezan por punto
             if (!nombre.EndsWith(".avlic", StringComparison.OrdinalIgnoreCase)) return null;
             if (archivo.Bytes < TamanoMinimo || archivo.Bytes > MarcaDeLicencia.TamanoMaximo) return null;
-            var forma = MarcaDeLicencia.Reconocer(_lector.LeerInicio(archivo.Ruta, MarcaDeLicencia.BytesParaReconocer));
+            var forma = MarcaDeLicencia.Reconocer(lector.LeerInicio(archivo.Ruta, MarcaDeLicencia.BytesParaReconocer));
             if (forma == FormaDeLicencia.Desconocida) return null;
-            var datos = _lector.LeerCompleto(archivo.Ruta, MarcaDeLicencia.TamanoMaximo);
+            var datos = lector.LeerCompleto(archivo.Ruta, MarcaDeLicencia.TamanoMaximo);
             if (datos is null || datos.Length < TamanoMinimo || MarcaDeLicencia.Reconocer(datos) == FormaDeLicencia.Desconocida) return null;
-            var carpeta = Path.GetDirectoryName(archivo.Ruta) ?? lugar.Carpeta;
-            return new CandidatoDeLicencia(archivo.Ruta, nombre, carpeta, lugar.Nombre, lugar.Origen, datos.Length, archivo.ModificadoUtc, forma, Convert.ToHexStringLower(SHA256.HashData(datos)));
+            var carpeta = Path.GetDirectoryName(archivo.Ruta) ?? carpetaPorOmision;
+            return new CandidatoDeLicencia(archivo.Ruta, nombre, carpeta, nombreDelLugar, origen, datos.Length, archivo.ModificadoUtc, forma, Convert.ToHexStringLower(SHA256.HashData(datos)));
         }
         catch
         {

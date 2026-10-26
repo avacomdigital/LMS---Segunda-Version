@@ -176,6 +176,31 @@ public sealed class FlujoDeActivacion
         return true;
     }
 
+    /// <summary>
+    /// La persona señaló un archivo en el Explorador de Windows (lo que la búsqueda no llega a ver: otra carpeta, otro disco). Si vale, pasa directo a la confirmación única, como si hubiera
+    /// tocado una tarjeta; si no, vuelve a las tarjetas con el motivo. <paramref name="ruta"/> null es «se cerró el Explorador sin elegir»: no cambia nada.
+    /// </summary>
+    public bool ElegirDelExplorador(string? ruta)
+    {
+        if (string.IsNullOrWhiteSpace(ruta)) return false;
+        if (Paso is not (PasoDeActivacion.Solicitud or PasoDeActivacion.SolicitudGuardada or PasoDeActivacion.EsperandoLicencia or PasoDeActivacion.Eligiendo or PasoDeActivacion.Confirmando
+            or PasoDeActivacion.NoInstalada)) return false;
+        var candidato = BuscadorDeLicencias.DeRuta(_lector, ruta);
+        if (candidato is null)
+        {
+            Paso = PasoDeActivacion.Eligiendo;
+            Elegido = null;
+            PuedeReintentar = false;
+            Aviso = new MensajeDeLicencia("Ese archivo no sirve", LicenciaTexto.ArchivoDelExploradorNoVale, LicenciaTexto.ArchivoDelExploradorNoValeAccion);
+            return false;
+        }
+        Elegido = candidato;
+        Paso = PasoDeActivacion.Confirmando;
+        Aviso = null;
+        PuedeReintentar = false;
+        return true;
+    }
+
     /// <summary>Desde la confirmación o desde un rechazo, de vuelta a las tarjetas.</summary>
     public void VolverALaLista()
     {

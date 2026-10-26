@@ -419,6 +419,7 @@ internal sealed class HojaDeLicencia : ContentView
                 if (f.RutaDeLaSolicitud is { } ruta) _cuerpo.Add(LicenciaUi.Dato("Solicitud", ruta, 110));
                 Boton("‹  Paso 1", Ds.Rango.Quiet, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
                 BotonCerrar();
+                Boton(LicenciaTexto.BuscarEnElExplorador, Ds.Rango.Secondary, BuscarEnElExploradorAsync, "licencia-explorador");
                 Boton("Ya tengo el archivo de licencia", Ds.Rango.Primary, BuscarLicenciasAsync, "licencia-ya-tengo");
                 break;
             case PasoDeActivacion.Buscando:
@@ -466,6 +467,7 @@ internal sealed class HojaDeLicencia : ContentView
         _cuerpo.Add(LicenciaUi.Seccion(LicenciaTexto.Paso3Titulo, LicenciaTexto.Paso3Texto));
         var herramientas = ExamenUi.Fila();
         herramientas.Add(LicenciaUi.Accion("Buscar de nuevo", Ds.Rango.Secondary, LicenciaUi.Seguro("Hoja.BuscarLicencias", BuscarLicenciasAsync), "licencia-buscar").Vista);
+        herramientas.Add(LicenciaUi.Accion(LicenciaTexto.BuscarEnElExplorador, Ds.Rango.Secondary, LicenciaUi.Seguro("Hoja.Explorador", BuscarEnElExploradorAsync), "licencia-explorador").Vista);
         _cuerpo.Add(herramientas);
         var busqueda = f.Busqueda;
         if (busqueda is null || busqueda.Vacia)
@@ -474,6 +476,7 @@ internal sealed class HojaDeLicencia : ContentView
         }
         else
         {
+            if (f.Aviso is { } rechazo) Aviso(rechazo, Tono.Ambar, "licencia-aviso");
             for (var i = 0; i < busqueda.Candidatos.Count; i++)
             {
                 var c = busqueda.Candidatos[i];
@@ -531,6 +534,17 @@ internal sealed class HojaDeLicencia : ContentView
         Pintar();                                                     // «Buscando…»
         await buscar;
         if (version == _version) Pintar();
+    }
+
+    /// <summary>Abre el selector de archivos de Windows para llegar a un .avlic que la búsqueda no ve (otra carpeta o disco) y lo lleva a la confirmación única.</summary>
+    private async Task BuscarEnElExploradorAsync()
+    {
+        if (_activacion is not { } f) return;
+        var version = _version;
+        var ruta = await Avacom.Lms.Ops.Reportes.Ui.SelectorDeCarpeta.ElegirArchivoAsync(".avlic");
+        if (version != _version || ruta is null) return;
+        if (!f.ElegirDelExplorador(ruta)) LicenciaUi.Anotar("licencia.archivo_del_explorador_no_vale", "El archivo elegido en el Explorador no es una licencia legible.", new { nombre = System.IO.Path.GetFileName(ruta) });
+        Pintar();
     }
 
     private async Task InstalarAsync()
