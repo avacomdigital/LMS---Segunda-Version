@@ -157,6 +157,10 @@ internal sealed class Aplicador
             return;
         }
 
+        // MOD-018 (P-23): lo que un paquete firmado cambio (o devolvio) deja de ser una diferencia para la verificacion de integridad del despliegue.
+        if (ctx.Orden.EsReversion) Integridad.Aplicadas.RegistrarRevertido(ctx.Orden);
+        else Integridad.Aplicadas.RegistrarAplicado(ctx.Orden);
+
         if (ctx.Orden.EsReversion) Disco.BorrarCarpeta(ctx.Orden.CarpetaDeVersion);     // lo que se queria ya paso: la instantanea no hace falta
         Terminar(ctx, ctx.Orden.EsReversion ? "revertido" : "aplicado",
             ctx.Orden.EsReversion ? "El paquete se revirtio y el aula verifico la version anterior." : "El paquete se aplico y el aula verifico la version nueva.", null);

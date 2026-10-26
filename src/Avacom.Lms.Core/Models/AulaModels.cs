@@ -868,8 +868,16 @@ public sealed record DispositivoAula(
     [property: JsonPropertyName("perfil")] string? Perfil = null,
     [property: JsonPropertyName("asignado_a")] AlumnoEstudio? AsignadoA = null,
     // MOD-010: lo que la tableta DECLARA poder garantizar en un examen (abierto · supervisado · controlado). Vacío = no la declaró.
-    [property: JsonPropertyName("capacidad_control")] string? CapacidadControl = null)
+    [property: JsonPropertyName("capacidad_control")] string? CapacidadControl = null,
+    // MOD-018 · Fase 5: la identidad por clave del equipo. `garantia` es lo que el nodo pudo comprobar (declarada · software · hardware); `clave_huella`, el SHA-256 de su clave pública.
+    [property: JsonPropertyName("garantia")] string? Garantia = null,
+    [property: JsonPropertyName("clave_huella")] string? ClaveHuella = null,
+    [property: JsonPropertyName("garantia_detalle")] JsonElement? GarantiaDetalle = null)
 {
+    /// <summary>La garantía de identidad en palabras de aula (declarada si el nodo no la informó).</summary>
+    public string GarantiaLegible => Avacom.Lms.Core.IdentidadDeDispositivo.ReglasDeIdentidad.Etiqueta(Garantia);
+    /// <summary>Por qué el nodo dejó la garantía donde la dejó (<c>sin_cadena</c>, <c>raiz_desconocida</c>, <c>ok</c>…), del detalle que informa; vacío si no lo trae.</summary>
+    public string? GarantiaMotivo => GarantiaDetalle is { ValueKind: JsonValueKind.Object } d && d.TryGetProperty("motivo", out var m) && m.ValueKind == JsonValueKind.String ? m.GetString() : null;
     public bool Asignado => string.Equals(Perfil, "asignado", StringComparison.OrdinalIgnoreCase);
     /// <summary>Verdadero si la tableta declaró su capacidad de control. Sin declarar cuenta como «abierto» frente a un examen (BR-075).</summary>
     public bool CapacidadDeclarada => !string.IsNullOrWhiteSpace(CapacidadControl);

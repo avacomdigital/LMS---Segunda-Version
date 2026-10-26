@@ -1,6 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-	<application android:allowBackup="true" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true" android:usesCleartextTraffic="true"></application>
+	<!-- MOD-018 · Fase 5 (P-25): allowBackup=false y reglas de extracción que excluyen todo (cloud-backup y device-transfer en Android 12+, full-backup-content antes): ni `adb backup`, ni la copia en la
+	     nube, ni pasar los datos a otra tableta se llevan la huella de esta instalación, la cola del modo estudio ni los paquetes cifrados. -->
+	<application android:allowBackup="false" android:fullBackupContent="@xml/backup_rules" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@mipmap/appicon" android:roundIcon="@mipmap/appicon_round" android:supportsRtl="true" android:usesCleartextTraffic="true"></application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
 </manifest>

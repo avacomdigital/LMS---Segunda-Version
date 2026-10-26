@@ -435,7 +435,7 @@ internal sealed class MockDownloadService : IDownloadService
 /// <summary>El aula «siempre está» en la demostración, salvo que se arranque sin conexión para verla (<c>AVACOM_ESTUDIO_DEMO_OFFLINE=1</c>).</summary>
 internal sealed class MockConnectivityService : IConnectivityService
 {
-    private bool _enLinea = Environment.GetEnvironmentVariable("AVACOM_ESTUDIO_DEMO_OFFLINE") != "1";
+    private bool _enLinea = !Avacom.Lms.Core.Desarrollo.InterruptoresDeDesarrollo.Encendido("AVACOM_ESTUDIO_DEMO_OFFLINE");
 
     public bool IsOnline => _enLinea;
     public event Action<bool>? Changed;

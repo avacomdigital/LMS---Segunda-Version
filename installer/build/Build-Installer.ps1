@@ -69,7 +69,13 @@ param(
     # empaqueto ya no seria lo que hay en el repositorio.
     [switch] $PermitirCambiosDuranteLaCompilacion,
     # MOD-018 (ver .PARAMETER ExigirLlaveDeProduccion): sin llave publica de produccion, falla en vez de avisar.
-    [switch] $ExigirLlaveDeProduccion
+    [switch] $ExigirLlaveDeProduccion,
+    # MOD-018 (P-23): la llave de PUBLICACION con la que se firma el manifiesto del paquete (la misma de los .avupd) y la copia de su frase protegida con DPAPI (ver 07-ceremonia de llaves).
+    # Si no estan, el paquete sale SIN firma (un desarrollo) salvo con -ExigirLlaveDeProduccion, que lo rechaza.
+    [string] $LlaveDePublicacion = (Join-Path $env:USERPROFILE 'AVACOM-Llaves\claves\upd-2026-1.avkey'),
+    [string] $FraseDeLaLlave = (Join-Path $env:USERPROFILE 'AVACOM-Llaves\frase\upd-2026-1.frase.dpapi'),
+    # MOD-018 (P-20 a P-22): sin avacom_lic.dll compilada (native\avacom-lic\dist\win-x64) el paquete sale con la implementacion de referencia (es lo que hace el nodo si la DLL no carga); con este interruptor falla.
+    [switch] $ExigirBinariosNativos
 )
 
 $ErrorActionPreference = 'Stop'
@@ -159,6 +165,12 @@ function Huella-App {
     Huella-Carpetas -Raices @(
         (Join-Path $raiz 'src\Avacom.Lms.Ops'), (Join-Path $raiz 'src\Avacom.Lms.Core'),
         (Join-Path $raiz 'src\Avacom.Lms.Ui'), (Join-Path $raiz 'assets')) -ExcluirArchivos @('*.user', '*.log')
+}
+# MOD-018 (P-21): las fuentes de la biblioteca nativa entran a la huella que el build compara al empezar y al terminar. Los binarios y lo que generan las compilaciones no cuentan:
+# se comprueban aparte (su SHA-256 va en el manifiesto y en la lista firmada de integridad).
+function Huella-Nativo {
+    Huella-Carpetas -Raices @((Join-Path $raiz 'native\avacom-lic')) -ExcluirCarpetas @('bin', 'obj', 'dist', 'build', 'out', '.vs', '__pycache__') `
+        -ExcluirArchivos @('*.obj', '*.o', '*.dll', '*.so', '*.exe', '*.pdb', '*.ilk', '*.lib', '*.exp', '*.log', '*.pyc', '*.gcda', '*.gcno')
 }
 function Huella-Instalador {
     # El asistente, el host, el verificador y los scripts de compilacion: todo lo que decide que hay
@@ -273,7 +285,24 @@ Write-Host '  Tomando la huella del codigo que se va a empaquetar ...'
 $huellaBackendInicial = Huella-Backend (Join-Path $raiz 'backend')
 $huellaAppInicial = Huella-App
 $huellaInstaladorInicial = Huella-Instalador
-Write-Host "  backend $($huellaBackendInicial.Substring(0, 12)) · app $($huellaAppInicial.Substring(0, 12)) · asistente $($huellaInstaladorInicial.Substring(0, 12))"
+$huellaNativoInicial = Huella-Nativo
+Write-Host "  backend $($huellaBackendInicial.Substring(0, 12)) · app $($huellaAppInicial.Substring(0, 12)) · asistente $($huellaInstaladorInicial.Substring(0, 12)) · nativo $($huellaNativoInicial.Substring(0, 12))"
+
+# MOD-018 (P-23): ¿se puede firmar el manifiesto? Hace falta la llave de publicacion cifrada Y la copia DPAPI de su frase (solo la cuenta que hizo la ceremonia, en su equipo, la abre).
+$firmarElManifiesto = (Test-Path -LiteralPath $LlaveDePublicacion) -and (Test-Path -LiteralPath $FraseDeLaLlave)
+$clavesDePublicacion = ''
+if ($firmarElManifiesto) {
+    # Las llaves PUBLICAS en las que el Host confiara (vigente y siguiente), incrustadas en su ejecutable: kid:hex|kid:hex (la coma y el punto y coma separan propiedades de MSBuild).
+    $clavesDePublicacion = (@((Get-Content (Join-Path $raiz 'backend\actualizacion\claves\produccion.json') -Raw -Encoding UTF8 | ConvertFrom-Json).claves |
+        Where-Object { $_.estado -in @('vigente', 'siguiente') -and "$($_.publica)".Length -eq 64 } | ForEach-Object { "$($_.kid):$($_.publica)" }) -join '|')
+    if (-not $clavesDePublicacion) { $firmarElManifiesto = $false }
+}
+if (-not $firmarElManifiesto) {
+    if ($ExigirLlaveDeProduccion) { Fallar "No se puede firmar el manifiesto: falta la llave de publicacion ($LlaveDePublicacion), la copia de su frase ($FraseDeLaLlave) o su llave publica en backend\actualizacion\claves\produccion.json." }
+    Write-Warning 'ATENCION: el manifiesto del paquete saldra SIN firma (no hay llave de publicacion en este equipo). Sirve para pruebas; no lo entregues a un cliente asi (usa -ExigirLlaveDeProduccion).'
+} else {
+    Write-Host "  El manifiesto se firmara con la llave de publicacion ($(Split-Path $LlaveDePublicacion -Leaf))."
+}
 
 # ------------------------------------------------------------------ 2. Pruebas
 if ($OmitirPruebas) {
@@ -383,13 +412,16 @@ if (-not (Test-Path $simbolo)) {
 # --------------------------------------------------------- 5. Host del backend
 Paso '5/8  Publicando el host del backend y el runtime de Python'
 
-$codigo = Nativo -Ejecutable 'dotnet' -Argumentos @(
+$argumentosHost = @(
     'publish', (Join-Path $raiz 'installer\src\host\Avacom.Ops.Host.csproj')
     '-c', $Configuracion
     "-p:PublishDir=$staging\Runtime\"
     "-p:Version=$Version"
     '--nologo', '-v', 'minimal'
-) -Silencioso
+)
+# MOD-018 (P-23): con firma, el Host lleva incrustadas las llaves publicas que verifican el manifiesto; sin ella, solo compara huellas.
+if ($clavesDePublicacion) { $argumentosHost += "-p:ClavesDePublicacion=$clavesDePublicacion" }
+$codigo = Nativo -Ejecutable 'dotnet' -Argumentos $argumentosHost -Silencioso
 if ($codigo -ne 0) { Fallar 'No se pudo publicar el host del backend.' }
 Remove-Item (Join-Path $staging 'Runtime\*.pdb') -Force -ErrorAction SilentlyContinue
 
@@ -468,6 +500,22 @@ Write-Host "  El backend empaquetado es el del repositorio (huella $($huellaBack
 # y ANTES de calcular la huella que va al manifiesto: forma parte del paquete.
 $marcadorDeCanal = Join-Path $destinoBackend '.avacom-canal'
 [IO.File]::WriteAllText($marcadorDeCanal, "canal=produccion`r`nversion=$Version`r`n", (New-Object System.Text.UTF8Encoding($false)))
+
+# MOD-018 (P-21, P-22): la biblioteca nativa (avacom_lic.dll, Windows x64) viaja junto al backend (Python la carga por RUTA ABSOLUTA: Backend\native\avacom_lic.dll, ver infraestructura/nativo.py) y junto a la app (Core la
+# llama por P/Invoke). NUNCA es obligatoria: si falta o no carga, el nodo usa la implementacion de referencia (D-40). Su SHA-256 queda en el manifiesto y en la lista firmada de integridad.
+$dllNativa = Join-Path $raiz 'native\avacom-lic\dist\win-x64\avacom_lic.dll'
+$huellaDeLaDll = $null
+if (Test-Path $dllNativa) {
+    New-Item -ItemType Directory -Force (Join-Path $destinoBackend 'native') | Out-Null
+    Copy-Item $dllNativa (Join-Path $destinoBackend 'native\avacom_lic.dll') -Force
+    Copy-Item $dllNativa (Join-Path $staging 'App\avacom_lic.dll') -Force
+    $huellaDeLaDll = (Get-FileHash $dllNativa -Algorithm SHA256).Hash.ToLowerInvariant()
+    Write-Host "  Biblioteca nativa avacom_lic.dll en Backend\native y en App (SHA-256 $($huellaDeLaDll.Substring(0, 12)))."
+} elseif ($ExigirBinariosNativos) {
+    Fallar "Falta la biblioteca nativa ($dllNativa): compilala con native\avacom-lic\Build-Native.ps1."
+} else {
+    Write-Warning 'La biblioteca nativa (avacom_lic.dll) no esta compilada: el paquete saldra con la implementacion de referencia (Python y C#). Es valido; no es la defensa completa de P-20.'
+}
 $huellaBackendPaquete = Huella-Backend $destinoBackend
 
 # MOD-018 (P-03): prueba sobre el CONTENIDO del paquete. Nada de claves privadas, de la llave de desarrollo, del emisor de pruebas ni de licencias sueltas dentro del backend.
@@ -476,7 +524,10 @@ if (Test-Path (Join-Path $destinoBackend 'licenciamiento\tests')) { $sospechosos
 if (Test-Path (Join-Path $destinoBackend 'licenciamiento\claves\desarrollo.json')) { $sospechosos += 'licenciamiento\claves\desarrollo.json (la llave de desarrollo)' }
 if (Test-Path (Join-Path $destinoBackend 'actualizacion\tests')) { $sospechosos += 'actualizacion\tests (el emisor de pruebas de paquetes)' }
 if (Test-Path (Join-Path $destinoBackend 'actualizacion\claves\desarrollo.json')) { $sospechosos += 'actualizacion\claves\desarrollo.json (la llave de desarrollo de paquetes)' }
-$sospechosos += @(Get-ChildItem $destinoBackend -Recurse -File -Include '*.avlic', '*.avreq', '*.avrel', '*.pem', '*.key' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($destinoBackend.Length + 1) })
+$sospechosos += @(Get-ChildItem $destinoBackend -Recurse -File -Include '*.avlic', '*.avreq', '*.avrel', '*.pem', '*.key', '*.avkey', '*.dpapi' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($destinoBackend.Length + 1) })
+# MOD-018 (P-23): lo mismo sobre TODO el paquete (no solo el backend): ni llaves privadas de AVACOM, ni copias de su frase, ni los emisores internos de licencias y de paquetes.
+$sospechosos += @(Get-ChildItem $staging -Recurse -File -Include '*.avkey', '*.dpapi', '*.frase', '*.frase.*', 'Emitir-Licencia.bat', 'avacom-licencias.bat', 'avacom-actualizacion.bat' -ErrorAction SilentlyContinue | ForEach-Object { 'paquete\' + $_.FullName.Substring($staging.Length + 1) })
+$sospechosos += @(Get-ChildItem $staging -Recurse -Directory -Include 'avacom_licencias', 'avacom_actualizacion', 'AVACOM-Llaves' -ErrorAction SilentlyContinue | ForEach-Object { 'paquete\' + $_.FullName.Substring($staging.Length + 1) + ' (carpeta de un emisor o de llaves)' })
 foreach ($archivo in (Get-ChildItem $destinoBackend -Recurse -File -Include '*.py', '*.json', '*.txt', '*.md' -ErrorAction SilentlyContinue)) {
     if (Select-String -Path $archivo.FullName -Pattern 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY', 'avacom-licencia-desarrollo', 'avacom-actualizacion-desarrollo' -Quiet -ErrorAction SilentlyContinue) { $sospechosos += $archivo.FullName.Substring($destinoBackend.Length + 1) }
 }
@@ -537,6 +588,9 @@ $manifiesto = [ordered]@{
     huella_backend      = $huellaBackendPaquete
     huella_app          = $huellaAppInicial
     huella_asistente    = $huellaInstaladorInicial
+    huella_nativo       = $huellaNativoInicial
+    biblioteca_nativa   = [bool]$huellaDeLaDll
+    sha256_avacom_lic_dll = $huellaDeLaDll
     empaquetado         = (Get-Date).ToString('o')
     servicio            = 'AVACOMOPSBackend'
     escucha             = '0.0.0.0:8000'
@@ -557,6 +611,27 @@ $manifiesto = [ordered]@{
 }
 $manifiesto | ConvertTo-Json -Depth 4 |
     Set-Content -Path (Join-Path $staging 'manifiesto.json') -Encoding utf8
+
+# MOD-018 (P-23): integridad del despliegue. Sellar-Paquete.py escribe integridad.json (ruta + SHA-256 de Backend, Runtime y lo propio de App), le anota su huella a manifiesto.json y, si hay
+# llave, firma los bytes de manifiesto.json (Ed25519). Es lo ULTIMO que se le hace al manifiesto: nada lo vuelve a tocar. La frase de la llave se lee de su copia DPAPI, viaja SOLO por una variable
+# de entorno del proceso hijo y no se escribe ni se imprime.
+Write-Host '  Sellando el paquete: lista de integridad y firma del manifiesto ...'
+$pythonSello = Join-Path $raiz 'backend\.venv\Scripts\python.exe'
+if (-not (Test-Path $pythonSello)) { $pythonSello = (Get-Command python).Source }
+$argumentosSello = @((Join-Path $PSScriptRoot 'Sellar-Paquete.py'), '--staging', $staging)
+if ($firmarElManifiesto) { $argumentosSello += @('--privada', $LlaveDePublicacion) }
+try {
+    if ($firmarElManifiesto) {
+        $segura = (Get-Content -LiteralPath $FraseDeLaLlave -Raw).Trim() | ConvertTo-SecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura)
+        try { $env:AVACOM_FRASE_LLAVE = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+    }
+    $codigoDelSello = Nativo -Ejecutable $pythonSello -Argumentos $argumentosSello
+} finally {
+    Remove-Item Env:\AVACOM_FRASE_LLAVE -ErrorAction SilentlyContinue
+}
+if ($codigoDelSello -ne 0) { Fallar 'No se pudo sellar el paquete (lista de integridad y firma del manifiesto).' }
+if ($firmarElManifiesto -and -not (Test-Path (Join-Path $staging 'manifiesto.firma.json'))) { Fallar 'El manifiesto debia quedar firmado y no hay manifiesto.firma.json.' }
 
 @"
 AVACOM OPS Master $Version (revision $revision)
@@ -687,10 +762,12 @@ if ($instalador.Name -ne "AVACOM-OPS-Master-Setup-$Version.exe") {
 $huellaBackendFinal = Huella-Backend (Join-Path $raiz 'backend')
 $huellaAppFinal = Huella-App
 $huellaInstaladorFinal = Huella-Instalador
+$huellaNativoFinal = Huella-Nativo
 $cambiaron = @()
 if ($huellaBackendFinal -ne $huellaBackendInicial) { $cambiaron += 'el backend' }
 if ($huellaAppFinal -ne $huellaAppInicial) { $cambiaron += 'la aplicacion' }
 if ($huellaInstaladorFinal -ne $huellaInstaladorInicial) { $cambiaron += 'el asistente' }
+if ($huellaNativoFinal -ne $huellaNativoInicial) { $cambiaron += 'la biblioteca nativa' }
 if ($cambiaron.Count -gt 0) {
     if ($PermitirCambiosDuranteLaCompilacion) {
         Write-Host "  AVISO: cambio $($cambiaron -join ', ') mientras se compilaba; se acepto por parametro." -ForegroundColor Yellow

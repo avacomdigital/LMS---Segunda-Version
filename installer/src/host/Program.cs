@@ -30,6 +30,11 @@ internal static class Program
             "restaurar-datos" => RestaurarDatos(),
             "aplicar-actualizacion" => new Actualizacion.VigilanteDeActualizaciones().AplicarAhora(),
             "vaciar-datos" => VaciarDatos(),
+            "verificar-integridad" => VerificarIntegridad(),
+            "verificar-dispositivo" => Dispositivo.Verbos.Verificar(argumentos),
+            "solicitar-sello" => Dispositivo.Verbos.Solicitar(argumentos),
+            "instalar-sello" => Dispositivo.Verbos.Instalar(argumentos),
+            "puerta-instalacion" => Dispositivo.Verbos.PuertaDeInstalacion(argumentos),
             "puerto-libre" => PuertoLibre(),
             "instalar-servicio" => Servicio.Instalar(new Registro("instalacion.log")),
             "quitar-servicio" => Con(Servicio.Quitar),
@@ -55,6 +60,17 @@ internal static class Program
         constructor.Logging.ClearProviders();
 
         constructor.Build().Run();
+        return 0;
+    }
+
+    /// <summary>
+    /// MOD-018 (P-23): verifica el despliegue (firma del manifiesto, huellas de Backend, Runtime, App y la DLL nativa), escribe la señal y SALE SIEMPRE con 0: una diferencia es evidencia,
+    /// no un fallo. El resumen queda en servicio.log; lo usan el ensayo del paquete y el diagnostico del administrador.
+    /// </summary>
+    private static int VerificarIntegridad()
+    {
+        var resultado = Integridad.Senal.Comprobar(new Registro("servicio.log"));
+        Console.Out.WriteLine(resultado is null ? "integridad: no se pudo verificar" : $"integridad: {resultado.Estado}");
         return 0;
     }
 

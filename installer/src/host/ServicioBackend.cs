@@ -34,6 +34,9 @@ internal sealed class ServicioBackend : BackgroundService
         // Un corte a mitad de una actualizacion se retoma o se deshace ANTES de levantar el backend: nunca arranca sobre un codigo a medias.
         _actualizaciones.Arrancar();
 
+        // MOD-018 (P-23): la integridad del despliegue se verifica EN SEGUNDO PLANO: deja un asiento y una señal para el backend, y NUNCA retrasa ni impide el arranque.
+        _ = Task.Run(() => Integridad.Senal.Comprobar(_registro), CancellationToken.None);
+
         var intento = 0;
         while (!cancelacion.IsCancellationRequested)
         {
@@ -111,6 +114,7 @@ internal sealed class ServicioBackend : BackgroundService
                 if (actualizado)
                 {
                     _registro.Escribir("La actualizacion termino con el backend parado: se vuelve a levantar.");
+                    _ = Task.Run(() => Integridad.Senal.Comprobar(_registro), CancellationToken.None);     // el codigo cambio: se vuelve a verificar contra lo que el paquete firmado declaro
                     intento = 0;
                     continue;
                 }

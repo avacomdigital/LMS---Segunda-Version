@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.IdentidadDeDispositivo;
 using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
@@ -94,6 +95,28 @@ public static class Sesion
                 _fuenteAula = fuente;
             }
             return _aula;
+        }
+    }
+
+    private static IdentidadDeEquipo? _identidadEquipo;
+    private static Uri? _baseIdentidad;
+
+    /// <summary>
+    /// MOD-018 · Fase 5: quien prueba ante el nodo la clave de este equipo (CNG de Windows: el TPM si lo hay, software si no). Mejor esfuerzo: sin clave o sin red no pasa nada. Se identifica al
+    /// presentarse y al abrir sesión, no en cada petición.
+    /// </summary>
+    public static IdentidadDeEquipo IdentidadEquipo
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_identidadEquipo is null || _baseIdentidad != actual)
+            {
+                _identidadEquipo = new IdentidadDeEquipo(new IdentidadApi(Http, actual), IdentidadDeEquipo.Proveedor,
+                    (evento, detalle) => RegistroLocal.Info(Canal.Dispositivo, evento, "Identidad por clave del equipo", new { detalle }));
+                _baseIdentidad = actual;
+            }
+            return _identidadEquipo;
         }
     }
 
@@ -381,6 +404,8 @@ public static class Sesion
         AparatoRegistrado.Cargar = () => Ajustes.Get<string?>("ops_dispositivo_id", null);
         AparatoRegistrado.Guardar = id => { if (id is null) Ajustes.Remove("ops_dispositivo_id"); else Ajustes.Set("ops_dispositivo_id", id); };
         RegistroLocal.Configurar("ops", AppInfo.Current.VersionString, () => AparatoRegistrado.Id);
+        // MOD-018 · Fase 5: la clave del equipo firma el reto del nodo al abrir sesión (en segundo plano: el login no espera ni se entera de si falla).
+        ClienteJson.SesionIniciada += () => { _ = Task.Run(async () => { try { await IdentidadEquipo.ConfirmarAsync(Dispositivo); } catch { /* nunca estorba al login */ } }); };
     }
 
     private static readonly object CandadoRegistro = new();
@@ -413,7 +438,8 @@ public static class Sesion
             if (equipo is not null)
             {
                 _registradoEn = base_;
-                RegistroLocal.Info(Canal.Dispositivo, "equipo.registrado", "Este equipo se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado });
+                RegistroLocal.Info(Canal.Dispositivo, "equipo.registrado", "Este equipo se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado, garantia = equipo.Garantia });
+                _ = Task.Run(async () => { try { await IdentidadEquipo.ConfirmarAsync(Dispositivo); } catch { /* mejor esfuerzo: la identidad nunca estorba */ } });
             }
         }
         catch (Exception ex) { RegistroLocal.Advertencia(Canal.Comunicacion, "equipo.registro_fallo", "No se pudo presentar el equipo ante el nodo", new { tipo = ex.GetType().Name }); }

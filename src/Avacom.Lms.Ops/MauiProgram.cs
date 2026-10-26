@@ -9,6 +9,7 @@ public static class MauiProgram
 	{
 		Avacom.Lms.Ui.Design.WebViewAjustes.Aplicar();   // antes de que exista cualquier WebView (video del aula sin superposición de DirectComposition)
 		Avacom.Lms.Core.Services.RegistroDeFallos.Observar("ops");
+		Avacom.Lms.Core.IdentidadDeDispositivo.IdentidadDeEquipo.Proveedor = Avacom.Lms.Core.IdentidadDeDispositivo.ProveedorCng.SiEsWindows("AVACOM-Identidad-Ops-v1");   // MOD-018 · Fase 5: clave de identidad en CNG (TPM si hay)
 		Sesion.PrepararAparato();   // MOD-019: logs locales con versión y aparato; el id del equipo persiste entre arranques
 		var builder = MauiApp.CreateBuilder();
 		builder

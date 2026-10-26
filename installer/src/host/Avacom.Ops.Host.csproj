@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
     Pegamento de ejecucion de AVACOM OPS Master. No forma parte del producto:
@@ -41,6 +41,31 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
+    <!-- MOD-018 (P-23, D-41): la verificacion Ed25519 del manifiesto firmado. .NET no trae Ed25519 estable; BouncyCastle es una biblioteca auditada y de uso comun, y esta
+         clase (Rfc8032.Ed25519) es solo verificacion: sin criptografia propia. -->
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.1" />
+  </ItemGroup>
+
+  <!-- Las llaves PUBLICAS de publicacion que el Host confia («kid:hex|kid:hex»), incrustadas al compilar: Build-Installer.ps1 las pasa con -p:ClavesDePublicacion=...
+       Sin la propiedad (un desarrollo) el Host solo compara huellas y declara «sin_firma». -->
+  <ItemGroup Condition="'$(ClavesDePublicacion)' != ''">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ClavesDePublicacion</_Parameter1>
+      <_Parameter2>$(ClavesDePublicacion)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <!-- MOD-018 segunda proteccion (S1): las llaves PUBLICAS del sello de dispositivo («kid:hex|kid:hex»), incrustadas al compilar con -p:ClavesDeSello=... (SP-07: distintas de las de licencias y de
+       publicacion). Sin la propiedad, el Host no puede validar ningun sello y la puerta del instalador no se incluye. -->
+  <ItemGroup Condition="'$(ClavesDeSello)' != ''">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>ClavesDeSello</_Parameter1>
+      <_Parameter2>$(ClavesDeSello)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Avacom.Ops.Host.Tests" />
   </ItemGroup>
 
 </Project>

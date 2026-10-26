@@ -200,6 +200,9 @@ Source: "{#CarpetaContenido}\Runtime\*"; DestDir: "{app}\Runtime"; Flags: ignore
 
 ; Que se empaqueto y desde que revision.
 Source: "{#CarpetaContenido}\manifiesto.json"; DestDir: "{app}"; Flags: ignoreversion
+; MOD-018 (P-23): la lista de integridad (ruta y SHA-256 de lo que el nodo ejecuta) y la firma del manifiesto. El Host las verifica al arrancar el servicio; sin firma (un desarrollo) no hay segundo archivo.
+Source: "{#CarpetaContenido}\integridad.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CarpetaContenido}\manifiesto.firma.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#CarpetaContenido}\LEEME.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

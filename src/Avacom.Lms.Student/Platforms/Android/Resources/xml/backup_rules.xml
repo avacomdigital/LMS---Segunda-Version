@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MOD-018 · Fase 5 (P-25). Android 11 y anteriores (copia automática completa): nada sale de la tableta. Es lo mismo que dice data_extraction_rules.xml para Android 12 en adelante.
+-->
+<full-backup-content>
+    <exclude domain="root" />
+    <exclude domain="file" />
+    <exclude domain="database" />
+    <exclude domain="sharedpref" />
+    <exclude domain="external" />
+</full-backup-content>

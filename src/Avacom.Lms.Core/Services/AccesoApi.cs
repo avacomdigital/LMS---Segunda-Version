@@ -262,7 +262,7 @@ public sealed class AccesoApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
             ? (object)new { identificador, secreto, dispositivo, rol = rol ?? "" }
             : new { identificador, secreto, dispositivo, rol = rol ?? "", pin_maestro = pinMaestro };
         var sesion = await EnviarAsync<SesionAcceso>("api/acceso/sesiones/", cuerpo, ct);
-        if (sesion is not null) Token = sesion.Token;
+        if (sesion is not null) { Token = sesion.Token; AvisarSesionIniciada(); }
         return sesion;
     }
 
@@ -270,7 +270,7 @@ public sealed class AccesoApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
     {
         Token = null;
         var sesion = await EnviarAsync<SesionAcceso>("api/acceso/sesiones/", new { usuario_id = usuarioId, secreto, dispositivo }, ct);
-        if (sesion is not null) Token = sesion.Token;
+        if (sesion is not null) { Token = sesion.Token; AvisarSesionIniciada(); }
         return sesion;
     }
 
@@ -279,7 +279,7 @@ public sealed class AccesoApi(HttpClient http, Uri baseUri) : ClienteJson(http, 
         Token = null;
         var cuerpo = string.IsNullOrWhiteSpace(grupoId) ? (object)new { dispositivo } : new { dispositivo, grupo_id = grupoId };
         var sesion = await EnviarAsync<SesionAcceso>("api/acceso/sesiones/visitante/", cuerpo, ct);
-        if (sesion is not null) Token = sesion.Token;
+        if (sesion is not null) { Token = sesion.Token; AvisarSesionIniciada(); }
         return sesion;
     }
 

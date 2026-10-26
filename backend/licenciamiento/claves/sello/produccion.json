@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "nota": "Llaves PUBLICAS de produccion del sello de dispositivo AVACOM (sello-2026-1 vigente, y la siguiente). VACIO hasta la ceremonia de llaves del sello (SQ-08): un nodo de produccion no acepta ningun sello hasta entonces. La privada NUNCA va en el repositorio (07-ceremonia-de-llaves.md).",
+  "claves": []
+}

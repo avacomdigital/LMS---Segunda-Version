@@ -19,8 +19,12 @@ public static class EstudioCompose
     private static IDownloadService? _descargas;
     private static IConnectivityService? _conectividad;
 
+    /// <summary>
+    /// La demostración (siete lecciones de muestra, sin hablar con el nodo) sólo se enciende en una compilación de depuración o con el archivo marcador <c>AVACOM-DESARROLLO</c> junto al
+    /// programa (MOD-018 · Fase 5, P-25): en un instalador de entrega, la variable y la preferencia no hacen nada y el alumno nunca ve datos de muestra.
+    /// </summary>
     public static bool EsDemo =>
-        Environment.GetEnvironmentVariable("AVACOM_ESTUDIO_DEMO") == "1" || Preferences.Default.Get("estudio_demo", false);
+        Avacom.Lms.Core.Desarrollo.InterruptoresDeDesarrollo.Encendido("AVACOM_ESTUDIO_DEMO") || Avacom.Lms.Core.Desarrollo.InterruptoresDeDesarrollo.Preferencia(Preferences.Default.Get("estudio_demo", false));
 
     public static IStudyModeService Servicio { get { Asegurar(); return _servicio!; } }
     public static IDownloadService Descargas { get { Asegurar(); return _descargas!; } }

@@ -85,4 +85,11 @@
 	  <ProjectReference Include="..\Avacom.Lms.Ui\Avacom.Lms.Ui.csproj" />
 	</ItemGroup>
 
+	<!-- MOD-018 Fase 4 (P-22): la biblioteca nativa de licenciamiento viaja en el APK como lib/<abi>/libavacom_lic.so. Los binarios NO se versionan (native\avacom-lic\Build-Native.ps1 los deja
+	     en native\avacom-lic\dist\android-<abi>\): si no se compilaron, no se incluye nada y la app sigue por la referencia (la nativa nunca es obligatoria). Sin AllowUnsafeBlocks. -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<AndroidNativeLibrary Include="..\..\native\avacom-lic\dist\android-arm64-v8a\libavacom_lic.so" Abi="arm64-v8a" Condition="Exists('..\..\native\avacom-lic\dist\android-arm64-v8a\libavacom_lic.so')" />
+		<AndroidNativeLibrary Include="..\..\native\avacom-lic\dist\android-x86_64\libavacom_lic.so" Abi="x86_64" Condition="Exists('..\..\native\avacom-lic\dist\android-x86_64\libavacom_lic.so')" />
+	</ItemGroup>
+
 </Project>

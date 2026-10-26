@@ -23,7 +23,11 @@ public interface IDispositivosApi
     /// es <c>TABLETA</c> (por defecto), <c>MASTER</c> (el nodo de OPS) u <c>OTRO</c>. El id que responde el nodo queda en
     /// <see cref="AparatoRegistrado"/> para la cabecera <c>X-Avacom-Dispositivo</c> (MOD-019).
     /// </summary>
-    Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default, string? tipo = null);
+    /// <remarks>
+    /// <paramref name="identidad"/> (Fase 5, opcional): la prueba de clave de un equipo NUEVO (reto firmado y, en Android, la atestación). El nodo la verifica junto al cupo; un equipo que ya existe
+    /// la ignora. Sin ella el equipo se registra como siempre, con garantía «declarada».
+    /// </remarks>
+    Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default, string? tipo = null, object? identidad = null);
 
     /// <summary>
     /// FUN-092 (MOD-008 · 008-01): deja la tableta asignada a un alumno; sólo en ese aparato existe el modo de estudio. Un aparato que ya es de
@@ -52,10 +56,10 @@ public sealed class DispositivosApi(HttpClient http, Uri baseUri) : ClienteJson(
     public Task<DispositivoAula?> DesbloquearAsync(string dispositivoId, string actor, CancellationToken ct = default) =>
         EnviarAsync<DispositivoAula>($"api/dispositivos/{Uri.EscapeDataString(dispositivoId)}/desbloquear/", new { actor }, ct);
 
-    public async Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default, string? tipo = null)
+    public async Task<DispositivoAula?> LatidoAsync(string identificadorHw, string nombre, string? plataforma, string? versionApp, CancellationToken ct = default, string? tipo = null, object? identidad = null)
     {
         var dispositivo = await EnviarAsync<DispositivoAula>("api/dispositivos/latido/",
-            new { identificador_hw = identificadorHw, nombre, plataforma, version_app = versionApp, tipo = tipo ?? "TABLETA" }, ct);
+            new { identificador_hw = identificadorHw, nombre, plataforma, version_app = versionApp, tipo = tipo ?? "TABLETA", identidad }, ct);
         if (dispositivo is not null) AparatoRegistrado.Recordar(dispositivo.Id);
         return dispositivo;
     }

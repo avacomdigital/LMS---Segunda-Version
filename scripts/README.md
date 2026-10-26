@@ -84,6 +84,14 @@ $env:AVACOM_EXAM_NO_LOCKDOWN = '1'      # solo para esta consola; luego lanza la
 
 En los equipos de la sede la variable **no se define** (no la pongas con `setx` ni en el perfil del usuario del kiosco). No sustituye a Assigned Access ni a Shell Launcher: no afecta a la capa del sistema.
 
+**Desde MOD-018 · Fase 5 (P-25) la variable sólo se obedece en una compilación de depuración o si junto al programa hay un archivo marcador vacío llamado `AVACOM-DESARROLLO`.** Un instalador de entrega (Release) no lo trae, así que ahí la variable no hace nada (el informe de bloqueo lo dice: «está definida pero se ignora»). Para probar OPS y Student en el mismo PC con el Student **instalado**: crea el archivo en la carpeta del programa (hace falta administrador) y bórralo al terminar.
+
+```powershell
+New-Item -ItemType File 'C:\Program Files\AVACOM\Student\AVACOM-DESARROLLO'     # ajusta la ruta; sólo en equipos de desarrollo o de QA
+```
+
+Lo mismo vale para `AVACOM_ESTUDIO_DEMO`, `AVACOM_ESTUDIO_DEMO_OFFLINE` y la preferencia `estudio_demo`. Los arneses de UI Automation lanzan Student **Debug**, donde las variables siguen valiendo sin marcador.
+
 ## Decisiones de diseño que conviene conocer
 
 - **El marcador es solo un indicio** (kiosk.md §5.1). `%ProgramData%\AVACOM\kiosk-provisioned.marker` (JSON con `mode`, `user`, `executablePath`, `appliedAtUtc`, `configSha256`) lo escribe el instalador **después** de aplicar, y es lo que la Student comprueba. Si alguien borra la política y deja el archivo, la Student se creerá aprovisionada. Por eso existe `-Verify`, que consulta el sistema: primero `MDM_AssignedAccess.Configuration` (necesita administrador) y, si no se puede leer, el almacén del sistema en `HKLM\SOFTWARE\Microsoft\Windows\AssignedAccessConfiguration` (legible sin privilegios; búsqueda de texto, **heurística**). Para Shell Launcher consulta `WESL_UserSetting`.

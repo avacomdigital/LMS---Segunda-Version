@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "nota": "Llaves PUBLICAS de DESARROLLO del sello de dispositivo (kid reservado). Se aceptan solo si el entorno es desarrollo o pruebas por construccion. El instalador NO copia este archivo.",
+  "claves": [
+    {
+      "kid": "sello-dev-1",
+      "publica": "5000c3565a522c7c13a34a53379fc48badf89b4032768a8da9f27d406062abd0",
+      "estado": "vigente"
+    }
+  ]
+}

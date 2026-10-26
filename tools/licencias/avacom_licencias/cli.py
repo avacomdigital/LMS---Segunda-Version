@@ -481,6 +481,9 @@ def _parser() -> argparse.ArgumentParser:
     rv.add_argument("--json", action="store_true", help="En JSON")
     rv.set_defaults(func=cmd_registro_ver)
 
+    from . import cli_sello
+    cli_sello.registrar(sub)
+
     pl_ = sub.add_parser("planes", help="Lista los planes")
     pl_.add_argument("--planes", help="Carpeta de planes")
     pl_.set_defaults(func=cmd_planes)

@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.IdentidadDeDispositivo;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
@@ -122,6 +123,17 @@ public partial class DispositivosPage : ContentPage
                 ? $"Asignada a {(string.IsNullOrWhiteSpace(d.AsignadoA?.Rotulo) ? "un alumno" : d.AsignadoA!.Rotulo)} · su dueño puede llevarse las lecciones"
                 : "Compartida del aula · las lecciones se estudian con el aula conectada";
             textos.Add(new Label { Text = perfil, FontFamily = Ds.FuenteMedia, FontSize = 14, TextColor = d.Asignado ? Color.FromArgb("#017A48") : Ds.TintaMedia });
+        }
+        if (d.Activo)
+        {
+            // MOD-018 · Fase 5: qué pudo comprobar el nodo de la identidad de este equipo (declarada · con clave propia · verificada por hardware). Informativo: no decide si entra a clase.
+            var garantia = new Label
+            {
+                Text = $"Identidad: {d.GarantiaLegible.ToLowerInvariant()}", FontFamily = Ds.FuenteMedia, FontSize = 13, AutomationId = $"dispositivo-garantia-{d.Id}",
+                TextColor = ReglasDeIdentidad.Nivel(d.Garantia) switch { 2 => Color.FromArgb("#017A48"), 1 => Color.FromArgb("#02739E"), _ => Ds.TintaSuave },
+            };
+            SemanticProperties.SetDescription(garantia, $"Identidad del equipo: {d.GarantiaLegible}. {ReglasDeIdentidad.Explicacion(d.Garantia, d.GarantiaMotivo)}");
+            textos.Add(garantia);
         }
         if (!string.Equals(d.NombreVisible, d.IdentificadorHw, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(d.IdentificadorHw))
             textos.Add(Ds.Secundario($"huella {d.IdentificadorHw}", 12));
