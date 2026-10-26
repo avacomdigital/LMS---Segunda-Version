@@ -158,15 +158,19 @@ class Programar(_Accion):
 class EmitirCustodia(_Accion):
     """BR-102 · el código de custodia de la institución. Se muestra UNA vez y el equipo no lo guarda: sólo conserva la clave derivada, envuelta con la suya."""
 
-    def ejecutar(self, actor: Actor, reemplazar: bool = False) -> dict:
+    def ejecutar(self, actor: Actor, reemplazar: bool = False, pase_b64: object = None) -> dict:
         self._exigir(actor, cat.P_PROGRAMAR)
         s = self.s
+        pase = self._pase(actor, cat.P_PROGRAMAR, pase_b64)                  # el código abre TODOS los respaldos: lo emite quien tiene la llave de AVACOM, no cualquier `TECHNICIAN`
         actual = s.clavero.custodia()
         if actual is not None and not reemplazar:
             raise CustodiaYaEmitida("La institución ya tiene un código de custodia. Si se perdió, repite pidiendo `reemplazar`: los respaldos anteriores seguirán abriéndose en este equipo.")
+        ahora = self.ahora()
+        with s.uow() as uow:
+            if not uow.pases.usar(pase.pase_id, ahora, cat.P_PROGRAMAR, pase.tecnico, pase.kid):
+                raise PaseInvalido("ya_usado")
         codigo = cripto.generar_codigo_de_custodia()
         secreto, sal = cripto.secreto_de_custodia(codigo), cripto.generar_sal()
-        ahora = self.ahora()
         s.clavero.guardar_custodia(ahora, sal, cripto.clave_de_custodia(secreto, sal))
         with s.uow() as uow:
             self.motor._h(uow, "", cat.H_CUSTODIA, actor.id, {"reemplazo": actual is not None})

@@ -83,7 +83,8 @@ class AplicadorSqlite:
                 continue
             destino.parent.mkdir(parents=True, exist_ok=True)
             tmp = destino.with_name(destino.name + ".restaurando")
-            shutil.copy2(origen, tmp)
+            shutil.copyfile(origen, tmp)
+            os.utime(tmp, None)                    # con la fecha de AHORA: un incremental sólo lleva lo modificado desde el respaldo anterior, y esto cambió ahora
             os.replace(tmp, destino)
             aplicados += 1
         return aplicados

@@ -190,9 +190,9 @@ class RutasSeguras(SimpleTestCase):
     def test_un_respaldo_con_una_ruta_que_escapa_se_rechaza_al_leer(self):
         dek = cripto.generar_clave()
         nodo = cripto.generar_clave()
-        claves = formato.envolver_dek("r", dek, nodo, None)
+        claves = formato.envolver_dek("00000000-0000-4000-8000-0000000000aa", dek, nodo, None)
         salida = io.BytesIO()
-        formato.escribir(salida, {"respaldo_id": "r", "tipo": "completo", "creado_en": 1}, entradas({"../escapa.txt": b"x"}), dek, claves)
+        formato.escribir(salida, {"respaldo_id": "00000000-0000-4000-8000-0000000000aa", "tipo": "completo", "creado_en": 1}, entradas({"../escapa.txt": b"x"}), dek, claves)
         f = io.BytesIO(salida.getvalue())
         manifiesto, cabecera = formato.leer_manifiesto(f)
         with self.assertRaises(RespaldoRechazado):
@@ -203,8 +203,8 @@ class RutasSeguras(SimpleTestCase):
         dek = cripto.generar_clave()
         nodo = cripto.generar_clave()
         salida = io.BytesIO()
-        formato.escribir(salida, {"respaldo_id": "r", "tipo": "completo", "creado_en": 1},
-                         [*entradas({"a.txt": b"1"}), *entradas({"A.TXT": b"2"})], dek, formato.envolver_dek("r", dek, nodo, None))
+        formato.escribir(salida, {"respaldo_id": "00000000-0000-4000-8000-0000000000aa", "tipo": "completo", "creado_en": 1},
+                         [*entradas({"a.txt": b"1"}), *entradas({"A.TXT": b"2"})], dek, formato.envolver_dek("00000000-0000-4000-8000-0000000000aa", dek, nodo, None))
         f = io.BytesIO(salida.getvalue())
         manifiesto, cabecera = formato.leer_manifiesto(f)
         with self.assertRaises(RespaldoRechazado):

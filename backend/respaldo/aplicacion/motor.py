@@ -83,7 +83,7 @@ class Motor(_CasoDeUso):
     def _ultimo_existente(self, fichas: list[dict]) -> dict | None:
         por_id = {f["respaldo_id"]: f for f in fichas}
         for f in fichas:                                                        # del más nuevo al más viejo
-            if f["existe"]:
+            if f["restaurable"]:                                                # un respaldo sin verificar o dañado NO sirve de base: la cadena colgaría de algo que no se restaura
                 try:
                     self.cadena(por_id, f["respaldo_id"])
                     return f
@@ -363,16 +363,20 @@ class Motor(_CasoDeUso):
             except RespaldoRechazado:
                 continue
             rid = manifiesto["respaldo_id"]
-            if rid in registrados:
+            if rid in registrados or int(manifiesto["creado_en"]) > self.ahora() + cat.DIA_MS or int(manifiesto["entradas"]) < 1:
+                continue                                                        # ya conocido, o un manifiesto no creíble (del futuro, sin entradas): no entra al catálogo
+            try:
+                with s.uow() as uow:
+                    uow.respaldos.insertar({"respaldo_id": rid, "tipo": manifiesto["tipo"], "base_id": manifiesto.get("base_id") or "", "disparo": manifiesto.get("disparo") if manifiesto.get("disparo") in cat.DISPAROS else cat.D_MANUAL,
+                                            "archivo": nombre, "sha256": huella, "bytes": int(s.almacen.tamano(nombre) or 0), "bytes_claro": manifiesto["bytes_claro"],
+                                            "creado_en": manifiesto["creado_en"], "secuencia_global": int(manifiesto.get("secuencia_global") or 0),
+                                            "version_producto": str(manifiesto.get("producto") or "")[:32], "nodo_id": str(manifiesto.get("nodo_id") or "")[:36], "entradas": manifiesto["entradas"],
+                                            "archivos": int(manifiesto.get("archivos") or 0), "incluye_reinstalable": bool(manifiesto.get("incluye_reinstalable")),
+                                            "con_custodia": "custodia" in manifiesto["claves"], "creado_por": actor.id[:cat.MAX_ACTOR]})
+                    self._h(uow, rid, cat.H_COMPLETO if manifiesto["tipo"] == cat.T_COMPLETO else cat.H_INCREMENTAL, actor.id, {"catalogado": True, "huella": huella[:16]})
+            except Exception:   # noqa: BLE001 — un archivo ajeno o dañado no rompe el catálogo de los demás
+                log.exception("Un .avbak de la carpeta no se pudo catalogar", extra={"evento": "respaldo.catalogo_archivo_fallo", "ruta": "bad"})
                 continue
-            with s.uow() as uow:
-                uow.respaldos.insertar({"respaldo_id": rid, "tipo": manifiesto["tipo"], "base_id": manifiesto.get("base_id") or "", "disparo": manifiesto.get("disparo") or cat.D_MANUAL,
-                                        "archivo": nombre, "sha256": huella, "bytes": int(s.almacen.tamano(nombre) or 0), "bytes_claro": manifiesto["bytes_claro"],
-                                        "creado_en": manifiesto["creado_en"], "secuencia_global": int(manifiesto.get("secuencia_global") or 0),
-                                        "version_producto": str(manifiesto.get("producto") or ""), "nodo_id": str(manifiesto.get("nodo_id") or ""), "entradas": manifiesto["entradas"],
-                                        "archivos": int(manifiesto.get("archivos") or 0), "incluye_reinstalable": bool(manifiesto.get("incluye_reinstalable")),
-                                        "con_custodia": "custodia" in manifiesto["claves"], "creado_por": actor.id[:cat.MAX_ACTOR]})
-                self._h(uow, rid, cat.H_COMPLETO if manifiesto["tipo"] == cat.T_COMPLETO else cat.H_INCREMENTAL, actor.id, {"catalogado": True, "huella": huella[:16]})
             nuevos.append(rid)
         for rid, f in fichas.items():
             if f["existe"] and f["archivo"] and f["archivo"] not in en_carpeta:
@@ -423,23 +427,60 @@ class Motor(_CasoDeUso):
             lista = s.unidades.candidatos()
             if not any(c.id == candidato_id for c in lista):
                 raise NoEncontrado("Ese respaldo ya no está en la unidad.")
-            pedidos = [candidato_id] + [c.id for c in lista if c.id != candidato_id]
-            for i, cid in enumerate(pedidos):
-                destino = entrada / f"c{i}"
+            traidos: set[str] = set()
+
+            def traer(cid: str, subcarpeta: str):
+                """Trae UN candidato (comprobando antes el espacio) y lee su manifiesto; None si ya no está o no es un respaldo."""
+                c = next((x for x in lista if x.id == cid), None)
+                if c is None:
+                    return None
+                libre = s.almacen.espacio_libre()
+                if libre is not None and libre < c.bytes + s.config.margen_espacio:
+                    raise EspacioInsuficiente(f"Hacen falta {(c.bytes + s.config.margen_espacio) // cat.MIB} MB libres para traer el respaldo y hay {libre // cat.MIB} MB.")
+                destino = entrada / subcarpeta
                 destino.mkdir(parents=True, exist_ok=True)
                 cand = s.unidades.traer(cid, destino)
                 if cand is None:
-                    continue
-                with open(destino / cand.nombre, "rb") as f:
+                    return None
+                ruta = destino / cand.nombre
+                with open(ruta, "rb") as f:
                     try:
                         manifiesto, _ = formato.leer_manifiesto(f)
                     except RespaldoRechazado:
                         if cid == candidato_id:
                             raise
+                        manifiesto = None
+                if manifiesto is None:
+                    ruta.unlink(missing_ok=True)
+                return None if manifiesto is None else (manifiesto, ruta)
+
+            elegido_ext = traer(candidato_id, "c0")
+            if elegido_ext is None:
+                raise NoEncontrado("Ese respaldo ya no está en la unidad.")
+            externos[elegido_ext[0]["respaldo_id"]] = {"manifiesto": elegido_ext[0], "ruta": elegido_ext[1]}
+            elegido = elegido_ext[0]["respaldo_id"]
+            traidos.add(candidato_id)
+            # Sólo la CADENA del elegido (sus bases), de una en una: el resto de la unidad no se copia al disco del nodo.
+            actual = elegido_ext[0].get("base_id") or ""
+            n = 0
+            while actual and actual not in externos and not (fichas.get(actual) and fichas[actual]["existe"] and s.almacen.tamano(fichas[actual]["archivo"]) is not None):
+                encontrado = None
+                for c in lista:
+                    if c.id in traidos:
                         continue
-                externos[manifiesto["respaldo_id"]] = {"manifiesto": manifiesto, "ruta": destino / cand.nombre}
-                if cid == candidato_id:
-                    elegido = manifiesto["respaldo_id"]
+                    n += 1
+                    traidos.add(c.id)
+                    t = traer(c.id, f"c{n}")
+                    if t is None:
+                        continue
+                    if t[0]["respaldo_id"] == actual:
+                        encontrado = t
+                        break
+                    t[1].unlink(missing_ok=True)                          # no es de la cadena: no ocupa disco
+                if encontrado is None:
+                    break
+                externos[actual] = {"manifiesto": encontrado[0], "ruta": encontrado[1]}
+                actual = encontrado[0].get("base_id") or ""
         if not elegido:
             raise NoEncontrado("Indica qué respaldo restaurar.")
         cadena, actual, visto = [], elegido, set()
@@ -537,40 +578,56 @@ class Motor(_CasoDeUso):
         s.vivo.marcar(rid, "restauracion", self.ahora())
         with s.uow() as uow:
             self._h(uow, rid, cat.H_RESTAURACION_INICIADA, actor.id, {"motivo": motivo, "punto_de_retorno": retorno["respaldo_id"], "nueva_huella": nueva_huella})
-        # 3 · aplicar
+        # 3 · aplicar. La base es atómica: si falla, NADA vivo cambió. Un archivo puede fallar después de la base: se sigue (la base ya es la restaurada y lo derivado hay que rehacerlo) y se dice.
+        with s.uow(lectura=True) as uow:
+            pases_gastados = uow.pases.todos()                  # la base restaurada no sabe de los pases que se gastaron después del respaldo: se vuelven a anotar TODOS
         try:
             s.aplicador.aplicar_base(staging / "base.sqlite3")
-            aplicados = 0
-            carpeta_de_archivos = staging / "archivos"
-            if carpeta_de_archivos.exists():
-                for sub in sorted(p for p in carpeta_de_archivos.iterdir() if p.is_dir()):
-                    aplicados += s.aplicador.aplicar_archivos(sub.name, cat.CLASE_PRIMARIO, sub)
         except Exception as error:   # noqa: BLE001
-            log.exception("La restauración falló al aplicarse", extra={"evento": "respaldo.restauracion_fallo", "ruta": "bad"})
-            raise RestauracionAbortada("aplicacion_parcial", "La restauración falló al aplicarse. El respaldo de seguridad previo está intacto: avisa al personal de AVACOM.",
+            log.exception("La restauración no pudo aplicar la base", extra={"evento": "respaldo.restauracion_fallo", "ruta": "bad"})
+            raise RestauracionAbortada("aplicacion_base", "La base no se pudo reemplazar y NO se tocó. El respaldo de seguridad previo está intacto.",
                                        punto_de_retorno=retorno["respaldo_id"]) from error
-        # 4 · rehacer lo derivado y dejar constancia EN LA BASE RESTAURADA
+        aplicados, fallos_archivos = 0, []
+        carpeta_de_archivos = staging / "archivos"
+        if carpeta_de_archivos.exists():
+            for sub in sorted(p for p in carpeta_de_archivos.iterdir() if p.is_dir()):
+                try:
+                    aplicados += s.aplicador.aplicar_archivos(sub.name, cat.CLASE_PRIMARIO, sub)
+                except Exception:   # noqa: BLE001
+                    log.exception("No se pudieron devolver los archivos de «%s»", sub.name, extra={"evento": "respaldo.restauracion_archivos_fallo", "ruta": "bad"})
+                    fallos_archivos.append(sub.name)
+        # 4 · rehacer lo derivado y dejar constancia EN LA BASE RESTAURADA (pase y catálogo incluidos)
         if nueva_huella and custodia:
-            self._reanclar_custodia(manifiesto_elegido, custodia)
+            try:
+                self._reanclar_custodia(manifiesto_elegido, custodia)
+            except Exception:   # noqa: BLE001
+                log.exception("No se pudo reanclar la custodia en el equipo nuevo", extra={"evento": "respaldo.custodia_fallo", "ruta": "bad"})
         post = s.tras.ejecutar(nueva_huella)
         fin = self.ahora()
-        reconciliado = self.reconciliar(Actor(id=cat.SISTEMA))
+        try:
+            reconciliado = self.reconciliar(Actor(id=cat.SISTEMA))
+        except Exception:   # noqa: BLE001 — el catálogo se reconstruye en el siguiente arranque
+            log.exception("No se pudo catalogar tras restaurar", extra={"evento": "respaldo.catalogo_fallo", "ruta": "bad"})
+            reconciliado = {"catalogados": [], "ausentes": []}
         perdidas = {"horas": round(max(0, fin - int(manifiesto_elegido["creado_en"])) / cat.HORA_MS, 1), "eventos": max(0, secuencia_antes - int(manifiesto_elegido.get("secuencia_global") or 0))}
         with s.uow() as uow:
+            uow.pases.reinsertar(pases_gastados)
             if pase is not None:
-                uow.pases.usar(pase.pase_id, fin, cat.P_RESTAURAR, pase.tecnico, pase.kid, rid)       # la base restaurada no sabe que este pase ya se gastó
-            self._h(uow, rid, cat.H_RESTAURADO, actor.id, {"motivo": motivo, "nota": nota[:cat.MAX_NOTA], "punto_de_retorno": retorno["respaldo_id"], "perdidas": perdidas,
-                                                           "nueva_huella": nueva_huella, "duracion_ms": max(0, fin - inicio)})
+                uow.pases.usar(pase.pase_id, fin, cat.P_RESTAURAR, pase.tecnico, pase.kid, rid)
+            # la nota es texto libre del técnico: va a la bitácora (de acceso restringido), no al historial que lee la administración
+            self._h(uow, rid, cat.H_RESTAURADO, actor.id, {"motivo": motivo, "nota_largo": len(nota), "punto_de_retorno": retorno["respaldo_id"], "perdidas": perdidas,
+                                                           "nueva_huella": nueva_huella, "duracion_ms": max(0, fin - inicio), "parcial": bool(fallos_archivos)})
             if post.get("reconstruidos"):
                 self._h(uow, rid, cat.H_INDICE, cat.SISTEMA, {"modulos": post["reconstruidos"]})
-            uow.auditoria.registrar(actor.id, cat.A_RESTAURADO, "m16_respaldo", rid, nuevo={"motivo": motivo, "punto_de_retorno": retorno["respaldo_id"], "perdidas": perdidas,
-                                                                                               "nueva_huella": nueva_huella})
-            self._evento(uow, rid, cat.EV_RESTAURADO, {"motivo": motivo, "punto_de_retorno": retorno["respaldo_id"], "perdidas": perdidas, "nueva_huella": nueva_huella})
+            uow.auditoria.registrar(actor.id, cat.A_RESTAURADO, "m16_respaldo", rid, nuevo={"motivo": motivo, "nota": nota[:cat.MAX_NOTA], "punto_de_retorno": retorno["respaldo_id"],
+                                                                                               "perdidas": perdidas, "nueva_huella": nueva_huella, "parcial": bool(fallos_archivos)})
+            self._evento(uow, rid, cat.EV_RESTAURADO, {"motivo": motivo, "punto_de_retorno": retorno["respaldo_id"], "perdidas": perdidas, "nueva_huella": nueva_huella,
+                                                        "parcial": bool(fallos_archivos)})
             if post.get("reconstruidos"):
                 self._evento(uow, rid, cat.EV_INDICE, {"modulos": post["reconstruidos"]})
         with s.uow(lectura=True) as uow:
             ficha = self.ficha(uow, rid)
-        resultado = {"ok": True, "en": fin, "respaldo_id": rid, "punto_de_retorno": retorno["respaldo_id"], "archivos": aplicados, "perdidas": perdidas, "post": post,
+        resultado = {"ok": not fallos_archivos, "parcial": bool(fallos_archivos), "fallos_archivos": fallos_archivos, "en": fin, "respaldo_id": rid, "punto_de_retorno": retorno["respaldo_id"], "archivos": aplicados, "perdidas": perdidas, "post": post,
                      "licencia": post.get("licencia"), "reconstruidos": ", ".join(post.get("reconstruidos") or []) or None, "catalogados": reconciliado["catalogados"],
                      "nueva_huella": nueva_huella, "reinicio_recomendado": True}
         texto = informes.informe_de_restauracion(ficha, resultado, s.nodo.institucion(), s.reloj.desfase_min())
@@ -589,5 +646,4 @@ class Motor(_CasoDeUso):
         if not custodia or secreto is None:
             return
         sal = bytes.fromhex(custodia["sal"])
-        self.s.clavero.guardar_custodia(self.ahora(), sal, cripto.clave_de_custodia(secreto, sal, int(custodia.get("n", cripto.SCRYPT_N)), int(custodia.get("r", cripto.SCRYPT_R)),
-                                                                                    int(custodia.get("p", cripto.SCRYPT_P))))
+        self.s.clavero.guardar_custodia(self.ahora(), sal, cripto.clave_de_custodia(secreto, sal))

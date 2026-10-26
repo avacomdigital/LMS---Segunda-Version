@@ -131,7 +131,7 @@ class BaseRespaldo(BaseAcceso):
         return r.json()
 
     def emitir_custodia(self) -> str:
-        r = self.tecnico().post(f"{R}/custodia/emitir/", {}, format="json")
+        r = self.tecnico().post(f"{R}/custodia/emitir/", {"pase": self.pase(cat.P_PROGRAMAR)}, format="json")
         self.assertEqual(r.status_code, 201, r.content)
         return r.json()["codigo"]
 

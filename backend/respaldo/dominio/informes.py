@@ -123,7 +123,7 @@ def informe_de_restauracion(r: dict, resultado: dict, institucion: str = "", des
         f"Institución:            {institucion or '—'}",
         f"Restaurado el:          {_fecha(resultado.get('en'), desfase_min)}",
         f"Respaldo usado:         {str(r.get('respaldo_id') or '')[:8].upper()}  ({_TIPO.get(r.get('tipo'), r.get('tipo'))}, del {_fecha(r.get('creado_en'), desfase_min)})",
-        f"Resultado:              {'Restauración completa' if resultado.get('ok', True) else 'No se restauró'}", "",
+        f"Resultado:              {'Restauración completa' if resultado.get('ok', True) else 'Restauración PARCIAL: la base se restauró, pero no todos los archivos'}", "",
         "QUÉ SE RECUPERÓ",
         "  · La base de datos del aula tal como estaba al hacerse el respaldo.",
         f"  · Archivos de la institución: {int(resultado.get('archivos') or 0)}.", "",
@@ -135,6 +135,8 @@ def informe_de_restauracion(r: dict, resultado: dict, institucion: str = "", des
         "  · Se cerraron todas las sesiones abiertas: cada persona entra de nuevo.",
         f"  · Licencia: {resultado.get('licencia') or 'se vuelve a validar contra la huella del equipo'}.",
         f"  · Índices y reportes: {resultado.get('reconstruidos') or 'se reconstruyen a partir de los datos restaurados'}.", "",
+        *(["PENDIENTE", f"  · No se pudieron devolver los archivos de: {', '.join(resultado.get('fallos_archivos') or [])}. Avise al personal técnico de AVACOM: el respaldo de seguridad previo está intacto.", ""]
+          if not resultado.get("ok", True) else []),
         "QUÉ HACER AHORA",
         "  1. Pida a los profesores y a los alumnos que vuelvan a entrar.",
         "  2. Reinicie el servicio del aula si el personal técnico lo indica.",

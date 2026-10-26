@@ -30,7 +30,7 @@ sys.path.insert(0, str(RAIZ / "backend"))
 from cryptography.hazmat.primitives import serialization  # noqa: E402
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 
-PERMISOS = ("backup.export", "backup.restore", "backup.restore.module")
+PERMISOS = ("backup.export", "backup.restore", "backup.restore.module", "backup.schedule")      # backup.schedule: sólo para emitir el código de custodia
 HORA_MS = 3_600_000
 
 

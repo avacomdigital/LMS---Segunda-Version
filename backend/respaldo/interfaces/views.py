@@ -12,7 +12,7 @@ Rutas HTTP de MOD-016 (`/api/respaldo/`). Las vistas sólo traducen HTTP ↔ cas
   POST respaldos/<id>/verificar/         backup.verify   `{custodia?}` (FUN-173)
   POST respaldos/<id>/exportar/          backup.export   `{unidad, pase}` (FUN-176) · pase de soporte de AVACOM
   POST programacion/                     backup.schedule `{activo?, hora_min?, dias?, completo_cada_dias?, retencion?, incluir_reinstalable?, destino?}` (FUN-169)
-  POST custodia/emitir/                  backup.schedule `{reemplazar?}` el código de custodia de la institución: se muestra UNA vez (BR-102)
+  POST custodia/emitir/                  backup.schedule + pase `{reemplazar?, pase}` el código de custodia de la institución: se muestra UNA vez (BR-102)
   POST restaurar/                        backup.restore  `{respaldo_id | candidato, motivo, nota?, custodia?, pase}` (FUN-174) · pase de soporte de AVACOM
   POST restaurar/modulo/                 backup.restore.module  `{modulo, pase}` (FUN-175)
 
@@ -160,7 +160,7 @@ class ProgramacionView(VistaRespaldo):
 class CustodiaView(VistaRespaldo):
     def post(self, request):
         datos = _cuerpo(request)
-        return Response(acciones.EmitirCustodia(servicios()).ejecutar(self._actor(request), bool(datos.get("reemplazar"))), status=status.HTTP_201_CREATED)
+        return Response(acciones.EmitirCustodia(servicios()).ejecutar(self._actor(request), bool(datos.get("reemplazar")), datos.get("pase")), status=status.HTTP_201_CREATED)
 
 
 class RestaurarView(VistaRespaldo):

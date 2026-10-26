@@ -206,6 +206,9 @@ class RepositorioAjuste(Protocol):
 class RepositorioPases(Protocol):
     def usar(self, pase_id: str, en: int, permiso: str, tecnico: str, kid: str, respaldo_id: str = "") -> bool:
         """Registra el uso; False si ese pase ya se usó (un pase vale una vez)."""
+    def todos(self) -> list[dict]: ...
+    def reinsertar(self, filas: list[dict]) -> None:
+        """Vuelve a anotar pases gastados (la base restaurada no los conoce)."""
 
 
 class UnidadDeTrabajo(Protocol):

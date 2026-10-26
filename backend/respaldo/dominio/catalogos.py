@@ -28,7 +28,7 @@ PERMISOS = (P_LEER, P_EJECUTAR, P_PROGRAMAR, P_VERIFICAR, P_EXPORTAR, P_RESTAURA
 # Lo que sólo hace el personal de AVACOM WORLD (D-1): la administración de la institución NO tiene ninguno de éstos, ni siquiera por escalada.
 PERMISOS_DE_AVACOM = (P_EJECUTAR, P_PROGRAMAR, P_VERIFICAR, P_EXPORTAR, P_RESTAURAR, P_RESTAURAR_MODULO)
 # Los que, además del permiso, exigen un pase de soporte firmado por AVACOM (D-2): sacar datos del equipo o reemplazarlos.
-PERMISOS_CON_PASE = (P_EXPORTAR, P_RESTAURAR, P_RESTAURAR_MODULO)
+PERMISOS_CON_PASE = (P_EXPORTAR, P_RESTAURAR, P_RESTAURAR_MODULO, P_PROGRAMAR)   # backup.schedule con pase SÓLO para emitir el código de custodia (programar el calendario no lo pide)
 
 # ------------------------------------------------------------------------------------------------------------------- tipos y disparos
 T_COMPLETO, T_INCREMENTAL = "completo", "incremental"

@@ -341,3 +341,152 @@ class Catalogo(BaseRespaldo):
         self.assertEqual((r["catalogados"], r["ausentes"]), ([a["respaldo_id"]], [b["respaldo_id"]]))
         self.assertEqual(self.ficha(a["respaldo_id"])["estado"], "completo_no_verificado", "catalogado pero sin verificar: el vigilante lo verificará")
         self.assertEqual(self.ficha(b["respaldo_id"])["estado"], "caducado")
+
+
+class Endurecimiento(BaseRespaldo):
+    """Lo que encontró la revisión independiente (2026-10-26) y quedó corregido."""
+
+    def restaurar(self, cuerpo: dict):
+        return self.tecnico().post(f"{R}/restaurar/", {"motivo": "otro", **cuerpo}, format="json")
+
+    def test_la_custodia_se_reemplaza_solo_con_pase_y_el_pase_no_se_reusa(self):
+        self.emitir_custodia()
+        r = self.tecnico().post(f"{R}/custodia/emitir/", {"reemplazar": True}, format="json")
+        self.assertEqual((r.status_code, r.json()["codigo"]), (403, "pase_requerido"))
+        pase = self.pase(cat.P_PROGRAMAR)
+        self.assertEqual(self.tecnico().post(f"{R}/custodia/emitir/", {"reemplazar": True, "pase": pase}, format="json").status_code, 201)
+        r = self.tecnico().post(f"{R}/custodia/emitir/", {"reemplazar": True, "pase": pase}, format="json")
+        self.assertEqual((r.status_code, r.json()["motivo"]), (403, "ya_usado"))
+
+    def test_si_fallan_los_archivos_tras_aplicar_la_base_se_rehace_lo_derivado_y_se_dice_parcial(self):
+        self.dejar_archivo("a.txt", b"1")
+        f = self.respaldar()
+
+        def falla(*a, **k):
+            raise OSError("archivo bloqueado")
+
+        self.s.aplicador.aplicar_archivos = falla
+        r = self.restaurar({"respaldo_id": f["respaldo_id"], "pase": self.pase(cat.P_RESTAURAR)})
+        self.assertEqual(r.status_code, 200, r.content)
+        j = r.json()
+        self.assertEqual((j["ok"], j["parcial"], j["fallos_archivos"]), (False, True, ["evidencias"]))
+        self.assertEqual(self.tras.llamadas, [False], "aun así se revocaron sesiones, se saltó la secuencia y se rehicieron los índices")
+        self.assertIn("PARCIAL", j["informe_texto"])
+        self.assertIn("evidencias", j["informe_texto"])
+        self.assertIn(cat.EV_RESTAURADO, self.tipos_de_eventos())
+
+    def test_los_pases_gastados_antes_de_restaurar_siguen_anotados_despues(self):
+        from respaldo.models import PaseUsado
+        f = self.respaldar()
+        u = self.tecnico().get(f"{R}/destinos/").json()["unidades"][0]["id"]
+        self.assertEqual(self.tecnico().post(f"{R}/respaldos/{f['respaldo_id']}/exportar/", {"unidad": u, "pase": self.pase(cat.P_EXPORTAR)}, format="json").status_code, 200)
+        gastado = PaseUsado.objects.get(permiso="backup.export").pase_id
+        guardado = {}
+
+        # lo que haría la base restaurada: no conocer el pase gastado después del respaldo
+        original = self.s.aplicador.aplicar_base
+
+        def aplicar_y_olvidar(ruta):
+            r = original(ruta)
+            PaseUsado.objects.all().delete()
+            guardado["borrado"] = True
+            return r
+
+        self.s.aplicador.aplicar_base = aplicar_y_olvidar
+        self.assertEqual(self.restaurar({"respaldo_id": f["respaldo_id"], "pase": self.pase(cat.P_RESTAURAR)}).status_code, 200)
+        self.assertTrue(guardado["borrado"])
+        self.assertTrue(PaseUsado.objects.filter(pase_id=gastado).exists(), "el pase gastado antes de restaurar se vuelve a anotar: no revive")
+        self.assertEqual(PaseUsado.objects.filter(permiso="backup.restore").count(), 1)
+
+    def test_un_respaldo_sin_verificar_no_sirve_de_base_para_un_incremental(self):
+        self.s.config = type(self.s.config)(**{**self.s.config.__dict__, "verificar_al_terminar": False})
+        self.respaldar()                                                          # completo_no_verificado
+        r = self.tecnico().post(f"{R}/respaldos/ahora/", {"tipo": "incremental"}, format="json")
+        self.assertEqual((r.status_code, r.json()["codigo"]), (409, "sin_respaldo_previo"))
+
+    def test_el_calendario_hace_otro_completo_si_el_ultimo_completo_no_es_restaurable(self):
+        from datetime import datetime, timezone
+        self.s.config = type(self.s.config)(**{**self.s.config.__dict__, "verificar_al_terminar": False})
+        self.assertEqual(self.tecnico().post(f"{R}/programacion/", {"hora_min": 120}, format="json").status_code, 200)
+        from unittest import mock
+        from respaldo.aplicacion.vigilante import Tick
+        self.reloj.t = int(datetime(2026, 10, 26, 3, tzinfo=timezone.utc).timestamp() * 1000)
+        with mock.patch.object(Tick, "_verificar", lambda *a, **k: None):             # que el vigilante no lo verifique en el mismo ciclo
+            self.assertEqual(self.tick()["pasos"]["programado"], "completo")
+            self.reloj.t += cat.DIA_MS
+            self.assertEqual(self.tick()["pasos"]["programado"], "completo", "el de ayer nunca se verificó: no cuenta como el completo de la semana")
+
+    def test_un_manifiesto_ajeno_no_creible_no_entra_al_catalogo_ni_lo_rompe(self):
+        import io
+        from respaldo.dominio import cripto, formato
+        dek, nodo = cripto.generar_clave(), cripto.generar_clave()
+        for nombre, base in (("ajeno-futuro.avbak", {"respaldo_id": "11111111-1111-4111-8111-111111111111", "tipo": "completo", "creado_en": self.reloj.t + 5 * cat.DIA_MS,
+                                                     "disparo": "de_otro_producto"}),
+                             ("ajeno-disparo.avbak", {"respaldo_id": "22222222-2222-4222-8222-222222222222", "tipo": "completo", "creado_en": self.reloj.t - cat.HORA_MS,
+                                                      "disparo": "de_otro_producto"})):
+            salida = io.BytesIO()
+            formato.escribir(salida, base, [formato.Entrada("base.sqlite3", "primario", 3, lambda: io.BytesIO(b"abc"))], dek, formato.envolver_dek(base["respaldo_id"], dek, nodo, None))
+            (self.carpeta / nombre).write_bytes(salida.getvalue())
+        (self.carpeta / "roto.avbak").write_bytes(b"AVBK" + b"\x00" * 30)
+        from respaldo.aplicacion.motor import Motor
+        from respaldo.aplicacion.puertos import Actor
+        r = Motor(self.s).reconciliar(Actor(id="sistema"))
+        self.assertEqual(r["catalogados"], ["22222222-2222-4222-8222-222222222222"], "el del futuro no entra; el de un disparo desconocido entra como manual")
+        self.assertEqual(self.ficha("22222222-2222-4222-8222-222222222222")["disparo"], "manual")
+
+    def test_un_manifiesto_con_ids_que_no_son_uuid_se_rechaza(self):
+        import io
+        from respaldo.dominio import cripto, formato
+        from respaldo.dominio.errores import RespaldoRechazado
+        dek, nodo = cripto.generar_clave(), cripto.generar_clave()
+        for mal in ({"respaldo_id": "no-es-uuid"}, {"respaldo_id": "11111111-1111-4111-8111-111111111111", "base_id": "x" * 40}):
+            salida = io.BytesIO()
+            formato.escribir(salida, {"tipo": "completo", "creado_en": 1, **mal}, [formato.Entrada("a.txt", "primario", 1, lambda: io.BytesIO(b"a"))], dek,
+                             formato.envolver_dek(mal["respaldo_id"], dek, nodo, None))
+            with self.assertRaises(RespaldoRechazado):
+                formato.leer_manifiesto(io.BytesIO(salida.getvalue()))
+
+    def test_los_parametros_de_scrypt_del_manifiesto_no_se_obedecen(self):
+        from respaldo.dominio import cripto, formato
+        from respaldo.dominio.errores import ClaveNoDisponible
+        codigo = cripto.generar_codigo_de_custodia()
+        sal = cripto.generar_sal()
+        kek = cripto.clave_de_custodia(cripto.secreto_de_custodia(codigo), sal)
+        dek = cripto.generar_clave()
+        rid = "33333333-3333-4333-8333-333333333333"
+        claves = formato.envolver_dek(rid, dek, cripto.generar_clave(), (kek, sal))
+        for n, r, p in ((2 ** 15, 8, 4000), (2 ** 15, "ocho", 1), (2 ** 20, 8, 1)):
+            claves["custodia"].update({"n": n, "r": r, "p": p})
+            with self.assertRaises(ClaveNoDisponible):
+                formato.abrir_dek({"respaldo_id": rid, "claves": claves}, None, codigo)
+
+    def test_los_archivos_restaurados_llevan_la_fecha_de_la_restauracion(self):
+        import time
+        ruta = self.dejar_archivo("a.txt", b"original", mtime_ms=self.t0 - 10 * cat.DIA_MS)
+        f = self.respaldar()
+        ruta.write_bytes(b"cambiado")
+        self.assertEqual(self.restaurar({"respaldo_id": f["respaldo_id"], "pase": self.pase(cat.P_RESTAURAR)}).status_code, 200)
+        self.assertEqual(ruta.read_bytes(), b"original")
+        self.assertGreater(ruta.stat().st_mtime, time.time() - 120, "la fecha de modificación es la de AHORA: el siguiente incremental lo lleva")
+
+    def test_la_nota_libre_del_tecnico_no_llega_al_historial_que_lee_la_administracion(self):
+        f = self.respaldar()
+        r = self.restaurar({"respaldo_id": f["respaldo_id"], "pase": self.pase(cat.P_RESTAURAR), "nota": "El hijo de la señora Martha borró las notas"})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertNotIn("Martha", self.admin.get(f"{R}/respaldos/{f['respaldo_id']}/").content.decode())
+        self.assertNotIn("Martha", r.content.decode())
+
+    def test_al_restaurar_desde_una_unidad_solo_se_trae_lo_necesario(self):
+        a = self.respaldar()
+        self.reloj.avanzar(cat.HORA_MS)
+        b = self.respaldar()
+        u = self.tecnico().get(f"{R}/destinos/").json()["unidades"][0]["id"]
+        for x in (a, b):
+            self.assertEqual(self.tecnico().post(f"{R}/respaldos/{x['respaldo_id']}/exportar/", {"unidad": u, "pase": self.pase(cat.P_EXPORTAR)}, format="json").status_code, 200)
+        traidos = []
+        original = self.s.unidades.traer
+        self.s.unidades.traer = lambda cid, destino: (traidos.append(cid), original(cid, destino))[1]
+        candidatos = {c["nombre"]: c["id"] for c in self.tecnico().get(f"{R}/destinos/").json()["candidatos"]}
+        r = self.restaurar({"candidato": candidatos[b["archivo"]], "pase": self.pase(cat.P_RESTAURAR)})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(traidos, [candidatos[b["archivo"]]], "un completo no tiene bases: no se copia nada más de la unidad")

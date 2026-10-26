@@ -41,7 +41,9 @@ class MatrizDeRoles(BaseRespaldo):
         f = self.respaldar()
         self.assertEqual(self.llamar(t, "post", f"respaldos/{f['respaldo_id']}/verificar/", {}).status_code, 200)
         self.assertEqual(self.llamar(t, "post", "programacion/", {"hora_min": 180}).status_code, 200)
-        self.assertEqual(self.llamar(t, "post", "custodia/emitir/", {}).status_code, 201)
+        self.assertEqual(self.llamar(t, "post", "custodia/emitir/", {}).status_code, 403, "el código de custodia abre TODOS los respaldos: sin pase de AVACOM no se emite")
+        self.assertEqual(self.llamar(t, "post", "custodia/emitir/", {"pase": self.pase(cat.P_RESTAURAR)}).status_code, 403, "un pase de otra operación no vale")
+        self.assertEqual(self.llamar(t, "post", "custodia/emitir/", {"pase": self.pase(cat.P_PROGRAMAR)}).status_code, 201)
 
     def test_los_demas_roles_no_ven_nada(self):
         for nombre, cliente in (("profesor", self.sesion(self.DOCENTE_DNI, self.DOCENTE_PASS)), ("estudiante", self.sesion(self.ESTUDIANTE_CODIGO, self.ESTUDIANTE_PIN)),

@@ -34,6 +34,7 @@ _REG_ENTRADA, _REG_FIN = b"E", b"F"
 _MAX_MANIFIESTO = 64 * 1024
 _MAX_CABECERA = 64 * 1024
 _COMPONENTE = re.compile(r"^[\w][\w.\- ()&,'+]{0,119}$")
+_UUID = re.compile(r"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
 _RESERVADOS = {"con", "prn", "aux", "nul", *(f"com{i}" for i in range(1, 10)), *(f"lpt{i}" for i in range(1, 10))}
 
 
@@ -177,6 +178,8 @@ def leer_manifiesto(entrada: BinaryIO) -> tuple[dict, bytes]:
     for campo, tipo in (("respaldo_id", str), ("tipo", str), ("trozos", int), ("bytes_claro", int), ("prefijo", str), ("claves", dict), ("entradas", int), ("creado_en", int)):
         if not isinstance(manifiesto.get(campo), tipo) or isinstance(manifiesto.get(campo), bool):
             raise RespaldoRechazado("formato_invalido")
+    if not _UUID.match(manifiesto["respaldo_id"]) or not (manifiesto.get("base_id") in (None, "") or _UUID.match(str(manifiesto.get("base_id")))) or len(str(manifiesto.get("nodo_id") or "")) > 36:
+        raise RespaldoRechazado("formato_invalido")
     if manifiesto["tipo"] not in cat.TIPOS or manifiesto["trozos"] < 1 or manifiesto["bytes_claro"] < 5 or len(manifiesto["prefijo"]) != cripto.LARGO_PREFIJO * 2:
         raise RespaldoRechazado("formato_invalido")
     return manifiesto, MAGIC + corte[4:10] + cuerpo
@@ -297,10 +300,12 @@ def abrir_dek(manifiesto: dict, clave_del_nodo: bytes | None, codigo_de_custodia
         secreto = cripto.secreto_de_custodia(codigo_de_custodia)
         if secreto is not None:
             try:
-                kek = cripto.clave_de_custodia(secreto, bytes.fromhex(custodia["sal"]), int(custodia.get("n", cripto.SCRYPT_N)), int(custodia.get("r", cripto.SCRYPT_R)),
-                                               int(custodia.get("p", cripto.SCRYPT_P)))
+                # el manifiesto no está autenticado antes de abrir la clave: sus parámetros de scrypt NO se obedecen, se exigen los del producto (si no, un archivo ajeno elegiría cuánta CPU gastar)
+                if (custodia.get("n"), custodia.get("r"), custodia.get("p")) != (cripto.SCRYPT_N, cripto.SCRYPT_R, cripto.SCRYPT_P):
+                    raise ValueError("parámetros de scrypt distintos de los del producto")
+                kek = cripto.clave_de_custodia(secreto, bytes.fromhex(custodia["sal"]))
                 return cripto.desenvolver(kek, bytes.fromhex(custodia["nonce"]), bytes.fromhex(custodia["dek"]), aad + b"|custodia")
-            except (cripto.ClaveIncorrecta, KeyError, ValueError):
+            except (cripto.ClaveIncorrecta, KeyError, ValueError, TypeError, AttributeError):
                 pass
     raise ClaveNoDisponible()
 

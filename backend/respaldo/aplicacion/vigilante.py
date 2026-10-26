@@ -85,7 +85,7 @@ class Tick(_CasoDeUso):
         if s.aula.sesiones_activas() > 0:
             s.vivo.aplazar(horario)
             return "aplazado_por_clase"
-        completos = [f["creado_en"] for f in fichas if f["existe"] and f["tipo"] == cat.T_COMPLETO]
+        completos = [f["creado_en"] for f in fichas if f["restaurable"] and f["tipo"] == cat.T_COMPLETO]
         tipo = programacion.tipo_que_toca(programa, max(completos, default=None), ahora)
         try:
             motor.respaldar(sistema, tipo, cat.D_PROGRAMADO)

@@ -78,6 +78,15 @@ class PasesDjango:
             return False
 
 
+    def todos(self) -> list[dict]:
+        return [{"pase_id": p.pase_id, "usado_en": int(p.usado_en), "permiso": p.permiso, "tecnico": p.tecnico, "kid": p.kid, "respaldo_id": p.respaldo_id} for p in m.PaseUsado.objects.all()]
+
+    def reinsertar(self, filas: list[dict]) -> None:
+        """Vuelve a anotar pases ya gastados (tras restaurar la base); los que ya están se dejan como están."""
+        for f in filas:
+            m.PaseUsado.objects.get_or_create(pase_id=f["pase_id"], defaults={k: f[k] for k in ("usado_en", "permiso", "tecnico", "kid", "respaldo_id")})
+
+
 class EventosDelNodo:
     """La cola única de MOD-015: el evento se escribe en la MISMA transacción que el hecho (`publicar` lo exige)."""
 
