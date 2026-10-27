@@ -48,13 +48,13 @@ C# (`AiAgentPage`): `ReproducirAsync`, `DetenerAsync`, `ExpresionAsync`, `FpsAsy
 ## Decisiones
 
 - **HybridWebView** con `HybridRoot="wwwroot/ai-agent"`; la página incluye `_framework/hybridwebview.js` (sin él no hay mensajes al host en .NET 10). Fuera del host (navegador) funciona igual.
-- Materiales del cuerpo y la pantalla: no se tocan; `getDiagnostics().materialesIntactos` lo comprueba comparando una huella tomada al cargar.
+- Material del cuerpo: no se toca; el de la pantalla sólo recibe el degradado; `getDiagnostics().materialesIntactos` lo comprueba comparando una huella tomada al cargar.
 - `material_face_sprite`: se le pone el atlas (`map`, color base blanco para no oscurecerlo), un brillo propio y un `onBeforeCompile` que pinta el sprite sólo en la cara frontal (los cantos conservan el color original). Un único material y una única textura; cada fotograma sólo reescribe la matriz UV.
 - Render a 30 FPS máx., pixel ratio ≤ 2, sin dibujar si la pantalla no se ve; vaivén suave de la raíz del GLB (respeta `prefers-reduced-motion`).
 - Al salir de la pantalla: `dispose` (bucle, listeners, geometrías, texturas, contexto WebGL) y desconexión del handler. Cada entrada crea una página nueva.
 
 ## Limitaciones verificadas
 
-- **El degradado de `material_pantalla_colores` no existe en el GLB**: sin textura y con color base blanco, se ve como un marco gris claro alrededor del rostro. Se avisa en consola, en el log de OPS (`aiagent.aviso`) y en `getDiagnostics().pantalla`. No se simula; hay que hornearlo en Blender y volver a exportar.
+- **El degradado de `material_pantalla_colores` no está en el GLB** (sin textura, color base blanco). Desde la corrección del 2026-10-27 se dibuja en JavaScript (`js/screen-gradient.js`) con los cuatro colores del diseño (`#FC2B4EFF`, `#EE01FCFF`, `#6040FCFF`, `#EA02FDFF`, a partes iguales, a 135°) y se pone como textura base de ese material y sólo de ese; la rugosidad 0 sigue siendo la del GLB. Se define en `config/face-animations.json` → `screen` (colores y ángulo editables). Si el GLB algún día trae el degradado en una textura, no se toca. El ángulo y el reparto de los colores son una suposición: el diseño sólo dio la lista.
 - Sin fotograma de ojos cerrados (ver `blink`).
 - Probado: página en Chrome-pane (WebGL2, estados y API) y dentro de OPS real con un nodo aislado (carga el GLB y el atlas sin red, mensaje `ready`, menú con la tesela). No probado en vivo: volver al menú y reentrar (UI Automation no ve la ventana con un WebView y no se pudo disparar el botón sin controlar el escritorio), ni Android.
