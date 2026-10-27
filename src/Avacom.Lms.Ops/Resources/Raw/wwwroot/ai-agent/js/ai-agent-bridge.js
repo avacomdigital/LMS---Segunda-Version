@@ -63,7 +63,7 @@ async function iniciar() {
 
     agente = new AgentScene($('stage'), { ...opciones, onEvent: alEvento });
     agente.init();
-    await agente.cargarModelo(MODELO);                     // valida los tres objetos antes de dibujar
+    await agente.cargarModelo(MODELO, config);                     // valida los tres objetos antes de dibujar
 
     const textura = await new THREE.TextureLoader().loadAsync(config.atlas.src).catch((e) => {
       throw new AgentError('atlas_no_carga', `No se pudo cargar la hoja de rostros (${config.atlas.src}).`, e?.message || e);

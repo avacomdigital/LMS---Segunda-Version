@@ -2,6 +2,7 @@
 // El modelo de Blender es lo unico que se dibuja: no se sustituye ni se completa con primitivas.
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/three/loaders/GLTFLoader.js';
+import { aplicarDegradadoDePantalla } from './screen-gradient.js';
 
 const log = (nivel, ...args) => console[nivel]('[AvacomAIAgent/scene]', ...args);
 
@@ -93,7 +94,7 @@ export class AgentScene {
 
   _on(target, tipo, fn) { target.addEventListener(tipo, fn); this._listeners.push([target, tipo, fn]); }
 
-  async cargarModelo(url) {
+  async cargarModelo(url, config = {}) {
     const gltf = await new Promise((ok, fail) => new GLTFLoader().load(url, ok, undefined, (e) => fail(new AgentError('modelo_no_carga', `No se pudo cargar el modelo 3D (${url}).`, String(e?.message || e)))));
     this.gltf = gltf;
     this.raiz = gltf.scene;
@@ -101,8 +102,8 @@ export class AgentScene {
     this.scene.add(gltf.scene);
     this.raiz.updateMatrixWorld(true);
     this._encuadrar();
-    this._guardarHuellas();
-    this._diagnosticarPantalla();
+    this._diagnosticarPantalla(config.screen, config.face);
+    this._guardarHuellas();                    // despues del degradado: de ahi en adelante nada vuelve a tocar el cuerpo ni la pantalla
     return gltf;
   }
 
@@ -128,25 +129,35 @@ export class AgentScene {
   _nombres(raiz) { const n = []; raiz.traverse((o) => { if (o.name && o !== raiz) n.push(o.name); }); return n; }
 
   _guardarHuellas() {
-    // Los materiales del cuerpo y de la pantalla se conservan como salieron de Blender; se anota como eran para poder demostrarlo.
+    // El cuerpo se conserva como salio de Blender y la pantalla como salio mas su degradado; se anota como quedaron para poder demostrar que no se vuelven a tocar.
     this._huellas = { tablet_cuerpo: huella(this.objetos.tablet_cuerpo.material), pantalla_colores: huella(this.objetos.pantalla_colores.material) };
   }
 
-  /** true si el cuerpo y la pantalla siguen exactamente como se cargaron. */
+  /** true si el cuerpo y la pantalla siguen exactamente como quedaron al cargar. */
   materialesIntactos() {
     if (!this._huellas) return false;
     return huella(this.objetos.tablet_cuerpo.material) === this._huellas.tablet_cuerpo && huella(this.objetos.pantalla_colores.material) === this._huellas.pantalla_colores;
   }
 
-  /** El degradado de la pantalla debe venir en el GLB (textura horneada). Si no, se dice, sin inventarlo. */
-  _diagnosticarPantalla() {
-    const m = this.objetos.pantalla_colores.material;
-    const traeTextura = !!(m.map || m.emissiveMap);
+  /**
+   * El GLB no trae el degradado de la pantalla horneado (sin textura, color base blanco). Si config.screen lo define, se genera con esos colores y se pone en
+   * ese material (js/screen-gradient.js). Si el GLB ya trae textura, no se toca. Sin ninguno de los dos, se avisa.
+   */
+  _diagnosticarPantalla(screen, face) {
+    const mesh = this.objetos.pantalla_colores;
+    const m = mesh.material;
+    const traiaTextura = !!(m.map || m.emissiveMap);
     const color = m.color ? `#${m.color.getHexString()}` : 'sin color';
-    this.diagnostics.pantalla = { texturas: traeTextura, colorBase: color, emisivo: m.emissive ? `#${m.emissive.getHexString()}` : null };
-    if (!traeTextura && m.color?.getHex() === 0xffffff) {
-      this._aviso("material_pantalla_colores no trae ninguna textura y su color base es blanco: el degradado procedural de Blender no se horneo al exportar el GLB, " +
-        'asi que no hay datos con que dibujarlo. Se muestra tal como se exporto (no se simula). Para verlo hay que hornear el degradado a una textura en Blender y volver a exportar.');
+    const resumen = { texturaEnElGlb: traiaTextura, colorBase: color, emisivo: m.emissive ? `#${m.emissive.getHexString()}` : null, degradado: null };
+    this.diagnostics.pantalla = resumen;
+    try {
+      resumen.degradado = aplicarDegradadoDePantalla(mesh, screen, face?.frontNormal, face?.up);
+    } catch (e) {
+      resumen.degradado = { aplicado: false, motivo: String(e?.message || e) };
+      this._aviso(`No se pudo aplicar el degradado a material_pantalla_colores: ${resumen.degradado.motivo}`);
+    }
+    if (!traiaTextura && !resumen.degradado.aplicado && m.color?.getHex() === 0xffffff) {
+      this._aviso('material_pantalla_colores no trae textura, su color base es blanco y no hay degradado configurado (config.screen): se muestra blanco.');
     }
   }
 

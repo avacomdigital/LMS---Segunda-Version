@@ -20,6 +20,17 @@
     "_comment": "frontNormal es la normal (en espacio del objeto) de la cara del cubo que hace de pantalla; sus UV se leen de la propia geometria, no se supone ninguna. glow es cuanto 'brilla' el rostro por si solo (la pantalla emite luz): 0 = solo luz de la escena."
   },
 
+  "screen": {
+    "object": "pantalla_colores",
+    "material": "material_pantalla_colores",
+    "gradient": {
+      "angleDeg": 135,
+      "stops": ["#FC2B4EFF", "#EE01FCFF", "#6040FCFF", "#EA02FDFF"],
+      "size": 512
+    },
+    "_comment": "El GLB no trae el degradado horneado, asi que se dibuja aqui y se pone como textura base de material_pantalla_colores (la rugosidad 0 sigue siendo la del GLB). Colores #RRGGBBAA repartidos a partes iguales. angleDeg al estilo CSS: 0 = hacia arriba, 90 = hacia la derecha, 135 = de arriba-izquierda a abajo-derecha, 180 = hacia abajo. Si el GLB algun dia trae el degradado en una textura, no se toca."
+  },
+
   "defaultFps": 10,
 
   "autoBlink": { "enabled": true, "minMs": 2600, "maxMs": 5200, "state": "blink" },
