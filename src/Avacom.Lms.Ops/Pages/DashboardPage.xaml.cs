@@ -230,6 +230,9 @@ public partial class DashboardPage : ContentPage
             case "Buscar":
                 await Shell.Current.GoToAsync("buscar");
                 break;
+            case "AI Agent":
+                await Shell.Current.GoToAsync("ai-agent");
+                break;
             case "Historial":
                 await Shell.Current.GoToAsync("logs-bitacora");
                 break;

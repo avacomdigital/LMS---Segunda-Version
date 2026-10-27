@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Avacom.Lms.Ops.Pages.AiAgentPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="White"
+    Shell.NavBarIsVisible="False">
+    <!-- AI Agent: la tableta 3D de AVACOM con su rostro animado. Es sólo visual: el dibujo (Three.js + el GLB de Blender) vive en Resources/Raw/wwwroot/ai-agent y corre
+         dentro de un HybridWebView, sin red. Esta página sólo lo aloja, enseña el estado de arranque y cuenta los errores. El texto del agente (hoy vacío) y las animaciones se
+         gobiernan desde aquí por AiAgentPage.ReproducirAsync / DetenerAsync / ExpresionAsync / TextoAsync cuando se conecte un agente. -->
+    <Grid RowDefinitions="Auto,*">
+        <Grid Padding="44,16,44,0" ColumnDefinitions="Auto,*" ColumnSpacing="20" ZIndex="3">
+            <Button x:Name="VolverButton" AutomationId="ai-agent-volver" Text="‹  Menú principal" HeightRequest="44" MinimumWidthRequest="170" Padding="18,0" CornerRadius="12"
+                    BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnVolverClicked" />
+            <Label Grid.Column="1" Text="AI AGENT" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" VerticalOptions="Center" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <HybridWebView x:Name="Visor" AutomationId="ai-agent-visor" HybridRoot="wwwroot/ai-agent" DefaultFile="index.html" BackgroundColor="White" RawMessageReceived="OnMensajeDelVisor" />
+
+            <!-- Estado del arranque del renderizador: sobre el visor mientras carga y, si falla, con el motivo. Desaparece cuando la página avisa que está lista. -->
+            <Border x:Name="EstadoPanel" AutomationId="ai-agent-estado" ZIndex="5" BackgroundColor="White" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill">
+                <VerticalStackLayout Spacing="16" HorizontalOptions="Center" VerticalOptions="Center" MaximumWidthRequest="620" Padding="24">
+                    <ActivityIndicator x:Name="Cargando" IsRunning="True" Color="#18181B" HeightRequest="36" WidthRequest="36" />
+                    <Label x:Name="EstadoLabel" AutomationId="ai-agent-estado-texto" Text="Preparando a AI Agent…" FontSize="18" TextColor="#52525B" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+                    <Button x:Name="ReintentarButton" AutomationId="ai-agent-reintentar" IsVisible="False" Text="Reintentar" HeightRequest="44" MinimumWidthRequest="140" Padding="18,0" CornerRadius="12"
+                            BackgroundColor="#18181B" TextColor="White" FontSize="14" HorizontalOptions="Center" Clicked="OnReintentarClicked" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

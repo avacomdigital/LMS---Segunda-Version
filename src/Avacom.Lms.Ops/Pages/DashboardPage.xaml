@@ -162,6 +162,11 @@
                  absolutos con arcos de radio 88, 72 y 8 (nada diminuto que Win2D no pueda pintar). Sólo la ven quienes pueden buscar (el soporte técnico y el alumno no). -->
             <ui:ProfessorHexTile x:Name="BuscarTile" AbsoluteLayout.LayoutBounds="159,545,146,168" AccentColor="#65A30D" Text="Buscar" Tapped="OnModuleTapped"
                 IconGeometry="M229.66,218.34 L179.59,168.28 A88.11,88.11 0 1 0 168.28,179.59 L218.34,229.66 A8,8 0 0 0 229.66,218.34 Z M40,112 A72,72 0 1 1 112,184 A72.08,72.08 0 0 1 40,112 Z" />
+
+            <!-- «AI Agent»: la tableta 3D con rostro animado (sólo visual por ahora; luego se conecta a un agente). Ocupa la celda libre a la derecha de «Comunicación», en la fila
+                 de «Asignaturas». Robot de Phosphor convertido a comandos absolutos: arcos de radio 8, 12, 16, 28 y 32 (nada diminuto que Win2D no pueda pintar). -->
+            <ui:ProfessorHexTile x:Name="AiAgentTile" AbsoluteLayout.LayoutBounds="555,136,146,168" AccentColor="#7C3AED" Text="AI Agent" AutomationId="dashboard-ai-agent" Tapped="OnModuleTapped"
+                IconGeometry="M200,48 H136 V16 A8,8 0 0 0 120,16 V48 H56 A32,32 0 0 0 24,80 V192 A32,32 0 0 0 56,224 H200 A32,32 0 0 0 232,192 V80 A32,32 0 0 0 200,48 Z M216,192 A16,16 0 0 1 200,208 H56 A16,16 0 0 1 40,192 V80 A16,16 0 0 1 56,64 H200 A16,16 0 0 1 216,80 Z M164,136 H92 A28,28 0 0 0 92,192 H164 A28,28 0 0 0 164,136 Z M140,152 V176 H116 V152 Z M80,164 A12,12 0 0 1 92,152 H100 V176 H92 A12,12 0 0 1 80,164 Z M164,176 H156 V152 H164 A12,12 0 0 1 164,176 Z M72,108 A12,12 0 1 1 84,120 A12,12 0 0 1 72,108 Z M160,108 A12,12 0 1 1 172,120 A12,12 0 0 1 160,108 Z" />
         </AbsoluteLayout>
 
         <Border Grid.RowSpan="3" Margin="0,0,0,28" Padding="8,4" BackgroundColor="#5A5A56" HeightRequest="60" HorizontalOptions="Center" StrokeThickness="0" VerticalOptions="End" WidthRequest="750" ZIndex="5">

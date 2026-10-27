@@ -82,6 +82,9 @@
 		<!-- Lápiz 3D de la pantalla de ingreso (Pencil3DView, render nativo). La fuente única del modelo vive en assets\3d;
 		     el empaquetado usa Link si existe y, si no, LogicalName, así que sólo se pone LogicalName. -->
 		<MauiAsset Include="..\..\assets\3d\lapiz.glb" LogicalName="models\lapiz.glb" />
+		<!-- AI Agent (HybridWebView): la tableta 3D exportada de Blender. La fuente única sigue en assets\3d\agent; se empaqueta dentro de wwwroot con el nombre que carga el renderizador
+		     (no hay copia). El resto de la página (HTML, JS, three.js local, atlas del rostro) vive en Resources\Raw\wwwroot\ai-agent y entra por el MauiAsset de Resources\Raw. -->
+		<MauiAsset Include="..\..\assets\3d\agent\tablet.glb" LogicalName="wwwroot/ai-agent/models/avacom-ai-agent.glb" />
 	</ItemGroup>
 
 	<ItemGroup>

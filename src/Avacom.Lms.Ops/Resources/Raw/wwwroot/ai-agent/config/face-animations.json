@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "_comment": "Configuracion editable del rostro de AI Agent. Los fotogramas se numeran por fila: indice = fila * columns + columna (0..23). Medido sobre assets/sprite-ai-agent.png: 8688 x 2896 px, RGB sin canal alfa, rejilla de 8 columnas x 3 filas (1086 x 965.3 px por fotograma, con una linea clara de 4 px en el borde de cada uno).",
+
+  "atlas": {
+    "src": "assets/sprite-ai-agent.png",
+    "columns": 8,
+    "rows": 3,
+    "inset": 0.012,
+    "alpha": false,
+    "_comment": "src es una copia reducida a 4096 px de ancho (tools/ai-agent/preparar_atlas.py) porque el original supera el MAX_TEXTURE_SIZE de muchas GPU moviles; la rejilla es la misma. inset recorta esa fraccion de cada fotograma por los cuatro lados para que no se vea la linea del borde ni se mezcle con el vecino al reducir (mipmaps). alpha=true activa el canal alfa si algun dia el atlas lo trae."
+  },
+
+  "face": {
+    "object": "face_sprite",
+    "material": "material_face_sprite",
+    "frontNormal": [1, 0, 0],
+    "up": [0, 1, 0],
+    "glow": 0.9,
+    "_comment": "frontNormal es la normal (en espacio del objeto) de la cara del cubo que hace de pantalla; sus UV se leen de la propia geometria, no se supone ninguna. glow es cuanto 'brilla' el rostro por si solo (la pantalla emite luz): 0 = solo luz de la escena."
+  },
+
+  "defaultFps": 10,
+
+  "autoBlink": { "enabled": true, "minMs": 2600, "maxMs": 5200, "state": "blink" },
+
+  "states": {
+    "idle": {
+      "description": "Rostro en reposo: sonrisa suave con los ojos abiertos.",
+      "pose": 12,
+      "frames": [12],
+      "loop": true
+    },
+    "blink": {
+      "description": "Parpadeo. El spritesheet no trae ojos cerrados lisos; se usan los ojos en arco (fila 3) con la misma sonrisa del reposo, que leen como ojos cerrados.",
+      "pose": 20,
+      "frames": [{ "f": 20, "ms": 140 }],
+      "loop": false,
+      "returnTo": "previous"
+    },
+    "happy": {
+      "description": "Sonrisa tierna: ojos en arco y la boca abriendose y cerrandose con suavidad.",
+      "pose": 21,
+      "frames": [20, 17, 21, 17],
+      "fps": 4,
+      "loop": true,
+      "durationMs": 3200,
+      "returnTo": "idle"
+    },
+    "tender": {
+      "description": "Expresion dulce y afectuosa: ojos en arco con sonrisa cerrada que respira despacio.",
+      "pose": 20,
+      "frames": [19, 20, 23, 20],
+      "fps": 2.5,
+      "loop": true,
+      "durationMs": 4200,
+      "returnTo": "idle"
+    },
+    "talking": {
+      "description": "Habla simulada: secuencia de formas de boca (filas 1 y 2, ojos abiertos). Se repite hasta stopAnimation().",
+      "pose": 1,
+      "frames": [3, 6, 1, 9, 2, 9, 1, 14, 3, 4, 10, 4, 11, 15, 11, 6],
+      "fps": 10,
+      "loop": true,
+      "returnTo": "idle"
+    },
+    "thinking": {
+      "description": "Pensativo: boca en arco hacia abajo y pausas largas.",
+      "pose": 13,
+      "frames": [{ "f": 13, "ms": 900 }, { "f": 3, "ms": 500 }, { "f": 13, "ms": 900 }, { "f": 4, "ms": 600 }],
+      "loop": true,
+      "returnTo": "idle"
+    }
+  },
+
+  "fallbacks": {
+    "blink": "idle",
+    "happy": "tender",
+    "tender": "happy",
+    "talking": "idle",
+    "thinking": "idle",
+    "_comment": "Si un estado no tiene fotogramas validos se registra la ausencia y se usa este."
+  }
+}

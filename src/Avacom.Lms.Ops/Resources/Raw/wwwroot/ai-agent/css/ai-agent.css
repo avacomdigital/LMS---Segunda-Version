@@ -1,0 +1,76 @@
+:root {
+  color-scheme: light;
+  --fondo: #ffffff;
+  --tinta: #18181b;
+  --tinta-suave: #71717a;
+  --linea: #e4e4e7;
+  --panel: #f6f7f9;
+  --error: #b42318;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.agent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 16px 20px;
+}
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.stage canvas { display: block; width: 100%; height: 100%; outline: none; }
+
+.status {
+  position: absolute;
+  inset: 0 0 auto 0;
+  margin: 0;
+  top: 40%;
+  text-align: center;
+  font-size: 18px;
+  color: var(--tinta-suave);
+  padding: 0 24px;
+  pointer-events: none;
+}
+.status[hidden] { display: none; }
+.status[data-kind="error"] { color: var(--error); font-weight: 500; }
+
+/* Espacio del texto del agente: banda centrada bajo el personaje. */
+.caption {
+  flex: 0 0 auto;
+  width: min(100%, 760px);
+  min-height: 104px;
+  margin: 0 auto;
+  padding: 18px 26px;
+  border: 1px solid var(--linea);
+  border-radius: 20px;
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.caption-text { margin: 0; font-size: clamp(18px, 2.2vw, 26px); line-height: 1.4; color: var(--tinta); }
+.caption-hint { margin: 0; font-size: 16px; color: var(--tinta-suave); }
+.caption[data-empty="false"] .caption-hint { display: none; }
+.caption[data-empty="true"] .caption-text { display: none; }
+
+@media (max-height: 560px) {
+  .caption { min-height: 72px; padding: 10px 20px; }
+}

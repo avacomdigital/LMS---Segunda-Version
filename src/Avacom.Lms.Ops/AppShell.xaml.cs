@@ -54,6 +54,8 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("calificaciones-config", typeof(Pages.CalificacionesConfigPage));
         // MOD-021 · Search: la búsqueda del menú principal (cursos, lecciones, recursos, evaluaciones, estudios y clases) y sus resultados, que abren la pantalla del módulo dueño
         Routing.RegisterRoute("buscar", typeof(Pages.BuscarPage));
+        // AI Agent: la tableta 3D con rostro animado (sólo visual por ahora; Three.js dentro de un HybridWebView, sin red)
+        Routing.RegisterRoute("ai-agent", typeof(Pages.AiAgentPage));
         // MOD-013 · Reporting: el inicio de Reportes, elegir una clase, un grupo o un estudiante, los cuatro reportes (clase, grupo, estudiante, uso de equipos) y el estado y los ajustes
         Routing.RegisterRoute(Reportes.RutasDeReportes.Inicio, typeof(Pages.ReportesPage));
         Routing.RegisterRoute(Reportes.RutasDeReportes.Elegir, typeof(Pages.ReportesElegirPage));
