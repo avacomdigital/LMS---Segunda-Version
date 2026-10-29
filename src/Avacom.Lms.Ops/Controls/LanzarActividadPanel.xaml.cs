@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Ui.Design;
 
@@ -32,7 +32,7 @@ public sealed record LanzamientoPropuesto(
 public partial class LanzarActividadPanel : ContentView
 {
     private const int MaximoNombresEnNota = 5;
-    private static readonly Color FondoFicha = Color.FromArgb("#F4F4F5");
+    private static readonly Color FondoFicha = Color.FromArgb("#F6F7F9");
     private static readonly Color FiloFicha = Color.FromArgb("#26000000");
     private static readonly int?[] MinutosBase = [null, 5, 10, 15, 20, 30];
     private static readonly int?[] IntentosBase = [1, 2, 3, null];
@@ -311,7 +311,7 @@ public partial class LanzarActividadPanel : ContentView
     /// <summary>El interruptor de «estudiar en casa»: la pista y la perilla dibujadas con Border (nada de Path ni Ellipse) y el estado también en texto.</summary>
     private void PintarEstudio()
     {
-        EstudioPista.BackgroundColor = _estudio ? Ds.Exito : Color.FromArgb("#A1A1AA");
+        EstudioPista.BackgroundColor = _estudio ? Ds.Exito : Color.FromArgb("#6A788E");
         EstudioPerilla.HorizontalOptions = _estudio ? LayoutOptions.End : LayoutOptions.Start;
         EstudioDetalleLabel.Text = _estudio
             ? "Sí · los alumnos podrán abrirlo después de la clase."
@@ -349,8 +349,8 @@ public partial class LanzarActividadPanel : ContentView
     {
         var ficha = new Button
         {
-            HeightRequest = alto, MinimumHeightRequest = alto, CornerRadius = Ds.RadioBoton, FontFamily = Ds.FuenteMedia, FontSize = fuente,
-            Padding = new Thickness(20, 0), BorderWidth = 1.5, Margin = new Thickness(0, 0, 10, 10),
+            HeightRequest = alto, MinimumHeightRequest = alto, CornerRadius = (int)(alto / 2), FontFamily = Ds.FuenteMedia, FontSize = fuente,
+            Padding = new Thickness(20, 0), BorderWidth = 2, Margin = new Thickness(0, 0, 10, 10),
         };
         Ds.Hundir(ficha);
         ficha.Clicked += alPulsar;

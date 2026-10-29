@@ -5,7 +5,7 @@ namespace Avacom.Lms.Student.ModoEstudio.Models;
 
 /// <summary>
 /// Cómo se escriben para el alumno los tamaños, los tiempos y las fechas: en español, en cristiano y sin conceptos técnicos.
-/// «Ahora» es la hora del nodo que el aparato aprendió (<see cref="RelojNodo"/>), pasada a la zona horaria de la tableta: la fecha
+/// «Ahora» es la hora del aula que el aparato aprendió (<see cref="RelojNodo"/>), pasada a la zona horaria de la tableta: la fecha
 /// límite es del aula, no del reloj del aparato (BR-062).
 /// </summary>
 public static class StudyFormat

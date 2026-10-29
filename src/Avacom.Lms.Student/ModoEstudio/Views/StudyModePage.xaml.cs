@@ -1,3 +1,4 @@
+﻿using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Student.ModoEstudio.Services;
 using Avacom.Lms.Student.ModoEstudio.ViewModels;
@@ -19,6 +20,7 @@ public partial class StudyModePage : ContentPage, IStudyNavigation
     public StudyModePage()
     {
         InitializeComponent();
+        Raiz.SizeChanged += OnPageSizeChanged;
         _vm = EstudioCompose.CrearViewModel(this);
         BindingContext = _vm;
         _vm.PropertyChanged += (_, e) =>
@@ -53,7 +55,9 @@ public partial class StudyModePage : ContentPage, IStudyNavigation
         var estrecha = Width < 700;
         var baja = Height < 820;
         var ancho = Math.Min(AnchoMaximo, Width * (estrecha ? 0.94 : FraccionAncho));
-        var alto = Height * (baja ? 0.92 : FraccionAlto);
+        // El alto se mide en el área bajo la isla de marca (MarcoDs), no en la página entera: si no, el pie quedaba cortado abajo.
+        var util = Raiz.Height > 0 ? Raiz.Height : Height - 86;
+        var alto = Math.Min(util - 16, Height * (baja ? 0.92 : FraccionAlto));
         Modal.WidthRequest = Math.Max(320, ancho);
         Modal.HeightRequest = Math.Max(420, alto);
         var lado = Math.Min(Width, Height) * 0.95;
@@ -102,7 +106,7 @@ public partial class StudyModePage : ContentPage, IStudyNavigation
     public Task OpenPracticeAsync(string lessonId, bool retry) =>
         Shell.Current.GoToAsync($"estudio-practica?asignacion={Uri.EscapeDataString(lessonId)}&nueva={(retry ? "1" : "0")}");
 
-    public Task ShowInfoAsync(string title, string message) => DisplayAlertAsync(title, message, "Entendido");
+    public Task ShowInfoAsync(string title, string message) => this.AlertaAsync(title, message, "Entendido");
 
     public async Task<string?> ChooseAsync(string title, IReadOnlyList<string> options, string? destruction = null)
     {
@@ -111,7 +115,7 @@ public partial class StudyModePage : ContentPage, IStudyNavigation
     }
 
     public Task<bool> ConfirmAsync(string title, string message, string accept, string cancel) =>
-        DisplayAlertAsync(title, message, accept, cancel);
+        this.AlertaAsync(title, message, accept, cancel);
 
     // ---------------------------------------------------------------------------- visitante (RF-24): adónde ir a practicar
 

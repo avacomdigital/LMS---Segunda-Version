@@ -10,16 +10,16 @@ namespace Avacom.Lms.Ui.Graphics;
 /// </summary>
 public sealed class GlassBookDrawable : IDrawable
 {
-    private static readonly Color TapaClara = Color.FromArgb("#7A55B0");
-    private static readonly Color TapaOscura = Color.FromArgb("#4E2E7F");
-    private static readonly Color HaloLibro = Color.FromArgb("#4A2A7A");
-    private static readonly Color PaginaBaja = Color.FromArgb("#EDE6F5");
-    private static readonly Color PaginaBajaDerecha = Color.FromArgb("#E6DDF2");
-    private static readonly Color Surco = Color.FromArgb("#5B3C8C");
+    private static readonly Color TapaClara = Color.FromArgb("#5B45D1");
+    private static readonly Color TapaOscura = Color.FromArgb("#4B36B8");
+    private static readonly Color HaloLibro = Color.FromArgb("#4B36B8");
+    private static readonly Color PaginaBaja = Color.FromArgb("#EEEBFD");
+    private static readonly Color PaginaBajaDerecha = Color.FromArgb("#EEEBFD");
+    private static readonly Color Surco = Color.FromArgb("#4B36B8");
     private static readonly Color Linea = Color.FromArgb("#9C86C4");
-    private static readonly Color Azul = Color.FromArgb("#3D8BFF");
+    private static readonly Color Azul = Color.FromArgb("#0A72A6");
     private static readonly Color Rosa = Color.FromArgb("#FF5FB7");
-    private static readonly Color Violeta = Color.FromArgb("#9B6CFF");
+    private static readonly Color Violeta = Color.FromArgb("#6A55E0");
 
     /// <summary>Fase de la flotación, en radianes; avanza con el tiempo.</summary>
     public float Phase { get; set; }

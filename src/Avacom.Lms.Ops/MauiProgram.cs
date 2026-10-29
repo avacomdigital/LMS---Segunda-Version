@@ -15,11 +15,13 @@ public static class MauiProgram
 			.UseMauiApp<App>()
 			.ConfigureFonts(fonts =>
 			{
-				// Inter 4.1 (OFL) en cuatro pesos estáticos; los alias son los que usan Ds y los estilos XAML.
-				fonts.AddFont("Inter-Light.ttf", "InterLight");
-				fonts.AddFont("Inter-Regular.ttf", "InterRegular");
-				fonts.AddFont("Inter-Medium.ttf", "InterMedium");
-				fonts.AddFont("Inter-SemiBold.ttf", "InterSemiBold");
+				// Aula · Design System: Lexend (OFL) para la interfaz y Andika (OFL) para lectura en Inicial y Primaria.
+				// Los alias son los que usan Ds y los estilos XAML.
+				fonts.AddFont("Lexend-Regular.ttf", "Lexend");
+				fonts.AddFont("Lexend-Medium.ttf", "LexendMedium");
+				fonts.AddFont("Lexend-SemiBold.ttf", "LexendSemiBold");
+				fonts.AddFont("Andika-Regular.ttf", "Andika");
+				fonts.AddFont("Andika-Bold.ttf", "AndikaBold");
 			})
 			.ConfigureLifecycleEvents(eventos =>
 			{
@@ -38,6 +40,8 @@ public static class MauiProgram
 		builder.Logging.AddDebug();
 #endif
 
+		// Campos de texto con el aspecto del Aula · Design System (sin el subrayado de Windows).
+		Avacom.Lms.Ui.Controls.NeumoChrome.Registrar();
 		return builder.Build();
 	}
 }

@@ -3,12 +3,15 @@
     x:Class="Avacom.Lms.Student.Pages.AsignaturasPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca compacta, etiqueta de modo de la tableta y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Tableta="True" Modo="Aprender">
     <Grid RowDefinitions="68,*">
-        <Grid BackgroundColor="White" Padding="22,0" ColumnDefinitions="Auto,*,Auto">
-            <Button Text="← Menú" BackgroundColor="Transparent" TextColor="{StaticResource Ink}" Clicked="OnBack" />
-            <Label Grid.Column="1" Text="Asignaturas" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" />
-            <Border x:Name="EstadoChip" Grid.Column="2" BackgroundColor="#E6F6FC" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
+        <Grid BackgroundColor="Transparent" Padding="32,0" ColumnDefinitions="Auto,*,Auto">
+            <Button Text="←  Menú" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" FontSize="16" FontFamily="LexendMedium" HeightRequest="48" Padding="18,0" VerticalOptions="Center" Clicked="OnBack" />
+            <Label Grid.Column="1" Text="Asignaturas" FontSize="18" FontFamily="LexendSemiBold" HorizontalOptions="Center" VerticalOptions="Center" />
+            <Border x:Name="EstadoChip" Grid.Column="2" BackgroundColor="#E3F5FC" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
                 <Label x:Name="EstadoChipLabel" Text="●  Buscando cursos…" TextColor="{StaticResource BrandBlue}" FontSize="13" />
             </Border>
         </Grid>
@@ -16,17 +19,17 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="24,24,24,90" Spacing="20" MaximumWidthRequest="980" HorizontalOptions="Center">
                 <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
-                    <Label x:Name="SaludoLabel" Text="Tus cursos" FontSize="25" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                    <Label x:Name="SaludoLabel" Text="Tus cursos" FontSize="25" FontFamily="LexendSemiBold" HorizontalTextAlignment="Center" />
                     <Label Text="Elige una asignatura para ver todo su contenido. Tu avance se guarda solo." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
 
-                <Border x:Name="AvisoCard" IsVisible="False" Padding="18" StrokeThickness="0" BackgroundColor="#FDECEC">
+                <Border x:Name="AvisoCard" IsVisible="False" Padding="18" StrokeThickness="0" BackgroundColor="#FDE7E7">
                     <VerticalStackLayout Spacing="6">
-                        <Label x:Name="AvisoTitulo" Text="" FontAttributes="Bold" TextColor="#8A1C1F" LineBreakMode="WordWrap" />
-                        <Label x:Name="AvisoDetalle" Text="" FontSize="13" TextColor="#8A1C1F" LineBreakMode="WordWrap" />
+                        <Label x:Name="AvisoTitulo" Text="" FontFamily="LexendSemiBold" TextColor="#A51C20" LineBreakMode="WordWrap" />
+                        <Label x:Name="AvisoDetalle" Text="" FontSize="13" TextColor="#A51C20" LineBreakMode="WordWrap" />
                         <HorizontalStackLayout Spacing="10">
                             <Button Text="Reintentar" Style="{StaticResource DarkButton}" HeightRequest="42" WidthRequest="130" Clicked="OnActualizar" />
-                            <Button x:Name="DemoBtn" Text="Ver curso demo" BackgroundColor="White" TextColor="{StaticResource Ink}" CornerRadius="14" HeightRequest="42" WidthRequest="150" IsVisible="False" Clicked="OnDemo" />
+                            <Button x:Name="DemoBtn" Text="Ver curso demo" BackgroundColor="White" TextColor="{StaticResource Ink}" CornerRadius="21" HeightRequest="42" WidthRequest="150" IsVisible="False" Clicked="OnDemo" />
                         </HorizontalStackLayout>
                     </VerticalStackLayout>
                 </Border>
@@ -34,11 +37,12 @@
                 <FlexLayout x:Name="HexHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Center" />
 
                 <Grid ColumnDefinitions="*,Auto">
-                    <Label Text="Lista completa" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
-                    <Button Grid.Column="1" Text="Actualizar" Style="{StaticResource DarkButton}" HeightRequest="40" WidthRequest="120" Clicked="OnActualizar" />
+                    <Label Text="Lista completa" FontSize="20" FontFamily="LexendSemiBold" VerticalOptions="Center" />
+                    <Button Grid.Column="1" Text="Actualizar" Style="{StaticResource DarkButton}" HeightRequest="44" WidthRequest="150" Clicked="OnActualizar" />
                 </Grid>
                 <VerticalStackLayout x:Name="ListaHost" Spacing="12" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

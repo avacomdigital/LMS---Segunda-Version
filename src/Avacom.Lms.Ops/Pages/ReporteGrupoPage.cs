@@ -135,7 +135,7 @@ public sealed class ReporteGrupoPage : PaginaDeReporte
         fila.Add(texto, 0, 0);
         fila.Add(ExamenUi.Pildora("Atención", Tono.Ambar, 13), 1, 0);
         return ReportesUi.Tocable(fila, ReportesUi.Seguro(nameof(ReporteGrupoPage), "AbrirAlumno", () => Shell.Current.GoToAsync(RutasDeReportes.DeAlumno(a.AlumnoId, grupo.Id, _nodo))),
-            $"{a.Alumno}. {a.Motivo}", $"reporte-grupo-atencion-{a.AlumnoId}", Color.FromArgb("#FFFDF3"), new Thickness(20, 12));
+            $"{a.Alumno}. {a.Motivo}", $"reporte-grupo-atencion-{a.AlumnoId}", Color.FromArgb("#F6F7F9"), new Thickness(20, 12));
     }
 
     private View FilaDeEstudiante(GrupoResumido grupo, AlumnoEnGrupo a, int indice)

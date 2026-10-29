@@ -186,7 +186,7 @@ public static class BusquedaTexto
     public static AvisoDeBusqueda Error(ErrorAula? error, string? motivo)
     {
         if (error is null || error.Estado == 0)
-            return new AvisoDeBusqueda("No hay conexión con el nodo del aula", "No se pudo buscar. Revisa que el equipo principal esté encendido y en la misma red; se vuelve a intentar al tocar «Buscar».", true);
+            return new AvisoDeBusqueda("No hay conexión con el aula", "No se pudo buscar. Revisa que el equipo principal esté encendido y en la misma red; se vuelve a intentar al tocar «Buscar».", true);
         return error.Codigo switch
         {
             "sin_permiso" or "fuera_de_alcance" => new AvisoDeBusqueda("Tu rol no puede buscar", "Pídele acceso a la administración.", true),
@@ -196,7 +196,7 @@ public static class BusquedaTexto
             "catalogo_no_disponible" => new AvisoDeBusqueda("AVACOM Biblioteca no está disponible", "Sin ella no se puede abrir el contenido. Abre la aplicación de contenido y vuelve a intentarlo.", true),
             _ when error.EsModuloNoDisponible => new AvisoDeBusqueda(EnPausaTitulo, Licencia.LicenciaTexto.ParaError(error) ?? Licencia.LicenciaTexto.NucleoSigue, true),
             _ when error.SesionPerdida => new AvisoDeBusqueda("Tu sesión terminó", "Vuelve a entrar para seguir buscando.", true),
-            _ => new AvisoDeBusqueda("No se pudo buscar", string.IsNullOrWhiteSpace(motivo) ? "El nodo no contestó lo esperado. Se puede volver a intentar." : motivo!, true),
+            _ => new AvisoDeBusqueda("No se pudo buscar", string.IsNullOrWhiteSpace(motivo) ? "El aula no respondió como se esperaba. Se puede volver a intentar." : motivo!, true),
         };
     }
 }

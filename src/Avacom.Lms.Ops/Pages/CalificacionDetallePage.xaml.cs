@@ -9,7 +9,7 @@ namespace Avacom.Lms.Ops.Pages;
 /// <summary>
 /// El detalle de UNA calificación (MOD-011 · FUN-122, FUN-123). Dice lo que el nodo respondió, sin calcular nada: estado y versión, quién y cómo se calificó, CUATRO bloques separados
 /// (el resultado interno 0–100, la calificación presentada, el nivel de desempeño —con «valorado por el profesor» si aplica— y el criterio de aprobación), la puntuación ORIGINAL y la
-/// EFECTIVA, la retroalimentación y el historial de versiones (tipo, anterior → nuevo, motivo, quién y cuándo según el reloj del nodo).
+/// EFECTIVA, la retroalimentación y el historial de versiones (tipo, anterior → nuevo, motivo, quién y cuándo según la hora del aula).
 ///
 /// Quien califica (el profesorado) además puede ajustar la puntuación con un teclado numérico táctil y un motivo en frases, reabrir para recalificar, publicar o retirar la publicación,
 /// valorar el nivel de desempeño y retroalimentar. Todo cambio manda la <c>version_esperada</c> que se leyó y una <c>solicitud_id</c>: si otra persona cambió la calificación se avisa, se
@@ -105,7 +105,7 @@ public partial class CalificacionDetallePage : ContentPage
                     // Un tropiezo no borra lo que ya se ve.
                     ConexionHost.Clear();
                     ConexionHost.Add(CalificacionesUi.SinConexion(api)
-                        ? ExamenUi.Aviso("Sin conexión con el nodo", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
+                        ? ExamenUi.Aviso("Sin conexión con el aula", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
                         : ExamenUi.Aviso("No se pudo actualizar la calificación", CalificacionesUi.Error(api), Tono.Ambar));
                     return;
                 }
@@ -248,7 +248,6 @@ public partial class CalificacionDetallePage : ContentPage
         var p = c.Presentacion;
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(ExamenUi.Seccion("Cuatro cosas distintas"));
-        pila.Add(Ds.Secundario("El resultado interno es la base; la nota que ve el estudiante depende de la escala del nivel. No son lo mismo y aquí se ven por separado.", 14));
         var datos = new VerticalStackLayout { Spacing = 6 };
         datos.Add(ExamenUi.Dato("Puntuación original", GradebookTexto.Puntaje(c.PuntajeOriginal) + " (lo que se registró; no cambia jamás)", 220));
         datos.Add(ExamenUi.Dato("Puntuación efectiva", GradebookTexto.Puntaje(c.PuntajeEfectivo) + (c.Ajustada ? " · ajustada" : " · la misma que la original"), 220));
@@ -296,7 +295,6 @@ public partial class CalificacionDetallePage : ContentPage
     {
         var pila = new VerticalStackLayout { Spacing = 8 };
         pila.Add(ExamenUi.Seccion("Historial de cambios"));
-        pila.Add(Ds.Secundario("Cada cambio deja su rastro: qué era antes, qué es ahora, por qué, quién lo hizo y cuándo según el reloj del nodo. Lo más reciente está arriba.", 14));
         if (d.Historial.Count == 0) pila.Add(Ds.Secundario("Todavía no hay cambios registrados.", 15));
         foreach (var v in d.Historial.OrderByDescending(x => x.Numero))
         {

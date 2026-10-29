@@ -12,18 +12,18 @@ public static class Avatares
 {
     public static IReadOnlyList<Avatar> Todos { get; } =
     [
-        new("gato", "Gato", "\U0001F431", "#FDECEC"),
-        new("perro", "Perro", "\U0001F436", "#FEF9E6"),
-        new("leon", "León", "\U0001F981", "#FEF3D6"),
-        new("pez", "Pez", "\U0001F41F", "#E6F6FC"),
-        new("pajaro", "Pájaro", "\U0001F426", "#E6F5EE"),
-        new("oso", "Oso", "\U0001F43B", "#F3ECE6"),
-        new("conejo", "Conejo", "\U0001F430", "#F5E8F1"),
-        new("tortuga", "Tortuga", "\U0001F422", "#E6F5EE"),
-        new("mariposa", "Mariposa", "\U0001F98B", "#E6F6FC"),
-        new("estrella", "Estrella", "⭐", "#FEF9E6"),
-        new("sol", "Sol", "☀️", "#FEF3D6"),
-        new("luna", "Luna", "\U0001F319", "#ECEBF7"),
+        new("gato", "Gato", "\U0001F431", "#FDE7E7"),
+        new("perro", "Perro", "\U0001F436", "#FFEDDF"),
+        new("leon", "León", "\U0001F981", "#FFEDDF"),
+        new("pez", "Pez", "\U0001F41F", "#E3F5FC"),
+        new("pajaro", "Pájaro", "\U0001F426", "#E1F5EC"),
+        new("oso", "Oso", "\U0001F43B", "#F6F7F9"),
+        new("conejo", "Conejo", "\U0001F430", "#F7E5F1"),
+        new("tortuga", "Tortuga", "\U0001F422", "#E1F5EC"),
+        new("mariposa", "Mariposa", "\U0001F98B", "#E3F5FC"),
+        new("estrella", "Estrella", "⭐", "#FFEDDF"),
+        new("sol", "Sol", "☀️", "#FFEDDF"),
+        new("luna", "Luna", "\U0001F319", "#EEEBFD"),
     ];
 
     public static Avatar? Por(string? clave) => Todos.FirstOrDefault(a => string.Equals(a.Clave, clave, StringComparison.Ordinal));

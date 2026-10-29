@@ -14,7 +14,7 @@ public partial class BitacoraPage
     private bool _confirmarVaciar;
     private string _mensajeMedios = string.Empty;
 
-    private static readonly Color FondoNeutro = Color.FromArgb("#EEEEF0");
+    private static readonly Color FondoNeutro = Color.FromArgb("#E3E6EC");
 
     private async Task<View> MediosAsync()
     {

@@ -12,41 +12,41 @@
     <Grid x:Name="Raiz" SizeChanged="OnRaizSizeChanged">
 
         <!-- Velo tenue: atenúa la clase y no deja pasar toques. Cerrar el panel es cosa de la página (no hay botón aquí). -->
-        <Border x:Name="Velo" BackgroundColor="#73141417" StrokeThickness="0" />
+        <Border x:Name="Velo" BackgroundColor="#731F2433" StrokeThickness="0" />
 
-        <Border x:Name="Tarjeta" HorizontalOptions="Center" VerticalOptions="Center" Padding="30,26,30,22" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 24">
-            <Border.Shadow><Shadow Brush="#18181B" Offset="0,12" Radius="32" Opacity="0.28" /></Border.Shadow>
+        <Border x:Name="Tarjeta" HorizontalOptions="Center" VerticalOptions="Center" Padding="30,26,30,22" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 24">
+            <Border.Shadow><Shadow Brush="#1F2433" Offset="0,12" Radius="32" Opacity="0.28" /></Border.Shadow>
             <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="14">
 
                 <!-- Cabecera: rótulo y cronómetro -->
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="18">
                     <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
-                        <Label Text="AVANCE DEL GRUPO" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                        <Label x:Name="RotuloLabel" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="TailTruncation" MaxLines="1" />
-                        <Label x:Name="SubtituloLabel" FontFamily="InterLight" FontSize="16" TextColor="#52525B" LineBreakMode="TailTruncation" MaxLines="1" />
+                        <Label Text="AVANCE DEL GRUPO" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                        <Label x:Name="RotuloLabel" FontFamily="LexendMedium" FontSize="30" TextColor="#1F2433" LineBreakMode="TailTruncation" MaxLines="1" />
+                        <Label x:Name="SubtituloLabel" FontFamily="Lexend" FontSize="16" TextColor="#4F5566" LineBreakMode="TailTruncation" MaxLines="1" />
                     </VerticalStackLayout>
                     <!-- Nunca rojo ni animado: el estado se lee en el texto y el fondo sólo lo acompaña -->
-                    <Border x:Name="CronoPildora" Grid.Column="1" IsVisible="False" Padding="20,10" MaximumWidthRequest="420" BackgroundColor="#F4F4F5" StrokeThickness="0" StrokeShape="RoundRectangle 18" VerticalOptions="Center">
+                    <Border x:Name="CronoPildora" Grid.Column="1" IsVisible="False" Padding="20,10" MaximumWidthRequest="420" BackgroundColor="#F6F7F9" StrokeThickness="0" StrokeShape="RoundRectangle 18" VerticalOptions="Center">
                         <VerticalStackLayout Spacing="2">
-                            <Label x:Name="CronoLabel" FontFamily="InterMedium" FontSize="26" TextColor="#18181B" HorizontalTextAlignment="Center" />
-                            <Label x:Name="CronoDetalleLabel" IsVisible="False" FontFamily="InterRegular" FontSize="15" TextColor="#3F3F46" HorizontalTextAlignment="Center" />
+                            <Label x:Name="CronoLabel" FontFamily="LexendMedium" FontSize="26" TextColor="#1F2433" HorizontalTextAlignment="Center" />
+                            <Label x:Name="CronoDetalleLabel" IsVisible="False" FontFamily="Lexend" FontSize="15" TextColor="#4F5566" HorizontalTextAlignment="Center" />
                         </VerticalStackLayout>
                     </Border>
                 </Grid>
 
                 <!-- Totales legibles a 4 m, promedio y una línea discreta de estado de la conexión -->
                 <VerticalStackLayout Grid.Row="1" Spacing="4">
-                    <Label x:Name="TotalesLabel" FontFamily="InterMedium" FontSize="26" TextColor="#18181B" />
-                    <Label x:Name="PromedioLabel" IsVisible="False" FontFamily="InterRegular" FontSize="20" TextColor="#3F3F46" />
-                    <Label x:Name="AvisoLabel" IsVisible="False" FontFamily="InterRegular" FontSize="14" TextColor="#52525B" />
+                    <Label x:Name="TotalesLabel" FontFamily="LexendMedium" FontSize="26" TextColor="#1F2433" />
+                    <Label x:Name="PromedioLabel" IsVisible="False" FontFamily="Lexend" FontSize="20" TextColor="#4F5566" />
+                    <Label x:Name="AvisoLabel" IsVisible="False" FontFamily="Lexend" FontSize="14" TextColor="#4F5566" />
                 </VerticalStackLayout>
 
                 <!-- Encabezado de columnas -->
                 <Grid x:Name="EncabezadoGrid" Grid.Row="2" ColumnDefinitions="*,280,96,190,250" ColumnSpacing="12" Padding="16,0">
-                    <Label Grid.Column="0" Text="ALUMNO" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2" />
-                    <Label Grid.Column="1" Text="AVANCE" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2" />
-                    <Label Grid.Column="2" Text="NOTA" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2" HorizontalTextAlignment="End" />
-                    <Label Grid.Column="3" Text="ESTADO" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2" />
+                    <Label Grid.Column="0" Text="ALUMNO" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2" />
+                    <Label Grid.Column="1" Text="AVANCE" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2" />
+                    <Label Grid.Column="2" Text="NOTA" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2" HorizontalTextAlignment="End" />
+                    <Label Grid.Column="3" Text="ESTADO" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2" />
                 </Grid>
 
                 <!-- Lista de alumnos (filas reutilizadas) o el mensaje de que aún no hay respuestas -->
@@ -54,7 +54,7 @@
                     <ScrollView x:Name="ListaScroll">
                         <VerticalStackLayout x:Name="ListaHost" Spacing="8" Padding="0,0,6,8" />
                     </ScrollView>
-                    <Label x:Name="VacioLabel" Text="Todavía no hay respuestas. Aparecerán aquí en cuanto lleguen." FontFamily="InterLight" FontSize="20" TextColor="#52525B" HorizontalTextAlignment="Center" VerticalOptions="Center" Margin="24,0" />
+                    <Label x:Name="VacioLabel" Text="Todavía no hay respuestas. Aparecerán aquí en cuanto lleguen." FontFamily="Lexend" FontSize="20" TextColor="#4F5566" HorizontalTextAlignment="Center" VerticalOptions="Center" Margin="24,0" />
                 </Grid>
             </Grid>
         </Border>

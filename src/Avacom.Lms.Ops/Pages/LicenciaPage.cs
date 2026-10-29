@@ -48,7 +48,7 @@ public sealed class LicenciaPage : ContentPage
         textos.Add(_subtitulo);
         var acciones = new HorizontalStackLayout { Spacing = 12, VerticalOptions = LayoutOptions.Center };
         acciones.Add(LicenciaUi.Accion("Actualizar", Ds.Rango.Secondary, LicenciaUi.Seguro("Actualizar", CargarAsync), "licencia-actualizar", 170).Vista);
-        acciones.Add(LicenciaUi.Accion("‹  Menú principal", Ds.Rango.Quiet, LicenciaUi.Seguro("Volver", AlMenuPrincipalAsync), "licencia-volver", 220).Vista);
+        acciones.Add(LicenciaUi.Accion("‹  Menú principal", Ds.Rango.Secondary, LicenciaUi.Seguro("Volver", AlMenuPrincipalAsync), "licencia-volver", 220).Vista);
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, Padding = new Thickness(44, 24, 48, 0), VerticalOptions = LayoutOptions.Start };
         cabecera.Add(textos, 0, 0);
         cabecera.Add(acciones, 1, 0);
@@ -67,7 +67,7 @@ public sealed class LicenciaPage : ContentPage
         raiz.Add(pie, 0, 2);
         raiz.Add(_hoja, 0, 0);
         Grid.SetRowSpan(_hoja, 3);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = raiz };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
     }
 
     protected override async void OnAppearing()
@@ -163,7 +163,7 @@ public sealed class LicenciaPage : ContentPage
     {
         var e = _estado!;
         _subtitulo.Text = e.Ilimitada
-            ? "En desarrollo y pruebas la licencia no se verifica."
+            ? "Este equipo funciona en modo de prueba, sin licencia."
             : $"{LicenciaTexto.EstadoBreve(e)} · lo que el equipo del aula dice de su licencia y lo que puedes hacer con ella.";
         _izquierda.Content = new ScrollView { Content = TarjetaDeUso(e, _consumo) };
         _centro.Content = new ScrollView { Content = TarjetaDeEstado(e, sinConexion) };

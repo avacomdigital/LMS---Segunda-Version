@@ -8,6 +8,7 @@ using Avacom.Lms.Ops.Busqueda;
 using Avacom.Lms.Ops.Calificaciones;
 using Avacom.Lms.Ops.Reportes;
 using Avacom.Lms.Ui.Controls;
+using Avacom.Lms.Ui.Design;
 
 namespace Avacom.Lms.Ops.Pages;
 
@@ -31,6 +32,9 @@ public partial class DashboardPage : ContentPage
         ReportesTile.IsVisible = AccesoAReportes.Leer(Sesion.Usuario is not null, Sesion.Usuario?.Rol);
         // MOD-021: «Buscar» para quien puede buscar (profesorado, administración y reportes; ni el soporte técnico ni el alumno). Sin sesión, se deja ver y el nodo decide qué devuelve.
         BuscarTile.IsVisible = BusquedaUi.PuedeBuscar;
+        // «Agente»: sólo en modo docente (el profesorado; sin sesión, el prototipo lo deja ver).
+        AgenteTile.IsVisible = Sesion.Usuario is null || Sesion.Usuario.Rol is "TEACHER";
+        Recolocar();
         // 019-01: este equipo se presenta ante el nodo como MASTER y entrega sus logs cada minuto, de mejor esfuerzo.
         _ = Sesion.RegistrarEquipoAsync();
         Sesion.EntregadorDeLogs.Iniciar();
@@ -187,14 +191,90 @@ public partial class DashboardPage : ContentPage
         AvisoBanner.IsVisible = false;
     }
 
+    // ------------------------------------------------------------------------------------------- barra inferior
+
+    private bool _dockRecogido;
+    private bool _dockAnimando;
+    private List<(View Boton, double Ancho)>? _dockVisibles;
+
+    /// <summary>
+    /// «« / »»: recoge la barra inferior hasta dejar la marca y la flecha, o la despliega. La barra se encoge y se estira de
+    /// forma continua: cada botón visible pasa de su ancho a cero (o al revés) mientras se funde, en 320 ms con CubicOut
+    /// (movimiento lento del DS). Sólo cambia qué se ve: los que ya estaban ocultos siguen ocultos y ninguno pierde su acción.
+    /// </summary>
+    private async void OnDockColapsar(object? sender, EventArgs e)
+    {
+        if (_dockAnimando) return;
+        _dockAnimando = true;
+        _dockRecogido = !_dockRecogido;
+        DockColapsarButton.Text = _dockRecogido ? "»" : "«";
+        SemanticProperties.SetDescription(DockColapsarButton, _dockRecogido ? "Desplegar la barra" : "Recoger la barra");
+        if (_dockRecogido)
+            _dockVisibles = DockBotones.Children.OfType<Button>().Where(b => b != DockColapsarButton && b.IsVisible).Select(b => ((View)b, b.Width)).ToList();
+        var piezas = _dockVisibles ?? [];
+        if (!_dockRecogido)
+            foreach (var (boton, _) in piezas) { boton.WidthRequest = 0; boton.MinimumWidthRequest = 0; boton.Opacity = 0; boton.IsVisible = true; }
+
+        var fin = new TaskCompletionSource();
+        var animacion = new Animation();
+        foreach (var (boton, ancho) in piezas)
+        {
+            var (desde, hasta) = _dockRecogido ? (ancho, 0d) : (0d, ancho);
+            if (_dockRecogido) boton.MinimumWidthRequest = 0;
+            animacion.Add(0, 1, new Animation(v => boton.WidthRequest = v, desde, hasta));
+            animacion.Add(_dockRecogido ? 0 : 0.35, _dockRecogido ? 0.65 : 1, new Animation(v => boton.Opacity = v, _dockRecogido ? 1 : 0, _dockRecogido ? 0 : 1));
+        }
+        animacion.Commit(this, "dock", 16, Ds.DurLenta, Easing.CubicOut, (_, _) => fin.TrySetResult());
+        await fin.Task;
+
+        foreach (var (boton, ancho) in piezas)
+        {
+            if (_dockRecogido) boton.IsVisible = false;
+            boton.WidthRequest = -1;                 // vuelve a medir solo, como antes
+            boton.MinimumWidthRequest = 118;
+            boton.Opacity = 1;
+        }
+        _dockAnimando = false;
+    }
+
+    // ------------------------------------------------------------------------------------------------ panal
+
+    /// <summary>Centro del panal y paso entre teselas (146 × 168 con 13 de separación: 159 en horizontal y 136,5 en vertical).</summary>
+    private const double CentroX = 400, CentroY = 136.5, PasoX = 159, PasoY = 136.5;
+
+    /// <summary>Huecos alrededor de «Clase de hoy», en el orden en que se llenan: el anillo de seis (en el sentido de las agujas
+    /// del reloj desde arriba a la izquierda) y después los dos extremos de la fila de arriba, trabados con el anillo:
+    /// cuatro arriba, tres en medio y dos abajo, simétrico y sin teselas sueltas. El último, a la derecha de la fila de abajo,
+    /// sólo se usa sin sesión (el prototipo lo deja ver todo).</summary>
+    private static readonly (double Dx, double Dy)[] Huecos =
+    [
+        (-0.5, -1), (0.5, -1), (1, 0), (0.5, 1), (-0.5, 1), (-1, 0), (-1.5, -1), (1.5, -1), (1.5, 1),
+    ];
+
+    /// <summary>
+    /// Aula · Design System: «Clase de hoy» (el principal) en el centro exacto del panal y las demás teselas visibles alrededor,
+    /// en este orden (colores vecinos distintos). Sólo mueve teselas: qué se ve lo decide cada regla de rol de <see cref="OnAppearing"/>.
+    /// </summary>
+    private void Recolocar()
+    {
+        AbsoluteLayout.SetLayoutBounds(ClaseHoyTile, new Rect(CentroX, CentroY, 146, 168));
+        var alrededor = new ProfessorHexTile[] { GruposTile, AgenteTile, DispositivosTile, EvaluacionesTile, ReportesTile, CalificacionesTile, EstudioTile, HistorialTile, BuscarTile };
+        var i = 0;
+        foreach (var tesela in alrededor.Where(t => t.IsVisible).Take(Huecos.Length))
+        {
+            var (dx, dy) = Huecos[i++];
+            AbsoluteLayout.SetLayoutBounds(tesela, new Rect(CentroX + dx * PasoX, CentroY + dy * PasoY, 146, 168));
+        }
+    }
+
     private void OnPageSizeChanged(object? sender, EventArgs e)
     {
         if (Width <= 0 || Height <= 0) return;
         // MOD-018 · U-2: las bandas persistentes (PIN, licencia, nodo) van en su propia fila encima del panal, así que lo que queda para el panal es la ventana menos ellas.
         // La fila mide 0 sin bandas; cuando una aparece, su SizeChanged vuelve a llamar aquí.
         var bandas = BandasPersistentes.Height > 0 ? BandasPersistentes.Height : 0;
-        var widthScale = Math.Max(0.55, (Width - 32) / 780d);
-        var heightScale = Math.Max(0.55, (Height - 155 - bandas) / 714d);
+        var widthScale = Math.Max(0.55, (Width - 32) / 946d);
+        var heightScale = Math.Max(0.55, (Height - 236 - bandas) / 441d);   // 112 de cabecera (isla y esquinas) + 76 de barra a 28 del borde + aire
         MenuStage.Scale = Math.Min(1, Math.Min(widthScale, heightScale));
     }
 
@@ -233,8 +313,11 @@ public partial class DashboardPage : ContentPage
             case "Historial":
                 await Shell.Current.GoToAsync("logs-bitacora");
                 break;
+            case "Agente":
+                await this.AlertaAsync("Agente", "El agente del aula llega muy pronto: te ayudará a preparar y acompañar tus clases.", "Entendido");
+                break;
             default:
-                await DisplayAlertAsync(tile.Text, $"El módulo {tile.Text} está representado en este prototipo y listo para conectar su flujo.", "Entendido");
+                await this.AlertaAsync(tile.Text, "Esta opción estará disponible muy pronto.", "Entendido");
                 break;
         }
     }

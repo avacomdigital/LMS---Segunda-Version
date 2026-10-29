@@ -5,44 +5,39 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     xmlns:gfx="clr-namespace:Avacom.Lms.Ui.Graphics;assembly=Avacom.Lms.Ui"
-    BackgroundColor="#F1F1F1"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
-    <Grid RowDefinitions="86,Auto,*">
-        <!-- Fondo decorativo (capa más baja, bajo cabecera, menú y dock): retícula de hexágonos grandes con las
-             puntas redondeadas, en un solo GraphicsView que se adapta solo al tamaño de la ventana y la orientación.
-             Se declara primero y sin ZIndex para quedar debajo de todo lo existente; InputTransparent: es 100 %
-             decorativa y nunca captura toques, clics ni gestos. La tinta translúcida (negro al 10 %) da sobre el
-             #F1F1F1 de la página el mismo contraste que el gris #E6E6E6 de la referencia sobre blanco. -->
-        <GraphicsView Grid.RowSpan="3" InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill">
-            <GraphicsView.Drawable>
-                <gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#1A000000" StrokeWidth="1.25" />
-            </GraphicsView.Drawable>
-        </GraphicsView>
+    <Grid RowDefinitions="112,Auto,*">
+        <!-- Fondo Aurora del Aula · Design System (capa más baja, sin captar toques). En el menú principal el panal es el
+             único elemento hexagonal de la pantalla: sin retícula de hexágonos de fondo. -->
+        <ui:FondoAurora Grid.RowSpan="3" />
 
-        <Grid Padding="44,0" ColumnDefinitions="*,Auto" ZIndex="3">
-            <HorizontalStackLayout Spacing="16" VerticalOptions="Center">
-                <!-- El logotipo ya incluye el símbolo y la palabra «AVACOM»; sólo se
-                     añade «CLASSROOM». 56 de alto equivale al tope de la versión web. -->
-                <Image Aspect="AspectFit" HeightRequest="56" Source="avacom_logo.png" VerticalOptions="Center" WidthRequest="209" />
-                <Label FontAttributes="Bold" FontSize="16" Text="CLASSROOM" TextColor="#52525B" VerticalTextAlignment="Center" />
-            </HorizontalStackLayout>
-            <HorizontalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
+        <!-- Cabecera del Aula · Design System: isla de marca neumórfica con el logo, arriba al centro; esquina izquierda con la fecha y la
+             hora (sólo información) y esquina derecha con el nombre y el avatar, ambas neumórficas. -->
+        <Grid ZIndex="3">
+            <ui:IslaDeMarca />
+            <ui:EsquinaFechaHora Margin="44,20,0,0" />
+            <HorizontalStackLayout Spacing="12" HorizontalOptions="End" VerticalOptions="Start" Margin="0,20,44,0">
                 <!-- RF-08: «Seguridad del aula» (PIN maestro, profesores registrados con él y puertas de entrada), sólo para la administración. Es un botón
                      y no una tesela para que se toque igual que el resto de la cabecera (y lo encuentre UI Automation). -->
                 <!-- MOD-018: «Licencia» (estado, activación y renovación sin internet, copia y liberación) para la administración y el soporte técnico, que tienen license.read;
                      sin sesión el prototipo lo deja ver y el nodo decide. Mismo aspecto que «Seguridad del aula», a su lado. -->
                 <!-- MOD-017: «Actualizaciones» (paquetes de AVACOM en memorias USB: traer, programar, aplicar y volver atrás) para quien tiene update.read: administración y soporte técnico. -->
-                <Button x:Name="ActualizacionesButton" IsVisible="False" Text="Actualizaciones" AutomationId="dashboard-actualizaciones" HeightRequest="40" MinimumWidthRequest="110" Padding="16,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnActualizacionesClicked" />
-                <Button x:Name="LicenciaButton" IsVisible="False" Text="Licencia" AutomationId="dashboard-licencia" HeightRequest="40" MinimumWidthRequest="110" Padding="16,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnLicenciaClicked" />
-                <Button x:Name="SeguridadButton" IsVisible="False" Text="Seguridad del aula" HeightRequest="40" MinimumWidthRequest="120" Padding="16,0" Margin="0,0,10,0" CornerRadius="12" BackgroundColor="White" TextColor="#18181B" BorderColor="#17000000" BorderWidth="1" FontSize="14" VerticalOptions="Center" Clicked="OnSeguridadClicked" />
-                <Border BackgroundColor="#977528" HeightRequest="48" StrokeThickness="0" WidthRequest="48">
-                    <Label x:Name="InicialesLabel" FontAttributes="Bold" HorizontalOptions="Center" Text="EC" TextColor="White" VerticalOptions="Center" />
-                </Border>
-                <VerticalStackLayout Spacing="0" VerticalOptions="Center">
-                    <Label x:Name="NombreLabel" FontAttributes="Bold" FontSize="16" Text="Ms. Carter" />
-                    <Label x:Name="RolLabel" FontSize="13" Text="Profesora" />
-                </VerticalStackLayout>
+                <Button x:Name="ActualizacionesButton" IsVisible="False" Text="Actualizaciones" AutomationId="dashboard-actualizaciones" HeightRequest="48" MinimumWidthRequest="110" Padding="18,0" CornerRadius="24" BackgroundColor="White" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" FontSize="14" VerticalOptions="Center" Clicked="OnActualizacionesClicked" />
+                <Button x:Name="LicenciaButton" IsVisible="False" Text="Licencia" AutomationId="dashboard-licencia" HeightRequest="48" MinimumWidthRequest="110" Padding="18,0" CornerRadius="24" BackgroundColor="White" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" FontSize="14" VerticalOptions="Center" Clicked="OnLicenciaClicked" />
+                <Button x:Name="SeguridadButton" IsVisible="False" Text="Seguridad del aula" HeightRequest="48" MinimumWidthRequest="120" Padding="18,0" CornerRadius="24" BackgroundColor="White" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" FontSize="14" VerticalOptions="Center" Clicked="OnSeguridadClicked" />
+                <ui:CajaNeumorfica Relleno="22,8,8,8" VerticalOptions="Start">
+                    <HorizontalStackLayout Spacing="12">
+                        <VerticalStackLayout Spacing="0" VerticalOptions="Center">
+                            <Label x:Name="NombreLabel" FontFamily="LexendSemiBold" FontSize="16" Text="Ms. Carter" HorizontalTextAlignment="End" />
+                            <Label x:Name="RolLabel" FontSize="13" Text="Profesora" TextColor="#5F6474" HorizontalTextAlignment="End" />
+                        </VerticalStackLayout>
+                        <Border BackgroundColor="#A81D81" HeightRequest="48" StrokeThickness="0" WidthRequest="48" StrokeShape="RoundRectangle 24">
+                            <Label x:Name="InicialesLabel" FontFamily="LexendSemiBold" HorizontalOptions="Center" Text="EC" TextColor="White" VerticalOptions="Center" />
+                        </Border>
+                    </HorizontalStackLayout>
+                </ui:CajaNeumorfica>
             </HorizontalStackLayout>
         </Grid>
 
@@ -52,27 +47,27 @@
         <VerticalStackLayout x:Name="BandasPersistentes" Grid.Row="1" ZIndex="7" Spacing="0" HorizontalOptions="Center" VerticalOptions="Start" Margin="24,0,24,0" MaximumWidthRequest="860" SizeChanged="OnPageSizeChanged">
             <!-- RF-09 · RN-08: banda del PIN maestro para administración y técnico (a 30 días o menos, vencido o sin configurar). Se queda mientras dure: no
                  se descarta, porque lo que avisa sigue pendiente. Al profesorado nunca se le muestra. -->
-            <Border x:Name="PinBanner" IsVisible="False" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+            <Border x:Name="PinBanner" IsVisible="False" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#FFEDDF" Stroke="#FDD0AE" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <Label x:Name="PinBannerLabel" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
-                    <Button x:Name="PinBannerButton" Grid.Column="1" Text="Cambiar ahora" HeightRequest="40" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnSeguridadClicked" />
+                    <Label x:Name="PinBannerLabel" FontSize="15" TextColor="#9A3412" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button x:Name="PinBannerButton" Grid.Column="1" Text="Cambiar ahora" HeightRequest="40" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#9A3412" FontSize="14" Clicked="OnSeguridadClicked" />
                 </Grid>
             </Border>
             <!-- MOD-018 · R-01: banda de la licencia (evaluación, por vencer, gracia, funciones en pausa, cupo, fecha, huella, programa modificado) para quien ve la licencia.
                  Persistente como la del PIN: no se descarta mientras lo que avisa siga pendiente. Vive SÓLO en el menú principal y NO se muestra con una clase abierta en este equipo
                  (ninguna alerta administrativa interrumpe una sesión activa). El tono y el texto los pone el código (ReglasDeLicencia.Banner). -->
-            <Border x:Name="LicenciaBanner" IsVisible="False" AutomationId="licencia-banner" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+            <Border x:Name="LicenciaBanner" IsVisible="False" AutomationId="licencia-banner" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#E3F5FC" Stroke="#BCE5F5" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <Label x:Name="LicenciaBannerLabel" AutomationId="licencia-banner-texto" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />
-                    <Button x:Name="LicenciaBannerButton" Grid.Column="1" Text="Ver la licencia" AutomationId="licencia-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#0B4F70" FontSize="14" Clicked="OnLicenciaClicked" />
+                    <Label x:Name="LicenciaBannerLabel" AutomationId="licencia-banner-texto" FontSize="15" TextColor="#075985" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button x:Name="LicenciaBannerButton" Grid.Column="1" Text="Ver la licencia" AutomationId="licencia-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#075985" FontSize="14" Clicked="OnLicenciaClicked" />
                 </Grid>
             </Border>
             <!-- MOD-015 · P-18: banda del estado del nodo, molde de la del PIN, SÓLO para «restringido» y «en recuperación», para la administración y el técnico, y NUNCA con una clase
                  abierta en este equipo (ningún aviso de plataforma interrumpe una clase, R-01). Lee el campo `nodo` de /health/ (público, sin tocar la base). -->
-            <Border x:Name="NodoBanner" IsVisible="False" AutomationId="nodo-banner" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#FEF9E6" Stroke="#4DF3C701" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+            <Border x:Name="NodoBanner" IsVisible="False" AutomationId="nodo-banner" Margin="0,8,0,4" Padding="18,10,10,10" BackgroundColor="#FFEDDF" Stroke="#FDD0AE" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <Label x:Name="NodoBannerLabel" AutomationId="nodo-banner-texto" FontSize="15" TextColor="#3A2A00" VerticalOptions="Center" LineBreakMode="WordWrap" />
-                    <Button x:Name="NodoBannerButton" Grid.Column="1" Text="Ver el equipo" AutomationId="nodo-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#3A2A00" FontSize="14" Clicked="OnNodoClicked" />
+                    <Label x:Name="NodoBannerLabel" AutomationId="nodo-banner-texto" FontSize="15" TextColor="#9A3412" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button x:Name="NodoBannerButton" Grid.Column="1" Text="Ver el equipo" AutomationId="nodo-banner-ver" HeightRequest="40" MinimumWidthRequest="130" Padding="14,0" BackgroundColor="Transparent" TextColor="#9A3412" FontSize="14" Clicked="OnNodoClicked" />
                 </Grid>
             </Border>
         </VerticalStackLayout>
@@ -81,25 +76,29 @@
              unos segundos SOBRE el tablero y se quita solo o con «Entendido»; nada espera una confirmación. Es transitorio: por eso se superpone
              en vez de mover el panal. -->
         <VerticalStackLayout Grid.Row="2" ZIndex="7" HorizontalOptions="Center" VerticalOptions="Start" Margin="24,10,24,0" MaximumWidthRequest="860">
-            <Border x:Name="AvisoBanner" IsVisible="False" HorizontalOptions="Center" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E6F6FC" Stroke="#4D01A4E1" StrokeThickness="1" StrokeShape="RoundRectangle 16">
+            <Border x:Name="AvisoBanner" IsVisible="False" HorizontalOptions="Center" MaximumWidthRequest="760" Padding="18,10,10,10" BackgroundColor="#E3F5FC" Stroke="#BCE5F5" StrokeThickness="1" StrokeShape="RoundRectangle 16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <Label x:Name="AvisoLabel" FontSize="15" TextColor="#0B4F70" VerticalOptions="Center" LineBreakMode="WordWrap" />
-                    <Button Grid.Column="1" Text="Entendido" HeightRequest="44" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#0B4F70" FontSize="14" Clicked="OnAvisoEntendido" />
+                    <Label x:Name="AvisoLabel" FontSize="15" TextColor="#075985" VerticalOptions="Center" LineBreakMode="WordWrap" />
+                    <Button Grid.Column="1" Text="Entendido" HeightRequest="44" MinimumWidthRequest="110" Padding="14,0" BackgroundColor="Transparent" TextColor="#075985" FontSize="14" Clicked="OnAvisoEntendido" />
                 </Grid>
             </Border>
         </VerticalStackLayout>
 
         <AbsoluteLayout
             x:Name="MenuStage"
+            Margin="0,0,0,104"
             AnchorY="0"
             Grid.Row="2"
-            HeightRequest="714"
+            HeightRequest="441"
             HorizontalOptions="Center"
-            VerticalOptions="Start"
-            WidthRequest="780">
-            <!-- Envolvente medida sobre la referencia. El SVG conserva 587:654
-                 y queda alineado con los seis huecos del núcleo hexagonal. -->
+            VerticalOptions="Center"
+            WidthRequest="946">
+            <!-- Panal del Aula · Design System: «Clase de hoy» en el centro exacto y el resto alrededor (anillo de seis y, si hay más, en los extremos
+                 de la fila de arriba: 4 · 3 · 2). Las posiciones las pone el code-behind (Recolocar) según qué teselas ve el rol; las de LayoutBounds son de partida.
+                 Asignaturas, Comunicación, Enciclopedia, Progreso, Calendario y Estudiantes quedan ocultas de la vista (los módulos siguen igual). -->
+            <!-- Aro de color de la referencia anterior: oculto, porque en el Aula · Design System el panal es el único elemento hexagonal. -->
             <Image
+                IsVisible="False"
                 AbsoluteLayout.LayoutBounds="203,147,374,416"
                 Aspect="AspectFit"
                 InputTransparent="True"
@@ -109,78 +108,86 @@
             <!-- «Reportes» (MOD-013 · Reporting): reportes de una clase, un estudiante y un grupo, uso de equipos y exportar a un archivo. Sólo la ven quienes pueden leer datos académicos
                  (profesorado, administración y reportes; el rol técnico no): sin sesión, el prototipo la deja ver y el nodo decide. Antes abría la demo «activity-monitor»; ésta sigue
                  accesible desde Reportes → «Visitantes y actividad» (ahí está «Vincular a un alumno», RF-09c). -->
-            <ui:ProfessorHexTile x:Name="ReportesTile" AbsoluteLayout.LayoutBounds="317,0,146,168" AccentColor="#52525B" Text="Reportes" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="ReportesTile" AbsoluteLayout.LayoutBounds="317,0,146,168" AccentColor="#C2410C" Text="Reportes" IconSource="ico_reporte.png" Tapped="OnModuleTapped"
                 IconGeometry="M213.66,66.34 L173.66,26.34 A8,8 0 0 0 168,24 H88 A16,16 0 0 0 72,40 V56 H56 A16,16 0 0 0 40,72 V216 A16,16 0 0 0 56,232 H168 A16,16 0 0 0 184,216 V200 H200 A16,16 0 0 0 216,184 V72 A8,8 0 0 0 213.66,66.34 Z M168,216 H56 V72 H132.69 L168,107.31 Z M200,184 H184 V104 A8,8 0 0 0 181.66,98.34 L141.66,58.34 A8,8 0 0 0 136,56 H88 V40 H164.69 L200,75.31 Z M144,152 A8,8 0 0 1 136,160 H88 A8,8 0 0 1 88,144 H136 A8,8 0 0 1 144,152 Z M144,184 A8,8 0 0 1 136,192 H88 A8,8 0 0 1 88,176 H136 A8,8 0 0 1 144,184 Z" />
 
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="238,136,146,168" AccentColor="#E5282C" Text="Asignaturas" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile IsVisible="False" AbsoluteLayout.LayoutBounds="238,136,146,168" AccentColor="#A81D81" Text="Asignaturas" IconSource="ico_libros.png" Tapped="OnModuleTapped"
                 IconGeometry="M232,48 H160 A40,40 0 0 0 128,64 A40,40 0 0 0 96,48 H24 A8,8 0 0 0 16,56 V200 A8,8 0 0 0 24,208 H96 A24,24 0 0 1 120,232 A8,8 0 0 0 136,232 A24,24 0 0 1 160,208 H232 A8,8 0 0 0 240,200 V56 A8,8 0 0 0 232,48 Z M96,192 H32 V64 H96 A24,24 0 0 1 120,88 V200 A39.81,39.81 0 0 0 96,192 Z M224,192 H160 A39.81,39.81 0 0 0 136,200 V88 A24,24 0 0 1 160,64 H224 Z" />
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="397,136,146,168" AccentColor="#C8222F" Text="Comunicación" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile IsVisible="False" AbsoluteLayout.LayoutBounds="397,136,146,168" AccentColor="#0A72A6" Text="Comunicación" IconSource="ico_avisos.png" Tapped="OnModuleTapped"
                 IconGeometry="M221.8,175.94 C216.25,166.38 208,139.33 208,104 A80,80 0 1 0 48,104 C48,139.34 39.74,166.38 34.19,175.94 A16,16 0 0 0 48,200 H88.81 A40,40 0 0 0 167.19,200 H208 A16,16 0 0 0 221.8,175.94 Z M128,216 A24,24 0 0 1 105.38,200 H150.62 A24,24 0 0 1 128,216 Z M48,184 C55.7,170.76 64,140.08 64,104 A64,64 0 1 1 192,104 C192,140.05 200.28,170.73 208,184 Z" />
 
             <!-- «Dispositivos» (MOD-009) ocupa el hexágono de «Asistencia», que el Documento Maestro deja fuera del MVP.
                  Icono de tableta con comandos absolutos y arcos de 8 y 24 px: nada diminuto que Win2D no pueda pintar. -->
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="0,273,146,168" AccentColor="#C2410C" Text="Dispositivos" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="DispositivosTile" AbsoluteLayout.LayoutBounds="0,273,146,168" AccentColor="#0A72A6" Text="Dispositivos" IconSource="ico_dispositivos.png" Tapped="OnModuleTapped"
                 IconGeometry="M176,24 H80 A24,24 0 0 0 56,48 V208 A24,24 0 0 0 80,232 H176 A24,24 0 0 0 200,208 V48 A24,24 0 0 0 176,24 Z M184,208 A8,8 0 0 1 176,216 H80 A8,8 0 0 1 72,208 V48 A8,8 0 0 1 80,40 H176 A8,8 0 0 1 184,48 Z M152,192 H104 A8,8 0 0 1 104,176 H152 A8,8 0 0 1 152,192 Z" />
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="159,273,146,168" AccentColor="#F2C600" Text="Enciclopedia" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile IsVisible="False" AbsoluteLayout.LayoutBounds="159,273,146,168" AccentColor="#0E7490" Text="Enciclopedia" IconSource="ico_mundo.png" Tapped="OnModuleTapped"
                 IconGeometry="M231.65,194.55 L198.46,36.75 A16,16 0 0 0 179.46,24.36 L132.65,34.42 A16.08,16.08 0 0 0 120.35,53.42 L153.54,211.22 A16,16 0 0 0 169.16,224 A16.25,16.25 0 0 0 172.54,223.64 L219.35,213.58 A16.09,16.09 0 0 0 231.65,194.55 Z M136,50.15 L182.8,40.06 L186.13,55.93 L139.33,66 Z M142.62,81.62 L189.44,71.57 L192.78,87.47 L146,97.53 Z M149.26,113.19 L196.08,103.13 L209.38,166.37 L162.56,176.43 Z M216,197.94 L169.2,207.94 L165.87,192.07 L212.67,182 Z M104,32 H56 A16,16 0 0 0 40,48 V208 A16,16 0 0 0 56,224 H104 A16,16 0 0 0 120,208 V48 A16,16 0 0 0 104,32 Z M56,48 H104 V64 H56 Z M56,80 H104 V176 H56 Z M104,208 H56 V192 H104 Z" />
             <!-- «Grupos» (MOD-001 · padrón) ocupa el hexágono de «Perfil»: crear grupos y registrar estudiantes con su grupo, para probar el modo de estudio. -->
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="317,273,146,168" AccentColor="#0E7490" Text="Grupos" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="GruposTile" AbsoluteLayout.LayoutBounds="317,273,146,168" AccentColor="#5B45D1" Text="Grupos" IconSource="ico_grupo.png" Tapped="OnModuleTapped"
                 IconGeometry="M244.8,150.4 A8,8 0 0 1 233.6,148.8 A51.6,51.6 0 0 0 192,128 A8,8 0 0 1 184.63,123.11 A8,8 0 0 1 192,112 A24,24 0 1 0 168.76,82 A8,8 0 1 1 153.26,78 A40,40 0 1 1 219,117.51 A67.94,67.94 0 0 1 246.43,139.19 A8,8 0 0 1 244.8,150.4 Z M190.92,212 A8,8 0 1 1 177.08,220 A57,57 0 0 0 78.92,220 A8,8 0 1 1 65.08,212 A72.06,72.06 0 0 1 98.82,182.08 A48,48 0 1 1 157.18,182.08 A72.06,72.06 0 0 1 190.92,212 Z M128,176 A32,32 0 1 0 96,144 A32,32 0 0 0 128,176 Z M72,120 A8,8 0 0 0 64,112 A24,24 0 1 1 87.24,82 A8,8 0 1 0 102.74,78 A40,40 0 1 0 37,117.51 A67.94,67.94 0 0 0 9.6,139.19 A8,8 0 1 0 22.4,148.8 A51.6,51.6 0 0 1 64,128 A8,8 0 0 0 72,120 Z" />
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="476,273,146,168" AccentColor="#A62080" Text="Progreso" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile IsVisible="False" AbsoluteLayout.LayoutBounds="476,273,146,168" AccentColor="#047857" Text="Progreso" IconSource="ico_grafica.png" Tapped="OnModuleTapped"
                 IconGeometry="M232,208 A8,8 0 0 1 224,216 H32 A8,8 0 0 1 24,208 V48 A8,8 0 0 1 40,48 V156.69 L90.34,106.34 A8,8 0 0 1 101.66,106.34 L128,132.69 L180.69,80 H160 A8,8 0 0 1 160,64 H200 A8,8 0 0 1 208,72 V112 A8,8 0 0 1 192,112 V91.31 L133.66,149.66 A8,8 0 0 1 122.34,149.66 L96,123.31 L40,179.31 V200 H224 A8,8 0 0 1 232,208 Z" />
             <!-- «Historial» (MOD-019): la bitácora de auditoría y los logs (ruta logs-bitacora). Con sesión sólo lo ven Administrador y Técnico. -->
-            <ui:ProfessorHexTile x:Name="HistorialTile" AbsoluteLayout.LayoutBounds="634,273,146,168" AccentColor="#52525B" Text="Historial" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="HistorialTile" AbsoluteLayout.LayoutBounds="634,273,146,168" AccentColor="#A81D81" Text="Historial" IconSource="ico_historial.png" Tapped="OnModuleTapped"
                 IconGeometry="M136,80 V123.47 L172.12,145.14 A8,8 0 0 1 163.88,158.86 L123.88,134.86 A8,8 0 0 1 120,128 V80 A8,8 0 0 1 136,80 Z M128,32 A95.44,95.44 0 0 0 60.08,60.15 C52.81,67.51 46.35,74.59 40,82 V64 A8,8 0 0 0 24,64 V104 A8,8 0 0 0 32,112 H72 A8,8 0 0 0 72,96 H49 C56.15,87.58 63.27,79.65 71.39,71.43 A80,80 0 1 1 73.05,186.18 A8,8 0 1 0 62.05,197.82 A96,96 0 1 0 128,32 Z" />
 
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="238,409,146,168" AccentColor="#009C60" Text="Calendario" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile IsVisible="False" AbsoluteLayout.LayoutBounds="238,409,146,168" AccentColor="#5B45D1" Text="Calendario" IconSource="ico_calendario.png" Tapped="OnModuleTapped"
                 IconGeometry="M208,32 H184 V24 A8,8 0 0 0 168,24 V32 H88 V24 A8,8 0 0 0 72,24 V32 H48 A16,16 0 0 0 32,48 V208 A16,16 0 0 0 48,224 H208 A16,16 0 0 0 224,208 V48 A16,16 0 0 0 208,32 Z M72,48 V56 A8,8 0 0 0 88,56 V48 H168 V56 A8,8 0 0 0 184,56 V48 H208 V80 H48 V48 Z M208,208 H48 V96 H208 Z M140,132 A12,12 0 1 1 128,120 A12,12 0 0 1 140,132 Z M184,132 A12,12 0 1 1 172,120 A12,12 0 0 1 184,132 Z M96,172 A12,12 0 1 1 84,160 A12,12 0 0 1 96,172 Z M140,172 A12,12 0 1 1 128,160 A12,12 0 0 1 140,172 Z M184,172 A12,12 0 1 1 172,160 A12,12 0 0 1 184,172 Z" />
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="397,409,146,168" AccentColor="#A81D81" Text="Clase de hoy" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="ClaseHoyTile" AbsoluteLayout.LayoutBounds="397,409,146,168" AccentColor="#047857" Glass="True" Text="Clase de hoy" IconSource="ico_clase.png" Tapped="OnModuleTapped"
                 IconGeometry="M128,88 A40,40 0 1 0 168,128 A40,40 0 0 0 128,88 Z M128,152 A24,24 0 1 1 152,128 A24,24 0 0 1 128,152 Z M201.71,159.14 A80,80 0 0 1 187.63,181.34 A8,8 0 0 1 175.71,170.67 A63.95,63.95 0 0 0 175.71,85.34 A8,8 0 1 1 187.63,74.67 A80.08,80.08 0 0 1 201.71,159.14 Z M69,103.09 A64,64 0 0 0 80.26,170.67 A8,8 0 0 1 68.34,181.34 A79.93,79.93 0 0 1 68.34,74.67 A8,8 0 1 1 80.29,85.34 A63.77,63.77 0 0 0 69,103.09 Z M248,128 A119.58,119.58 0 0 1 213.71,212 A8,8 0 1 1 202.29,200.8 A103.9,103.9 0 0 0 202.29,55.24 A8,8 0 1 1 213.71,44 A119.58,119.58 0 0 1 248,128 Z M53.71,200.78 A8,8 0 1 1 42.29,212 A119.87,119.87 0 0 1 42.29,44 A8,8 0 1 1 53.71,55.2 A103.9,103.9 0 0 0 53.71,200.78 Z" />
 
             <!-- «Modo de estudio» (MOD-008): asignar lecciones a los alumnos y ver quién las completó. Ocupa la celda libre a la derecha de «Clase de hoy»,
                  fuera del aro; el mismo gorro de graduación y el mismo verde que el hexágono de Student. -->
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="555,409,146,168" AccentColor="#019D60" Text="Modo de estudio" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="EstudioTile" AbsoluteLayout.LayoutBounds="555,409,146,168" AccentColor="#F3C701" Text="Modo de estudio" IconSource="ico_estudio.png" Tapped="OnModuleTapped"
                 IconGeometry="M251.76,88.94 L131.76,24.94 C130.67,24.35 129.38,24 128,24 C126.62,24 125.33,24.35 124.2,24.96 L124.24,24.94 L4.24,88.94 C1.7,90.31 0,92.96 0,96 C0,99.04 1.7,101.69 4.2,103.04 L4.24,103.06 L32,117.87 L32,166.29 L32,166.32 C32,170.41 33.54,174.14 36.07,176.95 L36.06,176.94 C49.16,191.53 78.51,216 128,216 C128.32,216 128.7,216 129.08,216 C145.95,216 162.08,212.79 176.88,206.93 L176,207.24 L176,240 C176,244.42 179.58,248 184,248 C188.42,248 192,244.42 192,240 L192,199.51 C202.75,193.24 211.96,185.74 219.85,177.04 L219.94,176.94 C222.46,174.14 224,170.41 224,166.32 L224,166.29 L224,117.87 L251.76,103.06 C254.3,101.69 256,99.04 256,96 C256,92.96 254.3,90.31 251.8,88.96 L251.76,88.94 Z M128,200 C84.73,200 59.28,178.86 48,166.29 L48,126.4 L124.24,167.06 C125.33,167.65 126.62,168 128,168 C129.38,168 130.67,167.65 131.8,167.04 L131.76,167.06 L176,143.47 L176,189.81 C163.4,195.69 147.52,200 128,200 Z M208,166.25 C203.23,171.53 197.99,176.21 192.29,180.3 L192,180.5 L192,134.93 L208,126.4 Z M188,118.94 L187.78,118.81 L131.78,88.94 C130.72,88.39 129.47,88.06 128.14,88.06 C123.72,88.06 120.14,91.65 120.14,96.06 C120.14,99.06 121.79,101.67 124.22,103.04 L124.26,103.06 L171,128 L128,150.93 L25,96 L128,41.07 L231,96 Z" />
 
             <!-- «Evaluaciones» (MOD-010): aplicar un examen de los cursos instalados y abrir el panel de los ya aplicados, sin entrar a una clase. Ocupa la celda libre
                  a la izquierda de «Calendario», bajo «Dispositivos» y «Enciclopedia». Portapapeles con cabecera y tres renglones: sólo líneas y esquinas de 16 px
                  con arcos grandes (nada diminuto que Win2D no pueda pintar). -->
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="79,409,146,168" AccentColor="#4F46E5" Text="Evaluaciones" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="EvaluacionesTile" AbsoluteLayout.LayoutBounds="79,409,146,168" AccentColor="#5B45D1" Text="Evaluaciones" IconSource="ico_examen.png" Tapped="OnModuleTapped"
                 IconGeometry="M56,40 H200 A16,16 0 0 1 216,56 V216 A16,16 0 0 1 200,232 H56 A16,16 0 0 1 40,216 V56 A16,16 0 0 1 56,40 Z M56,56 V216 H200 V56 Z M96,24 H160 V56 H96 Z M88,104 H168 V120 H88 Z M88,144 H168 V160 H88 Z M88,184 H136 V200 H88 Z" />
 
-            <ui:ProfessorHexTile AbsoluteLayout.LayoutBounds="317,545,146,168" AccentColor="#15A3DD" Text="Estudiantes" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile IsVisible="False" AbsoluteLayout.LayoutBounds="317,545,146,168" AccentColor="#0A72A6" Text="Estudiantes" IconSource="ico_perfil.png" Tapped="OnModuleTapped"
                 IconGeometry="M244.8,150.4 A8,8 0 0 1 233.6,148.8 A51.6,51.6 0 0 0 192,128 A8,8 0 0 1 184.63,123.11 A8,8 0 0 1 192,112 A24,24 0 1 0 168.76,82 A8,8 0 1 1 153.26,78 A40,40 0 1 1 219,117.51 A67.94,67.94 0 0 1 246.43,139.19 A8,8 0 0 1 244.8,150.4 Z M190.92,212 A8,8 0 1 1 177.08,220 A57,57 0 0 0 78.92,220 A8,8 0 1 1 65.08,212 A72.06,72.06 0 0 1 98.82,182.08 A48,48 0 1 1 157.18,182.08 A72.06,72.06 0 0 1 190.92,212 Z M128,176 A32,32 0 1 0 96,144 A32,32 0 0 0 128,176 Z M72,120 A8,8 0 0 0 64,112 A24,24 0 1 1 87.24,82 A8,8 0 1 0 102.74,78 A40,40 0 1 0 37,117.51 A67.94,67.94 0 0 0 9.6,139.19 A8,8 0 1 0 22.4,148.8 A51.6,51.6 0 0 1 64,128 A8,8 0 0 0 72,120 Z" />
 
             <!-- «Calificaciones» (MOD-011 · Gradebook): el libro de calificaciones del grupo, la bandeja de revisión y la configuración académica. Ocupa la celda libre a la
                  derecha de «Estudiantes». Sólo la ve quien puede leer datos académicos (el rol técnico no): sin sesión, el prototipo la deja ver y el nodo decide. Icono de
                  hoja con cabecera y renglones: SÓLO comandos absolutos rectos (M, L, H, V, Z), sin arcos ni curvas, para que Win2D nunca reciba una geometría degenerada. -->
-            <ui:ProfessorHexTile x:Name="CalificacionesTile" AbsoluteLayout.LayoutBounds="476,545,146,168" AccentColor="#B45309" Text="Calificaciones" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="CalificacionesTile" AbsoluteLayout.LayoutBounds="476,545,146,168" AccentColor="#0E7490" Text="Calificaciones" IconSource="ico_check.png" Tapped="OnModuleTapped"
                 IconGeometry="M40,40 H216 V216 H40 Z M56,56 V200 H200 V56 Z M72,72 H184 V92 H72 Z M72,108 H116 V124 H72 Z M132,108 H184 V124 H132 Z M72,140 H116 V156 H72 Z M132,140 H184 V156 H132 Z M72,172 H116 V188 H72 Z M132,172 H184 V188 H132 Z" />
 
             <!-- «Buscar» (MOD-021 · Search): encontrar cursos, lecciones, recursos, evaluaciones, estudios asignados y clases sin recorrer cada módulo; sólo devuelve lo que el rol puede
                  leer. Ocupa la celda libre a la izquierda de «Estudiantes» (la fila de abajo queda de tres teselas, centrada). La lupa es la misma de la barra de búsqueda: comandos
                  absolutos con arcos de radio 88, 72 y 8 (nada diminuto que Win2D no pueda pintar). Sólo la ven quienes pueden buscar (el soporte técnico y el alumno no). -->
-            <ui:ProfessorHexTile x:Name="BuscarTile" AbsoluteLayout.LayoutBounds="159,545,146,168" AccentColor="#65A30D" Text="Buscar" Tapped="OnModuleTapped"
+            <ui:ProfessorHexTile x:Name="BuscarTile" AbsoluteLayout.LayoutBounds="159,545,146,168" AccentColor="#047857" Text="Buscar" IconSource="ico_buscar.png" Tapped="OnModuleTapped"
                 IconGeometry="M229.66,218.34 L179.59,168.28 A88.11,88.11 0 1 0 168.28,179.59 L218.34,229.66 A8,8 0 0 0 229.66,218.34 Z M40,112 A72,72 0 1 1 112,184 A72.08,72.08 0 0 1 40,112 Z" />
+
+            <!-- «Agente»: el asistente del docente. Sólo la ve el profesorado (sin sesión, el prototipo la deja ver); el módulo aún no existe y al tocarla se avisa que llega pronto.
+                 El icono de reserva sólo usa comandos absolutos rectos (cabeza, antena y ojos), como «Calificaciones». -->
+            <ui:ProfessorHexTile x:Name="AgenteTile" AbsoluteLayout.LayoutBounds="634,409,146,168" AccentColor="#A81D81" Text="Agente" IconSource="ico_agente.png" Tapped="OnModuleTapped"
+                IconGeometry="M48,80 H208 V216 H48 Z M64,96 V200 H192 V96 Z M120,32 H136 V80 H120 Z M88,128 H112 V152 H88 Z M144,128 H168 V152 H144 Z M96,172 H160 V184 H96 Z" />
         </AbsoluteLayout>
 
-        <Border Grid.RowSpan="3" Margin="0,0,0,28" Padding="8,4" BackgroundColor="#5A5A56" HeightRequest="60" HorizontalOptions="Center" StrokeThickness="0" VerticalOptions="End" WidthRequest="750" ZIndex="5">
-            <Border.Shadow><Shadow Brush="#35000000" Offset="0,5" Radius="10" /></Border.Shadow>
-            <Grid ColumnDefinitions="54,*,*,*,*,*,*,*,42" ColumnSpacing="0">
-                <Border Margin="0" BackgroundColor="White" HeightRequest="48" StrokeThickness="0" WidthRequest="48"><Image HeightRequest="35" Source="avacom_mark.png" WidthRequest="31" /></Border>
-                <Button Grid.Column="1" Text="⌘&#10;Menú principal" Style="{StaticResource DockButton}" />
-                <Button Grid.Column="2" Text="▤&#10;Asignaturas" Style="{StaticResource DockButton}" Clicked="OnAssignmentsClicked" />
-                <Button Grid.Column="3" Text="◉&#10;Clase de hoy" Style="{StaticResource DockButton}" Clicked="OnClassTodayClicked" />
-                <Button Grid.Column="4" Text="▥&#10;Enciclopedia" Style="{StaticResource DockButton}" />
-                <Button Grid.Column="5" Text="♙&#10;Grupos" Style="{StaticResource DockButton}" Clicked="OnGruposClicked" />
-                <Button Grid.Column="6" Text="?&#10;Ayuda" Style="{StaticResource DockButton}" />
-                <Button Grid.Column="7" Text="↪&#10;Cerrar sesión" Style="{StaticResource DockButton}" Clicked="OnLogoutClicked" />
-                <Label Grid.Column="8" FontSize="24" HorizontalOptions="Center" Text="«" TextColor="White" VerticalOptions="Center" />
+        <Border Grid.RowSpan="3" Margin="0,0,0,28" Padding="8,4" BackgroundColor="White" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 38" HeightRequest="76" HorizontalOptions="Center" VerticalOptions="End" ZIndex="5">
+            <Border.Shadow><Shadow Brush="#1F2433" Opacity="0.13" Offset="0,14" Radius="32" /></Border.Shadow>
+            <!-- Los mismos destinos que el panal del menú principal: Asignaturas y Enciclopedia quedan ocultas de la vista (los módulos siguen igual).
+                 Columnas automáticas: la barra se ajusta a lo que se ve, sin huecos, y queda centrada. -->
+            <Grid x:Name="DockBotones" ColumnDefinitions="54,Auto,Auto,Auto,Auto,Auto,Auto,Auto,48" ColumnSpacing="0">
+                <Border Margin="0" BackgroundColor="White" HeightRequest="48" StrokeThickness="0" WidthRequest="48" StrokeShape="RoundRectangle 24"><Image HeightRequest="35" Source="avacom_mark.png" WidthRequest="31" /></Border>
+                <Button Grid.Column="1" Text="Menú principal" ImageSource="barra_menu.png" ContentLayout="Top,2" Style="{StaticResource DockButton}" />
+                <Button Grid.Column="2" IsVisible="False" Text="Asignaturas" ImageSource="barra_libros.png" ContentLayout="Top,2" Style="{StaticResource DockButton}" Clicked="OnAssignmentsClicked" />
+                <Button Grid.Column="3" Text="Clase de hoy" ImageSource="barra_clase.png" ContentLayout="Top,2" Style="{StaticResource DockButton}" Clicked="OnClassTodayClicked" />
+                <Button Grid.Column="4" IsVisible="False" Text="Enciclopedia" ImageSource="barra_mundo.png" ContentLayout="Top,2" Style="{StaticResource DockButton}" />
+                <Button Grid.Column="5" Text="Grupos" ImageSource="barra_grupo.png" ContentLayout="Top,2" Style="{StaticResource DockButton}" Clicked="OnGruposClicked" />
+                <Button Grid.Column="6" Text="Ayuda" ImageSource="barra_ayuda.png" ContentLayout="Top,2" Style="{StaticResource DockButton}" />
+                <Button Grid.Column="7" Text="Cerrar sesión" ImageSource="barra_salir.png" ContentLayout="Top,2" Style="{StaticResource DockButton}" Clicked="OnLogoutClicked" />
+                <!-- Recoge la barra (queda la marca y la flecha) o la vuelve a desplegar. -->
+                <Button x:Name="DockColapsarButton" Grid.Column="8" Text="«" FontSize="24" MinimumWidthRequest="48" WidthRequest="48" HeightRequest="48" Padding="0" Style="{StaticResource DockButton}" TextColor="#4F5566" SemanticProperties.Description="Recoger la barra" Clicked="OnDockColapsar" />
             </Grid>
         </Border>
 
-        <Border Grid.RowSpan="3" Margin="0,0,18,18" Padding="4" BackgroundColor="White" HeightRequest="42" HorizontalOptions="End" StrokeThickness="0" VerticalOptions="End" WidthRequest="82" ZIndex="6">
-            <Grid ColumnDefinitions="*,*"><Border BackgroundColor="#18181B" StrokeThickness="0"><Label FontAttributes="Bold" FontSize="12" HorizontalOptions="Center" Text="ES" TextColor="White" VerticalOptions="Center" /></Border><Label Grid.Column="1" FontAttributes="Bold" FontSize="12" HorizontalOptions="Center" Text="EN" TextColor="#52525B" VerticalOptions="Center" /></Grid>
+        <Border Grid.RowSpan="3" Margin="0,0,18,18" Padding="4" BackgroundColor="White" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 21" HeightRequest="42" HorizontalOptions="End" VerticalOptions="End" WidthRequest="82" ZIndex="6">
+            <Grid ColumnDefinitions="*,*"><Border BackgroundColor="#A81D81" StrokeThickness="0" StrokeShape="RoundRectangle 17"><Label FontFamily="LexendSemiBold" FontSize="12" HorizontalOptions="Center" Text="ES" TextColor="White" VerticalOptions="Center" /></Border><Label Grid.Column="1" FontFamily="LexendSemiBold" FontSize="12" HorizontalOptions="Center" Text="EN" TextColor="#4F5566" VerticalOptions="Center" /></Grid>
         </Border>
     </Grid>
 </ContentPage>

@@ -3,17 +3,20 @@
     x:Class="Avacom.Lms.Ops.Pages.DispositivosPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    BackgroundColor="#F1F1F1"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs>
     <!-- Dispositivos (MOD-009 · Device Manager). Una sola columna centrada: cabecera con el título, el conteo y las dos
          acciones (actualizar, menú principal), y debajo la lista de tabletas del aula. Todo por toque: bloquear o
          desbloquear una tableta es un botón por fila; no hay nada que escribir. -->
     <Grid RowDefinitions="Auto,*" Padding="44,28,48,24" RowSpacing="18">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280">
             <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
-                <Label Text="DISPOSITIVOS DEL AULA" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                <Label Text="Tabletas registradas en este nodo" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" />
-                <Label x:Name="SubtituloLabel" Text="Se registran solas la primera vez que entran a una clase. Bloquear una tableta la deja fuera de las clases y de los lanzamientos; no borra nada." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <Label Text="DISPOSITIVOS DEL AULA" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                <Label Text="Tabletas del aula" FontFamily="LexendMedium" FontSize="30" TextColor="#1F2433" />
+                <Label x:Name="SubtituloLabel" Text="Se registran solas la primera vez que entran a una clase." FontFamily="Lexend" FontSize="15" TextColor="#4F5566" LineBreakMode="WordWrap" />
             </VerticalStackLayout>
             <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
         </Grid>
@@ -21,4 +24,5 @@
             <VerticalStackLayout x:Name="ListaHost" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280" Spacing="12" Padding="0,0,0,40" />
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

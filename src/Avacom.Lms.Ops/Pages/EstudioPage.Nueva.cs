@@ -89,7 +89,7 @@ public partial class EstudioPage
         Entrar(Vista.Nueva);
         ReiniciarBorrador();
         PonerCabecera("MODO DE ESTUDIO · NUEVA ASIGNACIÓN", "Asignar una lección",
-            "Tres pasos: para quién es, qué lección y para cuándo. Todo se elige con un toque.",
+            "Para quién, qué lección y para cuándo.",
             AccionMenu().Vista);
         Vaciar(true);
         PintarPaso();
@@ -132,7 +132,7 @@ public partial class EstudioPage
             var actual = n == _paso;
             var pildora = Ds.Pildora($"{(hecho ? "✓" : n.ToString())}   {nombres[i]}",
                 actual ? Ds.Tinta : hecho ? Ds.ExitoSuave : EstudioUi.PistaBarra,
-                actual ? Colors.White : hecho ? Color.FromArgb("#0B5D3B") : Ds.TintaSuave, 15);
+                actual ? Colors.White : hecho ? Color.FromArgb("#0B5E3E") : Ds.TintaSuave, 15);
             pildora.Padding = new Thickness(18, 9);
             pildora.Margin = new Thickness(0, 0, 10, 0);
             fila.Add(pildora);
@@ -204,14 +204,14 @@ public partial class EstudioPage
         }
         if (!_grupos.Instalado)
         {
-            ContenidoHost.Add(EstudioUi.Aviso("El nodo aún no tiene organización instalada",
-                "Sin organización no hay grupos ni alumnos. Pide a la administración que instale el nodo y vuelve aquí.", Ds.AlertaSuave, Color.FromArgb("#806600")));
+            ContenidoHost.Add(EstudioUi.Aviso("El aula todavía no está configurada",
+                "Aún no hay grupos ni alumnos. Pide a la administración que configure el aula y vuelve aquí.", Ds.AlertaSuave, Color.FromArgb("#9A3412")));
             return;
         }
         if (_grupos.Grupos.Count == 0)
         {
             ContenidoHost.Add(EstudioUi.Aviso("No tienes grupos a tu cargo",
-                "Los grupos los define la administración. Cuando tengas uno, aparecerá aquí.", Ds.AlertaSuave, Color.FromArgb("#806600")));
+                "Los grupos los define la administración. Cuando tengas uno, aparecerá aquí.", Ds.AlertaSuave, Color.FromArgb("#9A3412")));
             return;
         }
 
@@ -225,7 +225,7 @@ public partial class EstudioPage
             var detalle = string.Join(" · ", new[] { g.Codigo is not null && g.Nombre is not null ? g.Codigo : null, g.NivelClave }.Where(x => !string.IsNullOrWhiteSpace(x)));
             if (detalle.Length > 0) texto.Add(Ds.Secundario(detalle, 14));
             fila.Add(texto, 0, 0);
-            var cuantos = Ds.Pildora(EstudioTexto.Plural(g.Alumnos.Count, "alumno", "alumnos"), Color.FromArgb("#F0F0F2"), Ds.TintaMedia, 14);
+            var cuantos = Ds.Pildora(EstudioTexto.Plural(g.Alumnos.Count, "alumno", "alumnos"), Color.FromArgb("#E3E6EC"), Ds.TintaMedia, 14);
             fila.Add(cuantos, 1, 0);
             tarjetas.Add(EstudioUi.TarjetaElegible(fila, _grupo?.Id == g.Id, () =>
             {
@@ -239,7 +239,7 @@ public partial class EstudioPage
                 return Task.CompletedTask;
             }, $"Grupo {g.Nombre ?? g.Codigo}, {g.Alumnos.Count} alumnos", $"estudio-grupo-{g.Id}"));
         }
-        ContenidoHost.Add(Seccion("¿Para quién es?", "Elige el grupo. Después puedes asignarla a todo el grupo o sólo a algunos alumnos. Cada alumno elige su nombre al entrar al modo de estudio; no hay código.", tarjetas));
+        ContenidoHost.Add(Seccion("¿Para quién es?", null, tarjetas));
 
         if (_grupo is not { } elegido) return;
         var quienes = EstudioUi.Envolver();
@@ -315,7 +315,7 @@ public partial class EstudioPage
 
     private void PasoDos()
     {
-        var fuenteChip = Ds.Pildora("Fuente: AVACOM Biblioteca", Ds.InfoSuave, Color.FromArgb("#02739E"), 13);
+        var fuenteChip = Ds.Pildora("Fuente: AVACOM Biblioteca", Ds.InfoSuave, Color.FromArgb("#075985"), 13);
         fuenteChip.HorizontalOptions = LayoutOptions.Start;
 
         if (_catalogoCargando || (_catalogo is null && _catalogoError is null))
@@ -330,7 +330,7 @@ public partial class EstudioPage
             ContenidoHost.Add(Seccion("¿Qué lección?", null, fuenteChip,
                 EstudioUi.Aviso("No se pueden leer los cursos",
                     _catalogoError ?? "AVACOM Biblioteca no está conectada. Una lección no se asigna a ciegas: conecta la biblioteca y vuelve a intentarlo.",
-                    Ds.AlertaSuave, Color.FromArgb("#806600")), acciones));
+                    Ds.AlertaSuave, Color.FromArgb("#9A3412")), acciones));
             return;
         }
 
@@ -360,7 +360,7 @@ public partial class EstudioPage
         _resultados = new VerticalStackLayout { Spacing = 10 };
         contenido.Add(_resultados);
         PintarResultados();
-        ContenidoHost.Add(Seccion("¿Qué lección?", "Elige el curso y después la lección. La lección se lee de la biblioteca; aquí sólo se guarda a cuál te refieres.", contenido.ToArray()));
+        ContenidoHost.Add(Seccion("¿Qué lección?", "Elige el curso y después la lección.", contenido.ToArray()));
 
         if (_curso is null) return;
         if (_cursoCargando)
@@ -454,7 +454,7 @@ public partial class EstudioPage
             _minutos = minutos;
             PintarPaso();
         }, true);
-        ContenidoHost.Add(Seccion("¿Para cuándo?", "Elige el día y la hora de entrega. Se cuenta con la hora del aula.", fecha));
+        ContenidoHost.Add(Seccion("¿Para cuándo?", "Elige el día y la hora de entrega.", fecha));
 
         var plazo = EstudioUi.Envolver();
         plazo.Add(EstudioUi.Chip("Flexible", _plazo == "blando", () => { _plazo = "blando"; PintarPaso(); return Task.CompletedTask; }, "estudio-plazo-blando"));
@@ -479,8 +479,7 @@ public partial class EstudioPage
         var descarga = EstudioUi.Envolver();
         descarga.Add(EstudioUi.Chip("Se puede descargar", _descarga, () => { _descarga = true; PintarPaso(); return Task.CompletedTask; }, "estudio-descarga-si"));
         descarga.Add(EstudioUi.Chip("Sólo en línea", !_descarga, () => { _descarga = false; PintarPaso(); return Task.CompletedTask; }, "estudio-descarga-no"));
-        ContenidoHost.Add(Seccion("¿Se la pueden llevar a casa?", null, descarga,
-            Ds.Secundario("Sólo las tabletas asignadas a un alumno descargan la lección para estudiarla sin conexión; una tableta compartida nunca la descarga.", 14)));
+        ContenidoHost.Add(Seccion("¿Se la pueden llevar a casa?", null, descarga));
 
         var frases = EstudioUi.Envolver();
         foreach (var frase in Consignas)
@@ -488,7 +487,7 @@ public partial class EstudioPage
             var f = frase;
             frases.Add(EstudioUi.Chip(f, _consigna == f, () => { _consigna = _consigna == f ? null : f; PintarPaso(); return Task.CompletedTask; }, $"estudio-consigna-{Array.IndexOf(Consignas, f)}", 48));
         }
-        ContenidoHost.Add(Seccion("Consigna (opcional)", "Una frase que el alumno lee antes de empezar. Toca de nuevo para quitarla.", frases));
+        ContenidoHost.Add(Seccion("Consigna (opcional)", "Una frase que el alumno lee antes de empezar.", frases));
 
         ContenidoHost.Add(ResumenDeAsignar());
     }
@@ -513,7 +512,7 @@ public partial class EstudioPage
         Linea("Si llega tarde", _plazo == "endurecido" ? $"Estricto, con gracia de {_graciaMin} min" : "Flexible: se acepta y se marca");
         Linea("Descarga", _descarga ? "Se puede descargar en tabletas asignadas" : "Sólo en línea");
         if (_consigna is not null) Linea("Consigna", _consigna);
-        return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(26, 22), Color.FromArgb("#FBFBFC"));
+        return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(26, 22), Color.FromArgb("#F6F7F9"));
     }
 
     // ---------------------------------------------------------------------------------- asignar

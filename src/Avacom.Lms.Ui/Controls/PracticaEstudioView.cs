@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
@@ -39,10 +39,10 @@ public sealed class PracticaEstudioView : ContentView
 {
     static PracticaEstudioView() => NeumoChrome.Registrar();
 
-    private static readonly Color VerdeSuave = Color.FromArgb("#E5F6ED"), VerdeTinta = Color.FromArgb("#017A48");
-    private static readonly Color AmbarSuave = Color.FromArgb("#FFF7D6"), AmbarTinta = Color.FromArgb("#806600");
-    private static readonly Color AzulSuave = Color.FromArgb("#E5F5FB"), AzulTinta = Color.FromArgb("#02739E");
-    private static readonly Color TintaEstudio = Color.FromArgb("#1D1D1F"), GrisTexto = Color.FromArgb("#6E6E73");
+    private static readonly Color VerdeSuave = Color.FromArgb("#E1F5EC"), VerdeTinta = Color.FromArgb("#0B5E3E");
+    private static readonly Color AmbarSuave = Color.FromArgb("#FFF6CF"), AmbarTinta = Color.FromArgb("#9A3412");
+    private static readonly Color AzulSuave = Color.FromArgb("#E3F5FC"), AzulTinta = Color.FromArgb("#075985");
+    private static readonly Color TintaEstudio = Color.FromArgb("#1F2433"), GrisTexto = Color.FromArgb("#5F6474");
 
     // ------------------------------------------------------------------------------------ estado
     private ObjetoAula? _actividad;
@@ -97,10 +97,10 @@ public sealed class PracticaEstudioView : ContentView
         _contestadas = Ds.Secundario(string.Empty, 14);
         _contestadas.VerticalTextAlignment = TextAlignment.Center;
         _barraRejilla = new Grid { ColumnDefinitions = [new ColumnDefinition(new GridLength(0.0001, GridUnitType.Star)), new ColumnDefinition(GridLength.Star)], HeightRequest = 8 };
-        _barraRejilla.Add(new BoxView { Color = Color.FromArgb("#019D60"), CornerRadius = 4 }, 0, 0);
+        _barraRejilla.Add(new BoxView { Color = Color.FromArgb("#047857"), CornerRadius = 4 }, 0, 0);
         var barra = new Border
         {
-            BackgroundColor = Color.FromArgb("#E9E9E9"), StrokeThickness = 0, HeightRequest = 8, VerticalOptions = LayoutOptions.Center,
+            BackgroundColor = Color.FromArgb("#E3E6EC"), StrokeThickness = 0, HeightRequest = 8, VerticalOptions = LayoutOptions.Center,
             StrokeShape = new RoundRectangle { CornerRadius = 4 }, Content = _barraRejilla, Padding = 0,
         };
         var fila1 = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14 };
@@ -413,10 +413,10 @@ public sealed class PracticaEstudioView : ContentView
     {
         var b = new Button
         {
-            Text = texto, HeightRequest = Math.Max(48, AreaTactil), CornerRadius = 14, FontFamily = principal ? Ds.FuenteSemi : Ds.FuenteMedia, FontSize = 16,
-            Padding = new Thickness(22, 0), BorderWidth = principal ? 0 : 1,
+            Text = texto, HeightRequest = Math.Max(48, AreaTactil), CornerRadius = (int)(Math.Max(48, AreaTactil) / 2), FontFamily = principal ? Ds.FuenteSemi : Ds.FuenteMedia, FontSize = 16,
+            Padding = new Thickness(22, 0), BorderWidth = principal ? 0 : 2,
             BackgroundColor = principal ? TintaEstudio : Colors.White, TextColor = principal ? Colors.White : TintaEstudio,
-            BorderColor = Color.FromArgb("#D2D2D7"),
+            BorderColor = Color.FromArgb("#E3E6EC"),
         };
         if (ancho is { } w) b.WidthRequest = w;
         Ds.Hundir(b);
@@ -461,7 +461,7 @@ public sealed class PracticaEstudioView : ContentView
             var caja = new Border
             {
                 WidthRequest = 34, HeightRequest = 34, StrokeShape = new RoundRectangle { CornerRadius = 17 }, BackgroundColor = fondo,
-                Stroke = new SolidColorBrush(actual ? TintaEstudio : Color.FromArgb("#D4D4D8")), StrokeThickness = actual ? 2.5 : 1,
+                Stroke = new SolidColorBrush(actual ? TintaEstudio : Color.FromArgb("#E3E6EC")), StrokeThickness = actual ? 2.5 : 1,
                 Content = new Label { Text = glifo, FontFamily = Ds.FuenteMedia, FontSize = 14, TextColor = tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
             };
             SemanticProperties.SetDescription(caja, $"Pregunta {i + 1}");

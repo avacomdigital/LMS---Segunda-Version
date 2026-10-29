@@ -10,10 +10,10 @@ namespace Avacom.Lms.Student.ModoEstudio.Converters;
 /// </summary>
 public sealed class LessonStateToColorConverter : IValueConverter
 {
-    private static readonly Color PendienteFondo = Color.FromArgb("#FFF7D6"), PendienteTexto = Color.FromArgb("#806600");
-    private static readonly Color EnCursoFondo = Color.FromArgb("#E5F5FB"), EnCursoTexto = Color.FromArgb("#02739E");
-    private static readonly Color CompletadaFondo = Color.FromArgb("#E5F6ED"), CompletadaTexto = Color.FromArgb("#017A48");
-    private static readonly Color VencidaFondo = Color.FromArgb("#1AE5262B"), VencidaTexto = Color.FromArgb("#C1191D");   // rgba(229,38,43,.10)
+    private static readonly Color PendienteFondo = Color.FromArgb("#FFF6CF"), PendienteTexto = Color.FromArgb("#9A3412");
+    private static readonly Color EnCursoFondo = Color.FromArgb("#E3F5FC"), EnCursoTexto = Color.FromArgb("#075985");
+    private static readonly Color CompletadaFondo = Color.FromArgb("#E1F5EC"), CompletadaTexto = Color.FromArgb("#0B5E3E");
+    private static readonly Color VencidaFondo = Color.FromArgb("#1AE5262B"), VencidaTexto = Color.FromArgb("#A51C20");   // rgba(229,38,43,.10)
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -25,13 +25,13 @@ public sealed class LessonStateToColorConverter : IValueConverter
             (StudyLessonState.Pending, "accent") => Color.FromArgb("#F3C701"),
             (StudyLessonState.Pending, _) => PendienteFondo,
             (StudyLessonState.InProgress, "fg") => EnCursoTexto,
-            (StudyLessonState.InProgress, "accent") => Color.FromArgb("#01A4E1"),
+            (StudyLessonState.InProgress, "accent") => Color.FromArgb("#0A72A6"),
             (StudyLessonState.InProgress, _) => EnCursoFondo,
             (StudyLessonState.Completed, "fg") => CompletadaTexto,
-            (StudyLessonState.Completed, "accent") => Color.FromArgb("#019D60"),
+            (StudyLessonState.Completed, "accent") => Color.FromArgb("#047857"),
             (StudyLessonState.Completed, _) => CompletadaFondo,
             (_, "fg") => VencidaTexto,
-            (_, "accent") => Color.FromArgb("#E5262B"),
+            (_, "accent") => Color.FromArgb("#047857"),
             _ => VencidaFondo,
         };
     }
@@ -44,9 +44,9 @@ public sealed class SyncStateToColorConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
     {
-        StudySyncState.Syncing => Color.FromArgb("#02739E"),
-        StudySyncState.PendingSend => Color.FromArgb("#806600"),
-        _ => Color.FromArgb("#017A48"),
+        StudySyncState.Syncing => Color.FromArgb("#075985"),
+        StudySyncState.PendingSend => Color.FromArgb("#9A3412"),
+        _ => Color.FromArgb("#0B5E3E"),
     };
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotSupportedException();

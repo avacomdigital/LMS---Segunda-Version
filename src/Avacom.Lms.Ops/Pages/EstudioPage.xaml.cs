@@ -143,7 +143,7 @@ public partial class EstudioPage : ContentPage
         AvisoHost.Clear();
         AvisoHost.Add(error
             ? EstudioUi.Aviso(titulo, detalle, Ds.PeligroSuave, EstudioUi.TintaPeligro)
-            : EstudioUi.Aviso(titulo, detalle, Ds.ExitoSuave, Color.FromArgb("#0B5D3B")));
+            : EstudioUi.Aviso(titulo, detalle, Ds.ExitoSuave, Color.FromArgb("#0B5E3E")));
         var version = ++_versionAviso;
         if (!error)
             Dispatcher.DispatchDelayed(TimeSpan.FromSeconds(9), () => { if (version == _versionAviso) AvisoHost.Clear(); });

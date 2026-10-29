@@ -204,7 +204,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
             texto.Add(Ds.Secundario(ListasDeReportes.ResumenDeGrupo(g), 15));
             var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 18, MinimumHeightRequest = 52 };
             fila.Add(texto, 0, 0);
-            fila.Add(new Label { Text = boletines ? "Boletines  ›" : "Ver  ›", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Rojo, VerticalOptions = LayoutOptions.Center }, 1, 0);
+            fila.Add(new Label { Text = boletines ? "Boletines  ›" : "Ver  ›", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Azul700, VerticalOptions = LayoutOptions.Center }, 1, 0);
             var id = g.Id;
             var ruta = boletines ? RutasDeReportes.DeBoletines(id) : RutasDeReportes.DeGrupo(id);
             ContenidoHost.Add(ReportesUi.Tocable(fila, ReportesUi.Seguro(nameof(ReportesElegirPage), boletines ? "AbrirBoletines" : "AbrirGrupo", () => Shell.Current.GoToAsync(ruta)),

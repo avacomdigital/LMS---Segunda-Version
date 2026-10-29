@@ -163,12 +163,12 @@ public sealed record HojaDeAcceso(
             <html lang="es"><head><meta charset="utf-8"><title>Hoja de acceso · {{E(Aula)}}</title>
             <style>
               @page { size: A4; margin: 18mm; }
-              body { font-family: "Segoe UI", Arial, sans-serif; color: #18181B; max-width: 720px; margin: 24px auto; }
-              h1 { font-size: 26px; margin: 0 0 4px; } .sub { color: #52525B; margin: 0 0 28px; }
-              .caja { border: 2px solid #18181B; border-radius: 14px; padding: 18px 22px; margin: 0 0 18px; }
-              .rotulo { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #52525B; margin: 0 0 6px; }
+              body { font-family: "Segoe UI", Arial, sans-serif; color: #1F2433; max-width: 720px; margin: 24px auto; }
+              h1 { font-size: 26px; margin: 0 0 4px; } .sub { color: #4F5566; margin: 0 0 28px; }
+              .caja { border: 2px solid #1F2433; border-radius: 14px; padding: 18px 22px; margin: 0 0 18px; }
+              .rotulo { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #4F5566; margin: 0 0 6px; }
               .valor { font-family: Consolas, "Courier New", monospace; font-size: 34px; font-weight: 700; letter-spacing: .06em; margin: 0; }
-              .nota { font-size: 14px; line-height: 1.5; color: #3F3F46; } ol { padding-left: 20px; }
+              .nota { font-size: 14px; line-height: 1.5; color: #4F5566; } ol { padding-left: 20px; }
             </style></head>
             <body onload="window.print()">
               <h1>Hoja de acceso · {{E(Aula)}}</h1>

@@ -65,7 +65,7 @@ internal sealed class HojaDeLicencia : ContentView
         IsVisible = false;
         ZIndex = 50;
         // El velo es hermano de la tarjeta: un toque dentro de la tarjeta nunca llega a él. Tocar fuera NO cierra la hoja (nada de esto se cancela de un roce).
-        var velo = new Border { BackgroundColor = Color.FromArgb("#73141417"), StrokeThickness = 0 };
+        var velo = new Border { BackgroundColor = Color.FromArgb("#731F2433"), StrokeThickness = 0 };
         _eyebrow = EstudioUi.Eyebrow(string.Empty);
         _titulo = new Label { FontFamily = Ds.FuenteMedia, FontSize = 24, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap, AutomationId = "licencia-hoja-titulo" };
         _subtitulo = new Label { FontFamily = Ds.FuenteLigera, FontSize = 15, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.WordWrap };
@@ -417,7 +417,7 @@ internal sealed class HojaDeLicencia : ContentView
             case PasoDeActivacion.EsperandoLicencia:
                 _cuerpo.Add(LicenciaUi.Seccion(LicenciaTexto.Paso2Titulo, LicenciaTexto.Paso2Texto));
                 if (f.RutaDeLaSolicitud is { } ruta) _cuerpo.Add(LicenciaUi.Dato("Solicitud", ruta, 110));
-                Boton("‹  Paso 1", Ds.Rango.Quiet, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
+                Boton("‹  Paso 1", Ds.Rango.Secondary, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
                 BotonCerrar();
                 Boton("Ya tengo el archivo de licencia", Ds.Rango.Primary, BuscarLicenciasAsync, "licencia-ya-tengo");
                 break;
@@ -490,7 +490,7 @@ internal sealed class HojaDeLicencia : ContentView
             }
             if (busqueda.Recortada) _cuerpo.Add(Ds.Secundario($"Se muestran los {BuscadorDeLicencias.Tope} archivos más recientes.", 13));
         }
-        Boton("‹  Paso 1", Ds.Rango.Quiet, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
+        Boton("‹  Paso 1", Ds.Rango.Secondary, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
         BotonCerrar();
     }
 

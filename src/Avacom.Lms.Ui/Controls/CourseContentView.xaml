@@ -9,23 +9,23 @@
         <!-- Columna izquierda: la estructura vigente del curso, resuelta en vivo -->
         <ScrollView x:Name="PanelEstructura" Grid.Column="0">
             <VerticalStackLayout Spacing="14" Padding="0,0,0,24">
-                <Border Padding="20" Stroke="#16000000" StrokeShape="RoundRectangle 20" BackgroundColor="White">
+                <Border Padding="20" Stroke="#E3E6EC" StrokeShape="RoundRectangle 20" BackgroundColor="White">
                     <VerticalStackLayout Spacing="6">
-                        <Label x:Name="TituloLabel" Text="Curso" FontSize="22" FontAttributes="Bold" TextColor="#18181B" LineBreakMode="WordWrap" />
-                        <Label x:Name="SubtituloLabel" Text="" FontSize="13" TextColor="#52525B" />
+                        <Label x:Name="TituloLabel" Text="Curso" FontSize="22" FontFamily="LexendSemiBold" TextColor="#1F2433" LineBreakMode="WordWrap" />
+                        <Label x:Name="SubtituloLabel" Text="" FontSize="13" TextColor="#4F5566" />
                         <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
-                            <ProgressBar x:Name="ProgresoBar" Progress="0" ProgressColor="#E5262B" VerticalOptions="Center" />
-                            <Label x:Name="ProgresoLabel" Grid.Column="1" Text="0%" FontAttributes="Bold" TextColor="#E5262B" Margin="12,0,0,0" />
+                            <ProgressBar x:Name="ProgresoBar" Progress="0" ProgressColor="#047857" VerticalOptions="Center" />
+                            <Label x:Name="ProgresoLabel" Grid.Column="1" Text="0%" FontFamily="LexendSemiBold" TextColor="#0B5E3E" Margin="12,0,0,0" />
                         </Grid>
-                        <Label x:Name="EstadoLabel" Text="" FontSize="12" TextColor="#52525B" />
+                        <Label x:Name="EstadoLabel" Text="" FontSize="12" TextColor="#4F5566" />
                     </VerticalStackLayout>
                 </Border>
 
-                <Border x:Name="AvisoCard" IsVisible="False" Padding="16" Stroke="Transparent" StrokeShape="RoundRectangle 16" BackgroundColor="#FDECEC">
+                <Border x:Name="AvisoCard" IsVisible="False" Padding="16" Stroke="Transparent" StrokeShape="RoundRectangle 16" BackgroundColor="#FDE7E7">
                     <VerticalStackLayout Spacing="4">
-                        <Label x:Name="AvisoLabel" Text="" TextColor="#8A1C1F" FontAttributes="Bold" LineBreakMode="WordWrap" />
-                        <Label x:Name="AvisoDetalle" Text="" TextColor="#8A1C1F" FontSize="12" LineBreakMode="WordWrap" />
-                        <Button Text="Reintentar" BackgroundColor="#18181B" TextColor="White" CornerRadius="12" HeightRequest="40" HorizontalOptions="Start" Clicked="OnReintentar" />
+                        <Label x:Name="AvisoLabel" Text="" TextColor="#A51C20" FontFamily="LexendSemiBold" LineBreakMode="WordWrap" />
+                        <Label x:Name="AvisoDetalle" Text="" TextColor="#A51C20" FontSize="12" LineBreakMode="WordWrap" />
+                        <Button Text="Reintentar" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="20" HeightRequest="40" Padding="18,0" HorizontalOptions="Start" Clicked="OnReintentar" />
                     </VerticalStackLayout>
                 </Border>
 
@@ -34,23 +34,23 @@
         </ScrollView>
 
         <!-- Columna derecha: el visor -->
-        <Border x:Name="PanelVisor" Grid.Column="1" Padding="0" Stroke="#16000000" StrokeShape="RoundRectangle 20" BackgroundColor="White">
+        <Border x:Name="PanelVisor" Grid.Column="1" Padding="0" Stroke="#E3E6EC" StrokeShape="RoundRectangle 20" BackgroundColor="White">
             <Grid RowDefinitions="Auto,*">
-                <Grid Padding="18,12" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" BackgroundColor="#18181B">
+                <Grid Padding="18,12" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" BackgroundColor="#1F2433">
                     <Button x:Name="VolverListaBtn" Text="←" IsVisible="False" BackgroundColor="Transparent" TextColor="White" FontSize="20" Clicked="OnVolverLista" />
                     <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
-                        <Label x:Name="VisorTitulo" Text="Contenido del curso" TextColor="White" FontAttributes="Bold" FontSize="15" LineBreakMode="TailTruncation" />
-                        <Label x:Name="VisorSubtitulo" Text="Elige un material para verlo aquí" TextColor="#D4D4D8" FontSize="12" LineBreakMode="TailTruncation" />
+                        <Label x:Name="VisorTitulo" Text="Contenido del curso" TextColor="White" FontFamily="LexendSemiBold" FontSize="15" LineBreakMode="TailTruncation" />
+                        <Label x:Name="VisorSubtitulo" Text="Elige un material para verlo aquí" TextColor="#E3E6EC" FontSize="12" LineBreakMode="TailTruncation" />
                     </VerticalStackLayout>
-                    <Button x:Name="MostrarAulaBtn" Grid.Column="2" Text="Mostrar en el aula" IsVisible="False" BackgroundColor="#E5262B" TextColor="White" CornerRadius="10" HeightRequest="38" FontSize="12" Clicked="OnMostrarEnAula" />
-                    <Button x:Name="CerrarVisorBtn" Grid.Column="3" Text="Cerrar" IsVisible="False" BackgroundColor="#3F3F46" TextColor="White" CornerRadius="10" HeightRequest="38" FontSize="12" Clicked="OnCerrarVisor" />
+                    <Button x:Name="MostrarAulaBtn" Grid.Column="2" Text="Mostrar en el aula" IsVisible="False" Background="{StaticResource DegradadoPrincipal}" TextColor="White" CornerRadius="19" HeightRequest="38" Padding="16,0" FontSize="12" Clicked="OnMostrarEnAula" />
+                    <Button x:Name="CerrarVisorBtn" Grid.Column="3" Text="Cerrar" IsVisible="False" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="19" HeightRequest="38" Padding="16,0" FontSize="12" Clicked="OnCerrarVisor" />
                 </Grid>
 
-                <Grid Grid.Row="1" x:Name="VisorContenido" BackgroundColor="#FAFAFA">
+                <Grid Grid.Row="1" x:Name="VisorContenido" BackgroundColor="#F6F7F9">
                     <VerticalStackLayout x:Name="VisorVacio" HorizontalOptions="Center" VerticalOptions="Center" Spacing="8" Padding="32">
-                        <Label Text="⬡" FontSize="54" TextColor="#E5262B" HorizontalTextAlignment="Center" />
-                        <Label Text="Elige un material de la izquierda" FontSize="18" FontAttributes="Bold" TextColor="#18181B" HorizontalTextAlignment="Center" />
-                        <Label Text="Láminas, videos, documentos, interactivos, lecciones y evaluaciones se reproducen aquí. El contenido lo entrega AVACOM Biblioteca; el LMS sólo registra tu avance." FontSize="13" TextColor="#52525B" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" MaximumWidthRequest="420" />
+                        <Label Text="⬡" FontSize="54" TextColor="#A81D81" HorizontalTextAlignment="Center" />
+                        <Label Text="Elige un material de la izquierda" FontSize="18" FontFamily="LexendSemiBold" TextColor="#1F2433" HorizontalTextAlignment="Center" />
+                        <Label Text="Láminas, videos, documentos, interactivos, lecciones y evaluaciones se reproducen aquí. El contenido lo entrega AVACOM Biblioteca; el LMS sólo registra tu avance." FontSize="13" TextColor="#4F5566" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" MaximumWidthRequest="420" />
                     </VerticalStackLayout>
 
                     <Image x:Name="VisorImagen" IsVisible="False" Aspect="AspectFit" Margin="12" />
@@ -59,7 +59,7 @@
 
                     <ScrollView x:Name="VisorLeccion" IsVisible="False" Padding="20">
                         <VerticalStackLayout Spacing="10">
-                            <Label x:Name="LeccionIntro" Text="Secuencia de la lección" FontSize="13" TextColor="#52525B" />
+                            <Label x:Name="LeccionIntro" Text="Secuencia de la lección" FontSize="13" TextColor="#4F5566" />
                             <VerticalStackLayout x:Name="PasosHost" Spacing="8" />
                         </VerticalStackLayout>
                     </ScrollView>
@@ -67,40 +67,40 @@
                     <ScrollView x:Name="VisorEvaluacion" IsVisible="False" Padding="24">
                         <VerticalStackLayout Spacing="16" MaximumWidthRequest="720" HorizontalOptions="Center">
                             <Grid ColumnDefinitions="*,Auto">
-                                <Label x:Name="EvalProgreso" Text="Pregunta 1 de 1" TextColor="#E5262B" FontAttributes="Bold" />
-                                <Label x:Name="EvalEstado" Grid.Column="1" Text="" FontSize="12" TextColor="#52525B" />
+                                <Label x:Name="EvalProgreso" Text="Pregunta 1 de 1" TextColor="#075985" FontFamily="LexendSemiBold" />
+                                <Label x:Name="EvalEstado" Grid.Column="1" Text="" FontSize="12" TextColor="#4F5566" />
                             </Grid>
-                            <ProgressBar x:Name="EvalBarra" Progress="0" ProgressColor="#E5262B" />
-                            <Label x:Name="EvalEnunciado" Text="" FontSize="22" FontAttributes="Bold" TextColor="#18181B" LineBreakMode="WordWrap" />
-                            <Button x:Name="EvalVozBtn" Text="🔊  Escuchar la pregunta" IsVisible="False" BackgroundColor="#E6F6FC" TextColor="#01A4E1" CornerRadius="12" HeightRequest="48" HorizontalOptions="Start" Clicked="OnEscucharVoz" />
-                            <Label x:Name="EvalPista" Text="Escribe tu respuesta y pulsa Comprobar." FontSize="13" TextColor="#52525B" />
-                            <Entry x:Name="EvalRespuesta" Placeholder="Tu respuesta" BackgroundColor="White" HeightRequest="52" TextColor="#18181B" Completed="OnComprobar" />
+                            <ProgressBar x:Name="EvalBarra" Progress="0" ProgressColor="#0A72A6" />
+                            <Label x:Name="EvalEnunciado" Text="" FontSize="22" FontFamily="LexendSemiBold" TextColor="#1F2433" LineBreakMode="WordWrap" />
+                            <Button x:Name="EvalVozBtn" Text="🔊  Escuchar la pregunta" IsVisible="False" BackgroundColor="#E3F5FC" TextColor="#075985" CornerRadius="24" HeightRequest="48" Padding="20,0" HorizontalOptions="Start" Clicked="OnEscucharVoz" />
+                            <Label x:Name="EvalPista" Text="Escribe tu respuesta y pulsa Comprobar." FontSize="13" TextColor="#4F5566" />
+                            <Entry x:Name="EvalRespuesta" Placeholder="Tu respuesta" BackgroundColor="White" HeightRequest="52" TextColor="#1F2433" Completed="OnComprobar" />
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                                <Button x:Name="EvalComprobarBtn" Text="Comprobar" BackgroundColor="#18181B" TextColor="White" CornerRadius="14" HeightRequest="50" WidthRequest="160" Clicked="OnComprobar" />
-                                <Label x:Name="EvalVeredicto" Grid.Column="1" Text="" FontAttributes="Bold" VerticalTextAlignment="Center" LineBreakMode="WordWrap" />
+                                <Button x:Name="EvalComprobarBtn" Text="Comprobar" Background="{StaticResource DegradadoPrincipal}" TextColor="White" CornerRadius="25" HeightRequest="50" WidthRequest="160" Clicked="OnComprobar" />
+                                <Label x:Name="EvalVeredicto" Grid.Column="1" Text="" FontFamily="LexendSemiBold" VerticalTextAlignment="Center" LineBreakMode="WordWrap" />
                             </Grid>
-                            <Label x:Name="EvalRetro" Text="" FontSize="14" TextColor="#019D60" IsVisible="False" LineBreakMode="WordWrap" />
+                            <Label x:Name="EvalRetro" Text="" FontSize="14" TextColor="#047857" IsVisible="False" LineBreakMode="WordWrap" />
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,8,0,0">
-                                <Button x:Name="EvalAnteriorBtn" Text="← Anterior" BackgroundColor="#F1F1F1" TextColor="#18181B" CornerRadius="14" HeightRequest="48" Clicked="OnAnterior" />
-                                <Button x:Name="EvalSiguienteBtn" Grid.Column="2" Text="Siguiente →" BackgroundColor="#E5262B" TextColor="White" CornerRadius="14" HeightRequest="48" Clicked="OnSiguiente" />
+                                <Button x:Name="EvalAnteriorBtn" Text="← Anterior" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" HeightRequest="48" Padding="22,0" Clicked="OnAnterior" />
+                                <Button x:Name="EvalSiguienteBtn" Grid.Column="2" Text="Siguiente →" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" HeightRequest="48" Padding="22,0" Clicked="OnSiguiente" />
                             </Grid>
-                            <Button x:Name="EvalFinalizarBtn" Text="Finalizar y registrar la nota" BackgroundColor="#019D60" TextColor="White" CornerRadius="14" HeightRequest="52" Clicked="OnFinalizar" />
-                            <Border x:Name="EvalResultado" IsVisible="False" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 16" BackgroundColor="#E6F5EE">
+                            <Button x:Name="EvalFinalizarBtn" Text="Finalizar y registrar la nota" Background="{StaticResource DegradadoPrincipal}" TextColor="White" CornerRadius="26" HeightRequest="52" Clicked="OnFinalizar" />
+                            <Border x:Name="EvalResultado" IsVisible="False" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 16" BackgroundColor="#E1F5EC">
                                 <VerticalStackLayout Spacing="4">
-                                    <Label x:Name="EvalResultadoTitulo" Text="" FontSize="24" FontAttributes="Bold" TextColor="#019D60" />
-                                    <Label x:Name="EvalResultadoDetalle" Text="" FontSize="13" TextColor="#18181B" LineBreakMode="WordWrap" />
+                                    <Label x:Name="EvalResultadoTitulo" Text="" FontSize="24" FontFamily="LexendSemiBold" TextColor="#047857" />
+                                    <Label x:Name="EvalResultadoDetalle" Text="" FontSize="13" TextColor="#1F2433" LineBreakMode="WordWrap" />
                                 </VerticalStackLayout>
                             </Border>
                         </VerticalStackLayout>
                     </ScrollView>
 
                     <VerticalStackLayout x:Name="VisorMensaje" IsVisible="False" HorizontalOptions="Center" VerticalOptions="Center" Spacing="10" Padding="32">
-                        <Label x:Name="MensajeTitulo" Text="" FontSize="18" FontAttributes="Bold" TextColor="#18181B" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
-                        <Label x:Name="MensajeDetalle" Text="" FontSize="13" TextColor="#52525B" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" MaximumWidthRequest="480" />
-                        <Button x:Name="MensajeAccionBtn" Text="" IsVisible="False" BackgroundColor="#18181B" TextColor="White" CornerRadius="12" HeightRequest="44" HorizontalOptions="Center" Clicked="OnMensajeAccion" />
+                        <Label x:Name="MensajeTitulo" Text="" FontSize="18" FontFamily="LexendSemiBold" TextColor="#1F2433" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+                        <Label x:Name="MensajeDetalle" Text="" FontSize="13" TextColor="#4F5566" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" MaximumWidthRequest="480" />
+                        <Button x:Name="MensajeAccionBtn" Text="" IsVisible="False" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="22" HeightRequest="44" Padding="20,0" HorizontalOptions="Center" Clicked="OnMensajeAccion" />
                     </VerticalStackLayout>
 
-                    <ActivityIndicator x:Name="Cargando" IsRunning="False" IsVisible="False" Color="#E5262B" HorizontalOptions="Center" VerticalOptions="Center" />
+                    <ActivityIndicator x:Name="Cargando" IsRunning="False" IsVisible="False" Color="#0A72A6" HorizontalOptions="Center" VerticalOptions="Center" />
 
                     <!-- Reproductor oculto para la instrucción hablada (preescolar) -->
                     <WebView x:Name="Audio" HeightRequest="1" WidthRequest="1" Opacity="0" InputTransparent="True" HorizontalOptions="Start" VerticalOptions="End" />

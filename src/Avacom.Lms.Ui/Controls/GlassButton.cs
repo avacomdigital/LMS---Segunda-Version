@@ -4,14 +4,11 @@ using Microsoft.Maui.Controls.Shapes;
 namespace Avacom.Lms.Ui.Controls;
 
 /// <summary>
-/// Botón Liquid Glass (nivel 4 del lenguaje, sin desenfoque): cuerpo blanco translúcido con degradado, canto
-/// luminoso, reflejo superior y sombra violeta difusa; etiqueta blanca en Inter SemiBold. Con <see cref="Accent"/>
-/// el cuerpo toma ese color casi opaco y el halo se tiñe (la píldora de acción de una materia).
-///
-/// Microinteracciones: al pasar el puntero crece a 1,02 y se ilumina (150 ms); al presionar baja a 0,98 (90 ms) y al
-/// soltar vuelve (140 ms); <see cref="Clicked"/> se dispara al tocar. Es un <see cref="ContentView"/> y no un
-/// <see cref="Button"/> porque el material (degradados, reflejo y halo) no cabe en el botón nativo de WinUI.
-/// Tamaño por defecto 64 px de alto, como los botones del kit; el ancho lo fija quien lo usa.
+/// Botón secundario del Aula · Design System: píldora blanca con contorno de 2 px en <see cref="Ds.Linea"/> y etiqueta
+/// en tinta (Lexend 500); al pasar el puntero se tiñe de <see cref="Ds.Superficie2"/>. Con <see cref="Accent"/> el
+/// cuerpo toma el relleno 600 → 700 de ese color y una sombra difusa del mismo tono (un botón lleno de rol).
+/// Pulsado: escala 0,97 en 60 ms y vuelta. Es un <see cref="ContentView"/> (no un <see cref="Button"/>) para conservar
+/// la API anterior. Alto por defecto 64 px; el ancho lo fija quien lo usa.
 /// </summary>
 public class GlassButton : ContentView
 {
@@ -29,7 +26,6 @@ public class GlassButton : ContentView
     private readonly Border cuerpo;
     private readonly Border luz;
     private readonly Label etiqueta;
-    private bool sobre;
 
     public GlassButton()
     {
@@ -37,7 +33,7 @@ public class GlassButton : ContentView
         MinimumHeightRequest = 64;
         etiqueta = new Label
         {
-            FontFamily = Ds.FuenteSemi, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center,
+            FontFamily = Ds.FuenteMedia, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center,
             HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.TailTruncation,
         };
         var reflejo = new Border
@@ -47,7 +43,7 @@ public class GlassButton : ContentView
         };
         luz = new Border
         {
-            InputTransparent = true, BackgroundColor = Color.FromArgb("#24FFFFFF"), StrokeThickness = 0, StrokeShape = new Rectangle(), Padding = 0, Opacity = 0,
+            InputTransparent = true, BackgroundColor = Ds.Superficie2.WithAlpha(0.9f), StrokeThickness = 0, StrokeShape = new Rectangle(), Padding = 0, Opacity = 0,
         };
         cuerpo = new Border
         {
@@ -56,24 +52,21 @@ public class GlassButton : ContentView
         };
         Content = cuerpo;
         Pintar();
+        PropertyChanged += (_, e) => { if (e.PropertyName == nameof(HeightRequest)) Pintar(); };   // el radio de la píldora sigue al alto
 
         var toque = new TapGestureRecognizer();
         toque.Tapped += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
         var puntero = new PointerGestureRecognizer();
         puntero.PointerEntered += async (_, _) =>
         {
-            sobre = true;
-            _ = luz.FadeToAsync(1, 150, Easing.CubicOut);
-            await cuerpo.ScaleToAsync(1.02, 150, Easing.CubicOut);
+            await luz.FadeToAsync(Accent is null ? 1 : 0, Ds.DurBase, Easing.CubicOut);
         };
         puntero.PointerExited += async (_, _) =>
         {
-            sobre = false;
-            _ = luz.FadeToAsync(0, 150, Easing.CubicOut);
-            await cuerpo.ScaleToAsync(1, 150, Easing.CubicOut);
+            await luz.FadeToAsync(0, Ds.DurBase, Easing.CubicOut);
         };
-        puntero.PointerPressed += async (_, _) => await cuerpo.ScaleToAsync(0.98, 90, Easing.CubicOut);
-        puntero.PointerReleased += async (_, _) => await cuerpo.ScaleToAsync(sobre ? 1.02 : 1, 140, Easing.CubicOut);
+        puntero.PointerPressed += async (_, _) => await cuerpo.ScaleToAsync(0.97, 60, Easing.CubicOut);
+        puntero.PointerReleased += async (_, _) => await cuerpo.ScaleToAsync(1, 60, Easing.CubicOut);
         GestureRecognizers.Add(toque);
         GestureRecognizers.Add(puntero);
     }
@@ -95,16 +88,13 @@ public class GlassButton : ContentView
     private void Pintar()
     {
         var acento = Accent;
-        cuerpo.StrokeShape = new RoundRectangle { CornerRadius = CornerRadius };
-        // Sobre fondo claro el cuerpo blanco translúcido lleva el bisel del kit (luz arriba-izquierda, sombra
-        // abajo-derecha) para que se lea como botón; con acento, canto luminoso y halo del color.
-        cuerpo.Stroke = acento is null ? Ds.Bisel() : Glass.CantoLuminoso(0.95);
-        cuerpo.StrokeThickness = acento is null ? 1.5 : 1;
-        cuerpo.Background = acento is null ? Glass.Relleno(Colors.White, 0.78, 0.50) : Glass.RellenoAcento(acento, 0.92);
-        cuerpo.Shadow = acento is null ? Glass.SombraVidrio(0.14, 20, 8) : Glass.Halo(acento, 0.42, 20, 8);
+        cuerpo.StrokeShape = new RoundRectangle { CornerRadius = HeightRequest > 0 ? HeightRequest / 2 : CornerRadius };   // píldora
+        cuerpo.Stroke = new SolidColorBrush(acento is null ? Ds.Linea : Colors.Transparent);
+        cuerpo.StrokeThickness = acento is null ? 2 : 0;
+        cuerpo.Background = acento is null ? new SolidColorBrush(Ds.Superficie) : Glass.RellenoAcento(acento);
+        cuerpo.Shadow = acento is null ? Ds.SombraDe(Ds.Superficie) : Glass.Halo(acento, 0.30);
         etiqueta.Text = Text;
         etiqueta.FontSize = FontSize;
-        // Sobre un acento claro (ámbar, cian) la etiqueta pasa a tinta oscura; sobre vidrio blanco manda TextColor.
         etiqueta.TextColor = acento is null ? TextColor : Glass.TintaSobre(acento);
     }
 }

@@ -12,9 +12,9 @@ namespace Avacom.Lms.Ops.Calificaciones;
 /// </summary>
 internal static class BoletinUi
 {
-    public static readonly Color Lienzo = Color.FromArgb("#F1F1F1");
-    public static readonly Color Superficie = Color.FromArgb("#F4F4F6");
-    public static readonly Color PozoFondo = Color.FromArgb("#EBEBEF");
+    public static readonly Color Lienzo = Color.FromArgb("#EAF0F6");
+    public static readonly Color Superficie = Color.FromArgb("#F6F7F9");
+    public static readonly Color PozoFondo = Color.FromArgb("#E3E6EC");
     public static readonly Color Regla = Color.FromArgb("#1F000000");
 
     /// <summary>
@@ -59,18 +59,18 @@ internal static class BoletinUi
     public static View BandaDeColores(double alto = 8)
     {
         var banda = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], HeightRequest = alto };
-        Color[] colores = [Color.FromArgb("#F08C9A"), Color.FromArgb("#F6DF6B"), Color.FromArgb("#7FCB9E"), Color.FromArgb("#9ED3F2"), Color.FromArgb("#D49BC8"), Color.FromArgb("#BDBDC4")];
+        Color[] colores = [Color.FromArgb("#F6C3C4"), Color.FromArgb("#F3E29A"), Color.FromArgb("#BFE6D3"), Color.FromArgb("#BCE5F5"), Color.FromArgb("#E8C2DD"), Color.FromArgb("#E3E6EC")];
         for (var i = 0; i < colores.Length; i++) banda.Add(new BoxView { Color = colores[i], CornerRadius = 0 }, i, 0);
         return banda;
     }
 
-    /// <summary>El círculo con las iniciales de quien es: rojo de la marca, en relieve.</summary>
+    /// <summary>El círculo con las iniciales de quien es: azul de perfil (catálogo de iconos del DS).</summary>
     public static View Avatar(string nombre, double lado = 88)
     {
         var circulo = new Border
         {
-            WidthRequest = lado, HeightRequest = lado, Background = Ds.Degradado(Ds.Rojo), StrokeThickness = 2,
-            Stroke = Ds.Bisel(), StrokeShape = new RoundRectangle { CornerRadius = lado / 2 }, Shadow = Ds.SombraDe(Ds.Rojo), VerticalOptions = LayoutOptions.Center,
+            WidthRequest = lado, HeightRequest = lado, Background = Ds.Degradado(Ds.Azul600), StrokeThickness = 0,
+            Stroke = Ds.Bisel(), StrokeShape = new RoundRectangle { CornerRadius = lado / 2 }, Shadow = Ds.SombraDe(Ds.Azul600), VerticalOptions = LayoutOptions.Center,
             Content = new Label { Text = BoletinTexto.Iniciales(nombre), FontFamily = Ds.FuenteMedia, FontSize = lado * 0.38, TextColor = Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
         };
         SemanticProperties.SetDescription(circulo, $"Iniciales de {nombre}");
@@ -104,7 +104,7 @@ internal static class BoletinUi
         fraccion = double.IsNaN(fraccion) ? 0 : Math.Clamp(fraccion, 0, 1);
         var relleno = new BoxView { Color = color, CornerRadius = alto / 2, HeightRequest = alto };
         var pozo = new Grid { HeightRequest = alto, ColumnSpacing = 0 };
-        pozo.Add(new BoxView { Color = Color.FromArgb("#D9D9DE"), CornerRadius = alto / 2, HeightRequest = alto }, 0, 0);
+        pozo.Add(new BoxView { Color = Color.FromArgb("#E3E6EC"), CornerRadius = alto / 2, HeightRequest = alto }, 0, 0);
         if (fraccion > 0)
         {
             var avance = new Grid { ColumnDefinitions = [new ColumnDefinition(new GridLength(fraccion, GridUnitType.Star)), new ColumnDefinition(new GridLength(1 - fraccion, GridUnitType.Star))], HeightRequest = alto };

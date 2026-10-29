@@ -5,16 +5,19 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca compacta, etiqueta de modo de la tableta y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Tableta="True" Modo="Aprender">
     <Grid RowDefinitions="68,*">
-        <Grid BackgroundColor="White" Padding="22,0" ColumnDefinitions="Auto,*,Auto">
-            <Button Text="← Asignaturas" BackgroundColor="Transparent" TextColor="{StaticResource Ink}" Clicked="OnBack" />
-            <Label x:Name="TituloLabel" Grid.Column="1" Text="Asignatura" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center" LineBreakMode="TailTruncation" />
-            <Border Grid.Column="2" BackgroundColor="#FDECEC" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
-                <Label x:Name="ProgresoChip" Text="0% completado" TextColor="{StaticResource BrandRed}" FontAttributes="Bold" />
+        <Grid BackgroundColor="Transparent" Padding="32,0" ColumnDefinitions="Auto,*,Auto">
+            <Button Text="←  Asignaturas" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" FontSize="16" FontFamily="LexendMedium" HeightRequest="48" Padding="18,0" VerticalOptions="Center" Clicked="OnBack" />
+            <Label x:Name="TituloLabel" Grid.Column="1" Text="Asignatura" FontSize="18" FontFamily="LexendSemiBold" HorizontalOptions="Center" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+            <Border Grid.Column="2" BackgroundColor="#FDE7E7" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
+                <Label x:Name="ProgresoChip" Text="0% completado" TextColor="{StaticResource Verde700}" FontFamily="LexendSemiBold" />
             </Border>
         </Grid>
         <Grid Grid.Row="1" Padding="20,16,20,20">
             <ui:CourseContentView x:Name="Contenido" />
         </Grid>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

@@ -1,4 +1,4 @@
-using Avacom.Lms.Core.Actualizacion;
+﻿using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
@@ -26,11 +26,11 @@ public partial class ClaseUnirsePage : ContentPage
         InitializeComponent();
         for (var i = 0; i < 6; i++)
         {
-            var label = new Label { Text = string.Empty, FontSize = 34, FontAttributes = FontAttributes.Bold, TextColor = Ds.Tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            var label = new Label { Text = string.Empty, FontSize = 34, FontFamily = Ds.FuenteSemi, TextColor = Ds.Tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
             _casillas.Add(label);
             CasillasHost.Add(new Border
             {
-                WidthRequest = 62, HeightRequest = 76, BackgroundColor = Colors.White, Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1,
+                WidthRequest = 56, HeightRequest = 64, BackgroundColor = Colors.White, Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1,
                 StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioBoton }, Content = label, Shadow = Ds.SombraTarjeta(),
             });
         }
@@ -41,11 +41,41 @@ public partial class ClaseUnirsePage : ContentPage
             var b = Ds.Boton(tecla, tecla is "⌫" or "Borrar" ? Ds.Rango.Quiet : Ds.Rango.Secondary, (_, _) => Tecla(tecla), 76);
             b.FontSize = tecla == "Borrar" ? 18 : 28;
             Teclado.Add(b, i % 3, i / 3);
+            _teclas.Add(b);
         }
+        SizeChanged += (_, _) => AjustarTeclas();
         _entrarBtn = Ds.Boton("Entrar a la clase", Ds.Rango.Primary, async (_, _) => await EntrarAsync(), 64);
         _entrarBtn.IsEnabled = false;
         _entrarBtn.Opacity = 0.5;
         AccionesHost.Add(_entrarBtn);
+    }
+
+    private readonly List<Button> _teclas = [];
+
+    /// <summary>
+    /// Las teclas toman el alto que deja la ventana (entre 56, el objetivo táctil de la tableta, y 76) para que el teclado y «Entrar a la
+    /// clase» quepan sin desplazar. Lo fijo: isla y cabecera (≈ 180), título, casillas, botón y espacios (≈ 230).
+    /// </summary>
+    private void AjustarTeclas()
+    {
+        if (Height <= 0) return;
+        var alto = Math.Clamp((Height - 410 - 3 * 10) / 4, 56, 76);
+        for (var r = 0; r < Teclado.RowDefinitions.Count; r++) Teclado.RowDefinitions[r].Height = alto;
+        foreach (var b in _teclas)
+        {
+            b.HeightRequest = alto;
+            b.MinimumHeightRequest = alto;
+            b.CornerRadius = (int)(alto / 2);
+        }
+        // Si ni con teclas de 56 cabe, todo se reduce a escala desde arriba (sin desplazamiento ni botón escondido).
+        Dispatcher.Dispatch(() =>
+        {
+            if (Desplazar.Height <= 0) return;
+            var necesario = ((IView)Pila).Measure(Math.Min(520, Desplazar.Width), double.PositiveInfinity).Height;
+            var escala = necesario <= 0 ? 1 : Math.Min(1, Desplazar.Height / necesario);
+            Pila.Scale = escala;
+            Pila.Margin = new Thickness(0, 0, 0, -necesario * (1 - escala));
+        });
     }
 
     protected override async void OnAppearing()
@@ -161,7 +191,7 @@ public partial class ClaseUnirsePage : ContentPage
             {
                 var error = aula.UltimoError;
                 var (titulo, detalle) = MensajeDeError(error, aula);
-                AvisoHost.Add(Ds.Alerta_(titulo, detalle, Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
+                AvisoHost.Add(Ds.Alerta_(titulo, detalle, Ds.PeligroSuave, Color.FromArgb("#A51C20")));
                 if (error is { Frenado: true } && error.Numero("reintentar_en_ms") is { } espera and > 0) IniciarFreno(espera);
                 return;
             }
@@ -205,7 +235,7 @@ public partial class ClaseUnirsePage : ContentPage
             {
                 _esperaTimer.Stop();
                 AvisoHost.Clear();
-                AvisoHost.Add(Ds.Alerta_("No puedes entrar por ahora", "Habla con tu profesor para volver a la clase.", Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
+                AvisoHost.Add(Ds.Alerta_("No puedes entrar por ahora", "Habla con tu profesor para volver a la clase.", Ds.PeligroSuave, Color.FromArgb("#A51C20")));
                 Sesion.OlvidarClase();
             }
         }

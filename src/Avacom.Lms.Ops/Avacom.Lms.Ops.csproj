@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
@@ -73,6 +73,31 @@
 		<!-- Fondo de «Clase de hoy»: la imagen de referencia de discos en relieve (1632x941, ya recortada la franja del borde
 		     izquierdo). Se muestra con AspectFill a pantalla completa; Resize=false para no generar variantes por densidad. -->
 		<MauiImage Include="..\..\assets\fondo-discos.png" Link="Resources\Images\fondo_discos.png" Resize="false" />
+
+		<!-- Iconos sólidos del catálogo del Aula · Design System (46, exportados a PNG 256 desde el DS, como recomienda para MAUI).
+		     Fuente única en assets\iconos, compartida por las dos apps; MAUI genera las densidades desde 64 DIU. -->
+		<MauiImage Include="..\..\assets\iconos\ico_*.png" BaseSize="64,64" />
+		<!-- Los mismos iconos a 32 DIU para la barra inferior (un botón muestra su imagen al tamaño base). -->
+		<MauiImage Include="..\..\assets\iconos\ico_menu.png" Link="Resources\Images\barra_menu.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_libros.png" Link="Resources\Images\barra_libros.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_clase.png" Link="Resources\Images\barra_clase.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_mundo.png" Link="Resources\Images\barra_mundo.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_grupo.png" Link="Resources\Images\barra_grupo.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_ayuda.png" Link="Resources\Images\barra_ayuda.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_salir.png" Link="Resources\Images\barra_salir.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_engrane.png" Link="Resources\Images\barra_engrane.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_lamina.png" Link="Resources\Images\barra_lamina.png" BaseSize="32,32" />
+		<!-- Los iconos de los mandos redondos de la clase en curso, a 24 DIU (botón de 44). -->
+		<MauiImage Include="..\..\assets\iconos\ico_candado.png" Link="Resources\Images\mando_candado.png" BaseSize="24,24" />
+		<MauiImage Include="..\..\assets\iconos\ico_candado_abierto.png" Link="Resources\Images\mando_candado_abierto.png" BaseSize="24,24" />
+		<MauiImage Include="..\..\assets\iconos\ico_avisos.png" Link="Resources\Images\mando_avisos.png" BaseSize="24,24" />
+		<MauiImage Include="..\..\assets\iconos\ico_pantalla.png" Link="Resources\Images\mando_pantalla.png" BaseSize="24,24" />
+		<!-- Los iconos de materia, grandes, para la ilustración de «Clase de hoy» (a 64 DIU se verían borrosos al agrandarlos). -->
+		<MauiImage Include="..\..\assets\iconos\ico_libros.png" Link="Resources\Images\ilus_libros.png" BaseSize="160,160" />
+		<MauiImage Include="..\..\assets\iconos\ico_mate.png" Link="Resources\Images\ilus_mate.png" BaseSize="160,160" />
+		<MauiImage Include="..\..\assets\iconos\ico_ciencia.png" Link="Resources\Images\ilus_ciencia.png" BaseSize="160,160" />
+		<MauiImage Include="..\..\assets\iconos\ico_lenguaje.png" Link="Resources\Images\ilus_lenguaje.png" BaseSize="160,160" />
+		<MauiImage Include="..\..\assets\iconos\ico_mundo.png" Link="Resources\Images\ilus_mundo.png" BaseSize="160,160" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />

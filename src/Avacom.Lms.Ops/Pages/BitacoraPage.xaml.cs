@@ -1,4 +1,4 @@
-using Avacom.Lms.Core.Models;
+﻿using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
@@ -19,9 +19,9 @@ public partial class BitacoraPage : ContentPage
 {
     private enum Pestana { Comportamiento, Integridad, Exportaciones, Tecnico, Errores, Equipo, Medios, Rendimiento }
 
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
-    private static readonly Color TintaExito = Color.FromArgb("#017A48");
-    private static readonly Color TintaAlerta = Color.FromArgb("#7A5B00");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
+    private static readonly Color TintaExito = Color.FromArgb("#0B5E3E");
+    private static readonly Color TintaAlerta = Color.FromArgb("#6B4E00");
 
     private readonly Dictionary<Pestana, Button> _pestanas = new();
     private Pestana _actual;
@@ -69,7 +69,7 @@ public partial class BitacoraPage : ContentPage
         {
             EyebrowLabel.Text = "BITÁCORA Y LOGS";
             TituloLabel.Text = "Bitácora de auditoría";
-            SubtituloLabel.Text = "Quién hizo qué, cuándo, sobre qué y con qué resultado. La bitácora sólo se agrega; nadie puede editarla.";
+            SubtituloLabel.Text = "Quién hizo qué, cuándo y con qué resultado.";
             Agregar(Pestana.Comportamiento, "Comportamiento");
             Agregar(Pestana.Integridad, "Integridad");
             Agregar(Pestana.Exportaciones, "Exportaciones");
@@ -87,8 +87,8 @@ public partial class BitacoraPage : ContentPage
     {
         var boton = new Button
         {
-            Text = texto, HeightRequest = 52, MinimumHeightRequest = 52, MinimumWidthRequest = 170, CornerRadius = Ds.RadioBoton, FontSize = 15,
-            FontFamily = Ds.FuenteMedia, Padding = new Thickness(22, 0), BorderWidth = 1, BorderColor = Ds.Filo,
+            Text = texto, HeightRequest = 52, MinimumHeightRequest = 52, MinimumWidthRequest = 170, CornerRadius = 26, FontSize = 15,
+            FontFamily = Ds.FuenteMedia, Padding = new Thickness(22, 0), BorderWidth = 2, BorderColor = Ds.Filo,
         };
         boton.Clicked += async (_, _) => await MostrarAsync(pestana);
         _pestanas[pestana] = boton;
@@ -145,7 +145,7 @@ public partial class BitacoraPage : ContentPage
     {
         var pila = new VerticalStackLayout { Spacing = 12 };
         for (var i = 0; i < 4; i++)
-            pila.Add(new Border { BackgroundColor = Color.FromArgb("#E4E4E7"), StrokeThickness = 0, HeightRequest = i == 0 ? 88 : 64, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Opacity = 0.9 - i * 0.15 });
+            pila.Add(new Border { BackgroundColor = Color.FromArgb("#E3E6EC"), StrokeThickness = 0, HeightRequest = i == 0 ? 88 : 64, StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Opacity = 0.9 - i * 0.15 });
         return pila;
     }
 
@@ -202,7 +202,7 @@ public partial class BitacoraPage : ContentPage
         "happy" => Chip("happy", Ds.ExitoSuave, TintaExito),
         "sad" => Chip("sad", Ds.AlertaSuave, TintaAlerta),
         "bad" => Chip("bad", Ds.PeligroSuave, TintaPeligro),
-        _ => Chip("—", Color.FromArgb("#EEEEF0"), Ds.TintaSuave),
+        _ => Chip("—", Color.FromArgb("#E3E6EC"), Ds.TintaSuave),
     };
 
     private static string Hora(long ms) => DateTimeOffset.FromUnixTimeMilliseconds(ms).ToLocalTime().ToString("dd/MM HH:mm:ss");

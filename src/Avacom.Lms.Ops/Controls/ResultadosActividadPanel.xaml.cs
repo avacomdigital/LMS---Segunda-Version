@@ -1,3 +1,4 @@
+using Avacom.Lms.Ui.Controls;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Avacom.Lms.Core.Models;
@@ -33,7 +34,7 @@ public partial class ResultadosActividadPanel : ContentView
 
     public bool OcultarNombres { get => (bool)GetValue(OcultarNombresProperty); set => SetValue(OcultarNombresProperty, value); }
 
-    private static readonly Color Neutro = Color.FromArgb("#F4F4F5"), GrisTerminado = Color.FromArgb("#E4E4E7"), GrisPista = Color.FromArgb("#E4E4E7"), GrisSinEmpezar = Color.FromArgb("#A1A1AA");
+    private static readonly Color Neutro = Color.FromArgb("#F6F7F9"), GrisTerminado = Color.FromArgb("#E3E6EC"), GrisPista = Color.FromArgb("#E3E6EC"), GrisSinEmpezar = Color.FromArgb("#6A788E");
 
     // Los pinceles de las filas se comparten: asignar uno nuevo en cada refresco repintaría 100 bordes sin que nada cambiara.
     private static readonly Brush FiloFila = new SolidColorBrush(Ds.Filo), FiloRezagado = new SolidColorBrush(Ds.Alerta), FiloPendiente = new SolidColorBrush(Ds.Info);
@@ -423,7 +424,7 @@ public partial class ResultadosActividadPanel : ContentView
         // Estado en texto y la marca de atención (texto, no sólo color)
         v.Estado = new Label { FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta };
         v.Detalle = new Label { FontFamily = Ds.FuenteRegular, FontSize = 14, TextColor = Ds.TintaSuave, IsVisible = false };
-        v.Marca = Ds.Pildora("⚠  Necesita atención", Ds.Alerta, Ds.Tinta, 13);
+        v.Marca = Ds.Pildora("⚠  Necesita atención", Ds.AlertaSuave, Ds.Naranja700, 13);
         v.Marca.IsVisible = false;
         v.Marca.HorizontalOptions = LayoutOptions.Start;
         cuadricula.Add(new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center, Children = { v.Estado, v.Detalle, v.Marca } }, 3, 0);
@@ -512,7 +513,7 @@ public partial class ResultadosActividadPanel : ContentView
             if (actividad is null || string.IsNullOrEmpty(fila?.IntentoId) || v.Decidiendo) return;
 
             if (decision == "descartar" && Window?.Page is { } pagina
-                && !await pagina.DisplayAlertAsync($"¿Descartar lo que envió {NombreVisible(fila)}?",
+                && !await pagina.AlertaAsync($"¿Descartar lo que envió {NombreVisible(fila)}?",
                     "Lo que llegó fuera del tiempo no se contará y no se podrá recuperar desde aquí.", "Descartar", "Cancelar"))
                 return;
 

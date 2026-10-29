@@ -65,6 +65,18 @@
 		<MauiImage Include="..\..\assets\avacom-logo.svg" Link="Resources\Images\avacom_logo.svg" BaseSize="209,56" />
 		<MauiImage Include="..\..\assets\avacom-symbol.svg" Link="Resources\Images\avacom_mark.svg" />
 
+		<!-- Iconos sólidos del catálogo del Aula · Design System (46, exportados a PNG 256 desde el DS, como recomienda para MAUI).
+		     Fuente única en assets\iconos, compartida por las dos apps; MAUI genera las densidades desde 64 DIU. -->
+		<MauiImage Include="..\..\assets\iconos\ico_*.png" BaseSize="64,64" />
+		<!-- Los mismos iconos a 32 DIU para la barra inferior (un botón muestra su imagen al tamaño base). -->
+		<MauiImage Include="..\..\assets\iconos\ico_menu.png" Link="Resources\Images\barra_menu.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_play.png" Link="Resources\Images\barra_play.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_estudio.png" Link="Resources\Images\barra_estudio.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_examen.png" Link="Resources\Images\barra_examen.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_libros.png" Link="Resources\Images\barra_libros.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_ayuda.png" Link="Resources\Images\barra_ayuda.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_salir.png" Link="Resources\Images\barra_salir.png" BaseSize="32,32" />
+
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 

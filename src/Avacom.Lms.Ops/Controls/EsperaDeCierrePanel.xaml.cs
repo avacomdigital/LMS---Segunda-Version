@@ -23,7 +23,7 @@ public partial class EsperaDeCierrePanel : ContentView
 {
     private static readonly TimeSpan CadaRefresco = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan PausaSiNadieResponde = TimeSpan.FromMilliseconds(1200);
-    private static readonly Color FondoRespondiendo = Ds.InfoSuave, FondoSinEmpezar = Color.FromArgb("#F4F4F5");
+    private static readonly Color FondoRespondiendo = Ds.InfoSuave, FondoSinEmpezar = Color.FromArgb("#F6F7F9");
 
     private TaskCompletionSource<bool>? _espera;
     private CancellationTokenRegistration _registro;

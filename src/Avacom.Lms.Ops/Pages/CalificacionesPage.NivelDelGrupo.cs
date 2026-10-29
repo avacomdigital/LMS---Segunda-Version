@@ -36,7 +36,6 @@ public partial class CalificacionesPage
         Ds.Habilitar(asignar.Boton, _nivelPorAsignar is not null && !_asignandoNivel);
         asignar.Vista.HorizontalOptions = LayoutOptions.Start;
         pila.Add(asignar.Vista);
-        pila.Add(Ds.Secundario("Cambiar el nivel no modifica ninguna evaluación ni calificación del grupo: sólo decide con qué sistema se presentan sus notas.", 13));
         return ExamenUi.Tarjeta(pila);
     }
 
@@ -64,9 +63,9 @@ public partial class CalificacionesPage
                 if (!_visible) return;
                 var error = padron.UltimoError;
                 _aviso.Mostrar("No se pudo poner el nivel",
-                    GradebookTexto.SinConexion(error) ? "Sin conexión con el nodo del aula: nada cambió. Puedes volver a tocar el botón."
+                    GradebookTexto.SinConexion(error) ? "Sin conexión con el aula: nada cambió. Puedes volver a tocar el botón."
                     : error?.Codigo == "sin_permiso" ? "Sólo el profesor del grupo o la administración pueden cambiar su nivel."
-                    : error?.Detalle ?? padron.UltimoMotivo ?? "El nodo no contestó.", Tono.Ambar);
+                    : error?.Detalle ?? padron.UltimoMotivo ?? "El aula no respondió.", Tono.Ambar);
                 return;
             }
             if (!_visible) return;

@@ -246,7 +246,7 @@ public sealed class DescargadorDePaquetes(IEstudioApi api, AlmacenEstudio almace
             return (null, Terminar(Clasificar(error), alumnoId, asignacionId, avance, error));
         }
         if (paquete.Denegado)
-            return (null, Terminar(ResultadoDescarga.Denegada, alumnoId, asignacionId, avance, null, $"El nodo no permite descargar esta lección en este aparato ({paquete.Motivo})."));
+            return (null, Terminar(ResultadoDescarga.Denegada, alumnoId, asignacionId, avance, null, "Esta lección no se puede descargar en esta tableta."));
         if (paquete.Vencido)
             return (null, Terminar(ResultadoDescarga.Vencida, alumnoId, asignacionId, avance, null, "El paquete de esta lección ya venció."));
         almacen.RegistrarPaquete(alumnoId, paquete);
@@ -289,7 +289,7 @@ public sealed class DescargadorDePaquetes(IEstudioApi api, AlmacenEstudio almace
                         // El nodo dice que lo pedido queda fuera del archivo: el archivo del nodo no es el del manifiesto. Se tira lo escrito.
                         escritor.Dispose();
                         almacen.DescartarArchivo(alumnoId, asignacionId, archivo.MediaRef);
-                        return Terminar(ResultadoDescarga.Fallida, alumnoId, asignacionId, avance, error, "El archivo del nodo no coincide con el manifiesto.");
+                        return Terminar(ResultadoDescarga.Fallida, alumnoId, asignacionId, avance, error, "La lección llegó incompleta. Vuelve a descargarla.");
                     }
                     return Terminar(Clasificar(error), alumnoId, asignacionId, avance, error);
                 }
@@ -297,7 +297,7 @@ public sealed class DescargadorDePaquetes(IEstudioApi api, AlmacenEstudio almace
                 // 206 empalma en el byte pedido; 200 es el archivo entero (el nodo ignoró Range): se saltan los bytes que ya se tenían.
                 var inicio = respuesta.StatusCode == HttpStatusCode.PartialContent ? respuesta.Content.Headers.ContentRange?.From ?? pedido : 0;
                 if (inicio > pedido)
-                    return Terminar(ResultadoDescarga.Fallida, alumnoId, asignacionId, avance, null, "El nodo respondió un tramo que no empalma con lo ya descargado.");
+                    return Terminar(ResultadoDescarga.Fallida, alumnoId, asignacionId, avance, null, "La descarga se interrumpió. Vuelve a intentarlo.");
                 var saltar = pedido - inicio;
 
                 Stream flujo;
@@ -348,7 +348,7 @@ public sealed class DescargadorDePaquetes(IEstudioApi api, AlmacenEstudio almace
                 {
                     escritor.Dispose();
                     almacen.DescartarArchivo(alumnoId, asignacionId, archivo.MediaRef);
-                    return Terminar(ResultadoDescarga.HuellaInvalida, alumnoId, asignacionId, avance, null, "El nodo entregó más bytes de los que declara el manifiesto.");
+                    return Terminar(ResultadoDescarga.HuellaInvalida, alumnoId, asignacionId, avance, null, "La lección llegó con errores. Vuelve a descargarla.");
                 }
                 if (cortado || escritor.BytesEnClaro < archivo.Bytes)
                     return Terminar(ResultadoDescarga.SinConexion, alumnoId, asignacionId, avance, null, "La descarga se interrumpió; se reanudará donde quedó.");

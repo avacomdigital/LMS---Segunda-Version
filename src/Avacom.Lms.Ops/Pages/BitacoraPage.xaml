@@ -3,8 +3,11 @@
     x:Class="Avacom.Lms.Ops.Pages.BitacoraPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    BackgroundColor="#F1F1F1"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs>
     <!-- Bitácora y logs (MOD-019 · Audit), ruta «logs-bitacora». Misma composición que Dispositivos: una columna centrada de 1280 con la
          cabecera (título, resumen y acciones), una fila de pestañas y debajo el contenido de la pestaña. Todo por toque: filtros con
          selectores y fechas, motivos de lista; no hay nada que escribir salvo la autorización de salida (PAN-241), que pide el documento y la
@@ -12,9 +15,9 @@
     <Grid RowDefinitions="Auto,Auto,*" Padding="44,28,48,24" RowSpacing="16">
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280">
             <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
-                <Label x:Name="EyebrowLabel" Text="BITÁCORA Y LOGS" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                <Label x:Name="TituloLabel" Text="Bitácora de auditoría" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" />
-                <Label x:Name="SubtituloLabel" Text="Quién hizo qué, cuándo, sobre qué y con qué resultado. La bitácora sólo se agrega; nadie puede editarla." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <Label x:Name="EyebrowLabel" Text="BITÁCORA Y LOGS" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Bitácora de auditoría" FontFamily="LexendMedium" FontSize="30" TextColor="#1F2433" />
+                <Label x:Name="SubtituloLabel" Text="Quién hizo qué, cuándo y con qué resultado." FontFamily="Lexend" FontSize="15" TextColor="#4F5566" LineBreakMode="WordWrap" />
             </VerticalStackLayout>
             <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
         </Grid>
@@ -23,4 +26,5 @@
             <VerticalStackLayout x:Name="ContenidoHost" HorizontalOptions="Center" MaximumWidthRequest="1280" WidthRequest="1280" Spacing="12" Padding="0,0,0,40" />
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

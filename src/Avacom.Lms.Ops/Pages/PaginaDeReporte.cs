@@ -40,13 +40,13 @@ public abstract class PaginaDeReporte : ContentPage, IQueryAttributable
     protected PaginaDeReporte(string etiqueta, string titulo, string subtitulo)
     {
         Shell.SetNavBarIsVisible(this, false);
-        BackgroundColor = Color.FromArgb("#F1F1F1");
+        BackgroundColor = Color.FromArgb("#EAF0F6");
         SizeChanged += OnPageSizeChanged;
 
-        TituloLabel = new Label { Text = titulo, FontFamily = "InterMedium", FontSize = 30, TextColor = Color.FromArgb("#18181B"), LineBreakMode = LineBreakMode.WordWrap, AutomationId = "reporte-titulo" };
-        SubtituloLabel = new Label { Text = subtitulo, FontFamily = "InterLight", FontSize = 15, TextColor = Color.FromArgb("#52525B"), LineBreakMode = LineBreakMode.WordWrap, AutomationId = "reporte-subtitulo" };
+        TituloLabel = new Label { Text = titulo, FontFamily = "LexendMedium", FontSize = 30, TextColor = Color.FromArgb("#1F2433"), LineBreakMode = LineBreakMode.WordWrap, AutomationId = "reporte-titulo" };
+        SubtituloLabel = new Label { Text = subtitulo, FontFamily = "Lexend", FontSize = 15, TextColor = Color.FromArgb("#4F5566"), LineBreakMode = LineBreakMode.WordWrap, AutomationId = "reporte-subtitulo" };
         var textos = new VerticalStackLayout { Spacing = 6, VerticalOptions = LayoutOptions.Center };
-        textos.Add(new Label { Text = etiqueta, FontFamily = "InterRegular", FontSize = 12, TextColor = Color.FromArgb("#52525B"), CharacterSpacing = 2.5 });
+        textos.Add(new Label { Text = etiqueta, FontFamily = "Lexend", FontSize = 12, TextColor = Color.FromArgb("#4F5566"), CharacterSpacing = 2.5 });
         textos.Add(TituloLabel);
         textos.Add(SubtituloLabel);
 
@@ -57,7 +57,7 @@ public abstract class PaginaDeReporte : ContentPage, IQueryAttributable
         _exportarHost.IsVisible = false;
         AccionesHost.Add(_exportarHost);
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, ReportesUi.Seguro(GetType().Name, "Actualizar", () => CargarAsync(forzar: true)), 170, "reporte-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Reportes", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 170, "reporte-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Reportes", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 170, "reporte-volver").Vista);
 
         FijoHost.Add(ConexionHost);
         FijoHost.Add(ResultadoHost);
@@ -77,7 +77,7 @@ public abstract class PaginaDeReporte : ContentPage, IQueryAttributable
         _marco.Add(Raiz);
         _marco.Add(Hoja);
         _marco.Add(Opciones);
-        Content = _marco;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = _marco };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
     }
 
     // ------------------------------------------------------------------------------------------------------------ lo que cada pantalla pone

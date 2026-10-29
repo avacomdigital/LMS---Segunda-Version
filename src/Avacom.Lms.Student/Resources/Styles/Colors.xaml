@@ -1,2 +1,24 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"><Color x:Key="BrandRed">#E5262B</Color><Color x:Key="BrandYellow">#F3C701</Color><Color x:Key="BrandGreen">#019D60</Color><Color x:Key="BrandBlue">#01A4E1</Color><Color x:Key="BrandViolet">#A81D81</Color><Color x:Key="Ink">#18181B</Color><Color x:Key="InkMuted">#52525B</Color><Color x:Key="CanvasGray">#F1F1F1</Color><Color x:Key="SuccessSoft">#E6F5EE</Color><Color x:Key="ErrorSoft">#FDECEC</Color></ResourceDictionary>
+<!-- Aula · Design System v1.0 (fondo Nube, degradados, neumorfismo en isla y esquinas, iconos sólidos, tema Aula): mismos valores que Avacom.Lms.Ui.Design.Ds (Colors.xaml del DS, sección «Llevarlo a .NET MAUI»). -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    <Color x:Key="Azul50">#E3F5FC</Color><Color x:Key="Azul100">#BCE5F5</Color><Color x:Key="Azul500">#01A4E1</Color><Color x:Key="Azul600">#0A72A6</Color><Color x:Key="Azul700">#075985</Color>
+    <Color x:Key="Verde50">#E1F5EC</Color><Color x:Key="Verde100">#BFE6D3</Color><Color x:Key="Verde500">#019D60</Color><Color x:Key="Verde600">#047857</Color><Color x:Key="Verde700">#0B5E3E</Color>
+    <Color x:Key="Magenta50">#F7E5F1</Color><Color x:Key="Magenta100">#E8C2DD</Color><Color x:Key="Magenta500">#A81D81</Color><Color x:Key="Magenta600">#A81D81</Color><Color x:Key="Magenta700">#7D155F</Color>
+    <Color x:Key="Amarillo50">#FFF6CF</Color><Color x:Key="Amarillo100">#F3E29A</Color><Color x:Key="Amarillo500">#F3C701</Color><Color x:Key="Amarillo600">#F3C701</Color><Color x:Key="Amarillo700">#6B4E00</Color>
+    <Color x:Key="Violeta50">#EEEBFD</Color><Color x:Key="Violeta100">#D6CFFA</Color><Color x:Key="Violeta500">#6A55E0</Color><Color x:Key="Violeta600">#5B45D1</Color><Color x:Key="Violeta700">#4B36B8</Color>
+    <Color x:Key="Turquesa50">#E0F6FA</Color><Color x:Key="Turquesa100">#B3E8F1</Color><Color x:Key="Turquesa500">#1BA9C9</Color><Color x:Key="Turquesa600">#0E7490</Color><Color x:Key="Turquesa700">#155E75</Color>
+    <Color x:Key="Naranja50">#FFEDDF</Color><Color x:Key="Naranja100">#FDD0AE</Color><Color x:Key="Naranja500">#F26B1D</Color><Color x:Key="Naranja600">#C2410C</Color><Color x:Key="Naranja700">#9A3412</Color>
+    <Color x:Key="Rojo50">#FDE7E7</Color><Color x:Key="Rojo100">#F6C3C4</Color><Color x:Key="Rojo500">#E5262B</Color><Color x:Key="Rojo600">#C81E24</Color><Color x:Key="Rojo700">#A51C20</Color>
+    <Color x:Key="TintaAmarillo">#3D2E00</Color>
+    <Color x:Key="Fondo">#EAF0F6</Color><Color x:Key="Fondo2">#DDE6F0</Color><Color x:Key="NeuBase">#EEF1F5</Color><Color x:Key="Superficie">#FFFFFF</Color><Color x:Key="Superficie2">#F6F7F9</Color><Color x:Key="Linea">#E3E6EC</Color>
+    <Color x:Key="Tinta">#1F2433</Color><Color x:Key="Tinta2">#4F5566</Color><Color x:Key="Tinta3">#5F6474</Color><Color x:Key="Utilidad">#6A788E</Color>
+    <!-- Rol de la acción principal: verde (enseñar, empezar, hecho). -->
+    <Color x:Key="Principal">#047857</Color><Color x:Key="PrincipalOscuro">#0B5E3E</Color>
+    <!-- Acción principal de moverse o entrar (acceso, «Siguiente»): azul 600 → 700. -->
+    <LinearGradientBrush x:Key="DegradadoAzul" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#0A72A6" Offset="0" /><GradientStop Color="#075985" Offset="1" /></LinearGradientBrush>
+    <LinearGradientBrush x:Key="DegradadoPrincipal" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#047857" Offset="0" /><GradientStop Color="#0B5E3E" Offset="1" /></LinearGradientBrush>
+
+    <!-- Claves anteriores, ya con los valores del DS. El rojo queda sólo para parar, borrar o error. -->
+    <Color x:Key="BrandRed">#C81E24</Color><Color x:Key="BrandYellow">#F3C701</Color><Color x:Key="BrandGreen">#047857</Color><Color x:Key="BrandBlue">#0A72A6</Color><Color x:Key="BrandViolet">#A81D81</Color>
+    <Color x:Key="Ink">#1F2433</Color><Color x:Key="InkMuted">#4F5566</Color><Color x:Key="CanvasGray">#EAF0F6</Color><Color x:Key="SuccessSoft">#E1F5EC</Color><Color x:Key="ErrorSoft">#FDE7E7</Color>
+</ResourceDictionary>

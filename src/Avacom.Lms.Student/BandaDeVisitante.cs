@@ -36,10 +36,10 @@ public static class BandaDeVisitante
         raiz.RowDefinitions.Insert(0, new RowDefinition(GridLength.Auto));
         var banda = new Border
         {
-            BackgroundColor = Ds.Alerta, StrokeThickness = 0, Padding = new Thickness(18, 10), ZIndex = 90, AutomationId = "banda-visitante",
+            BackgroundColor = Ds.AlertaSuave, StrokeThickness = 0, Padding = new Thickness(18, 10), ZIndex = 90, AutomationId = "banda-visitante",
             Content = new Label
             {
-                Text = MensajesDeAcceso.BandaVisitante, FontSize = 15, FontFamily = Ds.FuenteMedia, TextColor = Ds.Tinta,
+                Text = MensajesDeAcceso.BandaVisitante, FontSize = 15, FontFamily = Ds.FuenteMedia, TextColor = Ds.Naranja700,
                 HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap,
             },
         };

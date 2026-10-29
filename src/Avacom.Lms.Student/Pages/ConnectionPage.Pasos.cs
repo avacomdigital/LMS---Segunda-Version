@@ -1,4 +1,4 @@
-using Avacom.Lms.Core.Models;
+﻿using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Student.Acceso;
 using Avacom.Lms.Student.Controls;
@@ -174,6 +174,7 @@ public partial class ConnectionPage
     {
         relojPausa?.Stop();
         teclado = null; dibujos = null;
+        Dispatcher.Dispatch(AjustarAlto);   // cuando el paso ya está pintado, la tarjeta toma su alto
         var paso = exigeSesion && flujo is not null ? flujo.Paso : PasoAcceso.Conexion;
         var enPasos = paso != PasoAcceso.Conexion;
         FormularioScroll.IsVisible = !enPasos;
@@ -308,7 +309,7 @@ public partial class ConnectionPage
         teclado = new TecladoPinView
         {
             Longitud = FlujoDeAcceso.LongitudMaxima, LongitudMinima = flujo.LongitudMinima, TeclaAncho = AnchoTecla, TeclaAlto = AltoTecla, Separacion = 8,
-            Acento = Ds.Rojo, HorizontalOptions = LayoutOptions.Center, AutomationId = "acceso-teclado",
+            Acento = Ds.Principal, HorizontalOptions = LayoutOptions.Center, AutomationId = "acceso-teclado",
         };
         teclado.PinCompleto += async (_, pin) => await alEntregar(pin);
         PasoHost.Add(teclado);
@@ -438,7 +439,7 @@ public partial class ConnectionPage
         var b = Ds.Boton(texto, Ds.Rango.Quiet, alTocar, AltoTecla);
         b.AutomationId = id;
         b.FontSize = 15;
-        b.TextColor = Ds.TintaSuave;
+        b.TextColor = Ds.Azul700;
         return b;
     }
 
@@ -447,10 +448,10 @@ public partial class ConnectionPage
     {
         var b = new Button
         {
-            Text = texto, AutomationId = id, HeightRequest = alto, MinimumHeightRequest = alto, CornerRadius = 14, Padding = new Thickness(12, 0),
+            Text = texto, AutomationId = id, HeightRequest = alto, MinimumHeightRequest = alto, CornerRadius = Ds.RadioM, Padding = new Thickness(12, 0),
             FontSize = alto > AltoTecla ? 18 : 16, FontFamily = Ds.FuenteMedia, LineBreakMode = LineBreakMode.WordWrap,
-            BackgroundColor = marcado ? Ds.Tinta : Colors.White, TextColor = marcado ? Colors.White : Ds.Tinta,
-            BorderColor = Color.FromArgb("#26000000"), BorderWidth = 1,
+            BackgroundColor = marcado ? Ds.Principal : Colors.White, TextColor = marcado ? Colors.White : Ds.Tinta,
+            BorderColor = marcado ? Ds.Principal : Ds.Linea, BorderWidth = 2,
         };
         b.Clicked += alTocar;
         return b;

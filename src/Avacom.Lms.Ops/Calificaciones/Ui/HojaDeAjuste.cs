@@ -37,7 +37,7 @@ internal sealed class HojaDeAjuste : ContentView
         IsVisible = false;
         ZIndex = 60;
         // El velo es hermano de la tarjeta: un toque dentro nunca llega aquí. Tocar fuera NO cierra la hoja: un ajuste a medio escribir no se pierde de un roce.
-        var velo = new Border { BackgroundColor = Color.FromArgb("#73141417"), StrokeThickness = 0 };
+        var velo = new Border { BackgroundColor = Color.FromArgb("#731F2433"), StrokeThickness = 0 };
         _titulo = new Label { FontFamily = Ds.FuenteMedia, FontSize = 24, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap };
         _subtitulo = new Label { FontFamily = Ds.FuenteLigera, FontSize = 15, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.WordWrap };
         _desplazable = new ScrollView { Content = _cuerpo };
@@ -105,7 +105,7 @@ internal sealed class HojaDeAjuste : ContentView
         if (GradebookTexto.Bruto(c.Bruto) is { Length: > 0 } bruto) lectura.Add(ExamenUi.PildoraEnFila(bruto, Tono.Neutro, 13));
         if (c.Presentacion is { } p) lectura.Add(ExamenUi.PildoraEnFila($"Presentada: {GradebookTexto.Presentada(p)}{(p.Desempeno.Nivel is { Length: > 0 } n ? " · " + n : string.Empty)}", Tono.Info, 13));
         _cuerpo.Add(lectura);
-        _cuerpo.Add(Ds.Secundario("El ajuste queda en el historial con tu nombre, la hora del nodo y el motivo, y en la bitácora del aula. La puntuación original no cambia jamás.", 13));
+        _cuerpo.Add(Ds.Secundario("El ajuste queda en el historial con tu nombre, la hora del aula y el motivo, y en la bitácora del aula. La puntuación original no cambia jamás.", 13));
         _panel = new PanelDeAjuste(c, AjustarAsync);
         _cuerpo.Add(_panel);
         return await tarea;

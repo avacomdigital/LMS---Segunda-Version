@@ -52,7 +52,7 @@ public partial class CalificacionesPage : ContentPage
         Raiz.Add(_hojaAjuste);
         _aviso = new AvisoTemporal(ResultadoHost);
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "calificaciones-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 220, "calificaciones-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "calificaciones-volver").Vista);
         // El filtro de evaluación y el buscador sólo cambian lo que se ve: no vuelven a pedir nada al nodo.
         _evaluaciones.SelectionChanged += (_, _) => Repintar();
         Buscador.AgregarFiltro(_evaluaciones);
@@ -156,7 +156,7 @@ public partial class CalificacionesPage : ContentPage
                     SelectorHost.Clear();
                     ContenidoHost.Clear();
                     ContenidoHost.Add(CalificacionesUi.Estado("No se pudieron leer los grupos",
-                        GradebookTexto.SinConexion(error) ? "Sin conexión con el nodo del aula. Se vuelve a intentar solo." : (error?.Detalle ?? Sesion.Padron.UltimoMotivo ?? "El nodo no contestó.")));
+                        GradebookTexto.SinConexion(error) ? "Sin conexión con el aula. Se vuelve a intentar solo." : (error?.Detalle ?? Sesion.Padron.UltimoMotivo ?? "El aula no respondió.")));
                     MostrarBanner(GradebookTexto.SinConexion(error) ? null : error?.Detalle, GradebookTexto.SinConexion(error));
                     return;
                 }
@@ -171,7 +171,7 @@ public partial class CalificacionesPage : ContentPage
             SelectorHost.Clear();
             Buscador.IsVisible = false;
             ContenidoHost.Clear();
-            ContenidoHost.Add(CalificacionesUi.Estado(_padron.Instalado ? "Todavía no hay grupos" : "El nodo todavía no tiene una organización instalada",
+            ContenidoHost.Add(CalificacionesUi.Estado(_padron.Instalado ? "Todavía no hay grupos" : "El aula todavía no está configurada",
                 _padron.Instalado ? "Cuando exista un grupo con estudiantes, su libro de calificaciones aparecerá aquí." : "Sin organización no hay grupos ni estudiantes. Pídele a la administración que la instale."));
             return;
         }
@@ -221,7 +221,7 @@ public partial class CalificacionesPage : ContentPage
     {
         ConexionHost.Clear();
         if (sinConexion)
-            ConexionHost.Add(ExamenUi.Aviso("Sin conexión con el nodo",
+            ConexionHost.Add(ExamenUi.Aviso("Sin conexión con el aula",
                 _libro is null ? "Se vuelve a intentar solo cada pocos segundos." : $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}. Se vuelve a intentar solo.", Tono.Ambar));
         else
             ConexionHost.Add(ExamenUi.Aviso("No se pudo actualizar el libro", string.IsNullOrWhiteSpace(detalle) ? "Se muestra lo último que se leyó." : detalle, Tono.Ambar));

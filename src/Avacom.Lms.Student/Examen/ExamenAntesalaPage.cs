@@ -39,7 +39,7 @@ public sealed class ExamenAntesalaPage : ContentPage
         var volver = ExamenAyudas.BotonVolver("‹  Mis evaluaciones", () => Shell.Current.GoToAsync(".."));
         Grid.SetColumnSpan(volver, 3);
         raiz.Add(volver);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = raiz };   // DS: isla de marca y modo; fondo liso al evaluar
     }
 
     protected override async void OnAppearing()

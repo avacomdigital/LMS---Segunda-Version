@@ -1,4 +1,4 @@
-using Avacom.Lms.Core.Services;
+﻿using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
@@ -16,7 +16,7 @@ namespace Avacom.Lms.Ops.Pages;
 /// </summary>
 public partial class GruposPage : ContentPage
 {
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
     private static readonly (string Clave, string Rotulo)[] Niveles =
         [("preescolar", "Preescolar"), ("primaria", "Primaria"), ("secundaria", "Secundaria"), ("bachillerato", "Bachillerato")];
 
@@ -65,7 +65,7 @@ public partial class GruposPage : ContentPage
         var e = new Entry
         {
             Placeholder = marcador, FontSize = 18, FontFamily = Ds.FuenteRegular, TextColor = Ds.Tinta, HeightRequest = 54,
-            BackgroundColor = Ds.Lienzo, IsSpellCheckEnabled = false, IsTextPredictionEnabled = false, ReturnType = ReturnType.Next,
+            BackgroundColor = Colors.White, IsSpellCheckEnabled = false,   // campo del DS: blanco, el contorno lo pone CampoDs IsTextPredictionEnabled = false, ReturnType = ReturnType.Next,
         };
         SemanticProperties.SetDescription(e, descripcion);
         return e;
@@ -124,7 +124,6 @@ public partial class GruposPage : ContentPage
             e.Organizacion?.Nombre,
             e.Grupos.Count == 1 ? "1 grupo" : $"{e.Grupos.Count} grupos",
             estudiantes == 1 ? "1 estudiante" : $"{estudiantes} estudiantes",
-            "Con ellos se prueba el modo de estudio (repaso).",
         }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
         var nuevo = Ds.Boton(_creandoGrupo ? "Cancelar" : "+ Nuevo grupo", _creandoGrupo ? Ds.Rango.Quiet : Ds.Rango.Primary, (_, _) => { _creandoGrupo = !_creandoGrupo; _aviso = null; Pintar(); }, 56);
@@ -150,7 +149,7 @@ public partial class GruposPage : ContentPage
 
     private void PintarNoInstalado()
     {
-        DetalleHost.Add(Ds.Alerta_("El nodo aún no está instalado",
+        DetalleHost.Add(Ds.Alerta_("El aula todavía no está configurada",
             "En un aula real la instalación la hace el asistente del instalador. Para probar aquí puedes preparar un aula de prueba: crea la organización «Aula de prueba» y deja todo listo para registrar grupos y estudiantes.",
             Ds.AlertaSuave, Ds.Tinta));
         var preparar = Ds.Boton("Preparar aula de prueba", Ds.Rango.Primary, async (_, _) =>
@@ -215,8 +214,6 @@ public partial class GruposPage : ContentPage
         var pila = new VerticalStackLayout { Spacing = 8 };
         pila.Add(Ds.Titulo(g.Nombre, 24));
         pila.Add(Ds.Secundario(g.Estudiantes.Count == 0 ? "Este grupo todavía no tiene estudiantes. Registra el primero aquí abajo." : $"Estudiantes del grupo ({g.Estudiantes.Count})", 15));
-        if (g.Estudiantes.Any(x => !x.Confirmado || x.PinPendiente))
-            pila.Add(Ds.Secundario("«Sin confirmar»: se registró solo en la tableta; confírmalo si es de tu grupo. «PIN pendiente»: elegirá su PIN la próxima vez que toque su nombre.", 14));
         foreach (var est in g.Estudiantes.OrderBy(x => x.Alias)) pila.Add(FilaEstudiante(g, est));
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(22, 18), Colors.White);
     }
@@ -235,7 +232,7 @@ public partial class GruposPage : ContentPage
         var nombre = new VerticalStackLayout { Spacing = 4, VerticalOptions = LayoutOptions.Center };
         nombre.Add(Ds.Cuerpo(est.Alias, 18));
         var marcas = new HorizontalStackLayout { Spacing = 6 };
-        if (!est.Confirmado) marcas.Add(Ds.Pildora("sin confirmar", Ds.AlertaSuave, Color.FromArgb("#3A2A00"), 12));
+        if (!est.Confirmado) marcas.Add(Ds.Pildora("sin confirmar", Ds.AlertaSuave, Color.FromArgb("#3D2E00"), 12));
         if (est.PinPendiente) marcas.Add(Ds.Pildora("PIN pendiente", Ds.InfoSuave, Ds.Tinta, 12));
         if (marcas.Count > 0) nombre.Add(marcas);
         fila.Add(nombre, 0, 0);
@@ -273,7 +270,6 @@ public partial class GruposPage : ContentPage
     {
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(_tituloEstudiante);
-        pila.Add(Ds.Secundario("Sólo los nombres son obligatorios. No hay PIN que anotar: el estudiante elige el suyo la primera vez que toca su nombre en la tableta.", 14));
         pila.Add(_nombresEntry);
         pila.Add(_apellidosEntry);
         pila.Add(_documentoEntry);
@@ -397,7 +393,7 @@ public partial class GruposPage : ContentPage
         {
             "sin_permiso" => "Con tu perfil no puedes hacer esto. Pídele a la administración que lo haga o que te dé el permiso.",
             "identificador_duplicado" => "Ese documento ya pertenece a otra persona del aula. Déjalo en blanco para que el aula emita una clave, o agrega a la persona que ya existe.",
-            "no_instalado" => "El nodo aún no está instalado.",
+            "no_instalado" => "El aula todavía no está configurada.",
             "conflicto" => "Ya existe un grupo con ese nombre en este periodo.",
             _ => error.Detalle,
         };

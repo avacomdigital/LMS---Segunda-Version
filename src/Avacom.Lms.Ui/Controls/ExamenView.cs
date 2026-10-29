@@ -106,7 +106,7 @@ public sealed class ExamenView : ContentView
         _barraRejilla.Add(new BoxView { Color = Ds.Info, CornerRadius = 5 }, 0, 0);
         _barra = new Border
         {
-            BackgroundColor = Color.FromArgb("#E4E4E7"), StrokeThickness = 0, HeightRequest = 10, VerticalOptions = LayoutOptions.Center,
+            BackgroundColor = Color.FromArgb("#E3E6EC"), StrokeThickness = 0, HeightRequest = 10, VerticalOptions = LayoutOptions.Center,
             StrokeShape = new RoundRectangle { CornerRadius = 5 }, Content = _barraRejilla, AutomationId = "exa-progreso",
         };
         var fila1 = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14 };
@@ -808,7 +808,7 @@ public sealed class ExamenView : ContentView
         _capSiguiente.IsVisible = !ultima;
         // Un solo Primary por pantalla: «Siguiente» mientras quedan preguntas y «Entregar» cuando ya no hay más.
         _capEntregar.IsVisible = true;
-        Ds.PintarRelieve(_btnEntregar, ultima ? Ds.Rojo : Colors.White, ultima ? Colors.White : Ds.Tinta);
+        Ds.PintarRelieve(_btnEntregar, ultima ? Ds.Principal : Colors.White, ultima ? Colors.White : Ds.Tinta);
     }
 
     private void PintarChips(SesionDeExamen s)

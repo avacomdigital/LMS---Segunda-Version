@@ -119,10 +119,39 @@ public partial class ExamenPanelPage
             SemanticProperties.SetDescription(info, $"Expediente de {f.Rotulo}");
         }
 
+        CentrarColumnas(info);
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(info);
         if (Acciones(panel, f) is { } acciones) pila.Add(acciones);
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(22, 14), Colors.White);
+    }
+
+    /// <summary>Estado, avance, tiempo y marcas a media altura y centrados en su columna; el alumno (columna 0) sigue a la izquierda.</summary>
+    private static void CentrarColumnas(Grid g)
+    {
+        foreach (var hijo in g.Children.OfType<View>())
+        {
+            hijo.VerticalOptions = LayoutOptions.Center;
+            var columna = Grid.GetColumn(hijo);
+            if (columna is 0 or 5) continue;
+            if (columna != 2) hijo.HorizontalOptions = LayoutOptions.Center;
+            if (hijo is Label l) l.HorizontalTextAlignment = TextAlignment.Center;
+            if (hijo is Layout capa)
+                foreach (var dentro in capa.Children.OfType<View>())
+                {
+                    // Textos y píldoras al centro; la barra de avance conserva el ancho de la columna.
+                    if (dentro is not (Label or Microsoft.Maui.Controls.Layout or Border { Content: Label })) continue;
+                    dentro.HorizontalOptions = LayoutOptions.Center;
+                    if (dentro is Label dl) dl.HorizontalTextAlignment = TextAlignment.Center;
+                }
+        }
+    }
+
+    /// <summary>El nombre del equipo sin el prefijo técnico «student-» ni la huella del final («-842354ef»): lo que el docente reconoce.</summary>
+    private static string NombreDeTableta(string nombre)
+    {
+        var limpio = nombre.StartsWith("student-", StringComparison.OrdinalIgnoreCase) ? nombre[8..] : nombre;
+        return System.Text.RegularExpressions.Regex.Replace(limpio, "-[0-9a-f]{8}$", string.Empty);
     }
 
     private static View Alumno(FilaDelPanel f, AsignacionDeExamen a, bool terminada)
@@ -134,7 +163,7 @@ public partial class ExamenPanelPage
         {
             tableta.Add(new Label
             {
-                Text = string.IsNullOrWhiteSpace(d.Nombre) ? "Tableta" : d.Nombre, FontFamily = Ds.FuenteRegular, FontSize = 14, TextColor = Ds.TintaSuave,
+                Text = string.IsNullOrWhiteSpace(d.Nombre) ? "Tableta" : NombreDeTableta(d.Nombre), FontFamily = Ds.FuenteRegular, FontSize = 14, TextColor = Ds.TintaSuave,
                 VerticalOptions = LayoutOptions.Center, Margin = new Thickness(0, 2, 8, 2), LineBreakMode = LineBreakMode.TailTruncation,
             });
             tableta.Add(Mini(ExamenTexto.Capacidad(d.Capacidad), Tono.Neutro));

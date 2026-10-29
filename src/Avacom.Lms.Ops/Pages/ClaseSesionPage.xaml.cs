@@ -1,3 +1,4 @@
+﻿using Avacom.Lms.Ui.Controls;
 using System.Diagnostics;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
@@ -30,7 +31,7 @@ namespace Avacom.Lms.Ops.Pages;
 public partial class ClaseSesionPage : ContentPage
 {
     private static readonly string[] Frases = ["Miren al frente", "Dos minutos", "Guarden lo que llevan", "Levanten la mano si terminaron", "Vamos a cerrar"];
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
 
     /// <summary>MSG-045: por debajo de este espacio libre una tableta puede no poder guardar el paquete de una actividad.</summary>
     private const int EspacioMinimoMb = 500;
@@ -473,7 +474,7 @@ public partial class ClaseSesionPage : ContentPage
         fila.Add(Ds.IconoCategoria(objeto.Componente, 40), 0, 0);
         var textos = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
         textos.Add(Ds.Cuerpo(objeto.Titulo, 15));
-        textos.Add(Ds.Secundario(string.Join(" · ", new[] { objeto.ComponenteLegible, objeto.DuracionTexto, esExamen ? (ExamenDe(objeto) is null ? "Aplicar examen" : "Ver panel del examen") : objeto.FueraDeAlcance ? "lo aplica MOD-010" : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 13));
+        textos.Add(Ds.Secundario(string.Join(" · ", new[] { objeto.ComponenteLegible, objeto.DuracionTexto, esExamen ? (ExamenDe(objeto) is null ? "Aplicar examen" : "Ver panel del examen") : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 13));
         fila.Add(textos, 1, 0);
         var pila = new VerticalStackLayout { Spacing = 6 };
         pila.Add(fila);
@@ -486,10 +487,10 @@ public partial class ClaseSesionPage : ContentPage
                 // Ficha de lámina en relieve: degradado, bisel y una sombra corta (la tarjeta recorta lo que sobresale).
                 var chip = new Border
                 {
-                    Background = Ds.Degradado(activa ? Ds.Rojo : Colors.White), Stroke = Ds.Bisel(), StrokeThickness = 1,
+                    Background = Ds.Degradado(activa ? Ds.Principal : Colors.White), Stroke = Ds.Bisel(), StrokeThickness = 1,
                     WidthRequest = 46, HeightRequest = 46, Margin = new Thickness(0, 0, 8, 8),
                     StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioControl },
-                    Shadow = new Shadow { Brush = new SolidColorBrush(activa ? Ds.Rojo : Ds.Tinta), Offset = new Point(0, 4), Radius = 10, Opacity = activa ? 0.35f : 0.12f },
+                    Shadow = new Shadow { Brush = new SolidColorBrush(activa ? Ds.Principal : Ds.Tinta), Offset = new Point(0, 4), Radius = 10, Opacity = activa ? 0.35f : 0.12f },
                     Content = new Label { Text = u.Indice.ToString(), FontSize = 17, FontFamily = Ds.FuenteMedia, TextColor = activa ? Colors.White : Ds.Tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
                 };
                 Ds.Tocable(chip, () => ProyectarAsync(objeto.ObjetoRef, u.UnidadRef));
@@ -597,13 +598,16 @@ public partial class ClaseSesionPage : ContentPage
         ControlesHost.Clear();
         // Bloqueo y aviso son la acción secundaria de siempre en clase: van sólo con ícono, redondos y juntos,
         // para no competir en tamaño con lanzar actividad y terminar clase.
-        _bloqueoBtn = Ds.BotonIcono("🔓", false, Ds.Alerta, async (_, _) => await ControlAsync("bloqueo", !(_sesion?.PantallasBloqueadas ?? false)), "Bloquear pantallas");
-        _avisoBtn = Ds.BotonIcono("⚠", false, Ds.Info, OnAlternarAviso, "Enviar un aviso");
+        _bloqueoBtn = ConIcono(Ds.BotonIcono("🔓", false, Ds.Alerta, async (_, _) => await ControlAsync("bloqueo", !(_sesion?.PantallasBloqueadas ?? false)), "Bloquear pantallas"), "mando_candado_abierto.png");
+        _avisoBtn = ConIcono(Ds.BotonIcono("⚠", false, Ds.Info, OnAlternarAviso, "Enviar un aviso"), "mando_avisos.png");
         _seguimientoBtn = Ds.Interruptor("Seguimiento", true, Ds.Info, async (_, _) => await ControlAsync("seguimiento", !(_sesion?.Seguimiento ?? true)), 46);
         _actividadBtn = Ds.Boton("Lanzar actividad", Ds.Rango.Secondary, async (_, _) => await LanzarOCerrarAsync(), 46);
         _terminarBtn = Ds.Boton("Terminar clase", Ds.Rango.Destructive, async (_, _) => await TerminarAsync(), 46);
+        // DS: el peligro va lleno sólo si es la acción principal de la pantalla; en la clase en vivo es un secundario rojo.
+        Ds.PintarRelieve(_terminarBtn, Ds.Superficie, Ds.Peligro);
+        _terminarBtn.BorderColor = Ds.Rojo100;
 
-        _pantallaBtn = Ds.BotonIcono("🖵", false, Ds.Info, OnAlternarPantalla, "Pantalla de proyección: resolución y escala");
+        _pantallaBtn = ConIcono(Ds.BotonIcono("🖵", false, Ds.Info, OnAlternarPantalla, "Pantalla de proyección: resolución y escala"), "mando_pantalla.png");
 
         var bloqueoYAviso = new HorizontalStackLayout { Spacing = 8 };
         bloqueoYAviso.Add(Ds.Capsula(_bloqueoBtn));
@@ -677,7 +681,7 @@ public partial class ClaseSesionPage : ContentPage
         if (_bloqueoBtn is not null)
         {
             Ds.PintarInterruptor(_bloqueoBtn, s.PantallasBloqueadas, Ds.Alerta);
-            _bloqueoBtn.Text = s.PantallasBloqueadas ? "🔒" : "🔓";
+            _bloqueoBtn.ImageSource = s.PantallasBloqueadas ? "mando_candado.png" : "mando_candado_abierto.png";
             SemanticProperties.SetDescription(_bloqueoBtn, s.PantallasBloqueadas ? "Pantallas bloqueadas · liberar" : "Bloquear pantallas");
         }
         if (_seguimientoBtn is not null)
@@ -887,7 +891,7 @@ public partial class ClaseSesionPage : ContentPage
     {
         if (_sesion is null) return;
         var aula = Sesion.Aula;
-        if (!await DisplayAlertAsync("¿Terminar la clase?", "Se libera la sala y se consolida el resumen. Una clase cerrada no se reabre.", "Terminar", "Seguir en clase")) return;
+        if (!await this.AlertaAsync("¿Terminar la clase?", "Se libera la sala y se consolida el resumen. Una clase cerrada no se reabre.", "Terminar", "Seguir en clase")) return;
         var cerrada = await aula.CerrarAsync(_sesion.Id, Sesion.ProfesorId, forzar: false);
         if (cerrada is null && aula.UltimoError?.Codigo == "actividades_abiertas")
         {
@@ -976,7 +980,7 @@ public partial class ClaseSesionPage : ContentPage
             Button accion = p.Estado == "esperando"
                 ? Ds.Boton("Admitir", Ds.Rango.Secondary, async (_, _) => await ParticipanteAsync(p.Id, "admitir"), 52)
                 : p.Admitido
-                    ? Ds.Boton("Expulsar", Ds.Rango.Quiet, async (_, _) => { if (await DisplayAlertAsync("¿Expulsar de la clase?", $"{p.Nombre} saldrá de la sesión. Sus respuestas se conservan.", "Expulsar", "Cancelar")) await ParticipanteAsync(p.Id, "expulsar"); }, 52)
+                    ? Ds.Boton("Expulsar", Ds.Rango.Quiet, async (_, _) => { if (await this.AlertaAsync("¿Expulsar de la clase?", $"{p.Nombre} saldrá de la sesión. Sus respuestas se conservan.", "Expulsar", "Cancelar")) await ParticipanteAsync(p.Id, "expulsar"); }, 52)
                     : Ds.Boton("Readmitir", Ds.Rango.Quiet, async (_, _) => await ParticipanteAsync(p.Id, "admitir"), 52);
             Agregar(accion);
             fila.Add(acciones, 1, 1);
@@ -1058,5 +1062,13 @@ public partial class ClaseSesionPage : ContentPage
         return error?.Detalle ?? motivo ?? "Sin detalle.";
     }
 
-    private Task Aviso(string titulo, string? detalle) => DisplayAlertAsync(titulo, detalle ?? "Sin detalle.", "Entendido");
+    private Task Aviso(string titulo, string? detalle) => this.AlertaAsync(titulo, detalle ?? "Sin detalle.", "Entendido");
+
+    /// <summary>Mando redondo con el icono sólido del DS en lugar del emoji (la descripción semántica sigue siendo su nombre).</summary>
+    private static Button ConIcono(Button boton, string icono)
+    {
+        boton.Text = string.Empty;
+        boton.ImageSource = icono;
+        return boton;
+    }
 }

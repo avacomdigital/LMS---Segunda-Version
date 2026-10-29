@@ -1,3 +1,4 @@
+using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Student.ModoEstudio.Services;
 using Avacom.Lms.Student.ModoEstudio.ViewModels;
@@ -72,7 +73,7 @@ public partial class StudyLessonPage : ContentPage, IStudyLessonNavigation
     public Task BackAsync() => Shell.Current.GoToAsync("..");
     public Task OpenPracticeAsync(string lessonId, string? objetoRef) =>
         Shell.Current.GoToAsync($"estudio-practica?asignacion={Uri.EscapeDataString(lessonId)}&nueva=0" + (string.IsNullOrEmpty(objetoRef) ? string.Empty : $"&objeto={Uri.EscapeDataString(objetoRef)}"));
-    public Task ShowInfoAsync(string title, string message) => DisplayAlertAsync(title, message, "Entendido");
+    public Task ShowInfoAsync(string title, string message) => this.AlertaAsync(title, message, "Entendido");
 
     private async void OnCerrar(object? sender, EventArgs e) => await Shell.Current.GoToAsync("..");
 
@@ -81,6 +82,7 @@ public partial class StudyLessonPage : ContentPage, IStudyLessonNavigation
         if (Width <= 0 || Height <= 0) return;
         var estrecha = Width < 700;
         Modal.WidthRequest = Math.Max(320, Math.Min(AnchoMaximo, Width * (estrecha ? 0.96 : FraccionAncho)));
-        Modal.HeightRequest = Math.Max(440, Height * (Height < 820 ? 0.95 : FraccionAlto));
+        // Bajo la isla de marca (fila de 86 del MarcoDs) queda el alto útil: la hoja no lo pasa, así los mandos de abajo no se cortan.
+        Modal.HeightRequest = Math.Max(440, Math.Min(Height - 86 - 16, Height * (Height < 820 ? 0.95 : FraccionAlto)));
     }
 }

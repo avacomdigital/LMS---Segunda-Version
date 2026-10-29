@@ -47,7 +47,7 @@ public partial class EvaluacionesPage : ContentPage
     {
         InitializeComponent();
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, () => CargarAsync(forzar: true), 170, "evaluaciones-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 220, "evaluaciones-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "evaluaciones-volver").Vista);
         // País y Nivel a la vista; Grado y Materia bajo «Más filtros»: la misma disposición que «Clase de hoy». Cualquier cambio repinta sólo la lista de exámenes.
         foreach (var filtro in new[] { _pais, _nivel })
         {
@@ -262,7 +262,7 @@ public partial class EvaluacionesPage : ContentPage
         fila.Add(aplicar.Vista, 1, 0);
         return new Border
         {
-            BackgroundColor = Color.FromArgb("#FAFAFB"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 10),
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 10),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = fila,
         };
     }
@@ -317,7 +317,7 @@ public partial class EvaluacionesPage : ContentPage
         fila.Add(abrir.Vista, 1, 0);
         return new Border
         {
-            BackgroundColor = Color.FromArgb("#FAFAFB"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 10),
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 10),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = fila,
         };
     }

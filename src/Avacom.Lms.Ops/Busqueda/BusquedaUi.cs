@@ -15,10 +15,10 @@ internal static class BusquedaUi
     /// <summary>El color y el glifo de cada tipo: el mismo de su módulo (Evaluaciones índigo, Modo de estudio verde, Clase de hoy magenta…).</summary>
     public static (Color Fondo, string Glifo) Marca(string? tipo) => tipo switch
     {
-        TiposDeBusqueda.Curso => (Color.FromArgb("#E5282C"), "▥"),
+        TiposDeBusqueda.Curso => (Color.FromArgb("#A81D81"), "▥"),
         TiposDeBusqueda.Leccion => (Ds.CatLectura, "▤"),
         TiposDeBusqueda.Recurso => (Ds.CatVideo, "▶"),
-        TiposDeBusqueda.Evaluacion => (Color.FromArgb("#4F46E5"), "✓"),
+        TiposDeBusqueda.Evaluacion => (Color.FromArgb("#5B45D1"), "✓"),
         TiposDeBusqueda.Estudio => (Ds.CatQuiz, "✎"),
         TiposDeBusqueda.Clase => (Ds.CatClaseEnVivo, "◉"),
         _ => (Ds.TintaSuave, "•"),

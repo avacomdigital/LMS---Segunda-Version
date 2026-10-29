@@ -159,10 +159,10 @@ public partial class BitacoraPage
         var valores = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 16 };
         var anterior = new VerticalStackLayout { Spacing = 4 };
         anterior.Add(Ds.Secundario("Valor anterior", 12));
-        anterior.Add(Ds.Tarjeta(Mono(Bonito(completo.ValorAnterior)), Ds.RadioInterno, new Thickness(12), Color.FromArgb("#F7F7F8")));
+        anterior.Add(Ds.Tarjeta(Mono(Bonito(completo.ValorAnterior)), Ds.RadioInterno, new Thickness(12), Color.FromArgb("#F6F7F9")));
         var nuevo = new VerticalStackLayout { Spacing = 4 };
         nuevo.Add(Ds.Secundario("Valor nuevo", 12));
-        nuevo.Add(Ds.Tarjeta(Mono(Bonito(completo.ValorNuevo)), Ds.RadioInterno, new Thickness(12), completo.ValorAnterior is null ? Color.FromArgb("#F7F7F8") : Ds.ExitoSuave));
+        nuevo.Add(Ds.Tarjeta(Mono(Bonito(completo.ValorNuevo)), Ds.RadioInterno, new Thickness(12), completo.ValorAnterior is null ? Color.FromArgb("#F6F7F9") : Ds.ExitoSuave));
         valores.Add(anterior, 0, 0);
         valores.Add(nuevo, 1, 0);
         pila.Add(valores);

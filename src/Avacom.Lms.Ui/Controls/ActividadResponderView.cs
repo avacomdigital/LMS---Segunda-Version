@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
@@ -128,7 +128,7 @@ public sealed class ActividadResponderView : ContentView
         _barraRejilla.Add(new BoxView { Color = Ds.Info, CornerRadius = 5 }, 0, 0);
         _barra = new Border
         {
-            BackgroundColor = Color.FromArgb("#E4E4E7"), StrokeThickness = 0, HeightRequest = 10, VerticalOptions = LayoutOptions.Center,
+            BackgroundColor = Color.FromArgb("#E3E6EC"), StrokeThickness = 0, HeightRequest = 10, VerticalOptions = LayoutOptions.Center,
             StrokeShape = new RoundRectangle { CornerRadius = 5 }, Content = _barraRejilla, AutomationId = "act-progreso",
         };
         var fila1 = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14 };
@@ -145,11 +145,11 @@ public sealed class ActividadResponderView : ContentView
             Content = new VerticalStackLayout { Spacing = 2, Children = { _textoCrono, _detalleCrono } }, AutomationId = "act-cronometro",
         };
 
-        var cabecera = Ds.Tarjeta(new VerticalStackLayout { Spacing = 10, Children = { fila0, fila1, _banner } }, Ds.RadioTarjeta, new Thickness(18, 14));
+        var cabecera = Ds.Tarjeta(new VerticalStackLayout { Spacing = 6, Children = { fila0, fila1, _banner } }, Ds.RadioTarjeta, new Thickness(18, 10));
 
         _scroll = new ScrollView { Orientation = ScrollOrientation.Vertical };
 
-        _raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto)], RowSpacing = 12 };
+        _raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto)], RowSpacing = 8 };
         _raiz.Add(cabecera, 0, 0);
         _raiz.Add(_scroll, 0, 1);
         _raiz.Add(_nav, 0, 2);
@@ -920,7 +920,7 @@ public sealed class ActividadResponderView : ContentView
         _capSiguiente.IsVisible = !ultima;
         // Un solo Primary por pantalla: «Siguiente» mientras quedan preguntas y «Entregar» cuando ya no hay más.
         _capEntregar.IsVisible = PuedeEntregar;
-        if (PuedeEntregar) Ds.PintarRelieve(_btnEntregar, ultima ? Ds.Rojo : Colors.White, ultima ? Colors.White : Ds.Tinta);
+        if (PuedeEntregar) Ds.PintarRelieve(_btnEntregar, ultima ? Ds.Principal : Colors.White, ultima ? Colors.White : Ds.Tinta);
     }
 
     private void PintarChips(bool centrar = false)

@@ -57,7 +57,7 @@ public partial class CalificacionEstudiantePage : ContentPage
         _aviso = new AvisoTemporal(ResultadoHost);
         AccionesHost.Add(_edicionHost);
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionEstudiantePage), "Actualizar", CargarAsync), 170, "boletin-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 150, "boletin-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 150, "boletin-volver").Vista);
         PintarBotonDeEdicion();
     }
 
@@ -187,7 +187,7 @@ public partial class CalificacionEstudiantePage : ContentPage
                     // Un tropiezo no borra lo que ya se ve.
                     ConexionHost.Clear();
                     ConexionHost.Add(CalificacionesUi.SinConexion(api)
-                        ? ExamenUi.Aviso("Sin conexión con el nodo", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
+                        ? ExamenUi.Aviso("Sin conexión con el aula", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
                         : ExamenUi.Aviso("No se pudo actualizar el boletín", CalificacionesUi.Error(api), Tono.Ambar));
                     return;
                 }

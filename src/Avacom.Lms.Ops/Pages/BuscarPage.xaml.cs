@@ -58,7 +58,7 @@ public partial class BuscarPage : ContentPage
         InitializeComponent();
         AccionesHost.Add(ExamenUi.Accion("Buscar", Ds.Rango.Primary, () => { Programar(inmediata: true, reciente: true); return Task.CompletedTask; }, 150, "buscar-buscar").Vista);
         AccionesHost.Add(ExamenUi.Accion("Limpiar", Ds.Rango.Secondary, () => { Reiniciar(); return Task.CompletedTask; }, 150, "buscar-limpiar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 220, "buscar-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "buscar-volver").Vista);
 
         Buscador.CampoAutomationId = "buscar-campo";
         // Tipo y Grupo a la vista; Ciclo, País, Nivel, Grado y Materia bajo «Más filtros». Cualquier cambio vuelve a buscar con lo ya escrito.
@@ -435,7 +435,7 @@ public partial class BuscarPage : ContentPage
         fila.Add(abrir.Vista, 2, 0);
         return new Border
         {
-            BackgroundColor = Color.FromArgb("#FAFAFB"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 12),
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 12),
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = fila, AutomationId = $"buscar-resultado-{IdDe(h)}",
         };
     }

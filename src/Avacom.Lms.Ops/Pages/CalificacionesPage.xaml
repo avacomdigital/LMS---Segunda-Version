@@ -4,19 +4,21 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
-    BackgroundColor="#F1F1F1"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo liso (evaluar); la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Aurora="False">
     <!-- Calificaciones (MOD-011 · Gradebook): el libro de calificaciones de un grupo. Arriba: título y acciones. Debajo, el aviso de lo que pasó y, si el nodo no responde, el
-         banner «Sin conexión con el nodo» (lo último que se veía se conserva). Cuerpo: nivel → periodo → grupo (fichas que se tocan), un buscador OPCIONAL de estudiante con el
+         banner «Sin conexión con el aula» (lo último que se veía se conserva). Cuerpo: nivel → periodo → grupo (fichas que se tocan), un buscador OPCIONAL de estudiante con el
          filtro de evaluación, el resumen del grupo y la cuadrícula alumnos × evaluaciones, con desplazamiento horizontal y la columna del alumno siempre a la vista. Nada exige
          teclado: el buscador es un extra. El nodo es la fuente de todo número; la pantalla sólo lo enseña. -->
     <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
         <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
             <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
-                <Label Text="CALIFICACIONES" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                <Label x:Name="TituloLabel" Text="Libro de calificaciones" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
-                <Label x:Name="SubtituloLabel" Text="Elige un grupo para ver lo que lleva cada estudiante en cada evaluación." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <Label Text="CALIFICACIONES" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Libro de calificaciones" FontFamily="LexendMedium" FontSize="30" TextColor="#1F2433" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Elige un grupo para ver lo que lleva cada estudiante en cada evaluación." FontFamily="Lexend" FontSize="15" TextColor="#4F5566" LineBreakMode="WordWrap" />
             </VerticalStackLayout>
             <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
         </Grid>
@@ -33,4 +35,5 @@
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

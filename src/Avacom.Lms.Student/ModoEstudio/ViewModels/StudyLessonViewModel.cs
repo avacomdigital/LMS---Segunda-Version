@@ -17,8 +17,8 @@ public interface IStudyLessonNavigation
 /// <summary>Un número de la tira de actividades: ✓ atendida, el número si no, resaltada la actual. Lleva su propio comando de toque.</summary>
 public sealed class StudyBlockChip : ObservableObject
 {
-    private static readonly Color Blanco = Colors.White, VerdeSuave = Color.FromArgb("#E5F6ED"), VerdeTinta = Color.FromArgb("#017A48");
-    private static readonly Color Tinta = Color.FromArgb("#1D1D1F"), Gris = Color.FromArgb("#6E6E73"), Borde = Color.FromArgb("#D4D4D8");
+    private static readonly Color Blanco = Colors.White, VerdeSuave = Color.FromArgb("#E1F5EC"), VerdeTinta = Color.FromArgb("#0B5E3E");
+    private static readonly Color Tinta = Color.FromArgb("#1F2433"), Gris = Color.FromArgb("#5F6474"), Borde = Color.FromArgb("#E3E6EC");
     private bool _actual, _atendida;
 
     public StudyBlockChip(int indice, string titulo, Action<StudyBlockChip> alTocar)

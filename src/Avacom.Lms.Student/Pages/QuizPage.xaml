@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage x:Class="Avacom.Lms.Student.Pages.QuizPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" Shell.NavBarIsVisible="False">
-    <Grid RowDefinitions="68,*"><Grid BackgroundColor="White" Padding="22,0" ColumnDefinitions="Auto,*,Auto"><Button Text="← Curso" BackgroundColor="Transparent" TextColor="{StaticResource Ink}" Clicked="OnBack"/><Label Grid.Column="1" Text="Quiz: Conociendo México" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"/><Border Grid.Column="2" BackgroundColor="#E6F5EE" Padding="12,7" StrokeThickness="0" VerticalOptions="Center"><Label Text="● Actividad conectada" TextColor="{StaticResource BrandGreen}"/></Border></Grid>
+<ContentPage x:Class="Avacom.Lms.Student.Pages.QuizPage" xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui" Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y etiqueta de modo de la tableta y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Tableta="True" Modo="Practicar">
+    <Grid RowDefinitions="68,*"><Grid BackgroundColor="Transparent" Padding="48,0" ColumnDefinitions="Auto,*,Auto"><Button Text="←  Curso" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" FontSize="16" FontFamily="LexendMedium" HeightRequest="48" Padding="18,0" VerticalOptions="Center" Clicked="OnBack"/><Label Grid.Column="1" Text="Quiz: Conociendo México" FontSize="18" FontFamily="LexendSemiBold" HorizontalOptions="Center" VerticalOptions="Center"/><Border Grid.Column="2" BackgroundColor="#E1F5EC" Padding="12,7" StrokeThickness="0" VerticalOptions="Center"><Label Text="● Actividad conectada" TextColor="{StaticResource BrandGreen}"/></Border></Grid>
         <Grid Grid.Row="1" Padding="24"><Border MaximumWidthRequest="760" Padding="32" HorizontalOptions="Center" VerticalOptions="Center"><VerticalStackLayout Spacing="22">
-            <Grid ColumnDefinitions="*,Auto"><Label x:Name="ProgressLabel" Text="Pregunta 1 de 5" TextColor="{StaticResource BrandRed}" FontAttributes="Bold"/><Label Grid.Column="1" Text="MÉXICO" CharacterSpacing="2" Style="{StaticResource Muted}"/></Grid><ProgressBar x:Name="QuizProgress" Progress="0.2" ProgressColor="{StaticResource BrandRed}"/>
-            <Label x:Name="QuestionLabel" Text="Pregunta" FontSize="26" FontAttributes="Bold"/>
+            <Grid ColumnDefinitions="*,Auto"><Label x:Name="ProgressLabel" Text="Pregunta 1 de 5" TextColor="{StaticResource Azul700}" FontFamily="LexendSemiBold"/><Label Grid.Column="1" Text="MÉXICO" CharacterSpacing="2" Style="{StaticResource Muted}"/></Grid><ProgressBar x:Name="QuizProgress" Progress="0.2" ProgressColor="{StaticResource Azul600}"/>
+            <Label x:Name="QuestionLabel" Text="Pregunta" FontSize="26" FontFamily="LexendSemiBold"/>
             <VerticalStackLayout x:Name="OptionsContainer" Spacing="10"/>
             <Label x:Name="ValidationLabel" Text="Selecciona una respuesta para continuar." TextColor="{StaticResource BrandRed}" IsVisible="False"/>
             <Button x:Name="NextButton" Text="Siguiente pregunta" Style="{StaticResource PrimaryButton}" Clicked="OnNext"/>
         </VerticalStackLayout></Border></Grid>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

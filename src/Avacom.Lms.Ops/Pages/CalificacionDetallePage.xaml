@@ -3,9 +3,12 @@
     x:Class="Avacom.Lms.Ops.Pages.CalificacionDetallePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    BackgroundColor="#F1F1F1"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo liso (evaluar); la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Aurora="False">
     <!-- Detalle de una calificación (MOD-011 · FUN-122, FUN-123). Lo que dice el nodo de UNA calificación: su estado y versión, quién y cómo la calificó, cuatro cosas distintas (el
          resultado interno 0–100, la calificación presentada, el nivel de desempeño y el criterio de aprobación), la puntuación original y la efectiva, la retroalimentación y el
          historial de cambios. Para quien califica: ajustar (con teclado numérico táctil y motivo en frases), reabrir, publicar o retirar la publicación, valorar el nivel de desempeño y
@@ -14,9 +17,9 @@
         <Grid RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
             <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
                 <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
-                    <Label Text="CALIFICACIÓN" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                    <Label x:Name="TituloLabel" Text="Cargando…" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
-                    <Label x:Name="SubtituloLabel" Text="" FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                    <Label Text="CALIFICACIÓN" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                    <Label x:Name="TituloLabel" Text="Cargando…" FontFamily="LexendMedium" FontSize="30" TextColor="#1F2433" LineBreakMode="WordWrap" />
+                    <Label x:Name="SubtituloLabel" Text="" FontFamily="Lexend" FontSize="15" TextColor="#4F5566" LineBreakMode="WordWrap" />
                     <FlexLayout x:Name="PastillasHost" Wrap="Wrap" Direction="Row" JustifyContent="Start" AlignItems="Start" Margin="0,4,0,0" />
                 </VerticalStackLayout>
                 <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
@@ -37,4 +40,5 @@
             </ScrollView>
         </Grid>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

@@ -317,7 +317,7 @@ public partial class CalificacionesPage
         pila.Add(Ds.Secundario("Sobre 100, de lo ya registrado.", 12));
         return new Border
         {
-            BackgroundColor = Color.FromArgb("#F7F7F8"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(12, 10), HeightRequest = AltoCabecera, WidthRequest = AnchoCelda,
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(12, 10), HeightRequest = AltoCabecera, WidthRequest = AnchoCelda,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = pila,
         };
     }
@@ -331,7 +331,7 @@ public partial class CalificacionesPage
         pila.Add(Ds.Secundario(VistaDelLibro.DetalleDeAgregado(agregado), 12));
         var tarjeta = new Border
         {
-            BackgroundColor = Color.FromArgb("#F7F7F8"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(12, 8), HeightRequest = alto, WidthRequest = AnchoCelda,
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(12, 8), HeightRequest = alto, WidthRequest = AnchoCelda,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = pila,
         };
         SemanticProperties.SetDescription(tarjeta, $"Promedio simple informativo de {fila.Rotulo}: {promedio}");

@@ -44,7 +44,7 @@ public partial class RevisionBandejaPage : ContentPage
         InitializeComponent();
         _aviso = new AvisoTemporal(ResultadoHost);
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(RevisionBandejaPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "bandeja-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 150, "bandeja-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 150, "bandeja-volver").Vista);
     }
 
     protected override async void OnAppearing()
@@ -135,7 +135,7 @@ public partial class RevisionBandejaPage : ContentPage
                     // Un tropiezo no borra lo que ya se ve: se conserva la última bandeja y se avisa.
                     ConexionHost.Clear();
                     ConexionHost.Add(CalificacionesUi.SinConexion(api)
-                        ? ExamenUi.Aviso("Sin conexión con el nodo", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}. Se vuelve a intentar solo.", Tono.Ambar)
+                        ? ExamenUi.Aviso("Sin conexión con el aula", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}. Se vuelve a intentar solo.", Tono.Ambar)
                         : ExamenUi.Aviso("No se pudo actualizar la bandeja", CalificacionesUi.Error(api), Tono.Ambar));
                     return;
                 }
@@ -186,7 +186,6 @@ public partial class RevisionBandejaPage : ContentPage
         {
             var pila = new VerticalStackLayout { Spacing = 8 };
             pila.Add(ExamenUi.Seccion(visibles.Count == 1 ? "1 esperando tu revisión" : $"{visibles.Count} esperando tu revisión"));
-            pila.Add(Ds.Secundario("Lo más antiguo está arriba. Toca un renglón para revisarlo. La cifra provisional es sólo lo ya calificado: la calificación llega cuando confirmes la revisión.", 14));
             foreach (var item in visibles) pila.Add(Renglon(item));
             ContenidoHost.Add(ExamenUi.Tarjeta(pila));
         }

@@ -1,5 +1,6 @@
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Ui.Controls;
+using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
 
 namespace Avacom.Lms.Ops.Pages;
@@ -38,14 +39,13 @@ public partial class AsignaturasPage : ContentPage
             if (!respuesta.Disponible)
             {
                 AvisoCard.IsVisible = true;
-                AvisoTitulo.Text = "No hay cursos que mostrar: AVACOM Biblioteca no está disponible.";
-                AvisoDetalle.Text = (respuesta.Aviso ?? biblioteca.UltimoMotivo ?? "Sin detalle.") +
-                    (estado.Sugerencia is null ? string.Empty : " " + estado.Sugerencia);
+                AvisoTitulo.Text = "La biblioteca de cursos no está disponible.";
+                AvisoDetalle.Text = "Pide a la administración que revise la biblioteca de cursos del aula y vuelve a intentarlo.";
                 ConteoLabel.Text = string.Empty;
                 return;
             }
             AvisoCard.IsVisible = false;
-            ConteoLabel.Text = $"{respuesta.Cursos.Count} curso(s) · huella {respuesta.HuellaCatalogo}";
+            ConteoLabel.Text = respuesta.Cursos.Count == 1 ? "1 curso" : $"{respuesta.Cursos.Count} cursos";
             var indice = 0;
             foreach (var curso in respuesta.Cursos)
             {
@@ -54,7 +54,7 @@ public partial class AsignaturasPage : ContentPage
                 ListaHost.Add(Fila(curso, color));
             }
             if (respuesta.Cursos.Count == 0)
-                ListaHost.Add(new Label { Text = "La biblioteca está encendida pero no ofrece ningún curso en este equipo.", Style = Estilo("Muted") });
+                ListaHost.Add(new Label { Text = "Todavía no hay cursos en la biblioteca.", Style = Estilo("Muted") });
         }
         finally { _cargando = false; }
     }
@@ -62,10 +62,10 @@ public partial class AsignaturasPage : ContentPage
     private void PintarEstado(EstadoBiblioteca estado)
     {
         var ok = estado.Disponible;
-        EstadoChip.BackgroundColor = Color.FromArgb(ok ? "#E6F5EE" : "#FDECEC");
-        EstadoChipLabel.TextColor = Color.FromArgb(ok ? "#019D60" : "#E5262B");
+        EstadoChip.BackgroundColor = Color.FromArgb(ok ? "#E1F5EC" : "#FDE7E7");
+        EstadoChipLabel.TextColor = Color.FromArgb(ok ? "#047857" : "#C81E24");
         EstadoChipLabel.Text = ok
-            ? $"●  Biblioteca conectada · {estado.Conteos?.Cursos ?? 0} curso(s) · {string.Join(", ", estado.Capacidades ?? [])}"
+            ? "●  Biblioteca conectada"
             : "●  Biblioteca no disponible";
     }
 
@@ -76,6 +76,7 @@ public partial class AsignaturasPage : ContentPage
             Text = curso.Titulo,
             AccentColor = Color.FromArgb(color),
             IconGeometry = Sesion.IconoLibro,
+            IconSource = Glass.IconoMateria(curso.Asignatura),
             Margin = new Thickness(6, 4),
             BindingContext = curso,
         };
@@ -97,9 +98,9 @@ public partial class AsignaturasPage : ContentPage
             Content = new Label { Text = "▤", TextColor = Colors.White, FontSize = 22, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
         }, 0, 0);
         var textos = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
-        textos.Add(new Label { Text = curso.Titulo, FontSize = 18, FontAttributes = FontAttributes.Bold });
+        textos.Add(new Label { Text = curso.Titulo, FontSize = 18, FontFamily = "LexendSemiBold" });
         textos.Add(new Label { Text = curso.Subtitulo, Style = Estilo("Muted") });
-        textos.Add(new Label { Text = $"{curso.Detalle} · ref {curso.CursoRef}", FontSize = 12, TextColor = Color.FromArgb("#71717A") });
+        textos.Add(new Label { Text = $"{curso.Detalle} · ref {curso.CursoRef}", FontSize = 12, TextColor = Color.FromArgb("#5F6474") });
         grid.Add(textos, 1, 0);
         var abrir = new Button { Text = "Abrir curso", Style = Estilo("PrimaryButton"), WidthRequest = 150, VerticalOptions = LayoutOptions.Center };
         abrir.Clicked += async (_, _) => await AbrirAsync(curso);

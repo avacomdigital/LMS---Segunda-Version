@@ -1,25 +1,30 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
     x:Class="Avacom.Lms.Student.Pages.ClaseUnirsePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca compacta, etiqueta de modo de la tableta y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Tableta="True" Modo="Explorar">
     <Grid RowDefinitions="Auto,*">
-        <Border Grid.Row="0" Margin="16,12,16,0" Padding="12,8" BackgroundColor="#B3FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 22">
+        <Border Grid.Row="0" Margin="16,12,16,0" Padding="12,8" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 22">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                <Button Text="←  Menú" BackgroundColor="Transparent" TextColor="#27272A" FontSize="17" FontAttributes="Bold" HeightRequest="52" Clicked="OnVolver" />
-                <Label Grid.Column="1" Text="Entrar a la clase" FontSize="20" FontAttributes="Bold" HorizontalTextAlignment="Center" VerticalOptions="Center" />
-                <Label x:Name="NombreLabel" Grid.Column="2" Text="" FontSize="14" TextColor="#52525B" VerticalOptions="Center" />
+                <Button Text="←  Menú" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="26" FontSize="16" FontFamily="LexendMedium" HeightRequest="52" Padding="20,0" Clicked="OnVolver" />
+                <Label Grid.Column="1" Text="Entrar a la clase" FontSize="20" FontFamily="LexendSemiBold" HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                <Label x:Name="NombreLabel" Grid.Column="2" Text="" FontSize="14" TextColor="#4F5566" VerticalOptions="Center" />
             </Grid>
         </Border>
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="20,20,20,40" Spacing="18" MaximumWidthRequest="520" HorizontalOptions="Center">
-                <Label Text="Escribe el código que muestra tu profesor" FontSize="24" FontAttributes="Bold" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+        <ScrollView x:Name="Desplazar" Grid.Row="1" VerticalScrollBarVisibility="Never">
+            <VerticalStackLayout x:Name="Pila" Padding="20,10,20,16" Spacing="12" MaximumWidthRequest="520" HorizontalOptions="Center" AnchorY="0">
+                <Label Text="Escribe el código que muestra tu profesor" FontSize="22" FontFamily="LexendSemiBold" HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
                 <HorizontalStackLayout x:Name="CasillasHost" Spacing="10" HorizontalOptions="Center" />
                 <VerticalStackLayout x:Name="AvisoHost" Spacing="8" />
-                <Grid x:Name="Teclado" ColumnDefinitions="*,*,*" RowDefinitions="76,76,76,76" ColumnSpacing="14" RowSpacing="14" />
+                <!-- Teclas de 60 (≥ 56, objetivo táctil de la tableta): el teclado y «Entrar a la clase» caben sin desplazar en 1280 × 800. -->
+                <Grid x:Name="Teclado" ColumnDefinitions="*,*,*" RowDefinitions="60,60,60,60" ColumnSpacing="12" RowSpacing="10" />
                 <VerticalStackLayout x:Name="AccionesHost" Spacing="10" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

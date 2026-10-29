@@ -28,7 +28,7 @@ public sealed class ExamenEntregaPage : ContentPage
         BackgroundColor = Ds.Lienzo;
         var tarjeta = Ds.Tarjeta(new ScrollView { Content = _contenido }, Ds.RadioTarjeta, new Thickness(30, 28));
         tarjeta.AutomationId = "entrega-tarjeta";
-        Content = ExamenAyudas.ConTarjetaAnclada(tarjeta, this, out _);
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = ExamenAyudas.ConTarjetaAnclada(tarjeta, this, out _) };   // DS: isla de marca y modo; fondo liso al evaluar
     }
 
     protected override async void OnAppearing()

@@ -115,11 +115,11 @@ internal sealed class PanelDeAjuste : ContentView
         switch (_fase)
         {
             case Fase.Guardando:
-                _estado.Add(ExamenUi.Aviso("Guardando…", "Un momento: el nodo está registrando el ajuste.", Tono.Info));
+                _estado.Add(ExamenUi.Aviso("Guardando…", "Un momento: se está registrando el ajuste.", Tono.Info));
                 break;
             case Fase.Pendiente:
                 // Sin conexión: NO está confirmado. Se conserva la solicitud para reintentar sin duplicar.
-                _estado.Add(ExamenUi.Aviso("Pendiente de confirmación", _texto ?? "No se pudo llegar al nodo: el ajuste no se registró todavía. Reintentar no lo duplica.", Tono.Ambar));
+                _estado.Add(ExamenUi.Aviso("Pendiente de confirmación", _texto ?? "No se pudo conectar con el aula: el ajuste no se registró todavía. Reintentar no lo duplica.", Tono.Ambar));
                 break;
             case Fase.Confirmado:
                 _estado.Add(ExamenUi.Aviso("Confirmado", _texto ?? "El ajuste quedó registrado en el historial.", Tono.Exito));

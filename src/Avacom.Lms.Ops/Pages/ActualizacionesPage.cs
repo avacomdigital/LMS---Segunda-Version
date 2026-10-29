@@ -51,7 +51,7 @@ public sealed class ActualizacionesPage : ContentPage
         textos.Add(_subtitulo);
         var acciones = new HorizontalStackLayout { Spacing = 12, VerticalOptions = LayoutOptions.Center };
         acciones.Add(ActualizacionUi.Accion("Actualizar", Ds.Rango.Secondary, ActualizacionUi.Seguro("Actualizar", () => CargarAsync(forzar: true)), "actualizaciones-actualizar", 170).Vista);
-        acciones.Add(ActualizacionUi.Accion("‹  Menú principal", Ds.Rango.Quiet, ActualizacionUi.Seguro("Volver", AlMenuPrincipalAsync), "actualizaciones-volver", 220).Vista);
+        acciones.Add(ActualizacionUi.Accion("‹  Menú principal", Ds.Rango.Secondary, ActualizacionUi.Seguro("Volver", AlMenuPrincipalAsync), "actualizaciones-volver", 220).Vista);
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, Padding = new Thickness(44, 24, 48, 0), VerticalOptions = LayoutOptions.Start };
         cabecera.Add(textos, 0, 0);
         cabecera.Add(acciones, 1, 0);
@@ -70,7 +70,7 @@ public sealed class ActualizacionesPage : ContentPage
         raiz.Add(pie, 0, 2);
         raiz.Add(_hoja, 0, 0);
         Grid.SetRowSpan(_hoja, 3);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = raiz };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
     }
 
     protected override async void OnAppearing()

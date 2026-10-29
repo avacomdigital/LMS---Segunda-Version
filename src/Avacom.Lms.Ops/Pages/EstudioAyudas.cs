@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ui.Design;
@@ -63,19 +63,19 @@ internal static class EstudioTexto
 
     /// <summary>El estado de una tarea con la paleta del modo de estudio (la misma de Student): pendiente, en curso, completada, vencida.</summary>
     public static (string Texto, Color Fondo, Color Tinta) Estado(string? estado, bool vencida) =>
-        vencida && estado != "completada" ? ("VENCIDA", Color.FromRgba(229, 38, 43, 26), Color.FromArgb("#C1191D"))
-        : estado == "completada" ? ("COMPLETADA", Color.FromArgb("#E5F6ED"), Color.FromArgb("#017A48"))
-        : estado == "en_curso" ? ("EN CURSO", Color.FromArgb("#E5F5FB"), Color.FromArgb("#02739E"))
-        : ("PENDIENTE", Color.FromArgb("#FFF7D6"), Color.FromArgb("#806600"));
+        vencida && estado != "completada" ? ("VENCIDA", Color.FromRgba(229, 38, 43, 26), Color.FromArgb("#A51C20"))
+        : estado == "completada" ? ("COMPLETADA", Color.FromArgb("#E1F5EC"), Color.FromArgb("#0B5E3E"))
+        : estado == "en_curso" ? ("EN CURSO", Color.FromArgb("#E3F5FC"), Color.FromArgb("#075985"))
+        : ("PENDIENTE", Color.FromArgb("#FFF6CF"), Color.FromArgb("#9A3412"));
 
     /// <summary>La frase que sustituye al código técnico del nodo. Lo que el nodo cuenta de más (detalle y sugerencia) se conserva.</summary>
     public static string Error(ErrorAula? e, string? motivo)
     {
-        if (e is { Estado: 0 }) return "No hay conexión con el aula. Revisa que el nodo esté encendido y vuelve a intentarlo.";
+        if (e is { Estado: 0 }) return "No hay conexión con el aula. Revisa que el equipo del aula esté encendido y vuelve a intentarlo.";
         var detalle = string.Join(" ", new[] { string.IsNullOrWhiteSpace(e?.Detalle) ? motivo : e!.Detalle, e?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x)));
         return e?.Codigo switch
         {
-            "no_instalado" => "El nodo todavía no tiene una organización instalada; sin ella no hay grupos ni alumnos a quienes asignar.",
+            "no_instalado" => "El aula todavía no está configurada: aún no hay grupos ni alumnos a quienes asignar.",
             "fuente_no_disponible" => "AVACOM Contenido no responde. Una lección no se asigna a ciegas: vuelve a intentarlo cuando la biblioteca esté conectada.",
             "sin_permiso" or "no_es_el_titular" => "Sólo el profesor titular del grupo o la administración puede hacerlo.",
             "dispositivo_ya_asignado" => "Esta tableta ya es de otro alumno. Primero hay que devolverla al fondo compartido.",
@@ -88,8 +88,8 @@ internal static class EstudioTexto
 /// <summary>Piezas visuales pequeñas que comparten las tres vistas de «Modo de estudio» en OPS. Todo se toca; nada se escribe.</summary>
 internal static class EstudioUi
 {
-    public static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
-    public static readonly Color PistaBarra = Color.FromArgb("#E7E7EA");
+    public static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
+    public static readonly Color PistaBarra = Color.FromArgb("#E3E6EC");
 
     /// <summary>
     /// Una opción de las que se eligen con el dedo: 52 px, cápsula, con ✓ cuando está elegida (no sólo el color). Es un botón de verdad, así
@@ -106,7 +106,7 @@ internal static class EstudioUi
             FontFamily = Ds.FuenteMedia,
             FontSize = 16,
             Padding = new Thickness(22, 0),
-            BorderWidth = 1,
+            BorderWidth = 2,
             BackgroundColor = activo ? Ds.Tinta : Colors.White,
             TextColor = activo ? Colors.White : Ds.TintaMedia,
             BorderColor = activo ? Ds.Tinta : Color.FromArgb("#29000000"),
@@ -159,7 +159,7 @@ internal static class EstudioUi
         cuerpo.Add(boton);
         var tarjeta = new Border
         {
-            BackgroundColor = activa ? Colors.White : Color.FromArgb("#F7F7F8"),
+            BackgroundColor = activa ? Colors.White : Color.FromArgb("#F6F7F9"),
             Stroke = new SolidColorBrush(elegida ? Ds.Tinta : Ds.Filo),
             StrokeThickness = elegida ? 2.5 : 1,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioTarjeta },

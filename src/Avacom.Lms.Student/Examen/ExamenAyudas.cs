@@ -1,4 +1,4 @@
-using Avacom.Lms.Core.Evaluacion;
+﻿using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
 
@@ -22,15 +22,19 @@ internal static class ExamenAyudas
         Grid.SetRow(tarjeta, 1);
         Grid.SetColumn(tarjeta, 1);
         tarjeta.HorizontalOptions = LayoutOptions.Fill;
-        tarjeta.VerticalOptions = LayoutOptions.Fill;
+        tarjeta.VerticalOptions = LayoutOptions.Center;
         raiz.Add(tarjeta);
+        // DS: la tarjeta mide lo que su contenido (sin blanco de sobra ni botones cortados) y, si no cabe, se reduce para caber entera.
+        if (tarjeta is Border { Content: ScrollView { Content: View contenido } })
+            Avacom.Lms.Ui.Controls.AjusteDeCaja.Encajar(raiz, tarjeta, contenido, 72, 16);
         void Ajustar()
         {
             var ancho = pagina.Width;
             if (ancho <= 0) return;
             var escritorio = ancho >= AnchoDeEscritorio;
+            // La tarjeta ocupa el 60 % del ancho en pantallas anchas: con un tercio quedaba tan alta que había que reducirla.
             raiz.ColumnDefinitions[0].Width = new GridLength(escritorio ? 1 : 0.25, GridUnitType.Star);
-            raiz.ColumnDefinitions[1].Width = new GridLength(escritorio ? 1 : 3.5, GridUnitType.Star);
+            raiz.ColumnDefinitions[1].Width = new GridLength(escritorio ? 3 : 3.5, GridUnitType.Star);
             raiz.ColumnDefinitions[2].Width = new GridLength(escritorio ? 1 : 0.25, GridUnitType.Star);
         }
         pagina.SizeChanged += (_, _) => Ajustar();
@@ -41,7 +45,7 @@ internal static class ExamenAyudas
     /// <summary>«‹ Volver» flotando arriba a la izquierda (fuera de la tarjeta anclada).</summary>
     public static Button BotonVolver(string texto, Func<Task> alPulsar)
     {
-        var volver = Ds.Boton(texto, Ds.Rango.Quiet, async (_, _) => await alPulsar(), 52);
+        var volver = Ds.Boton(texto, Ds.Rango.Secondary, async (_, _) => await alPulsar(), 52);   // DS: volver es secundario en píldora blanca
         volver.HorizontalOptions = LayoutOptions.Start;
         volver.VerticalOptions = LayoutOptions.Start;
         volver.Margin = new Thickness(18, 14, 0, 0);

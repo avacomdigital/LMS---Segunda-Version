@@ -32,7 +32,7 @@ public sealed class ResultadosPage : ContentPage
         Shell.SetNavBarIsVisible(this, false);
         BackgroundColor = Ds.Lienzo;
 
-        var volver = Ds.Boton("‹  Mis evaluaciones", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 52);
+        var volver = Ds.Boton("‹  Mis evaluaciones", Ds.Rango.Secondary, async (_, _) => await Shell.Current.GoToAsync(".."), 52);
         volver.FontSize = 17;
         volver.AutomationId = "resultados-volver";
         var titulo = Ds.Titulo("Mis resultados", 28);
@@ -51,7 +51,7 @@ public sealed class ResultadosPage : ContentPage
         var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)] };
         raiz.Add(barra, 0, 0);
         raiz.Add(new ScrollView { Content = _cuerpo }, 0, 1);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = raiz };   // DS: isla de marca y modo; fondo liso al evaluar
     }
 
     protected override async void OnAppearing()
@@ -185,7 +185,7 @@ public sealed class ResultadosPage : ContentPage
         }
         if (item.Aciertos is { Simbolos.Count: > 0 } aciertos)
         {
-            var estrellas = new Label { Text = string.Concat(aciertos.Simbolos.Select(GradebookTexto.SimboloDeAcierto)), FontSize = 24, TextColor = Ds.Alerta, LineBreakMode = LineBreakMode.WordWrap };
+            var estrellas = new Label { Text = string.Concat(aciertos.Simbolos.Select(GradebookTexto.SimboloDeAcierto)), FontSize = 24, TextColor = Ds.Amarillo500, LineBreakMode = LineBreakMode.WordWrap };
             SemanticProperties.SetDescription(estrellas, "Tus aciertos, como estrellas");
             textos.Add(estrellas);
             textos.Add(Ds.Secundario("Las estrellas llenas son lo que ya sabes; las vacías, lo que puedes repasar.", 14));

@@ -118,7 +118,7 @@ internal sealed class Reposo(IDispatcher? despachador, TimeSpan espera, Action a
 /// <summary>Piezas visuales que comparten los editores.</summary>
 internal static class VistasActividad
 {
-    public static readonly Color Reposo = Color.FromArgb("#D4D4D8");
+    public static readonly Color Reposo = Color.FromArgb("#E3E6EC");
     public static readonly Brush BrochaTinta = new SolidColorBrush(Ds.Tinta);
     public static readonly Brush BrochaReposo = new SolidColorBrush(Reposo);
 

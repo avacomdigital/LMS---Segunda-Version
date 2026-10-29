@@ -107,9 +107,9 @@ public partial class CalificacionesConfigPage
         pila.Add(acciones);
         pila.Add(Ds.Secundario(!hayCambio ? "Sin cambios: así está configurado ahora."
             : falta ? "Elige una escala para poder validar el cambio."
-            : _validacion is null || _validacionClave != clave ? "Primero valida el cambio: el nodo dice si se puede y qué conviene saber. Después podrás aplicarlo."
+            : _validacion is null || _validacionClave != clave ? "Primero valida el cambio: verás si se puede y qué conviene saber. Después podrás aplicarlo."
             : _validacion.Permitido ? "Se puede aplicar. El cambio no convierte ni borra nada solo: las calificaciones ya registradas se quedan como están."
-            : "El nodo no permite aplicarlo ahora. Lee el motivo, resuélvelo y vuelve a validar.", 13));
+            : "Ahora no se puede aplicar. Lee el motivo, resuélvelo y vuelve a validar.", 13));
         return pila;
     }
 
@@ -196,7 +196,7 @@ public partial class CalificacionesConfigPage
             pila.Add(Ds.Secundario("Calculando cómo convierte la escala…", 14));
             return ExamenUi.Zona(pila, ExamenUi.FondoNeutro);
         }
-        pila.Add(Ds.Secundario($"{previa.Rotulo}. Es sólo una muestra que calcula el nodo: no guarda nada.", 14));
+        pila.Add(Ds.Secundario($"{previa.Rotulo}. Es sólo una muestra: no guarda nada.", 14));
         var encabezado = FilaDeTabla();
         string[] titulos = ["RESULTADO INTERNO", "NOTA PRESENTADA", "NIVEL DE DESEMPEÑO", "CRITERIO DE APROBACIÓN"];
         for (var i = 0; i < titulos.Length; i++) encabezado.Add(EstudioUi.Eyebrow(titulos[i]), i, 0);
@@ -321,7 +321,7 @@ public partial class CalificacionesConfigPage
             {
                 _aviso.Mostrar("No se adoptó la plantilla",
                     CalificacionesUi.SinConexion(api)
-                        ? "No se pudo llegar al nodo y no se sabe si la plantilla llegó a adoptarse. Actualiza la pantalla y mira las escalas adoptadas antes de volver a intentarlo."
+                        ? "No se pudo conectar con el aula y no se sabe si la plantilla llegó a adoptarse. Actualiza la pantalla y mira las escalas adoptadas antes de volver a intentarlo."
                         : CalificacionesUi.Error(api), Tono.Ambar);
                 return;
             }
@@ -354,7 +354,7 @@ public partial class CalificacionesConfigPage
         if (v.EnCurso > 0) pila.Add(Ds.Secundario(v.EnCurso == 1 ? "Hay 1 evaluación en curso en este nivel." : $"Hay {v.EnCurso} evaluaciones en curso en este nivel.", 14));
         foreach (var b in v.Bloqueos) pila.Add(ExamenUi.Aviso("Lo que lo impide", b, Tono.Ambar));
         foreach (var a in v.Advertencias) pila.Add(ExamenUi.Aviso("Conviene saber", a, Tono.Info));
-        if (v.Bloqueos.Count == 0 && v.Advertencias.Count == 0) pila.Add(Ds.Secundario("El nodo no tiene nada que advertir.", 14));
+        if (v.Bloqueos.Count == 0 && v.Advertencias.Count == 0) pila.Add(Ds.Secundario("Nada que advertir.", 14));
         return pila;
     }
 

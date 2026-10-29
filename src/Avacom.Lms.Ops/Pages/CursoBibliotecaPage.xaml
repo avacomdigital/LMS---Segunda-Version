@@ -5,18 +5,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs>
     <Grid RowDefinitions="68,Auto,*">
-        <Grid BackgroundColor="White" Padding="28,0" ColumnDefinitions="Auto,*,Auto">
-            <Button Text="← Asignaturas" BackgroundColor="Transparent" TextColor="{StaticResource Ink}" Clicked="OnBack" />
-            <Label x:Name="TituloLabel" Grid.Column="1" Text="Curso" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18" FontAttributes="Bold" LineBreakMode="TailTruncation" />
-            <Border Grid.Column="2" BackgroundColor="#E6F6FC" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
-                <Label Text="Contenido de AVACOM Biblioteca · vista docente" TextColor="#0B5E80" FontSize="13" />
+        <Grid BackgroundColor="Transparent" Padding="48,0" ColumnDefinitions="Auto,*,Auto">
+            <Button Text="←  Asignaturas" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" FontSize="16" FontFamily="LexendMedium" HeightRequest="48" Padding="18,0" VerticalOptions="Center" Clicked="OnBack" />
+            <Label x:Name="TituloLabel" Grid.Column="1" Text="Curso" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18" FontFamily="LexendSemiBold" LineBreakMode="TailTruncation" />
+            <Border Grid.Column="2" BackgroundColor="#E3F5FC" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
+                <Label Text="Contenido de AVACOM Biblioteca · vista docente" TextColor="#075985" FontSize="13" />
             </Border>
         </Grid>
 
         <Grid Grid.Row="1" Padding="32,14,32,0" ColumnDefinitions="Auto,Auto,*" ColumnSpacing="10">
             <Button x:Name="TabContenido" Text="Contenido del curso" Style="{StaticResource DarkButton}" HeightRequest="44" Clicked="OnTabContenido" />
-            <Button x:Name="TabEstudiantes" Grid.Column="1" Text="Estudiantes y progreso" BackgroundColor="White" TextColor="{StaticResource Ink}" CornerRadius="14" HeightRequest="44" Clicked="OnTabEstudiantes" />
+            <Button x:Name="TabEstudiantes" Grid.Column="1" Text="Estudiantes y progreso" BackgroundColor="White" TextColor="{StaticResource Ink}" CornerRadius="22" HeightRequest="44" Clicked="OnTabEstudiantes" />
             <Label x:Name="ResumenLabel" Grid.Column="2" Text="" Style="{StaticResource Muted}" VerticalOptions="Center" HorizontalOptions="End" />
         </Grid>
 
@@ -26,13 +28,13 @@
             <ScrollView x:Name="PanelEstudiantes" IsVisible="False">
                 <VerticalStackLayout Spacing="16" MaximumWidthRequest="1120" HorizontalOptions="Center">
                     <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="14">
-                        <Border Padding="18"><VerticalStackLayout><Label Text="Estudiantes" Style="{StaticResource Muted}" /><Label x:Name="KpiEstudiantes" Text="0" FontSize="26" FontAttributes="Bold" /></VerticalStackLayout></Border>
-                        <Border Grid.Column="1" Padding="18"><VerticalStackLayout><Label Text="Progreso promedio" Style="{StaticResource Muted}" /><Label x:Name="KpiProgreso" Text="0%" FontSize="26" FontAttributes="Bold" TextColor="{StaticResource BrandRed}" /></VerticalStackLayout></Border>
-                        <Border Grid.Column="2" Padding="18"><VerticalStackLayout><Label Text="Materiales abiertos" Style="{StaticResource Muted}" /><Label x:Name="KpiAperturas" Text="0" FontSize="26" FontAttributes="Bold" TextColor="{StaticResource BrandBlue}" /></VerticalStackLayout></Border>
-                        <Border Grid.Column="3" Padding="18"><VerticalStackLayout><Label Text="Evaluaciones cerradas" Style="{StaticResource Muted}" /><Label x:Name="KpiIntentos" Text="0" FontSize="26" FontAttributes="Bold" TextColor="{StaticResource BrandGreen}" /></VerticalStackLayout></Border>
+                        <Border Padding="18"><VerticalStackLayout><Label Text="Estudiantes" Style="{StaticResource Muted}" /><Label x:Name="KpiEstudiantes" Text="0" FontSize="26" FontFamily="LexendSemiBold" /></VerticalStackLayout></Border>
+                        <Border Grid.Column="1" Padding="18"><VerticalStackLayout><Label Text="Progreso promedio" Style="{StaticResource Muted}" /><Label x:Name="KpiProgreso" Text="0%" FontSize="26" FontFamily="LexendSemiBold" TextColor="{StaticResource Principal}" /></VerticalStackLayout></Border>
+                        <Border Grid.Column="2" Padding="18"><VerticalStackLayout><Label Text="Materiales abiertos" Style="{StaticResource Muted}" /><Label x:Name="KpiAperturas" Text="0" FontSize="26" FontFamily="LexendSemiBold" TextColor="{StaticResource BrandBlue}" /></VerticalStackLayout></Border>
+                        <Border Grid.Column="3" Padding="18"><VerticalStackLayout><Label Text="Evaluaciones cerradas" Style="{StaticResource Muted}" /><Label x:Name="KpiIntentos" Text="0" FontSize="26" FontFamily="LexendSemiBold" TextColor="{StaticResource BrandGreen}" /></VerticalStackLayout></Border>
                     </Grid>
                     <Grid ColumnDefinitions="*,Auto">
-                        <Label Text="Consolidado por estudiante" FontSize="20" FontAttributes="Bold" VerticalOptions="Center" />
+                        <Label Text="Consolidado por estudiante" FontSize="20" FontFamily="LexendSemiBold" VerticalOptions="Center" />
                         <Button Grid.Column="1" Text="Actualizar" Style="{StaticResource DarkButton}" HeightRequest="42" WidthRequest="130" Clicked="OnActualizarEstudiantes" />
                     </Grid>
                     <VerticalStackLayout x:Name="EstudiantesHost" Spacing="10" />
@@ -41,4 +43,5 @@
             </ScrollView>
         </Grid>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

@@ -3,36 +3,43 @@
     x:Class="Avacom.Lms.Ops.Pages.ClaseCursoPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs>
     <Grid RowDefinitions="Auto,*,Auto">
-        <Border Grid.Row="0" Margin="24,16,24,0" Padding="16,10" BackgroundColor="#B3FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 22">
+        <Border Grid.Row="0" Margin="32,20,32,0" Padding="12,10" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 24">
+            <Border.Shadow><Shadow Brush="#1F2433" Offset="0,8" Radius="20" Opacity="0.09" /></Border.Shadow>
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                <Button Text="←  Materias" BackgroundColor="Transparent" TextColor="#27272A" FontSize="18" FontAttributes="Bold" HeightRequest="52" Clicked="OnVolver" />
+                <Button Text="←  Materias" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="26" FontSize="17" FontFamily="LexendMedium" HeightRequest="52" Padding="20,0" Clicked="OnVolver" />
                 <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
-                    <Label x:Name="TituloLabel" Text="Curso" FontSize="22" FontAttributes="Bold" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                    <Label x:Name="SubtituloLabel" Text="" FontSize="14" TextColor="#52525B" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                    <Label x:Name="TituloLabel" Text="Curso" FontSize="24" FontFamily="LexendSemiBold" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                    <Label x:Name="SubtituloLabel" Text="" FontSize="14" TextColor="#4F5566" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" />
                 </VerticalStackLayout>
-                <Button x:Name="NotasBtn" Grid.Column="2" Text="Notas del docente" BackgroundColor="Transparent" TextColor="#27272A" FontSize="16" FontAttributes="Bold" HeightRequest="52" Clicked="OnNotas" />
+                <Button x:Name="NotasBtn" Grid.Column="2" Text="Notas del docente" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="26" FontSize="16" FontFamily="LexendMedium" HeightRequest="52" Padding="20,0" Clicked="OnNotas" />
             </Grid>
         </Border>
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="48,24,48,40" Spacing="18" MaximumWidthRequest="1120" HorizontalOptions="Center">
+            <VerticalStackLayout Padding="48,24,48,40" Spacing="20" MaximumWidthRequest="1120" HorizontalOptions="Center">
                 <VerticalStackLayout x:Name="CabeceraHost" Spacing="10" />
                 <VerticalStackLayout x:Name="NotasHost" Spacing="8" IsVisible="False" />
                 <VerticalStackLayout x:Name="AvisoHost" Spacing="10" />
-                <Label Text="Elige la lección con la que empieza la clase" FontSize="22" FontAttributes="Bold" />
+                <Label Text="Elige la lección con la que empieza la clase" FontSize="26" FontFamily="LexendSemiBold" />
                 <VerticalStackLayout x:Name="LeccionesHost" Spacing="14" />
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- Barra de acción · dark glass. Un solo Primary en la pantalla. -->
-        <Border Grid.Row="2" Margin="24,0,24,20" Padding="16,12" BackgroundColor="#D1141417" StrokeThickness="0" StrokeShape="RoundRectangle 22">
+        <!-- Barra de acción del DS: blanca, flotante, contorno completo y sombra sh-2. Un solo principal: «Dar clase» (verde). -->
+        <Border Grid.Row="2" Margin="32,0,32,24" Padding="12,10" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 42">
+            <Border.Shadow><Shadow Brush="#1F2433" Offset="0,14" Radius="32" Opacity="0.13" /></Border.Shadow>
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
-                <Button x:Name="LibreBtn" Text="Clase libre" BackgroundColor="Transparent" TextColor="White" FontSize="18" FontAttributes="Bold" HeightRequest="64" Padding="18,0" Clicked="OnClaseLibre" />
-                <Label x:Name="SeleccionLabel" Grid.Column="1" Text="Toca una lección para seleccionarla" TextColor="#D4D4D8" FontSize="16" VerticalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" />
-                <Button x:Name="DarClaseBtn" Grid.Column="2" Text="Dar clase con esta lección" BackgroundColor="#E5262B" TextColor="White" FontSize="20" FontAttributes="Bold" CornerRadius="16" HeightRequest="64" Padding="26,0" IsEnabled="False" Opacity="0.5" Clicked="OnDarClase" />
+                <Button x:Name="LibreBtn" Text="Clase libre" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="32" FontSize="18" FontFamily="LexendMedium" HeightRequest="64" Padding="26,0" Clicked="OnClaseLibre" />
+                <Label x:Name="SeleccionLabel" Grid.Column="1" Text="Toca una lección para seleccionarla" TextColor="#4F5566" FontSize="17" VerticalOptions="Center" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" />
+                <Button x:Name="DarClaseBtn" Grid.Column="2" Text="Dar clase con esta lección" Background="{StaticResource DegradadoPrincipal}" TextColor="White" FontSize="20" FontFamily="LexendSemiBold" CornerRadius="32" HeightRequest="64" Padding="32,0" IsEnabled="False" Opacity="0.5" Clicked="OnDarClase" />
             </Grid>
         </Border>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

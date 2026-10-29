@@ -1,5 +1,6 @@
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Ui.Controls;
+using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
 
 namespace Avacom.Lms.Student.Pages;
@@ -35,16 +36,20 @@ public partial class AsignaturasPage : ContentPage
             ListaHost.Clear();
             DemoBtn.IsVisible = false;
 
-            var sinBackend = !respuesta.Disponible && respuesta.Cursos.Count == 0 && (respuesta.Aviso ?? string.Empty).Contains("backend", StringComparison.OrdinalIgnoreCase);
-            EstadoChip.BackgroundColor = Color.FromArgb(respuesta.Disponible ? "#E6F5EE" : "#FDECEC");
-            EstadoChipLabel.TextColor = Color.FromArgb(respuesta.Disponible ? "#019D60" : "#E5262B");
-            EstadoChipLabel.Text = respuesta.Disponible ? $"●  {respuesta.Cursos.Count} curso(s) disponibles" : "●  Biblioteca no disponible";
+            // Los avisos de «sin conexión» de BibliotecaDeContenido decían «backend»; ahora dicen «conexión con el aula» o «no respondió».
+            var aviso = respuesta.Aviso ?? string.Empty;
+            var sinBackend = !respuesta.Disponible && respuesta.Cursos.Count == 0
+                && (aviso.Contains("backend", StringComparison.OrdinalIgnoreCase) || aviso.Contains("conexión con el aula", StringComparison.OrdinalIgnoreCase)
+                    || aviso.Contains("biblioteca de cursos no respondió", StringComparison.OrdinalIgnoreCase));
+            EstadoChip.BackgroundColor = Color.FromArgb(respuesta.Disponible ? "#E1F5EC" : "#FDE7E7");
+            EstadoChipLabel.TextColor = Color.FromArgb(respuesta.Disponible ? "#047857" : "#C81E24");
+            EstadoChipLabel.Text = respuesta.Disponible ? (respuesta.Cursos.Count == 1 ? "●  1 curso disponible" : $"●  {respuesta.Cursos.Count} cursos disponibles") : "●  Biblioteca no disponible";
 
             AvisoCard.IsVisible = !respuesta.Disponible;
             if (!respuesta.Disponible)
             {
-                AvisoTitulo.Text = sinBackend ? "No hay conexión con el aula." : "AVACOM Biblioteca está cerrada en el equipo del aula.";
-                AvisoDetalle.Text = (respuesta.Aviso ?? "Sin detalle.") +
+                AvisoTitulo.Text = sinBackend ? "No hay conexión con el aula." : "Los cursos no están disponibles en este momento.";
+                AvisoDetalle.Text = (sinBackend ? "Revisa que la tableta esté conectada a la red del aula." : "Avisa a tu profesor.") +
                     (respuesta.Cursos.Count > 0 ? " Puedes seguir viendo tu progreso; el contenido se abrirá cuando vuelva." : string.Empty);
                 DemoBtn.IsVisible = sinBackend;
             }
@@ -67,8 +72,9 @@ public partial class AsignaturasPage : ContentPage
         var tile = new ProfessorHexTile
         {
             Text = curso.Titulo,
-            AccentColor = Color.FromArgb(curso.Disponible == false ? "#A1A1AA" : color),
+            AccentColor = Color.FromArgb(curso.Disponible == false ? "#6A788E" : color),
             IconGeometry = Sesion.IconoLibro,
+            IconSource = Glass.IconoMateria(curso.Asignatura),
             Margin = new Thickness(4, 2),
             BindingContext = curso,
         };
@@ -81,16 +87,16 @@ public partial class AsignaturasPage : ContentPage
         var grid = new Grid { ColumnDefinitions = [new ColumnDefinition(52), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14 };
         grid.Add(new Border
         {
-            BackgroundColor = Color.FromArgb(curso.Disponible == false ? "#A1A1AA" : color), StrokeThickness = 0, WidthRequest = 46, HeightRequest = 46,
+            BackgroundColor = Color.FromArgb(curso.Disponible == false ? "#6A788E" : color), StrokeThickness = 0, WidthRequest = 46, HeightRequest = 46,
             StrokeShape = new RoundRectangle { CornerRadius = 14 },
             Content = new Label { Text = "▤", TextColor = Colors.White, FontSize = 20, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
         }, 0, 0);
         var textos = new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center };
-        textos.Add(new Label { Text = curso.Titulo, FontSize = 17, FontAttributes = FontAttributes.Bold });
+        textos.Add(new Label { Text = curso.Titulo, FontSize = 17, FontFamily = "LexendSemiBold" });
         textos.Add(new Label { Text = curso.Disponible == false ? curso.Aviso ?? "No disponible" : curso.Subtitulo, Style = Estilo("Muted") });
         var barra = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 10 };
         barra.Add(new ProgressBar { Progress = curso.ProgresoFraccion, ProgressColor = Color.FromArgb(color), VerticalOptions = LayoutOptions.Center }, 0, 0);
-        barra.Add(new Label { Text = $"{curso.Progreso ?? 0:0}% completado", FontSize = 12, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb(color) }, 1, 0);
+        barra.Add(new Label { Text = $"{curso.Progreso ?? 0:0}% completado", FontSize = 12, FontFamily = "LexendSemiBold", TextColor = Color.FromArgb(color) }, 1, 0);
         textos.Add(barra);
         grid.Add(textos, 1, 0);
         var abrir = new Button { Text = curso.Disponible == false ? "Ver avance" : "Entrar", Style = Estilo("PrimaryButton"), WidthRequest = 130, VerticalOptions = LayoutOptions.Center };

@@ -4,7 +4,7 @@ using Microsoft.Maui.Controls.Shapes;
 namespace Avacom.Lms.Student.ModoEstudio.Views;
 
 /// <summary>
-/// La barra de progreso de las tarjetas: pista gris (#E9E9E9) de 8 px con relleno redondeado (verde para la lección, azul para una
+/// La barra de progreso de las tarjetas: pista gris (#E3E6EC) de 8 px con relleno redondeado (verde para la lección, azul para una
 /// descarga). Son dos columnas de pesos «estrella» (<see cref="ProgressToWidthConverter"/>), así que no necesita saber su ancho, y cuando
 /// el valor cambia el relleno se desliza en 280 ms en vez de saltar. No usa Path ni formas vectoriales: sólo <see cref="Border"/>.
 /// </summary>
@@ -14,11 +14,11 @@ public sealed class StudyProgressBar : ContentView
         BindableProperty.Create(nameof(Progress), typeof(double), typeof(StudyProgressBar), 0d, propertyChanged: (b, o, n) => ((StudyProgressBar)b).AlCambiar((double)o, (double)n));
 
     public static readonly BindableProperty FillColorProperty =
-        BindableProperty.Create(nameof(FillColor), typeof(Color), typeof(StudyProgressBar), Color.FromArgb("#019D60"),
+        BindableProperty.Create(nameof(FillColor), typeof(Color), typeof(StudyProgressBar), Color.FromArgb("#047857"),
             propertyChanged: (b, o, n) => ((StudyProgressBar)b)._relleno.BackgroundColor = (Color)n);
 
     public static readonly BindableProperty TrackColorProperty =
-        BindableProperty.Create(nameof(TrackColor), typeof(Color), typeof(StudyProgressBar), Color.FromArgb("#E9E9E9"),
+        BindableProperty.Create(nameof(TrackColor), typeof(Color), typeof(StudyProgressBar), Color.FromArgb("#E3E6EC"),
             propertyChanged: (b, o, n) => ((StudyProgressBar)b)._pista.BackgroundColor = (Color)n);
 
     public static readonly BindableProperty BarHeightProperty =

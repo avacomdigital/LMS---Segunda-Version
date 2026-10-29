@@ -45,7 +45,7 @@ public partial class RevisionDocentePage : ContentPage
         (_confirmar, _confirmarVista) = confirmar;
         Ds.Habilitar(_confirmar, false);
         AccionesHost.Add(_confirmarVista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Volver a la bandeja", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 240, "revision-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Volver a la bandeja", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 240, "revision-volver").Vista);
     }
 
     protected override async void OnAppearing()
@@ -110,7 +110,7 @@ public partial class RevisionDocentePage : ContentPage
                 {
                     ConexionHost.Clear();
                     ConexionHost.Add(CalificacionesUi.SinConexion(api)
-                        ? ExamenUi.Aviso("Sin conexión con el nodo", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
+                        ? ExamenUi.Aviso("Sin conexión con el aula", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
                         : ExamenUi.Aviso("No se pudo actualizar la revisión", CalificacionesUi.Error(api), Tono.Ambar));
                     return;
                 }
@@ -178,7 +178,6 @@ public partial class RevisionDocentePage : ContentPage
         }
         if (i.Reabierta)
             pila.Add(ExamenUi.Aviso("Esta calificación está reabierta", "No cuenta mientras la recalificas. Al confirmar la revisión, se vuelve a registrar.", Tono.Ambar));
-        pila.Add(Ds.Secundario("Pendiente: falta tu puntaje · Revisada: ya tiene tu puntaje · Registrada: la calificación existe, aún sin publicar · Publicada: el estudiante la ve.", 13));
         ResumenHost.Add(ExamenUi.Tarjeta(pila));
     }
 

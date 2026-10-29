@@ -100,10 +100,12 @@ internal static class ExamenTexto
     {
         if (liberadosEn is { } lib)
         {
+            // Sólo se nombra a quien publicó si se sabe su nombre; «otra persona del profesorado…» alargaba la píldora sin decir nada útil.
+            var persona = Persona(liberadosPor);
             var quien = liberadosPor == "sistema"
-                ? PoliticasDeResultados.Normalizar(resultados) == PoliticasDeResultados.Programada ? "a la hora fijada" : "al terminar el grupo"
-                : $"por {Persona(liberadosPor)}";
-            return $"Resultados publicados a las {Hora(lib)} {quien}";
+                ? PoliticasDeResultados.Normalizar(resultados) == PoliticasDeResultados.Programada ? " a la hora fijada" : " al terminar el grupo"
+                : persona.StartsWith("otra persona", StringComparison.Ordinal) || persona.StartsWith("una persona", StringComparison.Ordinal) ? string.Empty : $" por {persona}";
+            return $"Resultados publicados a las {Hora(lib)}{quien}";
         }
         return PoliticasDeResultados.Normalizar(resultados) == PoliticasDeResultados.Programada && publicarEn is { } cuando
             ? $"Se publican solos a las {Hora(cuando)}"
@@ -375,13 +377,13 @@ internal static class ExamenTexto
     /// </summary>
     public static string Error(ErrorAula? error, string? motivo)
     {
-        if (error is { Estado: 0 }) return "No hay conexión con el aula. Revisa que el nodo esté encendido y vuelve a intentarlo.";
+        if (error is { Estado: 0 }) return "No hay conexión con el aula. Revisa que el equipo del aula esté encendido y vuelve a intentarlo.";
         var detalle = string.Join(" ", new[] { string.IsNullOrWhiteSpace(error?.Detalle) ? motivo : error!.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x)));
         return error?.Codigo switch
         {
             "fuente_no_disponible" => "AVACOM Biblioteca no está disponible. Abre la aplicación de contenido y vuelve a intentarlo.",
             "fuente_error" => "AVACOM Biblioteca respondió con un problema. Espera un momento y vuelve a intentarlo.",
-            "no_instalado" => "El nodo todavía no tiene una organización instalada; sin ella no hay grupos ni alumnos.",
+            "no_instalado" => "El aula todavía no está configurada: aún no hay grupos ni alumnos.",
             "sin_permiso" or "no_es_el_titular" => "Sólo el profesor titular del grupo o la administración puede hacerlo.",
             "no_encontrado" => "Eso ya no existe en el aula. Vuelve atrás y actualiza la pantalla.",
             "intentos_abiertos" => "Todavía hay alumnos presentando. Cuando terminen, o cuando cierres el examen, podrás hacerlo.",

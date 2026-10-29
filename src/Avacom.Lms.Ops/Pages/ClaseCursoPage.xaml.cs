@@ -1,3 +1,4 @@
+using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Ui.Design;
@@ -45,7 +46,7 @@ public partial class ClaseCursoPage : ContentPage
         if (vista is null)
         {
             var error = aula.UltimoError;
-            AvisoHost.Add(Ds.Alerta_("No se pudo leer el curso", string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))), Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
+            AvisoHost.Add(Ds.Alerta_("No se pudo leer el curso", string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))), Ds.PeligroSuave, Color.FromArgb("#A51C20")));
             AvisoHost.Add(Ds.Boton("Reintentar", Ds.Rango.Secondary, async (_, _) => await CargarAsync(), 64, 220));
             return;
         }
@@ -76,7 +77,7 @@ public partial class ClaseCursoPage : ContentPage
         var grid = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 18 };
         var textos = new VerticalStackLayout { Spacing = 6 };
         var chips = new HorizontalStackLayout { Spacing = 8 };
-        if (v.Clasificacion?.Asignatura?.Nombre is { } asig) chips.Add(Ds.Pildora(asig, Ds.CatClaseEnVivo));
+        if (v.Clasificacion?.Asignatura?.Nombre is { } asig) chips.Add(Ds.Pildora(asig, Glass.AcentoMateria(asig, 0)));   // color de materia del DS
         if (v.Clasificacion?.Grado?.Nombre is { } grado) chips.Add(Ds.Pildora(grado, Ds.Lienzo, Ds.Tinta));
         if (v.Clasificacion?.Nivel?.Nombre is { } nivel) chips.Add(Ds.Pildora(nivel, Ds.Lienzo, Ds.Tinta));
         if (v.DuracionEstimadaMin is > 0) chips.Add(Ds.Pildora($"{v.DuracionEstimadaMin} min en total", Ds.Lienzo, Ds.Tinta));
@@ -108,21 +109,22 @@ public partial class ClaseCursoPage : ContentPage
         var soloExamen = leccion.SoloExamen;
         var numeroChip = new Border
         {
-            BackgroundColor = Ds.Rojo, StrokeThickness = 0, WidthRequest = 56, HeightRequest = 56,
+            BackgroundColor = Ds.Contenido, StrokeThickness = 0, WidthRequest = 56, HeightRequest = 56,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, VerticalOptions = LayoutOptions.Start,
-            Content = new Label { Text = numero.ToString(), FontSize = 24, FontAttributes = FontAttributes.Bold, TextColor = Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+            Content = new Label { Text = numero.ToString(), FontSize = 24, FontFamily = Ds.FuenteSemi, TextColor = Colors.White, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
         };
         grid.Add(numeroChip, 0, 0);
         var textos = new VerticalStackLayout { Spacing = 8 };
+        // Sólo el título: el resumen largo de la lección no se muestra en la lista.
         textos.Add(Ds.Titulo(leccion.Titulo, 22));
-        if (!string.IsNullOrWhiteSpace(leccion.Resumen)) textos.Add(Ds.Secundario(leccion.Resumen!, 16));
         var chips = new FlexLayout { Wrap = FlexWrap.Wrap, Direction = FlexDirection.Row, JustifyContent = FlexJustify.Start, AlignItems = FlexAlignItems.Center };
         foreach (var objeto in leccion.Objetos ?? [])
         {
             var color = Ds.Categoria(objeto.Componente);
             // El examen ya se puede aplicar (MOD-010): su chip es de categoría como los demás. Sólo lo que de verdad no se ejecuta sigue atenuado.
             var noSeEjecuta = objeto.FueraDeAlcance && objeto.Componente != "examen" && objeto.Tipo != "exam";
-            var chip = Ds.Pildora($"{Ds.Icono(objeto.Componente)}  {objeto.ComponenteLegible} · {objeto.Titulo}", noSeEjecuta ? Ds.Lienzo : color, noSeEjecuta ? Ds.TintaSuave : null, 14);
+            // El tipo lo dicen el icono y el color de la píldora: el texto es sólo el nombre del elemento.
+            var chip = Ds.Pildora($"{Ds.Icono(objeto.Componente)}  {objeto.Titulo}", noSeEjecuta ? Ds.Lienzo : color, noSeEjecuta ? Ds.TintaSuave : null, 14);
             chip.Margin = new Thickness(0, 0, 8, 8);
             if (noSeEjecuta) chip.Opacity = 0.7;
             chips.Add(chip);
@@ -131,10 +133,9 @@ public partial class ClaseCursoPage : ContentPage
         var pie = string.Join(" · ", new[]
         {
             leccion.DuracionEstimadaMin is > 0 ? $"{leccion.DuracionEstimadaMin} min" : null,
-            $"{leccion.ObjetosDelAula.Count} objeto(s) para el aula",
-            soloExamen ? "Sólo examen: se aplica durante la clase" : null,
+            soloExamen ? "Sólo examen" : null,
         }.Where(x => x is not null));
-        textos.Add(Ds.Secundario(pie, 14));
+        if (pie.Length > 0) textos.Add(Ds.Secundario(pie, 14));
         grid.Add(textos, 1, 0);
         var tarjeta = Ds.Tarjeta(grid, Ds.RadioTarjeta, new Thickness(22, 20));
         // Una lección que sólo tiene examen también se puede dar: el examen se aplica desde la clase.
@@ -148,7 +149,7 @@ public partial class ClaseCursoPage : ContentPage
         foreach (var (ref_, tarjeta) in _tarjetas)
         {
             var activa = ref_ == leccion.LeccionRef;
-            tarjeta.Stroke = new SolidColorBrush(activa ? Ds.Rojo : Ds.Filo);
+            tarjeta.Stroke = new SolidColorBrush(activa ? Ds.Principal : Ds.Filo);
             tarjeta.StrokeThickness = activa ? 3 : 1;
         }
         SeleccionLabel.Text = $"Lección seleccionada: {leccion.Titulo}";
@@ -184,7 +185,7 @@ public partial class ClaseCursoPage : ContentPage
             var error = aula.UltimoError;
             if (error?.Codigo == "sesion_activa_existente" && error.Texto("sesion_id") is { } existente)
             {
-                var continuar = await DisplayAlertAsync("Ya tienes una clase abierta", "Puedes continuarla con el mismo código o cerrarla y empezar esta.", "Continuar esa clase", "Cerrarla y empezar");
+                var continuar = await this.AlertaAsync("Ya tienes una clase abierta", "Puedes continuarla con el mismo código o cerrarla y empezar esta.", "Continuar esa clase", "Cerrarla y empezar");
                 if (continuar)
                 {
                     Sesion.ClaseAbiertaId = existente;
@@ -201,10 +202,10 @@ public partial class ClaseCursoPage : ContentPage
             // MOD-017 (R-01 · R-02): con el aula actualizándose no es un fallo ni una alarma: el nodo no inicia clases unos minutos y las abiertas siguen. Se dice en calma y con las palabras de siempre.
             if (ActualizacionTexto.SiEstaActualizando(error) is { } actualizando)
             {
-                AvisoHost.Add(Ds.Alerta_(actualizando.Titulo, actualizando.Completo, Ds.AlertaSuave, Color.FromArgb("#806600")));
+                AvisoHost.Add(Ds.Alerta_(actualizando.Titulo, actualizando.Completo, Ds.AlertaSuave, Color.FromArgb("#9A3412")));
                 return;
             }
-            AvisoHost.Add(Ds.Alerta_("No se pudo iniciar la clase", string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))), Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
+            AvisoHost.Add(Ds.Alerta_("No se pudo iniciar la clase", string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))), Ds.PeligroSuave, Color.FromArgb("#A51C20")));
         }
         finally
         {

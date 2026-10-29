@@ -19,6 +19,12 @@ public partial class CourseGlassCard : ContentView
         propertyChanged: (b, _, _) => ((CourseGlassCard)b).PintarBloque());
     public static readonly BindableProperty IconGeometryProperty = BindableProperty.Create(nameof(IconGeometry), typeof(string), typeof(CourseGlassCard), string.Empty,
         propertyChanged: (b, _, _) => ((CourseGlassCard)b).PintarBloque());
+    /// <summary>Icono sólido del DS; si está, el bloque va en el tono 50 de la materia con este icono en vez de la geometría.</summary>
+    public static readonly BindableProperty IconSourceProperty = BindableProperty.Create(nameof(IconSource), typeof(ImageSource), typeof(CourseGlassCard), null,
+        propertyChanged: (b, _, _) => ((CourseGlassCard)b).PintarBloque());
+    /// <summary>Portada del curso (16:9). Si está, ocupa el lugar del bloque; debajo queda el icono de la materia por si la imagen no llega.</summary>
+    public static readonly BindableProperty PortadaProperty = BindableProperty.Create(nameof(Portada), typeof(ImageSource), typeof(CourseGlassCard), null,
+        propertyChanged: (b, _, _) => ((CourseGlassCard)b).PintarBloque());
 
     private DateTime ultimo = DateTime.MinValue;
 
@@ -45,6 +51,8 @@ public partial class CourseGlassCard : ContentView
     public string Detalle { get => (string)GetValue(DetalleProperty); set => SetValue(DetalleProperty, value); }
     public Color AccentColor { get => (Color)GetValue(AccentColorProperty); set => SetValue(AccentColorProperty, value); }
     public string IconGeometry { get => (string)GetValue(IconGeometryProperty); set => SetValue(IconGeometryProperty, value); }
+    public ImageSource? IconSource { get => (ImageSource?)GetValue(IconSourceProperty); set => SetValue(IconSourceProperty, value); }
+    public ImageSource? Portada { get => (ImageSource?)GetValue(PortadaProperty); set => SetValue(PortadaProperty, value); }
 
     private void OnVerClicked(object? sender, EventArgs e) => Lanzar();
 
@@ -60,6 +68,20 @@ public partial class CourseGlassCard : ContentView
     {
         if (BloqueHost is null) return;
         BloqueHost.Children.Clear();
-        BloqueHost.Children.Add(Glass.Bloque(AccentColor, IconGeometry, 64, 16));
+        if (Portada is { } portada)
+        {
+            // Miniatura 16:9 con el radio de las tarjetas del DS; el icono de la materia queda debajo, centrado, como respaldo.
+            var fondo = new Grid { BackgroundColor = Ds.Suave(AccentColor) };
+            if (IconSource is { } respaldo)
+                fondo.Add(new Image { Source = respaldo, WidthRequest = 56, HeightRequest = 56, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center });
+            fondo.Add(new Image { Source = portada, Aspect = Aspect.AspectFill });
+            BloqueHost.Children.Add(new Border
+            {
+                WidthRequest = 176, HeightRequest = 99, StrokeThickness = 0, StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 16 },
+                Content = fondo,
+            });
+            return;
+        }
+        BloqueHost.Children.Add(IconSource is { } icono ? Glass.BloqueIcono(AccentColor, icono, 64, 16) : Glass.Bloque(AccentColor, IconGeometry, 64, 16));
     }
 }

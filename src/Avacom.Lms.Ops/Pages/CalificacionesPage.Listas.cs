@@ -84,7 +84,6 @@ public partial class CalificacionesPage
         if (filas.Count > _verEstudiantes)
             pila.Add(ExamenUi.Accion($"Mostrar más ({filas.Count - _verEstudiantes} estudiantes más)", Ds.Rango.Secondary,
                 CalificacionesUi.Seguro(nameof(CalificacionesPage), "MasEstudiantes", () => MasAsync(() => _verEstudiantes += EstudiantesPorTanda)), 320, "calificaciones-mas-estudiantes", 52, margen: false).Vista);
-        pila.Add(Ds.Secundario("El promedio es simple e informativo: no es una nota oficial ni está ponderado. Lo pendiente no es un cero. Toca a un estudiante para ver todas sus notas, resultados e insights.", 13));
         return pila;
     }
 
@@ -151,7 +150,6 @@ public partial class CalificacionesPage
         if (columnas.Count > _verEvaluaciones)
             pila.Add(ExamenUi.Accion($"Mostrar más ({columnas.Count - _verEvaluaciones} evaluaciones más)", Ds.Rango.Secondary,
                 CalificacionesUi.Seguro(nameof(CalificacionesPage), "MasEvaluaciones", () => MasAsync(() => _verEvaluaciones += EvaluacionesPorTanda)), 320, "calificaciones-mas-evaluaciones", 52, margen: false).Vista);
-        pila.Add(Ds.Secundario("Primero las que piden algo del profesor (revisar, registrar o publicar). Registrar lo calificado hace aparecer la nota de lo que se calificó antes de elegir el sistema; publicar la muestra al estudiante.", 13));
         return pila;
     }
 

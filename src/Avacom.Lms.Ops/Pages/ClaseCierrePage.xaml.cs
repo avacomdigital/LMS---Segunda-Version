@@ -95,7 +95,7 @@ public partial class ClaseCierrePage : ContentPage
                     Tarjeta("Proyecciones", r.Selectores.ToString(), "cambios de selector", Ds.Info);
                     Tarjeta("Actividades", r.Actividades.ToString(), r.Distribuciones == r.Actividades ? "lanzadas al grupo" : $"{r.Distribuciones} distribuciones en total", Ds.CatQuiz);
                     Tarjeta("Avisos", r.Avisos.ToString(), "enviados al grupo", Ds.CatLectura);
-                    Tarjeta("Duración", r.DuracionTexto, CierreLegible(r.OrigenCierre), Ds.TintaSuave);
+                    Tarjeta("Duración", r.DuracionTexto, CierreLegible(r.OrigenCierre), Ds.Turquesa600);
                     Tarjeta("Pendientes", r.Pendientes.ToString(), r.Pendientes == 0 ? "ningún intento abierto" : "intentos abiertos al cierre", r.Pendientes == 0 ? Ds.Exito : Ds.Alerta);
                     // Un resumen sin detalle (clase anterior a 007-09) se queda con sus tarjetas.
                     if (r.Detalle is { } detalle) PintarDetalle(sesion, detalle);
@@ -127,8 +127,8 @@ public partial class ClaseCierrePage : ContentPage
             ? "No hay conexión con el aula. La clase quedó guardada; revisa la red e inténtalo de nuevo."
             : "La clase quedó guardada. Inténtalo de nuevo en un momento.");
         AvisoHost.Add(permiso is null
-            ? Ds.Alerta_("No pudimos abrir el resumen", texto, Ds.PeligroSuave, Color.FromArgb("#8A1C1F"))
-            : Ds.Alerta_("Este resumen no es tuyo", texto, Ds.InfoSuave, Color.FromArgb("#0B4F70")));
+            ? Ds.Alerta_("No pudimos abrir el resumen", texto, Ds.PeligroSuave, Color.FromArgb("#A51C20"))
+            : Ds.Alerta_("Este resumen no es tuyo", texto, Ds.InfoSuave, Color.FromArgb("#075985")));
     }
 
     private static string CierreLegible(string? origen) => origen switch
@@ -200,8 +200,8 @@ public partial class ClaseCierrePage : ContentPage
         mensaje.IsVisible = true;
     }
 
-    private static readonly Color TintaBien = Color.FromArgb("#0B5A38");
-    private static readonly Color TintaMal = Color.FromArgb("#8A1C1F");
+    private static readonly Color TintaBien = Color.FromArgb("#0B5E3E");
+    private static readonly Color TintaMal = Color.FromArgb("#A51C20");
 
     /// <summary>Por qué no se pudo guardar algo, con lo que se conservó y lo que sigue (sin códigos ni detalles técnicos).</summary>
     private string TextoDeError(ErrorAula? error, string queNoSePudo)
@@ -242,7 +242,7 @@ public partial class ClaseCierrePage : ContentPage
         cabecera.Add(Ds.Titulo(alumno.Nombre, 18), 0, 0);
         if (pendientes > 0)
         {
-            var marca = Ds.Pildora(pendientes == 1 ? "1 sin entregar" : $"{pendientes} sin entregar", Ds.AlertaSuave, Color.FromArgb("#6B5800"));
+            var marca = Ds.Pildora(pendientes == 1 ? "1 sin entregar" : $"{pendientes} sin entregar", Ds.AlertaSuave, Color.FromArgb("#9A3412"));
             marca.VerticalOptions = LayoutOptions.Center;
             cabecera.Add(marca, 1, 0);
         }
@@ -263,7 +263,7 @@ public partial class ClaseCierrePage : ContentPage
         var rotulo = string.IsNullOrWhiteSpace(actividad.Rotulo) ? "Actividad" : actividad.Rotulo!;
         var etiqueta = actividad.Entregado
             ? Ds.Pildora($"✓  {rotulo} · entregó" + (actividad.Porcentaje is { } p ? $" · {Math.Round(p):0} %" : string.Empty), Ds.ExitoSuave, TintaBien)
-            : Ds.Pildora($"○  {rotulo} · sin entregar", Ds.AlertaSuave, Color.FromArgb("#6B5800"));
+            : Ds.Pildora($"○  {rotulo} · sin entregar", Ds.AlertaSuave, Color.FromArgb("#9A3412"));
         etiqueta.Margin = new Thickness(0, 0, 8, 8);
         return etiqueta;
     }
@@ -529,10 +529,11 @@ public partial class ClaseCierrePage : ContentPage
 
     private void Tarjeta(string titulo, string valor, string detalle, Color color)
     {
-        var pila = new VerticalStackLayout { Spacing = 4, WidthRequest = 250 };
+        // Indicador del DS: la etiqueta y el número, nada más. La explicación queda sólo para el lector de pantalla.
+        var pila = new VerticalStackLayout { Spacing = 6, WidthRequest = 200 };
         pila.Add(Ds.Pildora(titulo, color));
-        pila.Add(new Label { Text = valor, FontSize = 44, FontAttributes = FontAttributes.Bold, TextColor = Ds.Tinta });
-        pila.Add(Ds.Secundario(detalle, 14));
+        pila.Add(new Label { Text = valor, FontSize = 44, FontFamily = Ds.FuenteSemi, TextColor = Ds.Tinta });
+        SemanticProperties.SetDescription(pila, $"{titulo}: {valor}, {detalle}");
         var tarjeta = Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(22, 18));
         tarjeta.Margin = new Thickness(8);
         ResumenHost.Children.Add(tarjeta);

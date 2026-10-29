@@ -1,9 +1,9 @@
-using Avacom.Lms.Ui.Design;
+﻿using Avacom.Lms.Ui.Design;
 
 namespace Avacom.Lms.Student;
 
 /// <summary>
-/// Avisos tranquilizadores que no piden nada al alumno (MSG-020, MSG-024, sesión terminada): un cartel en la parte alta de la pantalla
+/// Avisos tranquilizadores que no piden nada al alumno (MSG-020, MSG-024, sesión terminada): un cartel en la parte baja de la pantalla
 /// visible, sin botones ni confirmación, que no capta toques y se va solo. Sirve para avisar sin retrasar lo que la persona estaba
 /// haciendo (por ejemplo, entrar al menú cuando su sesión anterior se cerró en otra tableta). Nunca lleva códigos ni la palabra «error».
 /// Se puede llamar desde cualquier hilo.
@@ -32,9 +32,9 @@ public static class Avisos
 
         var cartel = Ds.Alerta_(texto, null, Ds.InfoSuave, Ds.Tinta);
         cartel.HorizontalOptions = LayoutOptions.Center;
-        cartel.VerticalOptions = LayoutOptions.Start;
+        cartel.VerticalOptions = LayoutOptions.End;   // abajo: arriba está la isla de marca del DS, que no se tapa
         cartel.MaximumWidthRequest = 640;
-        cartel.Margin = new Thickness(16, 16, 16, 0);
+        cartel.Margin = new Thickness(16, 0, 16, 32);
         cartel.InputTransparent = true;   // el aviso nunca estorba: los toques pasan a lo que hay debajo
         cartel.ZIndex = 100;
 

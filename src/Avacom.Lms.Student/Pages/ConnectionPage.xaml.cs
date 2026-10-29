@@ -1,3 +1,4 @@
+﻿using Avacom.Lms.Ui.Controls;
 using System.Text.Json;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
@@ -17,7 +18,7 @@ public partial class ConnectionPage : ContentPage
 {
     private const string DescripcionPrototipo = "Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor.";
     private const string DescripcionConSesion = "Escribe la dirección que aparece en la pantalla principal del profesor y toca «Entrar al aula».";
-    private const string Verde = "#019D60", VerdeSuave = "#E6F5EE", Rojo = "#E5262B", RojoSuave = "#FDECEC", Azul = "#01A4E1", AzulSuave = "#E6F6FC";
+    private const string Verde = "#047857", VerdeSuave = "#E1F5EC", Rojo = "#C81E24", RojoSuave = "#FDE7E7", Azul = "#075985", AzulSuave = "#E3F5FC";
 
     private readonly ILmsApiClient apiClient = new LmsApiClient(new HttpClient { Timeout = TimeSpan.FromSeconds(3) });
     private string? claveAplicada;
@@ -170,7 +171,7 @@ public partial class ConnectionPage : ContentPage
     /// <summary>Modo prototipo (Q-04, el aula no exige sesión): como siempre, sólo se pide el nombre.</summary>
     private async Task EntrarSinSesionAsync(string direccion)
     {
-        if (string.IsNullOrWhiteSpace(NameEntry.Text)) { await DisplayAlertAsync("Falta tu nombre", "Escribe tu nombre para continuar.", "Entendido"); return; }
+        if (string.IsNullOrWhiteSpace(NameEntry.Text)) { await this.AlertaAsync("Falta tu nombre", "Escribe tu nombre para continuar.", "Entendido"); return; }
         ClienteJson.Token = null; Sesion.Usuario = null;   // por si quedaba el pase de una sesión anterior
         Preferences.Default.Set("student_name", NameEntry.Text); Preferences.Default.Set("student_server", direccion); await Shell.Current.GoToAsync("menu");
     }
@@ -238,26 +239,21 @@ public partial class ConnectionPage : ContentPage
     private void OnPageSizeChanged(object? sender, EventArgs e) => AjustarComposicion();
 
     /// <summary>
-    /// La composición del XAML (tarjeta a la izquierda, lápiz a la derecha) es la de una pantalla ancha, como
-    /// el acceso de OPS: a 1080p la tarjeta mide 2/3 del alto. La tableta también se usa en vertical y la ventana de Windows se
-    /// puede achicar, así que aquí sólo se recolocan las mismas piezas: la tarjeta nunca baja del alto que pide el formulario
-    /// (640, que también da cabida al teclado del PIN y a las dos acciones fijas; el resto es margen, repartido arriba y abajo); en vertical el lápiz pasa arriba y la
-    /// tarjeta ocupa el ancho; y en una ventana muy baja se aprietan el logo, la descripción y el espaciado. Nada se quita ni cambia de función.
+    /// Composición del Aula · Design System (tableta), como el acceso de OPS: isla de marca arriba (fila de 86) y la tarjeta
+    /// centrada en el área segura, de 560 de ancho como máximo (en vertical o en ventanas estrechas, el ancho disponible menos
+    /// 24 por lado). La tarjeta nunca baja del alto que pide el formulario (640, que da cabida al teclado del PIN y a las dos
+    /// acciones fijas); si ni eso cabe, modo compacto: se aprietan la descripción y el espaciado. Nada se quita ni cambia de función.
     /// </summary>
     private void AjustarComposicion()
     {
         if (Width <= 0 || Height <= 0) return;
-        var esEstrecha = Width < 900 || Width < Height;
-        var soloTarjeta = esEstrecha && Height < 940;                       // sin sitio para el lápiz: la tarjeta ocupa la ventana
-        var altoTarjeta = Math.Min(Height - 48, Math.Max(Height * 2 / 3, 640));
-        var margen = (Height - altoTarjeta) / 2;
+        var altoTarjeta = Math.Max(320, Math.Min(Height - 86 - 24 - 16, 720));
         esBaja = altoTarjeta < 640;                                         // ni siquiera el mínimo cabe: modo compacto
-        Tarjeta.WidthRequest = esEstrecha ? Math.Min(560, Math.Max(280, Width - 48)) : -1;
-        var ancho = esEstrecha ? Tarjeta.WidthRequest : Width / 3;
+        var ancho = Math.Min(560, Math.Max(280, Width - 48));
         var columnasAntes = ColumnasPara(anchoTarjeta, 170);
         anchoTarjeta = ancho;
 
-        var clave = $"{esEstrecha}|{soloTarjeta}|{esBaja}|{(esEstrecha ? 0 : Math.Round(altoTarjeta))}";
+        var clave = $"{esBaja}|{Math.Round(altoTarjeta)}|{Math.Round(ancho)}";
         if (clave == claveAplicada)
         {
             if (ColumnasPara(anchoTarjeta, 170) != columnasAntes) PintarPaso();
@@ -265,28 +261,46 @@ public partial class ConnectionPage : ContentPage
         }
         claveAplicada = clave;
 
-        Escena.ColumnDefinitions = esEstrecha ? Columnas(1) : Columnas(1, 2, 1, 2);
-        Escena.RowDefinitions = soloTarjeta ? Filas(1) : esEstrecha ? Filas(2, 5) : Filas(margen, altoTarjeta, margen);
-        var columnas = esEstrecha ? 1 : 4; var filas = soloTarjeta ? 1 : esEstrecha ? 2 : 3;
-        Colocar(Panal, 0, 0, filas, columnas);
-        Colocar(Tarjeta, soloTarjeta ? 0 : 1, esEstrecha ? 0 : 1, 1, 1);
-        Colocar(Lapiz, esEstrecha ? 0 : 1, esEstrecha ? 0 : 3, 1, 1);
-        Lapiz.IsVisible = !soloTarjeta;
-        Tarjeta.TranslationX = esEstrecha ? 0 : -50;
-        Tarjeta.Margin = soloTarjeta ? new Thickness(24) : esEstrecha ? new Thickness(24, 0, 24, 24) : new Thickness(0);
-        Tarjeta.HorizontalOptions = esEstrecha ? LayoutOptions.Center : LayoutOptions.Fill;
+        Colocar(Panal, 0, 0, 3, 1);
+        Colocar(Tarjeta, 1, 0, 1, 1);
+        Colocar(Lapiz, 1, 0, 1, 1);
+        Lapiz.IsVisible = false;                                            // el DS no lleva el lápiz 3D: se conserva oculto
+        Tarjeta.WidthRequest = ancho;
+        AjustarAlto();
+        Tarjeta.TranslationX = 0;
+        Tarjeta.HorizontalOptions = LayoutOptions.Center;
         Descripcion.IsVisible = !esBaja;
-        Formulario.Spacing = esBaja ? 9 : 14;
+        Formulario.Spacing = esBaja ? 8 : 14;
+        // Compacto: título más pequeño y estado más bajo, para que «Entrar al aula» quede a la vista sin desplazar.
+        Titulo.FontSize = esBaja ? 26 : 34;
+        StatusCard.Padding = esBaja ? new Thickness(14, 8) : new Thickness(14);
         PintarPaso();
+    }
+
+    /// <summary>
+    /// La tarjeta mide lo que su contenido (cabecera, paso en curso y pie), sin el blanco de un alto fijo; si no cabe en la ventana se
+    /// reduce a escala, sin desplazamiento. Se recalcula al pintar cada paso y al cambiar el tamaño de la ventana.
+    /// </summary>
+    private void AjustarAlto()
+    {
+        if (Width <= 0 || Height <= 0 || Tarjeta.WidthRequest <= 0) return;
+        Cabecera.Margin = new Thickness(0, VolverButton.IsVisible ? 30 : 0, 0, 0);
+        var ancho = Tarjeta.WidthRequest - 2;
+        double Alto(View v) => v.IsVisible ? ((IView)v).Measure(ancho, double.PositiveInfinity).Height : 0;
+        var cuerpo = PasoScroll.IsVisible ? (View)PasoHost : Formulario;
+        var alto = Alto((View)Cabecera.Parent) + Alto(cuerpo) + Alto(Pie) + 6;
+        var maximo = Math.Max(320, Height - 86 - 24 - 16);
+        // Si no cabe, la tarjeta conserva su alto y se reduce a escala hasta caber: nada se desplaza ni se corta.
+        var escala = Math.Min(1, maximo / alto);
+        var sobra = Math.Max(0, alto - (Height - 86 - 24)) / 2;
+        Tarjeta.HeightRequest = alto;
+        Tarjeta.Margin = new Thickness(0, -sobra, 0, -sobra);
+        Tarjeta.Scale = escala;
     }
 
     /// <summary>Cuántas columnas de un ancho mínimo caben en lo útil de la tarjeta (sin los 40 + 40 de margen interior).</summary>
     private static int ColumnasPara(double anchoDeTarjeta, double minimo) =>
         anchoDeTarjeta <= 0 ? 2 : Math.Clamp((int)((anchoDeTarjeta - 80 + 10) / (minimo + 10)), 2, 4);
-
-    private static ColumnDefinitionCollection Columnas(params double[] estrellas) => new(estrellas.Select(e => new ColumnDefinition(new GridLength(e, GridUnitType.Star))).ToArray());
-
-    private static RowDefinitionCollection Filas(params double[] estrellas) => new(estrellas.Select(e => new RowDefinition(new GridLength(e, GridUnitType.Star))).ToArray());
 
     private static void Colocar(View vista, int fila, int columna, int filas, int columnas)
     {

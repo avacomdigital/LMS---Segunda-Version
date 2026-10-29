@@ -32,7 +32,7 @@ public sealed class EvaluacionesPage : ContentPage
         Shell.SetNavBarIsVisible(this, false);
         BackgroundColor = Ds.Lienzo;
 
-        var volver = Ds.Boton("‹  Menú", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 52);
+        var volver = Ds.Boton("‹  Menú", Ds.Rango.Secondary, async (_, _) => await Shell.Current.GoToAsync(".."), 52);
         volver.FontSize = 17;
         volver.AutomationId = "evals-volver";
         var titulo = Ds.Titulo("Mis evaluaciones", 28);
@@ -60,7 +60,7 @@ public sealed class EvaluacionesPage : ContentPage
         var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)] };
         raiz.Add(barra, 0, 0);
         raiz.Add(new ScrollView { Content = _cuerpo }, 0, 1);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = raiz };   // DS: isla de marca y modo; fondo liso al evaluar
     }
 
     protected override async void OnAppearing()
@@ -288,7 +288,7 @@ public sealed class EvaluacionesPage : ContentPage
         pila.Add(lista);
         if (grupo is not null && _estudiantes.Grupos.Count > 1)
         {
-            var otro = Ds.Boton("‹  Elegir otro grupo", Ds.Rango.Quiet, (_, _) => { _grupoElegido = null; _firma = null; _ = CargarAsync(); }, 52);
+            var otro = Ds.Boton("‹  Elegir otro grupo", Ds.Rango.Secondary, (_, _) => { _grupoElegido = null; _firma = null; _ = CargarAsync(); }, 52);
             pila.Add(otro);
         }
         Pintar(Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(28, 32)), firma);

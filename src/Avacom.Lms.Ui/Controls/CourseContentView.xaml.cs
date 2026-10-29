@@ -76,7 +76,7 @@ public partial class CourseContentView : ContentView
         ProgresoBar.Progress = Math.Clamp(detalle.Progreso / 100d, 0, 1);
         ProgresoLabel.Text = $"{detalle.Progreso:0}%";
         EstadoLabel.Text = EsDocente
-            ? $"{detalle.Secciones.Count} secciones · {detalle.TotalItems} materiales · huella {detalle.Huella}"
+            ? $"{detalle.Secciones.Count} secciones · {detalle.TotalItems} materiales"
             : $"{detalle.Secciones.Count} secciones · {detalle.TotalItems} materiales · tu avance se guarda automáticamente";
         PintarSecciones(detalle);
         CursoCargado?.Invoke(this, detalle);
@@ -96,27 +96,27 @@ public partial class CourseContentView : ContentView
             {
                 BackgroundColor = Color.FromArgb(color), StrokeThickness = 0, WidthRequest = 34, HeightRequest = 34,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 10 },
-                Content = new Label { Text = numero.ToString(), TextColor = Colors.White, FontAttributes = FontAttributes.Bold, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+                Content = new Label { Text = numero.ToString(), TextColor = Colors.White, FontFamily = "LexendSemiBold", HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
             };
             cabecera.Add(chip, 0, 0);
             var textos = new VerticalStackLayout { Spacing = 1 };
-            textos.Add(new Label { Text = seccion.Titulo, FontAttributes = FontAttributes.Bold, FontSize = 15, TextColor = Color.FromArgb("#18181B"), LineBreakMode = LineBreakMode.WordWrap });
-            textos.Add(new Label { Text = $"{seccion.TipoLegible} · {seccion.Codigo}", FontSize = 11, TextColor = Color.FromArgb("#52525B") });
+            textos.Add(new Label { Text = seccion.Titulo, FontFamily = "LexendSemiBold", FontSize = 15, TextColor = Color.FromArgb("#1F2433"), LineBreakMode = LineBreakMode.WordWrap });
+            textos.Add(new Label { Text = $"{seccion.TipoLegible} · {seccion.Codigo}", FontSize = 11, TextColor = Color.FromArgb("#4F5566") });
             cabecera.Add(textos, 1, 0);
             if (!EsDocente)
-                cabecera.Add(new Label { Text = seccion.ProgresoTexto, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb(color), VerticalOptions = LayoutOptions.Center }, 2, 0);
+                cabecera.Add(new Label { Text = seccion.ProgresoTexto, FontFamily = "LexendSemiBold", TextColor = Color.FromArgb(color), VerticalOptions = LayoutOptions.Center }, 2, 0);
 
             var pila = new VerticalStackLayout { Spacing = 6 };
             pila.Add(cabecera);
             if (!EsDocente)
                 pila.Add(new ProgressBar { Progress = seccion.ProgresoFraccion, ProgressColor = Color.FromArgb(color), Margin = new Thickness(0, 4, 0, 6) });
-            pila.Add(new BoxView { HeightRequest = 1, Color = Color.FromArgb("#EEEEEE") });
+            pila.Add(new BoxView { HeightRequest = 1, Color = Color.FromArgb("#E3E6EC") });
             foreach (var item in seccion.Items)
                 pila.Add(FilaDeItem(seccion, item));
 
             SeccionesHost.Add(new Border
             {
-                Padding = 16, BackgroundColor = Colors.White, Stroke = Color.FromArgb("#16000000"),
+                Padding = 16, BackgroundColor = Colors.White, Stroke = Color.FromArgb("#E3E6EC"),
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 18 }, Content = pila,
             });
         }
@@ -129,16 +129,16 @@ public partial class CourseContentView : ContentView
         {
             ColumnDefinitions = [new ColumnDefinition(34), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)],
             ColumnSpacing = 8, Padding = new Thickness(6, 8), Opacity = item.Visible ? 1 : 0.5,
-            BackgroundColor = seleccionado ? Color.FromArgb("#FDECEC") : Colors.Transparent,
+            BackgroundColor = seleccionado ? Color.FromArgb("#FDE7E7") : Colors.Transparent,
         };
-        var iconoColor = item.Completado ? "#019D60" : item.Abierto ? "#01A4E1" : "#52525B";
+        var iconoColor = item.Completado ? "#047857" : item.Abierto ? "#0A72A6" : "#4F5566";
         fila.Add(new Label { Text = item.Completado ? "✓" : item.Icono, FontSize = 18, TextColor = Color.FromArgb(iconoColor), HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }, 0, 0);
         var textos = new VerticalStackLayout { Spacing = 0 };
-        textos.Add(new Label { Text = item.Titulo, FontSize = 14, TextColor = Color.FromArgb("#18181B"), LineBreakMode = LineBreakMode.WordWrap });
+        textos.Add(new Label { Text = item.Titulo, FontSize = 14, TextColor = Color.FromArgb("#1F2433"), LineBreakMode = LineBreakMode.WordWrap });
         var estado = item.EstadoTexto;
-        textos.Add(new Label { Text = string.IsNullOrEmpty(estado) ? item.TipoLegible : $"{item.TipoLegible} · {estado}", FontSize = 11, TextColor = Color.FromArgb("#52525B") });
+        textos.Add(new Label { Text = string.IsNullOrEmpty(estado) ? item.TipoLegible : $"{item.TipoLegible} · {estado}", FontSize = 11, TextColor = Color.FromArgb("#4F5566") });
         fila.Add(textos, 1, 0);
-        fila.Add(new Label { Text = "›", FontSize = 22, TextColor = Color.FromArgb("#A1A1AA"), VerticalOptions = LayoutOptions.Center }, 2, 0);
+        fila.Add(new Label { Text = "›", FontSize = 22, TextColor = Color.FromArgb("#6A788E"), VerticalOptions = LayoutOptions.Center }, 2, 0);
         if (item.Visible)
         {
             var tap = new TapGestureRecognizer();
@@ -329,15 +329,15 @@ public partial class CourseContentView : ContentView
             var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(44), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12, Padding = 14, BackgroundColor = Colors.White };
             fila.Add(new Border
             {
-                BackgroundColor = Color.FromArgb(paso.Disponible ? "#E5262B" : "#A1A1AA"), StrokeThickness = 0, WidthRequest = 36, HeightRequest = 36,
+                BackgroundColor = Color.FromArgb(paso.Disponible ? "#A81D81" : "#6A788E"), StrokeThickness = 0, WidthRequest = 36, HeightRequest = 36,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 18 },
-                Content = new Label { Text = paso.Orden.ToString(), TextColor = Colors.White, FontAttributes = FontAttributes.Bold, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+                Content = new Label { Text = paso.Orden.ToString(), TextColor = Colors.White, FontFamily = "LexendSemiBold", HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
             }, 0, 0);
             var textos = new VerticalStackLayout { Spacing = 1 };
-            textos.Add(new Label { Text = paso.Titulo ?? paso.ElementoRef, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#18181B"), LineBreakMode = LineBreakMode.WordWrap });
-            textos.Add(new Label { Text = string.Join(" · ", new[] { TipoLegible(paso.Tipo), paso.Nota, paso.Disponible ? null : "no disponible en este equipo" }.Where(t => !string.IsNullOrWhiteSpace(t))), FontSize = 12, TextColor = Color.FromArgb("#52525B") });
+            textos.Add(new Label { Text = paso.Titulo ?? paso.ElementoRef, FontFamily = "LexendSemiBold", TextColor = Color.FromArgb("#1F2433"), LineBreakMode = LineBreakMode.WordWrap });
+            textos.Add(new Label { Text = string.Join(" · ", new[] { TipoLegible(paso.Tipo), paso.Nota, paso.Disponible ? null : "no disponible en este equipo" }.Where(t => !string.IsNullOrWhiteSpace(t))), FontSize = 12, TextColor = Color.FromArgb("#4F5566") });
             fila.Add(textos, 1, 0);
-            fila.Add(new Label { Text = "›", FontSize = 22, TextColor = Color.FromArgb("#A1A1AA"), VerticalOptions = LayoutOptions.Center }, 2, 0);
+            fila.Add(new Label { Text = "›", FontSize = 22, TextColor = Color.FromArgb("#6A788E"), VerticalOptions = LayoutOptions.Center }, 2, 0);
             if (paso.Disponible)
             {
                 var tap = new TapGestureRecognizer();
@@ -348,7 +348,7 @@ public partial class CourseContentView : ContentView
                 };
                 fila.GestureRecognizers.Add(tap);
             }
-            PasosHost.Add(new Border { Padding = 0, Stroke = Color.FromArgb("#16000000"), StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 14 }, Content = fila });
+            PasosHost.Add(new Border { Padding = 0, Stroke = Color.FromArgb("#E3E6EC"), StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 14 }, Content = fila });
         }
         VisorLeccion.IsVisible = true;
     }
@@ -445,7 +445,7 @@ public partial class CourseContentView : ContentView
             false => "✗ Todavía no. Vuelve a mirarlo y prueba otra vez.",
             null => corregible ? "Guardada · pendiente de corrección" : "Guardada · la califica el docente",
         };
-        EvalVeredicto.TextColor = Color.FromArgb(acierta == true ? "#019D60" : acierta == false ? "#E5262B" : "#52525B");
+        EvalVeredicto.TextColor = Color.FromArgb(acierta == true ? "#047857" : acierta == false ? "#C81E24" : "#4F5566");
         EvalRetro.IsVisible = !string.IsNullOrWhiteSpace(retro);
         EvalRetro.Text = retro ?? string.Empty;
     }
@@ -455,14 +455,14 @@ public partial class CourseContentView : ContentView
         if (_biblioteca is null || _intento is null) return;
         var pregunta = _intento.Preguntas[_preguntaIndice];
         var respuesta = EvalRespuesta.Text?.Trim() ?? string.Empty;
-        if (respuesta.Length == 0) { EvalVeredicto.Text = "Escribe una respuesta."; EvalVeredicto.TextColor = Color.FromArgb("#E5262B"); return; }
+        if (respuesta.Length == 0) { EvalVeredicto.Text = "Escribe una respuesta."; EvalVeredicto.TextColor = Color.FromArgb("#C81E24"); return; }
         EvalComprobarBtn.IsEnabled = false;
         var veredicto = await _biblioteca.ResponderAsync(_intento.Id, pregunta.Ref, respuesta);
         EvalComprobarBtn.IsEnabled = true;
         if (veredicto is null)
         {
             EvalVeredicto.Text = _biblioteca.UltimoMotivo ?? "No se pudo enviar la respuesta.";
-            EvalVeredicto.TextColor = Color.FromArgb("#E5262B");
+            EvalVeredicto.TextColor = Color.FromArgb("#C81E24");
             return;
         }
         _veredictos[pregunta.Ref] = (veredicto.Acierta, veredicto.Retroalimentacion, respuesta);
@@ -490,8 +490,8 @@ public partial class CourseContentView : ContentView
             return;
         }
         EvalResultado.IsVisible = true;
-        EvalResultado.BackgroundColor = Color.FromArgb(resultado.Estado == "finalizado" ? "#E6F5EE" : "#FEF9E6");
-        EvalResultadoTitulo.TextColor = Color.FromArgb(resultado.Estado == "finalizado" ? "#019D60" : "#6B5800");
+        EvalResultado.BackgroundColor = Color.FromArgb(resultado.Estado == "finalizado" ? "#E1F5EC" : "#FFEDDF");
+        EvalResultadoTitulo.TextColor = Color.FromArgb(resultado.Estado == "finalizado" ? "#047857" : "#9A3412");
         EvalResultadoTitulo.Text = resultado.Puntaje is null ? "Registrado · pendiente de corrección" : $"Nota {resultado.Puntaje:0.#}/100";
         EvalResultadoDetalle.Text = $"{resultado.Aciertos} acierto(s) de {resultado.TotalPreguntas} pregunta(s)" +
             (resultado.Pendientes > 0 ? $" · {resultado.Pendientes} pendiente(s) de corrección del docente" : string.Empty) +
@@ -580,11 +580,11 @@ public partial class CourseContentView : ContentView
         Cargando.IsRunning = ocupado;
     }
 
-    private static readonly string[] Paleta = ["#E5262B", "#F3C701", "#01A4E1", "#019D60", "#A81D81", "#52525B"];
+    private static readonly string[] Paleta = ["#047857", "#C2410C", "#A81D81", "#0A72A6", "#0E7490", "#5B45D1"];
 
     private static Task Alerta(string titulo, string mensaje) =>
-        Shell.Current?.CurrentPage?.DisplayAlertAsync(titulo, mensaje, "Entendido") ?? Task.CompletedTask;
+        Shell.Current?.CurrentPage?.AlertaAsync(titulo, mensaje, "Entendido") ?? Task.CompletedTask;
 
     private static Task<bool> Confirmar(string titulo, string mensaje) =>
-        Shell.Current?.CurrentPage?.DisplayAlertAsync(titulo, mensaje, "Finalizar", "Seguir respondiendo") ?? Task.FromResult(true);
+        Shell.Current?.CurrentPage?.AlertaAsync(titulo, mensaje, "Finalizar", "Seguir respondiendo") ?? Task.FromResult(true);
 }

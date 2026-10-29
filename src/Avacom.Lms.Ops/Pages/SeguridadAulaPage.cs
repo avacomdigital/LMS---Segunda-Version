@@ -18,9 +18,9 @@ namespace Avacom.Lms.Ops.Pages;
 public sealed class SeguridadAulaPage : ContentPage
 {
     private static readonly CultureInfo Es = new("es-ES");
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
 
-    private readonly Label _subtitulo = new() { FontFamily = "InterLight", FontSize = 15, TextColor = Color.FromArgb("#52525B"), LineBreakMode = LineBreakMode.WordWrap, Text = "Cargando…" };
+    private readonly Label _subtitulo = new() { FontFamily = "Lexend", FontSize = 15, TextColor = Color.FromArgb("#4F5566"), LineBreakMode = LineBreakMode.WordWrap, Text = "Cargando…" };
     private readonly VerticalStackLayout _izquierda = new() { Spacing = 14, Padding = new Thickness(0, 0, 0, 40) };
     private readonly VerticalStackLayout _derecha = new() { Spacing = 10, Padding = new Thickness(0, 0, 0, 40) };
     // El teclado doble se construye UNA vez y se muestra u oculta dentro de la tarjeta del PIN.
@@ -37,11 +37,11 @@ public sealed class SeguridadAulaPage : ContentPage
     {
         Shell.SetNavBarIsVisible(this, false);
         Title = "Seguridad del aula";
-        BackgroundColor = Color.FromArgb("#F1F1F1");
+        BackgroundColor = Color.FromArgb("#EAF0F6");
 
         var encabezado = new VerticalStackLayout { Spacing = 6, VerticalOptions = LayoutOptions.Center };
-        encabezado.Add(new Label { Text = "SEGURIDAD", FontFamily = "InterRegular", FontSize = 12, TextColor = Color.FromArgb("#52525B"), CharacterSpacing = 2.5 });
-        encabezado.Add(new Label { Text = "Seguridad del aula", FontFamily = "InterMedium", FontSize = 30, TextColor = Color.FromArgb("#18181B") });
+        encabezado.Add(new Label { Text = "SEGURIDAD", FontFamily = "Lexend", FontSize = 12, TextColor = Color.FromArgb("#4F5566"), CharacterSpacing = 2.5 });
+        encabezado.Add(new Label { Text = "Seguridad del aula", FontFamily = "LexendMedium", FontSize = 30, TextColor = Color.FromArgb("#1F2433") });
         encabezado.Add(_subtitulo);
         var actualizar = Ds.Boton("Actualizar", Ds.Rango.Secondary, async (_, _) => await CargarAsync(), 48);
         var volver = Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 48);
@@ -58,7 +58,7 @@ public sealed class SeguridadAulaPage : ContentPage
         var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)], Padding = new Thickness(44, 28, 48, 24), RowSpacing = 18 };
         raiz.Add(cabecera, 0, 0);
         raiz.Add(columnas, 0, 1);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = raiz };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
 
         _pin.PinConfirmado += async (_, pin) => await CambiarPinAsync(pin);
         _cambioHost.Add(_pin);
@@ -116,7 +116,7 @@ public sealed class SeguridadAulaPage : ContentPage
     {
         _izquierda.Clear();
         _derecha.Clear();
-        var organizacion = _configuracion?.SesionObligatoria == true ? "Con sesión obligatoria" : "En modo prototipo";
+        var organizacion = _configuracion?.SesionObligatoria == true ? "Con sesión obligatoria" : "En modo de prueba";
         _subtitulo.Text = $"{organizacion} · el PIN maestro, quién se registró con él y las puertas de entrada del aula.";
         if (_aviso is { } aviso)
             _izquierda.Add(Ds.Alerta_(aviso.Problema ? "No se pudo" : "Listo", aviso.Texto, aviso.Problema ? Ds.PeligroSuave : Ds.ExitoSuave, aviso.Problema ? TintaPeligro : Ds.Tinta));
@@ -161,7 +161,6 @@ public sealed class SeguridadAulaPage : ContentPage
             if (e.BloqueadoHasta is { } hasta && hasta > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 pila.Add(Ds.Alerta_("Demasiados intentos desde este equipo",
                     $"El PIN maestro no se acepta aquí hasta las {DateTimeOffset.FromUnixTimeMilliseconds(hasta).ToLocalTime():HH:mm}.", Ds.AlertaSuave, Glass.TintaAlerta));
-            pila.Add(Ds.Secundario("Nadie puede ver el PIN maestro, ni la administración: si se olvida o se filtró, se reemplaza aquí sin necesidad de saber el actual.", 14));
         }
 
         if (_cambiando)
@@ -225,9 +224,9 @@ public sealed class SeguridadAulaPage : ContentPage
         texto.Add(Ds.Secundario(detalle, 14));
         var boton = new Button
         {
-            Text = encendido ? "Encendido" : "Apagado", HeightRequest = 40, WidthRequest = 120, CornerRadius = 12, BorderWidth = 1, FontSize = 14,
+            Text = encendido ? "Encendido" : "Apagado", HeightRequest = 40, WidthRequest = 120, CornerRadius = 20, BorderWidth = 2, FontSize = 14,
             BackgroundColor = encendido ? Ds.Exito : Colors.White, TextColor = encendido ? Colors.White : Ds.Tinta,
-            BorderColor = encendido ? Color.FromArgb("#017A4B") : Ds.Filo, VerticalOptions = LayoutOptions.Center,
+            BorderColor = encendido ? Color.FromArgb("#0B5E3E") : Ds.Filo, VerticalOptions = LayoutOptions.Center,
         };
         SemanticProperties.SetDescription(boton, $"{titulo}: {(encendido ? "encendido" : "apagado")}. Tocar para {(encendido ? "apagarlo" : "encenderlo")}.");
         AutomationProperties.SetName(boton, $"{titulo} · {(encendido ? "Encendido" : "Apagado")}");

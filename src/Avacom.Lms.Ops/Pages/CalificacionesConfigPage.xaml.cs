@@ -31,7 +31,7 @@ public partial class CalificacionesConfigPage : ContentPage
         InitializeComponent();
         _aviso = new AvisoTemporal(ResultadoHost);
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesConfigPage), "Actualizar", CargarAsync), 170, "config-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 150, "config-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 150, "config-volver").Vista);
     }
 
     protected override async void OnAppearing()
@@ -98,7 +98,7 @@ public partial class CalificacionesConfigPage : ContentPage
                     // Un tropiezo no borra lo que ya se ve.
                     ConexionHost.Clear();
                     ConexionHost.Add(CalificacionesUi.SinConexion(api)
-                        ? ExamenUi.Aviso("Sin conexión con el nodo", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
+                        ? ExamenUi.Aviso("Sin conexión con el aula", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}.", Tono.Ambar)
                         : ExamenUi.Aviso("No se pudo actualizar la configuración", CalificacionesUi.Error(api), Tono.Ambar));
                     return;
                 }
@@ -182,7 +182,6 @@ public partial class CalificacionesConfigPage : ContentPage
         if (!string.IsNullOrWhiteSpace(p.Pais)) datos.Add(FiltroDePlantillas.NombreDePais(p.Pais!.ToUpperInvariant()));
         if (!string.IsNullOrWhiteSpace(p.Jurisdiccion)) datos.Add(p.Jurisdiccion!);
         if (datos.Count > 0) pila.Add(Ds.Secundario(string.Join(" · ", datos), 14));
-        pila.Add(Ds.Secundario("Las ponderaciones por evaluación se guardan para una versión posterior y no se aplican: el promedio simple del libro es informativo.", 13));
         return ExamenUi.Tarjeta(pila);
     }
 
@@ -204,7 +203,7 @@ public partial class CalificacionesConfigPage : ContentPage
             var r = await api.ConfigurarPoliticaAsync(CalificacionesUi.Actor, politica);
             if (r is null)
             {
-                _aviso.Mostrar("No se cambió la política", CalificacionesUi.SinConexion(api) ? "Sin conexión con el nodo del aula: nada se guardó. Puedes volver a tocar «Aplicar»." : CalificacionesUi.Error(api), Tono.Ambar);
+                _aviso.Mostrar("No se cambió la política", CalificacionesUi.SinConexion(api) ? "Sin conexión con el aula: nada se guardó. Puedes volver a tocar «Aplicar»." : CalificacionesUi.Error(api), Tono.Ambar);
                 return;
             }
             _politicaPropuesta = null;
@@ -222,7 +221,6 @@ public partial class CalificacionesConfigPage : ContentPage
     {
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(ExamenUi.Seccion("Niveles educativos"));
-        pila.Add(Ds.Secundario("Un nivel sin configurar está en modo simple: sus estudiantes sólo ven si completaron cada evaluación, sin notas ni números. En modo calificaciones se presenta la nota con la escala elegida.", 14));
         // El orden de la escuela, aunque el nodo mande otro; los niveles que el nodo no conozca van al final.
         foreach (var nivel in c.Niveles.OrderBy(n => NivelesEducativos.Todos.ToList().IndexOf(n.NivelClave) is var i and >= 0 ? i : int.MaxValue))
             pila.Add(TarjetaDeNivel(nivel));
@@ -264,7 +262,6 @@ public partial class CalificacionesConfigPage : ContentPage
             pila.Add(Ds.Secundario("La institución todavía no adoptó ninguna escala. Al cambiar un nivel a modo calificaciones podrás adoptar una plantilla orientativa y revisarla antes de usarla.", 15));
             return ExamenUi.Tarjeta(pila);
         }
-        pila.Add(Ds.Secundario("Una escala adoptada es de la institución. Cada versión que se publique queda guardada y no cambia; lo que ya se publicó con una versión sigue presentándose igual.", 14));
         foreach (var e in c.Escalas)
         {
             var textos = new VerticalStackLayout { Spacing = 2 };

@@ -192,8 +192,8 @@ public partial class ExamenAplicarPage : ContentPage
         }
         if (!_grupos.Instalado)
         {
-            CuerpoHost.Add(ExamenUi.Aviso("El nodo aún no tiene organización instalada",
-                "Sin organización no hay grupos ni alumnos. Pide a la administración que instale el nodo y vuelve aquí.", Tono.Ambar));
+            CuerpoHost.Add(ExamenUi.Aviso("El aula todavía no está configurada",
+                "Aún no hay grupos ni alumnos. Pide a la administración que configure el aula y vuelve aquí.", Tono.Ambar));
             return;
         }
         if (_grupos.Grupos.Count == 0)

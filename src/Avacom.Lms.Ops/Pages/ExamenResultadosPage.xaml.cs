@@ -30,7 +30,7 @@ public partial class ExamenResultadosPage : ContentPage
     {
         InitializeComponent();
         AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, () => CargarAsync(forzar: true), 170, "resultados-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Volver al panel", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 220, "resultados-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Volver al panel", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "resultados-volver").Vista);
     }
 
     protected override async void OnAppearing()
@@ -190,9 +190,11 @@ public partial class ExamenResultadosPage : ContentPage
             return ExamenUi.Tarjeta(pila);
         }
         var encabezado = Rejilla();
-        encabezado.Margin = new Thickness(4, 4, 4, 0);
+        // Mismo relleno que las filas (16 + el filo de 1), para que cada título quede sobre su columna.
+        encabezado.Margin = new Thickness(17, 4, 17, 0);
         string[] titulos = ["ALUMNO", "ESTADO", "RESULTADO", "¿APROBÓ?", "FUERA DE PLAZO", "AVISOS", "PUBLICACIÓN"];
         for (var i = 0; i < titulos.Length; i++) encabezado.Add(EstudioUi.Eyebrow(titulos[i]), i, 0);
+        Centrar(encabezado);
         pila.Add(encabezado);
         var publicable = PoliticasDeResultados.Normalizar(r.Resultados) != PoliticasDeResultados.Nunca;
         foreach (var fila in r.Filas) pila.Add(Fila(fila, publicable));
@@ -216,6 +218,20 @@ public partial class ExamenResultadosPage : ContentPage
             AvisoHost.Add(ExamenUi.Aviso($"{f.Rotulo} ya puede ver su resultado", "Queda registrado con tu nombre y la hora.", Tono.Exito));
         }
         await CargarAsync(forzar: true);
+    }
+
+    /// <summary>Todo a media altura de la fila y, salvo el nombre del alumno, centrado en su columna (títulos incluidos).</summary>
+    private static void Centrar(Grid g)
+    {
+        foreach (var hijo in g.Children.OfType<View>())
+        {
+            hijo.VerticalOptions = LayoutOptions.Center;
+            if (Grid.GetColumn(hijo) == 0) continue;
+            hijo.HorizontalOptions = LayoutOptions.Center;
+            if (hijo is Label l) l.HorizontalTextAlignment = TextAlignment.Center;
+            if (hijo is VerticalStackLayout v)
+                foreach (var dentro in v.Children.OfType<View>()) { dentro.HorizontalOptions = LayoutOptions.Center; if (dentro is Label dl) dl.HorizontalTextAlignment = TextAlignment.Center; }
+        }
     }
 
     private View Fila(FilaDeResultados f, bool publicable)
@@ -273,9 +289,10 @@ public partial class ExamenResultadosPage : ContentPage
             Ds.Tocable(g, () => Shell.Current.GoToAsync($"examen-expediente?intento={Uri.EscapeDataString(intento)}"));
             SemanticProperties.SetDescription(g, $"Expediente de {f.Rotulo}");
         }
+        Centrar(g);
         return new Border
         {
-            BackgroundColor = Color.FromArgb("#FAFAFB"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 12),
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(16, 12),
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = g,
         };
     }

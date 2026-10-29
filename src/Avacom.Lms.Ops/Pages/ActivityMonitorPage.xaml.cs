@@ -9,7 +9,7 @@ namespace Avacom.Lms.Ops.Pages;
 /// </summary>
 public partial class ActivityMonitorPage : ContentPage
 {
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
 
     public IEnumerable<StudentRow> Students { get; } = DemoCatalog.Students.Select(s => new StudentRow(s.Initials, s.Name, s.Status, s.CurrentQuestion, s.TotalQuestions == 0 ? 0 : (double)s.CurrentQuestion / s.TotalQuestions, s.Score is null ? "—" : $"{s.Score:0}/100"));
 
@@ -43,7 +43,7 @@ public partial class ActivityMonitorPage : ContentPage
         VisitantesHost.Clear();
         var titulo = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
         var textos = new VerticalStackLayout { Spacing = 2 };
-        textos.Add(new Label { Text = "Visitantes", FontSize = 21, FontAttributes = FontAttributes.Bold });
+        textos.Add(new Label { Text = "Visitantes", FontSize = 21, FontFamily = Ds.FuenteSemi });
         textos.Add(new Label { Text = "Quien olvidó su PIN entra como visitante: lo que hace no va al historial de nadie hasta que lo vincules a un alumno.", Style = Estilo("Muted"), LineBreakMode = LineBreakMode.WordWrap });
         titulo.Add(textos, 0, 0);
         if (_visitantes is not null)

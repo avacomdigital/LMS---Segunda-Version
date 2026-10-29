@@ -37,19 +37,19 @@
             VerticalOptions="Center"
             Spacing="8">
             <Label
-                FontAttributes="Bold"
+                FontFamily="LexendSemiBold"
                 FontSize="32"
                 HorizontalTextAlignment="Center"
                 Text="{Binding Icon, Source={x:Reference Root}}"
                 TextColor="{Binding AccentColor, Source={x:Reference Root}}" />
             <Label
-                FontAttributes="Bold"
+                FontFamily="LexendSemiBold"
                 FontSize="15"
                 HorizontalTextAlignment="Center"
                 LineBreakMode="WordWrap"
                 MaximumWidthRequest="124"
                 Text="{Binding Text, Source={x:Reference Root}}"
-                TextColor="#3F3F46" />
+                TextColor="#4F5566" />
         </VerticalStackLayout>
         <Grid.GestureRecognizers>
             <TapGestureRecognizer Command="{Binding Command, Source={x:Reference Root}}" CommandParameter="{Binding CommandParameter, Source={x:Reference Root}}" Tapped="OnTapped" />

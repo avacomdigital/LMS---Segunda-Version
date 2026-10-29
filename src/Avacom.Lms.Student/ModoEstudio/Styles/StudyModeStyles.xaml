@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <!-- «Modo estudio · Mis lecciones»: tokens y estilos de la pantalla. Continúan el lenguaje del LMS (Apple Education en jerarquía y aire,
      Duolingo en la claridad de las acciones): blanco, mucho espacio, separadores casi invisibles, estados en píldoras pequeñas y una
      sola acción fuerte por tarjeta. Los colores comunican estado (amarillo pendiente · azul en curso · verde completada/disponible ·
@@ -6,27 +6,27 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
     <!-- ===================================================================================== colores -->
-    <Color x:Key="StudyInk">#1D1D1F</Color>
-    <Color x:Key="StudyMuted">#6E6E73</Color>
-    <Color x:Key="StudyMutedStrong">#5F6368</Color>
-    <Color x:Key="StudyBorder">#E8E8ED</Color>
-    <Color x:Key="StudyBorderStrong">#D2D2D7</Color>
-    <Color x:Key="StudySoft">#F5F5F7</Color>
-    <Color x:Key="StudySurface">#FBFBFD</Color>
-    <Color x:Key="StudyGreen">#019D60</Color>
-    <Color x:Key="StudyGreenInk">#017A48</Color>
-    <Color x:Key="StudyBlue">#01A4E1</Color>
-    <Color x:Key="StudyBlueInk">#02739E</Color>
-    <Color x:Key="StudyBlueSoft">#E5F5FB</Color>
-    <Color x:Key="StudyAmberInk">#806600</Color>
-    <Color x:Key="StudyAmberSoft">#FFF7D6</Color>
-    <Color x:Key="StudyRedInk">#C1191D</Color>
-    <Color x:Key="StudyTrack">#E9E9E9</Color>
+    <Color x:Key="StudyInk">#1F2433</Color>
+    <Color x:Key="StudyMuted">#5F6474</Color>
+    <Color x:Key="StudyMutedStrong">#5F6474</Color>
+    <Color x:Key="StudyBorder">#E3E6EC</Color>
+    <Color x:Key="StudyBorderStrong">#E3E6EC</Color>
+    <Color x:Key="StudySoft">#F6F7F9</Color>
+    <Color x:Key="StudySurface">#F6F7F9</Color>
+    <Color x:Key="StudyGreen">#047857</Color>
+    <Color x:Key="StudyGreenInk">#0B5E3E</Color>
+    <Color x:Key="StudyBlue">#0A72A6</Color>
+    <Color x:Key="StudyBlueInk">#075985</Color>
+    <Color x:Key="StudyBlueSoft">#E3F5FC</Color>
+    <Color x:Key="StudyAmberInk">#9A3412</Color>
+    <Color x:Key="StudyAmberSoft">#FFF6CF</Color>
+    <Color x:Key="StudyRedInk">#A51C20</Color>
+    <Color x:Key="StudyTrack">#E3E6EC</Color>
 
-    <SolidColorBrush x:Key="StudyBorderBrush" Color="#E8E8ED" />
-    <SolidColorBrush x:Key="StudyBlueBorderBrush" Color="#CDE9F5" />
-    <SolidColorBrush x:Key="StudyButtonBorderBrush" Color="#D2D2D7" />
-    <SolidColorBrush x:Key="StudyCloseBorderBrush" Color="#E5E5E5" />
+    <SolidColorBrush x:Key="StudyBorderBrush" Color="#E3E6EC" />
+    <SolidColorBrush x:Key="StudyBlueBorderBrush" Color="#BCE5F5" />
+    <SolidColorBrush x:Key="StudyButtonBorderBrush" Color="#E3E6EC" />
+    <SolidColorBrush x:Key="StudyCloseBorderBrush" Color="#E3E6EC" />
     <SolidColorBrush x:Key="StudyTransparentBrush" Color="Transparent" />
 
     <!-- ============================================================================== superficies -->
@@ -37,6 +37,8 @@
         <Setter Property="Stroke" Value="{StaticResource StudyBorderBrush}" />
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="Padding" Value="0" />
+        <!-- DS: una sola sombra difusa en tinta (sh-2), sin capas negras alrededor. -->
+        <Setter Property="Shadow"><Shadow Brush="#1F2433" Opacity="0.13" Offset="0,14" Radius="32" /></Setter>
     </Style>
 
     <!-- Una lección: tarjeta grande y aireada, para tocarla con el dedo. -->
@@ -66,27 +68,28 @@
     </Style>
 
     <Style x:Key="StudyDivider" TargetType="BoxView">
+        <!-- DS: sin líneas divisorias; se conserva el hueco, no la raya. -->
         <Setter Property="HeightRequest" Value="1" />
-        <Setter Property="Color" Value="{StaticResource StudyBorder}" />
+        <Setter Property="Color" Value="Transparent" />
         <Setter Property="HorizontalOptions" Value="Fill" />
     </Style>
 
     <!-- ================================================================================= tipografía -->
     <Style x:Key="StudyModalTitle" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontFamily" Value="LexendSemiBold" />
         <Setter Property="FontSize" Value="26" />
         <Setter Property="TextColor" Value="{StaticResource StudyInk}" />
     </Style>
 
     <Style x:Key="StudyModalSubtitle" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterRegular" />
+        <Setter Property="FontFamily" Value="Lexend" />
         <Setter Property="FontSize" Value="15" />
         <Setter Property="TextColor" Value="{StaticResource StudyMuted}" />
         <Setter Property="LineBreakMode" Value="WordWrap" />
     </Style>
 
     <Style x:Key="StudyEyebrow" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontFamily" Value="LexendSemiBold" />
         <Setter Property="FontSize" Value="11.5" />
         <Setter Property="CharacterSpacing" Value="0.9" />
         <Setter Property="TextColor" Value="{StaticResource StudyMuted}" />
@@ -95,21 +98,21 @@
     </Style>
 
     <Style x:Key="StudyCardTitle" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontFamily" Value="LexendSemiBold" />
         <Setter Property="FontSize" Value="19" />
         <Setter Property="TextColor" Value="{StaticResource StudyInk}" />
         <Setter Property="LineBreakMode" Value="WordWrap" />
     </Style>
 
     <Style x:Key="StudyBody" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterRegular" />
+        <Setter Property="FontFamily" Value="Lexend" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="TextColor" Value="{StaticResource StudyMuted}" />
         <Setter Property="LineBreakMode" Value="WordWrap" />
     </Style>
 
     <Style x:Key="StudyMeta" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterMedium" />
+        <Setter Property="FontFamily" Value="LexendMedium" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="TextColor" Value="{StaticResource StudyMuted}" />
         <Setter Property="VerticalOptions" Value="Center" />
@@ -117,14 +120,14 @@
     </Style>
 
     <Style x:Key="StudyPercent" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontFamily" Value="LexendSemiBold" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="TextColor" Value="{StaticResource StudyInk}" />
         <Setter Property="VerticalOptions" Value="Center" />
     </Style>
 
     <Style x:Key="StudyChipLabel" TargetType="Label">
-        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontFamily" Value="LexendSemiBold" />
         <Setter Property="FontSize" Value="11.5" />
         <Setter Property="CharacterSpacing" Value="0.5" />
         <Setter Property="LineBreakMode" Value="NoWrap" />
@@ -133,7 +136,7 @@
     <!-- ==================================================================================== botones -->
     <!-- Todos los botones se hunden un poco al pulsar (escala 0,98) y miden 44–48 de alto: el dedo cabe (mínimo táctil 44–48 dp). -->
     <Style x:Key="StudyButtonBase" TargetType="Button">
-        <Setter Property="FontFamily" Value="InterMedium" />
+        <Setter Property="FontFamily" Value="LexendMedium" />
         <Setter Property="FontSize" Value="15" />
         <Setter Property="BorderWidth" Value="0" />
         <Setter Property="Padding" Value="20,0" />
@@ -157,7 +160,7 @@
         </Setter>
     </Style>
 
-    <!-- Filtros: píldoras, no pestañas con subrayado. Normal #F5F5F7 / #5F6368; seleccionado #1D1D1F / blanco (DataTrigger en la página). -->
+    <!-- Filtros: píldoras, no pestañas con subrayado. Normal #F6F7F9 / #5F6474; seleccionado tinta / blanco (DataTrigger en la página). -->
     <Style x:Key="StudyPill" TargetType="Button" BasedOn="{StaticResource StudyButtonBase}">
         <Setter Property="BackgroundColor" Value="{StaticResource StudySoft}" />
         <Setter Property="TextColor" Value="{StaticResource StudyMutedStrong}" />
@@ -167,20 +170,20 @@
     </Style>
 
     <Style x:Key="StudyPrimaryButton" TargetType="Button" BasedOn="{StaticResource StudyButtonBase}">
-        <Setter Property="BackgroundColor" Value="{StaticResource StudyInk}" />
+        <Setter Property="Background" Value="{StaticResource DegradadoPrincipal}" />
         <Setter Property="TextColor" Value="White" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="24" />
         <Setter Property="HeightRequest" Value="48" />
         <Setter Property="ContentLayout" Value="Right,10" />
-        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontFamily" Value="LexendSemiBold" />
     </Style>
 
     <Style x:Key="StudySecondaryButton" TargetType="Button" BasedOn="{StaticResource StudyButtonBase}">
         <Setter Property="BackgroundColor" Value="White" />
         <Setter Property="TextColor" Value="{StaticResource StudyInk}" />
         <Setter Property="BorderColor" Value="{StaticResource StudyBorderStrong}" />
-        <Setter Property="BorderWidth" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BorderWidth" Value="2" />
+        <Setter Property="CornerRadius" Value="23" />
         <Setter Property="HeightRequest" Value="46" />
         <Setter Property="ContentLayout" Value="Left,8" />
     </Style>
@@ -188,24 +191,27 @@
     <Style x:Key="StudyPracticeButton" TargetType="Button" BasedOn="{StaticResource StudyButtonBase}">
         <Setter Property="BackgroundColor" Value="{StaticResource StudyBlueSoft}" />
         <Setter Property="TextColor" Value="{StaticResource StudyBlueInk}" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="23" />
         <Setter Property="HeightRequest" Value="46" />
         <Setter Property="ContentLayout" Value="Right,8" />
-        <Setter Property="FontFamily" Value="InterSemiBold" />
+        <Setter Property="FontFamily" Value="LexendSemiBold" />
     </Style>
 
+    <!-- Secundario del DS: blanco con contorno de 2 px. -->
     <Style x:Key="StudyGhostButton" TargetType="Button" BasedOn="{StaticResource StudyButtonBase}">
-        <Setter Property="BackgroundColor" Value="{StaticResource StudySoft}" />
+        <Setter Property="BackgroundColor" Value="White" />
         <Setter Property="TextColor" Value="{StaticResource StudyInk}" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BorderColor" Value="{StaticResource StudyBorderStrong}" />
+        <Setter Property="BorderWidth" Value="2" />
+        <Setter Property="CornerRadius" Value="22" />
         <Setter Property="HeightRequest" Value="44" />
     </Style>
 
-    <!-- El botón X del modal: redondo, blanco, borde #E5E5E5, 44 × 44. -->
+    <!-- El botón X del modal: redondo, blanco, borde #E3E6EC, 44 × 44. -->
     <Style x:Key="StudyCloseButton" TargetType="Button" BasedOn="{StaticResource StudyButtonBase}">
         <Setter Property="BackgroundColor" Value="White" />
         <Setter Property="BorderColor" Value="{StaticResource StudyCloseBorderBrush}" />
-        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="BorderWidth" Value="2" />
         <Setter Property="CornerRadius" Value="22" />
         <Setter Property="WidthRequest" Value="44" />
         <Setter Property="HeightRequest" Value="44" />
@@ -227,8 +233,8 @@
         <Setter Property="BackgroundColor" Value="White" />
         <Setter Property="TextColor" Value="{StaticResource StudyInk}" />
         <Setter Property="BorderColor" Value="{StaticResource StudyBorderStrong}" />
-        <Setter Property="BorderWidth" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BorderWidth" Value="2" />
+        <Setter Property="CornerRadius" Value="24" />
         <Setter Property="HeightRequest" Value="48" />
         <Setter Property="MinimumWidthRequest" Value="120" />
     </Style>

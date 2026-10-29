@@ -36,9 +36,9 @@ public sealed class PanelDeRendimiento : ContentView
         public required Linea Dibujo;
     }
 
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
-    private static readonly Color TintaAlerta = Color.FromArgb("#7A5B00");
-    private static readonly Color TintaInfo = Color.FromArgb("#0B5F80");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
+    private static readonly Color TintaAlerta = Color.FromArgb("#6B4E00");
+    private static readonly Color TintaInfo = Color.FromArgb("#075985");
     private const double AnchoTarjeta = 296, AltoTarjeta = 204;
 
     private readonly MonitorDeRendimiento monitor;
@@ -168,7 +168,7 @@ public sealed class PanelDeRendimiento : ContentView
             Prioridad.Alta => (Ds.AlertaSuave, TintaAlerta, "Alta"),
             _ => (Ds.InfoSuave, TintaInfo, "Media"),
         };
-        var punto = new Border { WidthRequest = 14, HeightRequest = 14, StrokeThickness = 0, BackgroundColor = Color.FromArgb("#D4D4D8"), StrokeShape = new RoundRectangle { CornerRadius = 7 }, VerticalOptions = LayoutOptions.Center };
+        var punto = new Border { WidthRequest = 14, HeightRequest = 14, StrokeThickness = 0, BackgroundColor = Color.FromArgb("#E3E6EC"), StrokeShape = new RoundRectangle { CornerRadius = 7 }, VerticalOptions = LayoutOptions.Center };
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 8 };
         cabecera.Add(punto, 0, 0);
         var nombre = Ds.Cuerpo(i.Nombre, 15);
@@ -233,9 +233,9 @@ public sealed class PanelDeRendimiento : ContentView
             var validos = serie.Where(v => v is { } x && double.IsFinite(x)).Select(v => v!.Value).ToArray();
             t.Resumen.Text = validos.Length == 0 ? i.Unidad : $"{i.Unidad} · prom {Compacto(validos.Average())} · máx {Compacto(validos.Max())}";
             t.Extra.Text = i.Tendencia?.Invoke(historial) ?? string.Empty;
-            t.Punto.BackgroundColor = nivel switch { Nivel.Bien => Ds.Exito, Nivel.Atencion => Ds.Alerta, Nivel.Mal => Ds.Peligro, _ => Color.FromArgb("#A1A1AA") };
+            t.Punto.BackgroundColor = nivel switch { Nivel.Bien => Ds.Exito, Nivel.Atencion => Ds.Alerta, Nivel.Mal => Ds.Peligro, _ => Color.FromArgb("#6A788E") };
             t.Dibujo.Valores = serie;
-            t.Dibujo.Color = nivel switch { Nivel.Mal => Ds.Peligro, Nivel.Atencion => Color.FromArgb("#B8860B"), Nivel.Bien => Ds.Exito, _ => Ds.Info };
+            t.Dibujo.Color = nivel switch { Nivel.Mal => Ds.Peligro, Nivel.Atencion => Color.FromArgb("#6B4E00"), Nivel.Bien => Ds.Exito, _ => Ds.Info };
             t.Grafica.Invalidate();
         }
     }

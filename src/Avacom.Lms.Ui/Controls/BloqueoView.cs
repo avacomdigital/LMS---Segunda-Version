@@ -15,10 +15,10 @@ public sealed class BloqueoView : ContentView
     {
         var pila = new VerticalStackLayout { Spacing = 14, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, Padding = 40 };
         pila.Add(new Label { Text = "◉", FontSize = 96, TextColor = Colors.White, HorizontalTextAlignment = TextAlignment.Center });
-        pila.Add(new Label { Text = "Mira al frente", FontSize = 40, FontAttributes = FontAttributes.Bold, TextColor = Colors.White, HorizontalTextAlignment = TextAlignment.Center });
-        _detalle = new Label { Text = "Tu profesor está explicando. Tu trabajo sigue guardado.", FontSize = 20, TextColor = Color.FromArgb("#D4D4D8"), HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap };
+        pila.Add(new Label { Text = "Mira al frente", FontSize = 40, FontFamily = Ds.FuenteSemi, TextColor = Colors.White, HorizontalTextAlignment = TextAlignment.Center });
+        _detalle = new Label { Text = "Tu profesor está explicando. Tu trabajo sigue guardado.", FontSize = 20, TextColor = Color.FromArgb("#E3E6EC"), HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap };
         pila.Add(_detalle);
-        Content = new Grid { BackgroundColor = Color.FromArgb("#141417"), Children = { pila } };
+        Content = new Grid { BackgroundColor = Color.FromArgb("#1F2433"), Children = { pila } };
         IsVisible = false;
     }
 

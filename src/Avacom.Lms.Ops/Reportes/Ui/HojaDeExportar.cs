@@ -58,7 +58,7 @@ internal sealed class HojaDeExportar : ContentView
         ZIndex = 50;
 
         // El velo es hermano de la tarjeta (no su padre): un toque dentro de la tarjeta nunca llega aquí. Tocar fuera NO cierra la hoja: guardar un reporte no se cancela de un roce.
-        var velo = new Border { BackgroundColor = Color.FromArgb("#73141417"), StrokeThickness = 0 };
+        var velo = new Border { BackgroundColor = Color.FromArgb("#731F2433"), StrokeThickness = 0 };
 
         _titulo = new Label { FontFamily = Ds.FuenteMedia, FontSize = 24, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap };
         _subtitulo = new Label { FontFamily = Ds.FuenteLigera, FontSize = 15, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.WordWrap };

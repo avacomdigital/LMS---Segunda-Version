@@ -4,42 +4,47 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
-    BackgroundColor="#F1F1F1"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
-    <!-- P1 · Clase de hoy. Dos columnas y una sola fila: el menú vertical fijo a la izquierda (250 px; 224 en anchos
-         intermedios; raíl de iconos por debajo de 1100, ver OnPageSizeChanged) y el contenido, que se desplaza en
-         vertical, a la derecha. No hay barra horizontal superior: el chip de la fuente vive arriba a la derecha del
-         contenido y sigue siendo tocable (vuelve a leer la biblioteca). Fondo claro como el resto de la aplicación
-         (la imagen de discos en relieve), menú sólido del gris del dock y Liquid Glass sólo en tarjetas y avisos. -->
-    <Grid x:Name="Marco" ColumnDefinitions="216,*">
-        <!-- Fondo: la imagen de referencia de discos en relieve (assets/fondo-discos.png), a pantalla completa y detrás
-             de todo, al 25 % sobre el gris #F1F1F1 de la página para que sólo insinúe el relieve. InputTransparent: es
-             100 % decorativa y nunca captura toques ni desplazamiento. -->
-        <Image Grid.ColumnSpan="2" Aspect="AspectFill" HorizontalOptions="Fill" InputTransparent="True" Opacity="0.25" Source="fondo_discos.png" VerticalOptions="Fill" />
+    <!-- P1 · Clase de hoy con la estructura del Aula · Design System: fondo Aurora, isla de marca y fecha y hora arriba (fijas),
+         el contenido desplazable debajo y la navegación como barra inferior blanca, flotante y centrada (antes, menú lateral).
+         La columna 0 se conserva a 0 de ancho porque el code-behind la sigue ajustando. -->
+    <Grid x:Name="Marco" ColumnDefinitions="0,*" RowDefinitions="112,*">
+        <ui:FondoAurora Grid.ColumnSpan="2" Grid.RowSpan="2" />
+        <Grid Grid.Column="1" Grid.Row="0" ZIndex="3">
+            <ui:IslaDeMarca />
+            <ui:EsquinaFechaHora Margin="44,20,0,0" />
+        </Grid>
 
-        <!-- Menú lateral: barra sólida #5A5A56 (la del dock del tablero), estrecha (216 px), radio 28 y una sombra
-             ligera y difusa que la despega del fondo, con las cuatro opciones apiladas desde abajo. -->
-        <Border x:Name="MenuPanel" Grid.Column="0" Margin="20,20,0,20" Padding="12,16" BackgroundColor="#5A5A56" StrokeShape="RoundRectangle 28" StrokeThickness="0">
-            <Border.Shadow><Shadow Brush="#000000" Opacity="0.16" Offset="0,10" Radius="28" /></Border.Shadow>
+        <!-- Barra inferior: las cuatro opciones de siempre (Menú principal, Lección, Configuración y Cerrar sesión). -->
+        <Border x:Name="MenuPanel" Grid.Column="1" Grid.RowSpan="2" Margin="0,0,0,28" Padding="8,4" BackgroundColor="White" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 38" HeightRequest="76" HorizontalOptions="Center" VerticalOptions="End" ZIndex="5">
+            <Border.Shadow><Shadow Brush="#1F2433" Opacity="0.13" Offset="0,14" Radius="32" /></Border.Shadow>
             <ui:VerticalNavigation x:Name="Navegacion" Active="menu" CerrarSesionTapped="OnCerrarSesion" ConfiguracionTapped="OnConfiguracion" LeccionTapped="OnLeccion" MenuPrincipalTapped="OnVolver" />
         </Border>
 
         <!-- Contenido principal, desplazable. Los tres hosts (AvisoHost, HexHost, ListaHost) son los mismos de siempre:
              el code-behind los llena con la clase abierta, los avisos, los hexágonos de materia y las secciones de cursos. -->
-        <ScrollView x:Name="Contenido" Grid.Column="1">
-            <VerticalStackLayout HorizontalOptions="Center" MaximumWidthRequest="1280" Padding="44,28,48,80" Spacing="26">
+        <ScrollView x:Name="Contenido" Grid.Column="1" Grid.Row="1">
+            <VerticalStackLayout HorizontalOptions="Center" MaximumWidthRequest="1280" Padding="64,8,64,140" Spacing="26">
                 <!-- Hero: saludo, título y descripción respiran sobre el fondo, sin tarjeta. A la derecha, el chip de la
                      fuente (arriba) y el libro de cristal (debajo, sólo decorativo). -->
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="28" RowDefinitions="Auto,*">
                     <VerticalStackLayout Grid.RowSpan="2" Spacing="8" VerticalOptions="Center">
                         <Label Style="{StaticResource GlassEyebrow}" Text="¡Hola!" />
                         <Label Style="{StaticResource GlassHero}" Text="¿Qué vas a dar hoy?" />
-                        <Label Style="{StaticResource GlassLead}" Text="Toca una materia para ver sus cursos y elige la lección con la que empieza la clase. El curso lo entrega AVACOM Biblioteca; aquí sólo se da la clase." />
+                        <Label Style="{StaticResource GlassLead}" Text="Toca una materia para ver sus cursos y elige la lección con la que empieza la clase." />
                         <Label x:Name="SubtituloLabel" Margin="0,6,0,0" Style="{StaticResource GlassCaption}" Text="Materias asignadas" />
                     </VerticalStackLayout>
                     <ui:SourceStatusChip x:Name="FuenteChip" Grid.Column="1" Grid.Row="0" HorizontalOptions="End" Text="Comprobando…" VerticalOptions="Start" />
-                    <ui:GlassBookView Grid.Column="1" Grid.Row="1" Margin="0,8,0,0" HeightRequest="230" HorizontalOptions="End" InputTransparent="True" VerticalOptions="Center" WidthRequest="340" />
+                    <!-- Ilustración con los iconos sólidos del Aula · Design System: las materias alrededor del libro (sólo decorativa). -->
+                    <AbsoluteLayout Grid.Column="1" Grid.Row="1" Margin="0,8,0,0" HeightRequest="230" HorizontalOptions="End" InputTransparent="True" VerticalOptions="Center" WidthRequest="340">
+                        <Image AbsoluteLayout.LayoutBounds="100,34,150,150" Source="ilus_libros.png" Aspect="AspectFit" />
+                        <Image AbsoluteLayout.LayoutBounds="14,18,78,78" Source="ilus_mate.png" Aspect="AspectFit" Rotation="-8" />
+                        <Image AbsoluteLayout.LayoutBounds="252,4,84,84" Source="ilus_ciencia.png" Aspect="AspectFit" Rotation="8" />
+                        <Image AbsoluteLayout.LayoutBounds="30,140,68,68" Source="ilus_lenguaje.png" Aspect="AspectFit" Rotation="6" />
+                        <Image AbsoluteLayout.LayoutBounds="262,140,70,70" Source="ilus_mundo.png" Aspect="AspectFit" Rotation="-6" />
+                    </AbsoluteLayout>
                 </Grid>
                 <!-- Buscador y filtros del contenido que entrega AVACOM Biblioteca: texto libre (por él se buscan los temas,
                      demasiados para un picklist) y picklists de País y Nivel; bajo «Más filtros», Grado y Materia. Los

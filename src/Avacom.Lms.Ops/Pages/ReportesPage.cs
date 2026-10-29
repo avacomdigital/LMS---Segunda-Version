@@ -31,17 +31,17 @@ public sealed class ReportesPage : ContentPage
     public ReportesPage()
     {
         Shell.SetNavBarIsVisible(this, false);
-        BackgroundColor = Color.FromArgb("#F1F1F1");
+        BackgroundColor = Color.FromArgb("#EAF0F6");
 
         var textos = new VerticalStackLayout { Spacing = 6, VerticalOptions = LayoutOptions.Center };
-        textos.Add(new Label { Text = "REPORTES", FontFamily = "InterRegular", FontSize = 12, TextColor = Color.FromArgb("#52525B"), CharacterSpacing = 2.5 });
-        textos.Add(new Label { Text = "Reportes", FontFamily = "InterMedium", FontSize = 30, TextColor = Color.FromArgb("#18181B"), AutomationId = "reportes-titulo" });
-        textos.Add(new Label { Text = "Elige qué quieres ver. Todos los reportes dicen hasta qué momento llegan sus datos.", FontFamily = "InterLight", FontSize = 15, TextColor = Color.FromArgb("#52525B"), LineBreakMode = LineBreakMode.WordWrap });
+        textos.Add(new Label { Text = "REPORTES", FontFamily = "Lexend", FontSize = 12, TextColor = Color.FromArgb("#4F5566"), CharacterSpacing = 2.5 });
+        textos.Add(new Label { Text = "Reportes", FontFamily = "LexendMedium", FontSize = 30, TextColor = Color.FromArgb("#1F2433"), AutomationId = "reportes-titulo" });
+        textos.Add(new Label { Text = "Elige qué quieres ver. Todos los reportes dicen hasta qué momento llegan sus datos.", FontFamily = "Lexend", FontSize = 15, TextColor = Color.FromArgb("#4F5566"), LineBreakMode = LineBreakMode.WordWrap });
 
         // La demo «Monitor de actividad» (con la lista de visitantes y «Vincular a un alumno», RF-09c) abría desde este hexágono antes de MOD-013: sigue a un toque de aquí.
         _acciones.Add(ExamenUi.Accion("Visitantes y actividad", Ds.Rango.Quiet, () => Shell.Current.GoToAsync("activity-monitor"), 250, "reportes-visitantes").Vista);
         _acciones.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, ReportesUi.Seguro(nameof(ReportesPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "reportes-actualizar").Vista);
-        _acciones.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 220, "reportes-volver").Vista);
+        _acciones.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "reportes-volver").Vista);
 
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, Padding = new Thickness(44, 24, 48, 0), VerticalOptions = LayoutOptions.Start };
         cabecera.Add(textos, 0, 0);
@@ -62,7 +62,7 @@ public sealed class ReportesPage : ContentPage
         _raiz.Add(cabecera, 0, 0);
         _raiz.Add(_tarjetas, 0, 1);
         _raiz.Add(pie, 0, 2);
-        Content = _raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = _raiz };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
     }
 
     protected override async void OnAppearing()
@@ -161,12 +161,12 @@ public sealed class ReportesPage : ContentPage
         var alumnos = grupos.Sum(g => g.Alumnos ?? 0);
         var atencion = grupos.Sum(g => g.EnAtencion ?? 0);
 
-        Agregar(0, "reportes_clase.png", "Una clase", "Lo que hizo cada estudiante en una clase ya cerrada: participación y aciertos.", datoClase, p.Clase, RutasDeReportes.DeElegir(RutasDeReportes.ElegirClase), "reportes-tarjeta-clase",
+        Agregar(0, "ico_clase.png", "Una clase", "Lo que hizo cada estudiante en una clase ya cerrada: participación y aciertos.", datoClase, p.Clase, RutasDeReportes.DeElegir(RutasDeReportes.ElegirClase), "reportes-tarjeta-clase",
             "La participación y los aciertos de cada estudiante", "Cómo quedó la tableta de cada uno al cerrar", "El promedio de la clase, abajo");
-        Agregar(1, "reportes_alumno.png", "Un estudiante", "Cómo va un estudiante: asistencia, participación, evaluaciones y estudio.", alumnos > 0 ? $"{FormatoDeReportes.Plural(alumnos, "estudiante", "estudiantes")} en {FormatoDeReportes.Plural(grupos.Count, "grupo", "grupos")}" : grupos.Count == 0 ? EstadosVaciosDeReportes.SinGrupos : null,
+        Agregar(1, "ico_perfil.png", "Un estudiante", "Cómo va un estudiante: asistencia, participación, evaluaciones y estudio.", alumnos > 0 ? $"{FormatoDeReportes.Plural(alumnos, "estudiante", "estudiantes")} en {FormatoDeReportes.Plural(grupos.Count, "grupo", "grupos")}" : grupos.Count == 0 ? EstadosVaciosDeReportes.SinGrupos : null,
             p.Alumno, RutasDeReportes.DeElegir(RutasDeReportes.ElegirAlumno), "reportes-tarjeta-alumno",
             "Su asistencia y su participación", "Sus evaluaciones, con la nota de su nivel", "Sus tareas de estudio y sus clases");
-        Agregar(2, "reportes_grupo.png", "Un grupo", "Quién necesita atención y cómo va todo el grupo.", atencion > 0 ? (atencion == 1 ? "1 estudiante necesita atención" : $"{atencion} estudiantes necesitan atención") : grupos.Count > 0 ? "Nadie necesita atención ahora" : EstadosVaciosDeReportes.SinGrupos,
+        Agregar(2, "ico_grupo.png", "Un grupo", "Quién necesita atención y cómo va todo el grupo.", atencion > 0 ? (atencion == 1 ? "1 estudiante necesita atención" : $"{atencion} estudiantes necesitan atención") : grupos.Count > 0 ? "Nadie necesita atención ahora" : EstadosVaciosDeReportes.SinGrupos,
             p.Grupo, RutasDeReportes.DeElegir(RutasDeReportes.ElegirGrupo), "reportes-tarjeta-grupo",
             "Quién necesita atención, primero y con su motivo", "Todos los estudiantes del grupo", "Sus clases cerradas y sus evaluaciones");
     }
@@ -175,21 +175,15 @@ public sealed class ReportesPage : ContentPage
     {
         // El icono arriba, el texto debajo y «Elegir ›» siempre al pie: así las tres tarjetas alinean aunque una descripción ocupe una línea más que otra.
         var texto = new VerticalStackLayout { Spacing = 12, Margin = new Thickness(0, 22, 0, 0), VerticalOptions = LayoutOptions.Start };
-        texto.Add(new Label { Text = titulo, FontFamily = Ds.FuenteMedia, FontSize = 30, TextColor = Ds.Tinta });
+        texto.Add(new Label { Text = titulo, FontFamily = Ds.FuenteSemi, FontSize = 26, TextColor = Ds.Tinta });
         texto.Add(Ds.Secundario(descripcion, 17));
         if (!string.IsNullOrWhiteSpace(dato)) texto.Add(new Label { Text = dato, FontFamily = Ds.FuenteMedia, FontSize = 15, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap, Margin = new Thickness(0, 6, 0, 0) });
-        if (veras.Length > 0)
-        {
-            var lista = new VerticalStackLayout { Spacing = 6, Margin = new Thickness(0, 18, 0, 0) };
-            lista.Add(EstudioUi.Eyebrow("QUÉ VERÁS"));
-            foreach (var linea in veras) lista.Add(Ds.Secundario($"•  {linea}", 16));
-            texto.Add(lista);
-        }
+        // «Qué verás» ya no se pinta: la descripción basta y la tarjeta queda más limpia (las líneas siguen en la llamada).
 
         var cuerpo = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto)] };
         cuerpo.Add(new Image { Source = icono, WidthRequest = 64, HeightRequest = 64, HorizontalOptions = LayoutOptions.Start }, 0, 0);
         cuerpo.Add(texto, 0, 1);
-        cuerpo.Add(new Label { Text = activa ? "Elegir  ›" : "Tu rol no puede ver este reporte", FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = activa ? Ds.Rojo : Ds.TintaSuave }, 0, 2);
+        cuerpo.Add(new Label { Text = activa ? "Elegir  ›" : "Tu rol no puede ver este reporte", FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = activa ? Ds.Azul700 : Ds.TintaSuave }, 0, 2);
 
         var tarjeta = ReportesUi.Tocable(cuerpo, activa ? ReportesUi.Seguro(nameof(ReportesPage), id, () => Shell.Current.GoToAsync(ruta)) : () => Task.CompletedTask, $"{titulo}. {descripcion}", id,
             Colors.White, new Thickness(32, 30));
@@ -207,10 +201,10 @@ public sealed class ReportesPage : ContentPage
         // En el tercio derecho del pie: el boletín académico (un archivo por estudiante, con la plantilla del país) y el uso de equipos, según lo que el nodo deja a esta persona.
         var secundarias = new VerticalStackLayout { Spacing = 8 };
         if (filtros.Puede.Alumno)
-            secundarias.Add(TarjetaPequena("reportes_alumno.png", "Boletín académico", "Un boletín por estudiante: puntos, calificación, competencias, progreso y recomendaciones.",
+            secundarias.Add(TarjetaPequena("ico_reporte.png", "Boletín académico", "Un boletín por estudiante: puntos, calificación, competencias, progreso y recomendaciones.",
                 RutasDeReportes.DeElegir(RutasDeReportes.ElegirBoletin), "reportes-tarjeta-boletin", "Boletin"));
         if (filtros.Puede.Uso)
-            secundarias.Add(TarjetaPequena("reportes_uso.png", "Uso de equipos", "Qué tabletas se usaron y cuánto.", RutasDeReportes.DeUso(), "reportes-tarjeta-uso", "Uso"));
+            secundarias.Add(TarjetaPequena("ico_dispositivos.png", "Uso de equipos", "Qué tabletas se usaron y cuánto.", RutasDeReportes.DeUso(), "reportes-tarjeta-uso", "Uso"));
         if (secundarias.Children.Count > 0) _usoHost.Content = secundarias;
 
         var lista = recientes?.Recientes.Where(r => RutasDeReportes.DeReciente(r) is not null).Take(6).ToList() ?? [];

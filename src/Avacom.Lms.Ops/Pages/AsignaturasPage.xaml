@@ -3,13 +3,16 @@
     x:Class="Avacom.Lms.Ops.Pages.AsignaturasPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs>
     <Grid RowDefinitions="68,*">
-        <Grid BackgroundColor="White" Padding="28,0" ColumnDefinitions="Auto,*,Auto">
-            <Button Text="← Volver" BackgroundColor="Transparent" TextColor="{StaticResource Ink}" Clicked="OnBack" />
-            <Label Grid.Column="1" Text="Asignaturas · cursos de AVACOM Biblioteca" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18" FontAttributes="Bold" />
+        <Grid BackgroundColor="Transparent" Padding="48,0" ColumnDefinitions="Auto,*,Auto">
+            <Button Text="←  Volver" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="26" FontSize="17" FontFamily="LexendMedium" HeightRequest="52" Padding="20,0" VerticalOptions="Center" Clicked="OnBack" />
+            <Label Grid.Column="1" Text="Asignaturas" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18" FontFamily="LexendSemiBold" />
             <Border x:Name="EstadoChip" Grid.Column="2" BackgroundColor="{StaticResource ErrorSoft}" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
-                <Label x:Name="EstadoChipLabel" Text="●  Comprobando biblioteca…" TextColor="{StaticResource BrandRed}" FontSize="13" />
+                <Label x:Name="EstadoChipLabel" Text="●  Comprobando biblioteca…" TextColor="{StaticResource Azul700}" FontSize="13" />
             </Border>
         </Grid>
 
@@ -18,15 +21,15 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                     <VerticalStackLayout>
                         <Label Text="Cursos disponibles" Style="{StaticResource PageTitle}" />
-                        <Label x:Name="IntroLabel" Text="Lo que se ofrece en este equipo lo decide AVACOM Biblioteca. Aquí se muestran los cursos y se registra lo que hacen los estudiantes con ellos." Style="{StaticResource Muted}" LineBreakMode="WordWrap" />
+                        <Label x:Name="IntroLabel" Text="Los cursos que tu escuela tiene disponibles en el aula." Style="{StaticResource Muted}" LineBreakMode="WordWrap" />
                     </VerticalStackLayout>
                     <Button Grid.Column="1" Text="Actualizar" Style="{StaticResource DarkButton}" WidthRequest="150" VerticalOptions="Start" Clicked="OnActualizar" />
                 </Grid>
 
                 <Border x:Name="AvisoCard" IsVisible="False" Padding="18" StrokeThickness="0" BackgroundColor="{StaticResource ErrorSoft}">
                     <VerticalStackLayout Spacing="4">
-                        <Label x:Name="AvisoTitulo" Text="" FontAttributes="Bold" TextColor="#8A1C1F" LineBreakMode="WordWrap" />
-                        <Label x:Name="AvisoDetalle" Text="" FontSize="13" TextColor="#8A1C1F" LineBreakMode="WordWrap" />
+                        <Label x:Name="AvisoTitulo" Text="" FontFamily="LexendSemiBold" TextColor="#A51C20" LineBreakMode="WordWrap" />
+                        <Label x:Name="AvisoDetalle" Text="" FontSize="13" TextColor="#A51C20" LineBreakMode="WordWrap" />
                     </VerticalStackLayout>
                 </Border>
 
@@ -34,18 +37,19 @@
                 <FlexLayout x:Name="HexHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Center" />
 
                 <Grid ColumnDefinitions="*,Auto">
-                    <Label Text="Lista completa" FontSize="21" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Label Text="Lista completa" FontSize="21" FontFamily="LexendSemiBold" VerticalOptions="Center" />
                     <Label x:Name="ConteoLabel" Grid.Column="1" Text="" Style="{StaticResource Muted}" VerticalOptions="Center" />
                 </Grid>
                 <VerticalStackLayout x:Name="ListaHost" Spacing="12" />
 
-                <Border Padding="18" StrokeThickness="0" BackgroundColor="#E6F6FC">
+                <Border Padding="18" StrokeThickness="0" BackgroundColor="#E3F5FC">
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="¿Falta un curso?" FontAttributes="Bold" TextColor="#0B5E80" />
-                        <Label Text="Los cursos se instalan y administran en AVACOM Biblioteca (pestaña Administración → Instalar paquetes). Lo que la escuela desactive por política no aparece aquí. Este panel nunca crea ni edita cursos." Style="{StaticResource Muted}" LineBreakMode="WordWrap" />
+                        <Label Text="¿Falta un curso?" FontFamily="LexendSemiBold" TextColor="#075985" />
+                        <Label Text="Pide a la administración de tu escuela que lo agregue a la biblioteca de cursos." Style="{StaticResource Muted}" LineBreakMode="WordWrap" />
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

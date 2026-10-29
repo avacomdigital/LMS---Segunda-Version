@@ -49,7 +49,6 @@ public partial class CalificacionEstudiantePage
             fila.Add(promedio, 2, 0);
         }
         pila.Add(fila);
-        pila.Add(Ds.Secundario("Vista informativa para el profesor: el promedio es simple y no está ponderado, y esto no es un boletín oficial.", 13));
         return BoletinUi.Relieve(pila, 32, new Thickness(32, 26, 32, 24));
     }
 
@@ -85,7 +84,6 @@ public partial class CalificacionEstudiantePage
     {
         var pila = new VerticalStackLayout { Spacing = 12 };
         pila.Add(Ds.Titulo("Recomendaciones del profesor", 24));
-        pila.Add(Ds.Secundario("Lo que le recomiendas a este estudiante en el periodo. Va a su boletín académico (la cuarta pregunta: ¿qué debe mejorar?). Toca las que apliquen y guarda.", 14));
         var catalogo = b.RecomendacionesDisponibles ?? [];
         var general = b.Observaciones?.FirstOrDefault(o => o.EsGeneral);
         if (CalificacionesUi.PuedeCalificar && catalogo.Count > 0)
@@ -469,7 +467,6 @@ public partial class CalificacionEstudiantePage
             }
         }
         else pila.Add(Ds.Secundario("Este nivel está en modo simple: se ve si completó cada evaluación, sin notas, letras ni números.", 14));
-        pila.Add(Ds.Secundario("El promedio es la media simple de lo ya registrado (informativa, sin ponderar, no oficial). Una evaluación sin calificar no es un cero: se ve como un guion.", 13));
         return BoletinUi.Relieve(pila, 26, new Thickness(26, 20));
     }
 }
