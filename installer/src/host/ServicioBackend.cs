@@ -70,6 +70,16 @@ internal sealed class ServicioBackend : BackgroundService
                 continue;
             }
 
+            // MOD-018 segunda proteccion: el backend solo arranca en un dispositivo AVACOM autorizado (identidad UEFI + sello). Sin la comprobacion no hay datos ni lecciones: la aplicacion queda inerte.
+            if (OperatingSystem.IsWindows() && !Dispositivo.PuertaDelServicio.Permite(_registro))
+            {
+                var esperaDispositivo = EsperasSegundos[Math.Min(intento, EsperasSegundos.Length - 1)];
+                intento++;
+                try { await Task.Delay(TimeSpan.FromSeconds(esperaDispositivo), cancelacion).ConfigureAwait(false); }
+                catch (OperationCanceledException) { break; }
+                continue;
+            }
+
             if (!Salud.PuertoLibre(puerto) && !await Salud.EsNuestroBackendAsync(puerto).ConfigureAwait(false))
             {
                 _registro.Escribir(

@@ -23,6 +23,8 @@ internal static class Rutas
 
     public static string PythonExe => Path.Combine(CarpetaRuntime, "Python", "python.exe");
     public static string GuionServidor => Path.Combine(CarpetaRuntime, "avacom_ops_backend.py");
+    /// <summary>MOD-018 S2: el arranque del backend CIFRADO (lee la llave de la entrada estandar y abre Backend\codigo.avpkg). Solo lo usa un paquete que trae codigo.avpkg.</summary>
+    public static string GuionDeArranqueCifrado => Path.Combine(CarpetaRuntime, "avacom_boot.py");
     public static string ManagePy => Path.Combine(CarpetaBackend, "manage.py");
     public static string AppExe => Path.Combine(CarpetaApp, "Avacom.Lms.Ops.exe");
     public static string HostExe { get; } = Environment.ProcessPath

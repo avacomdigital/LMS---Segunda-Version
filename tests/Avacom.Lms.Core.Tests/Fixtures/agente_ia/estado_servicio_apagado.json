@@ -1,0 +1,10 @@
+{
+  "codigo": "ai_unreachable",
+  "disponible": false,
+  "habilitada": true,
+  "modelo": null,
+  "motivo": "El asistente no está disponible en este momento.",
+  "servicio_activo": false,
+  "sugerencia": "Avisa a quien administra el equipo: el servicio «AVACOM Local AI» debe estar en marcha en este equipo.",
+  "voz_disponible": false
+}

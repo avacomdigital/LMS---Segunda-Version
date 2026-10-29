@@ -23,14 +23,15 @@ M_LICENCIA = "licencia"
 M_NODO = "nodo"
 M_ACTUALIZACION = "actualizacion"
 M_RESPALDO = "respaldo"
+M_AGENTE_IA = "agente_ia"
 MODULOS = (M_ACCESO, M_AULA, M_DISPOSITIVOS, M_ESTUDIO, M_EVALUACION, M_AUDITORIA, M_INSTALACION, M_EXPEDIENTE, M_PRUEBAS, M_BUSQUEDA, M_REPORTES, M_LICENCIA, M_NODO,
-           M_ACTUALIZACION, M_RESPALDO)
+           M_ACTUALIZACION, M_RESPALDO, M_AGENTE_IA)
 
 ETIQUETAS_MODULO = {
     M_ACCESO: "Acceso e identidad", M_AULA: "Aula (clase en vivo)", M_DISPOSITIVOS: "Dispositivos", M_ESTUDIO: "Modo estudio",
     M_EVALUACION: "Evaluaciones", M_AUDITORIA: "Auditoría", M_INSTALACION: "Instalación", M_EXPEDIENTE: "Expediente",
     M_PRUEBAS: "Pruebas", M_BUSQUEDA: "Búsqueda", M_REPORTES: "Reportes", M_LICENCIA: "Licencia", M_NODO: "Plataforma del nodo", M_ACTUALIZACION: "Actualizaciones",
-    M_RESPALDO: "Respaldo y recuperación",
+    M_RESPALDO: "Respaldo y recuperación", M_AGENTE_IA: "Agente de IA",
 }
 
 
@@ -267,6 +268,10 @@ _LISTA: tuple[Accion, ...] = (
     _a("respaldo.custodia_emitida", M_RESPALDO, "Se emitió el código de custodia de la institución (BR-102); el código no se guarda", evento_origen="respaldo.custodia_emitida.v1"),
     _a("respaldo.pase_rechazado", M_RESPALDO, "Un pase de soporte de AVACOM fue rechazado (con el motivo)"),
     _a("respaldo.acceso_denegado", M_RESPALDO, "Se intentó respaldar o restaurar sin ser personal de AVACOM"),
+    # ---- agente de IA (AI Agent): sólo cifras, el código del fallo y una huella corta de la conversación; JAMÁS el texto de la pregunta ni el de la respuesta ----
+    _a("agente_ia.consulta_realizada", M_AGENTE_IA, "El agente de IA respondió una pregunta (sólo cifras: longitudes y tiempos)"),
+    _a("agente_ia.consulta_fallida", M_AGENTE_IA, "El agente de IA no pudo responder una pregunta (con el código del motivo)"),
+    _a("agente_ia.voz_fallida", M_AGENTE_IA, "El agente de IA no pudo generar la voz de una respuesta (con el código del motivo)"),
     # ---- expediente (lo que hoy escribe `expediente/servicios.py`) ----
     _a("inscripcion.creada", M_EXPEDIENTE, "Inscripción creada"),
     _a("inscripcion.retirada", M_EXPEDIENTE, "Inscripción retirada"),
@@ -330,7 +335,7 @@ def modulo_de(clave: str) -> str:
     return {"identidad": M_ACCESO, "identity": M_ACCESO, "acceso": M_ACCESO, "aula": M_AULA, "dispositivos": M_DISPOSITIVOS,
             "estudio": M_ESTUDIO, "evaluacion": M_EVALUACION, "calificacion": M_EVALUACION, "auditoria": M_AUDITORIA,
             "instalacion": M_INSTALACION, "prueba": M_PRUEBAS, "busqueda": M_BUSQUEDA, "reporte": M_REPORTES, "licencia": M_LICENCIA, "nodo": M_NODO,
-            "actualizacion": M_ACTUALIZACION, "respaldo": M_RESPALDO}.get(prefijo, M_EXPEDIENTE)
+            "actualizacion": M_ACTUALIZACION, "respaldo": M_RESPALDO, "agente_ia": M_AGENTE_IA}.get(prefijo, M_EXPEDIENTE)
 
 
 def como_lista() -> list[dict]:

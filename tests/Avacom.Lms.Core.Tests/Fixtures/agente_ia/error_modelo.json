@@ -1,0 +1,5 @@
+{
+  "codigo": "llm_error",
+  "detail": "El asistente no pudo responder. Intenta de nuevo.",
+  "reintentable": true
+}

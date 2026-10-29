@@ -198,6 +198,11 @@ Source: "{#CarpetaContenido}\Backend\*"; DestDir: "{app}\Backend"; Flags: ignore
 ; (nunca se mezclan runtimes, migraciones ni paquetes de versiones distintas).
 Source: "{#CarpetaContenido}\Runtime\*"; DestDir: "{app}\Runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+#ifdef PuertaDeDispositivo
+; MOD-018 segunda proteccion (S1): el Host tambien viaja a la carpeta temporal del asistente (dontcopy), para preguntar «¿es un dispositivo AVACOM?» antes de copiar nada.
+Source: "{#CarpetaContenido}\Runtime\{#EjecutableHost}"; DestDir: "{tmp}"; Flags: dontcopy
+#endif
+
 ; Que se empaqueto y desde que revision.
 Source: "{#CarpetaContenido}\manifiesto.json"; DestDir: "{app}"; Flags: ignoreversion
 ; MOD-018 (P-23): la lista de integridad (ruta y SHA-256 de lo que el nodo ejecuta) y la firma del manifiesto. El Host las verifica al arrancar el servicio; sin firma (un desarrollo) no hay segundo archivo.

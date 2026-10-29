@@ -1218,6 +1218,70 @@ begin
   CopyFile(Origen, Ultima, False);
 end;
 
+#ifdef PuertaDeDispositivo
+{ ------------------------------------------------ Puerta de dispositivo AVACOM }
+
+{ Segunda proteccion (S1). Antes de copiar nada, el asistente le pregunta al
+  Host (extraido a la carpeta temporal) si ESTE equipo es un dispositivo AVACOM
+  autenticado: tiene un sello firmado por AVACOM y prueba, con una clave que
+  vive en su TPM y no sale de el, que el sello es suyo. Si no, se niega a
+  instalar y, de paso, deja en la memoria USB una solicitud para llevarla a
+  AVACOM. Todo con toques: nada se escribe.
+
+  Franqueza: esto es un chequeo y el instalador es un archivo que se puede
+  parchear. Lo que no se salta con un parche es que el codigo del nodo viaje
+  cifrado con una clave que solo el TPM de un equipo sellado entrega. No hay
+  una opcion de linea de comandos que apague esta puerta: el modo de desarrollo
+  es un marcador cuyo dueno debe ser un administrador. }
+{ El mensaje de rechazo lo fija AVACOM y es el MISMO para toda falla de identidad o de
+  autorizacion (identidad UEFI, sello, clave, revocado): el instalador y la aplicacion
+  dicen exactamente lo mismo. El detalle tecnico va al registro, no a la persona. }
+function MensajeDeLaPuerta: String;
+begin
+  Result := 'El LMS solo puede correr en dispositivos AVACOM. En caso de tratarse de un error, contacte con su distribuidor o canales de soporte autorizados.';
+end;
+
+{ El codigo corto de diagnostico («AVC-UEFI-0x») que el Host deja en su mensaje. }
+function CodigoDeDiagnostico(const Detalle: String): String;
+var
+  P: Integer;
+begin
+  Result := '';
+  P := Pos('AVC-UEFI-', Detalle);
+  if P > 0 then Result := Copy(Detalle, P, 11);
+end;
+
+function InitializeSetup: Boolean;
+var
+  Codigo: Integer;
+  Detalle: AnsiString;
+  Ruta: String;
+begin
+  Result := True;
+  if RutaVolcado <> '' then Exit;      { el modo diagnostico no instala nada }
+  ExtractTemporaryFile('{#EjecutableHost}');
+  if not Exec(ExpandConstant('{tmp}\{#EjecutableHost}'), 'puerta-instalacion', '', SW_HIDE,
+              ewWaitUntilTerminated, Codigo) then
+    Codigo := -1;
+  if Codigo = 0 then Exit;
+
+  Detalle := '';
+  Ruta := ExpandConstant('{commonappdata}\AVACOM\OPS Master\Logs\dispositivo.txt');
+  if FileExists(Ruta) then LoadStringFromFile(Ruta, Detalle);
+  { 47 = la identidad UEFI no esta autorizada: ahi no hay mas que decir que el mensaje y el codigo.
+    Con 40-46 (el equipo tiene identidad pero le falta o falla el sello) el Host cuenta ademas que hacer
+    (la solicitud que dejo en la memoria USB). }
+  Ruta := MensajeDeLaPuerta;
+  if Codigo <> 47 then
+    Ruta := Ruta + #13#10#13#10 + String(Detalle)
+  else if CodigoDeDiagnostico(String(Detalle)) <> '' then
+    Ruta := Ruta + #13#10#13#10 + 'Código de diagnóstico: ' + CodigoDeDiagnostico(String(Detalle));
+  SuppressibleMsgBox(Ruta, mbCriticalError, MB_OK, IDOK);
+  Result := False;
+end;
+
+#endif
+
 { Si la instalacion se interrumpe despues de apartar la version anterior (falla
   la copia de archivos, se acaba el disco, alguien cancela), Inno Setup deshace
   lo que instalo pero no sabe de <app>\Anterior: sin esto el equipo se quedaria

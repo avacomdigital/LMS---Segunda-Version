@@ -7,7 +7,8 @@ namespace Avacom.Lms.Ops.Pages;
 /// AI Agent (sólo visual): aloja el HybridWebView con la tableta 3D y su rostro animado. El renderizador es JavaScript (Resources/Raw/wwwroot/ai-agent) y habla con esta página por
 /// mensajes JSON: <c>ready</c> (listo, con diagnóstico), <c>error</c> (WebGL ausente, GLB incompleto, atlas que no carga…), <c>log</c> (avisos) y <c>state</c> (cambios del rostro).
 /// Hacia la página van órdenes <c>{cmd:'play'|'stop'|'expression'|'fps'|'text'|'pause'|'resume'|'dispose'}</c> por <see cref="HybridWebView.SendRawMessage"/>.
-/// Sin LLM, sin voz y sin red: el agente real se conectará llamando a <see cref="ReproducirAsync"/>, <see cref="TextoAsync"/> y compañía.
+/// La conversación con el modelo local y su voz (el chat) vive en <c>AiAgentPage.Chat.cs</c> y <c>ConversacionConAgente</c> (Core); esta parte sólo aloja el visor y le manda órdenes con
+/// <see cref="ReproducirAsync"/>, <see cref="TextoAsync"/> y compañía. El chat funciona aunque el visor 3D no arranque.
 /// </summary>
 public partial class AiAgentPage : ContentPage
 {
@@ -16,14 +17,22 @@ public partial class AiAgentPage : ContentPage
 
     private int _versionArranque;
     private bool _liberado;
+    private bool _visorListo;
+    private readonly List<string> _ordenesEnEspera = [];          // lo que se mandó al visor antes de que su JavaScript estuviera escuchando: un mensaje a una página que aún no carga se pierde
 
-    public AiAgentPage() => InitializeComponent();
+    public AiAgentPage()
+    {
+        InitializeComponent();
+        IniciarChat();
+    }
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
         if (_liberado) return;
         _ = VigilarArranqueAsync();
+        AjustarChat();
+        _ = ComprobarServicioAsync();                            // el chat funciona aunque el renderizador 3D no arranque
     }
 
     /// <summary>Se sale de la pantalla: se detiene el dibujo y se libera la WebView (WebGL incluido). Volver a entrar abre una página nueva, nunca reutiliza esta.</summary>
@@ -38,6 +47,8 @@ public partial class AiAgentPage : ContentPage
         if (_liberado) return;
         _liberado = true;
         _versionArranque++;
+        try { _conversacion?.Detener(); }                        // corta la espera del modelo y el sonido: nada debe seguir hablando en otra pantalla
+        catch (Exception ex) { RegistroDeFallos.Escribir("ops", "AiAgentPage.Detener", ex); }
         try
         {
             Orden("dispose");                                    // cancela el bucle, quita los listeners y suelta geometrías, texturas y el contexto WebGL
@@ -92,6 +103,7 @@ public partial class AiAgentPage : ContentPage
                 case "ready":
                     _versionArranque++;
                     EstadoPanel.IsVisible = false;
+                    VaciarOrdenesEnEspera();
                     var diagnostico = raiz.TryGetProperty("diagnostics", out var d) ? d.GetRawText() : null;
                     RegistroLocal.Info(Canal.Aplicacion, "aiagent.listo", "AI Agent: renderizador listo.", diagnostico is null ? null : JsonDocument.Parse(diagnostico).RootElement.Clone());
                     break;
@@ -128,6 +140,7 @@ public partial class AiAgentPage : ContentPage
         try
         {
             MostrarCargando("Preparando a AI Agent…");
+            _visorListo = false;                                  // la página se recarga: hasta que avise «ready» las órdenes esperan
             _ = VigilarArranqueAsync();
             await Visor.EvaluateJavaScriptAsync("location.reload()");
         }
@@ -154,8 +167,36 @@ public partial class AiAgentPage : ContentPage
     private Task EnviarAsync(object orden)
     {
         if (_liberado) return Task.CompletedTask;
-        Visor.SendRawMessage(JsonSerializer.Serialize(orden, Json));
+        try
+        {
+            var texto = JsonSerializer.Serialize(orden, Json);
+            if (!_visorListo)
+            {
+                // Se conservan las últimas 16 (una animación vieja no importa; el texto y el último estado sí).
+                _ordenesEnEspera.Add(texto);
+                if (_ordenesEnEspera.Count > 16) _ordenesEnEspera.RemoveAt(0);
+                return Task.CompletedTask;
+            }
+            Visor.SendRawMessage(texto);
+        }
+        catch (Exception ex)
+        {
+            // El personaje es un acompañante: si el visor no está listo o falló, el chat sigue sin él (la causa ya la contó el arranque).
+            RegistroLocal.Advertencia(Canal.Aplicacion, "aiagent.orden_no_enviada", "AI Agent: no se pudo mandar una orden al visor.", new { tipo = ex.GetType().Name });
+        }
         return Task.CompletedTask;
+    }
+
+    /// <summary>El visor avisó que está listo: se le manda, en orden, lo que quedó esperando.</summary>
+    private void VaciarOrdenesEnEspera()
+    {
+        _visorListo = true;
+        try
+        {
+            foreach (var orden in _ordenesEnEspera) Visor.SendRawMessage(orden);
+        }
+        catch (Exception ex) { RegistroLocal.Advertencia(Canal.Aplicacion, "aiagent.orden_no_enviada", "AI Agent: no se pudieron mandar las órdenes en espera al visor.", new { tipo = ex.GetType().Name }); }
+        finally { _ordenesEnEspera.Clear(); }
     }
 
     private void Orden(string cmd) => Visor.SendRawMessage(JsonSerializer.Serialize(new { cmd }, Json));

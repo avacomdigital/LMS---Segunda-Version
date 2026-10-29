@@ -10,6 +10,9 @@ Sin red. La frase de paso se pide sin eco (o AVACOM_EMISOR_FRASE). El sello NUNC
 """
 from __future__ import annotations
 
+import base64
+import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -43,6 +46,11 @@ def _fecha_ms(valor: str | None) -> int:
     return int(d.timestamp() * 1000)
 
 
+def _dispositivos(a) -> Path:
+    """Donde la estacion guarda la clave PUBLICA de cifrado de cada equipo sellado (junto al registro de emisiones)."""
+    return Path(archivos.limpiar(a.registro)).parent / "dispositivos" if a.registro else _cli().RAIZ / "datos" / "dispositivos"
+
+
 def _salida(a, nombre: str) -> Path:
     carpeta = Path(archivos.limpiar(a.salida)) if a.salida else _cli().SALIDA_POR_OMISION
     return carpeta / nombre
@@ -61,8 +69,15 @@ def cmd_sello_emitir(a) -> int:
     datos, s, renglon = sellos.emitir_sello(ruta_sol.read_bytes(), llave.privada, llave.kid, inventario, c._registro(a.registro), a.origen, ahora, _fecha_ms(a.vence), a.reemitir)
     destino = _salida(a, f"{s.serie}.avsello")
     archivos.escribir(destino, datos)
+    sol = sello.leer_solicitud(ruta_sol.read_bytes())
+    if sol.cifrado_publica:                      # la clave PUBLICA de cifrado del equipo: la estacion la necesita para envolverle la llave de cada version del paquete (S2)
+        carpeta = _dispositivos(a)
+        carpeta.mkdir(parents=True, exist_ok=True)
+        (carpeta / f"{s.serie}.json").write_text(json.dumps({"serie": s.serie, "cifrado_spki": base64.b64encode(sol.cifrado_publica).decode(), "cifrado_huella": s.cifrado_huella.hex() if s.cifrado_huella else "",
+                                                             "sello_id": s.id}, indent=1) + chr(10), encoding="utf-8")
     c._p(f"Sello emitido para la serie {s.serie} ({s.origen}, evidencia: {s.evidencia}).")
     c._p(f"  Archivo ............ {destino}")
+    c._p(f"  Identidad UEFI ..... {s.uefi_id}")
     c._p(f"  Vence .............. {'no vence' if not s.vence else c._iso(s.vence)}")
     c._p(f"  Registro ........... renglón {renglon['n']}")
     return 0
@@ -86,7 +101,7 @@ def cmd_sello_ver(a) -> int:
         s = sello.leer_sello(datos, _claves(a))
     except errores.LicenciaInvalida as error:
         raise c.ErrorDeUso(f"El sello NO es válido: {error.detalle} (motivo: {error.motivo}).") from error
-    c._p(f"Sello {s.id}: serie {s.serie} · {s.modelo} · origen {s.origen} · evidencia {s.evidencia}")
+    c._p(f"Sello {s.id}: serie {s.serie} · {s.modelo} · origen {s.origen} · evidencia {s.evidencia} · UEFI {s.uefi_id or 'sin identificador (no autoriza ningún equipo)'}")
     c._p(f"  Emitido {c._iso(s.emitido)} · {'no vence' if not s.vence else 'vence ' + c._iso(s.vence)} · llave {s.kid}")
     c._p(f"  Huella de la clave del equipo: {s.clave_huella.hex()}")
     c._p("La firma es válida.")
@@ -111,6 +126,30 @@ def cmd_sello_revocar(a) -> int:
     archivos.escribir(destino, datos)
     c._p(f"Lista de revocados número {numero}: {destino}")
     c._p("Entrégala junto a la próxima licencia o actualización (el nodo guarda la más nueva que ve).")
+    return 0
+
+
+def cmd_clave_emitir(a) -> int:
+    c = _cli()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,64}", a.serie):
+        raise c.ErrorDeUso("La serie solo lleva letras, numeros, punto, guion y guion bajo.")
+    ruta_dispositivo = _dispositivos(a) / f"{a.serie}.json"
+    if not ruta_dispositivo.is_file():
+        raise c.ErrorDeUso(f"La estacion no conoce la serie «{a.serie}»: primero se emite su sello (sello emitir).")
+    spki = base64.b64decode(json.loads(ruta_dispositivo.read_text(encoding="utf-8"))["cifrado_spki"])
+    ruta_k = Path(archivos.limpiar(a.llave_paquete))
+    if not ruta_k.is_file():
+        raise c.ErrorDeUso(f"No se encontro la llave del paquete «{ruta_k}».")
+    try:
+        k = bytes.fromhex(ruta_k.read_text(encoding="ascii").strip())
+    except ValueError as error:
+        raise c.ErrorDeUso("La llave del paquete debe ser 64 hexadecimales.") from error
+    llave = _abrir_privada(a.privada)
+    datos, leida = sellos.emitir_clave(spki, k, llave.privada, llave.kid, a.version or "", c._ahora_ms(), c._registro(a.registro), a.serie)
+    destino = _salida(a, f"{a.serie}-{leida.kid_paquete.hex()}.avclave")
+    archivos.escribir(destino, datos)
+    c._p(f"Clave del paquete {leida.kid_paquete.hex()} envuelta para la serie {a.serie}: {destino}")
+    c._p("Entregala junto al instalador o la actualizacion; solo el TPM de ese equipo la abre.")
     return 0
 
 
@@ -159,3 +198,14 @@ def registrar(sub) -> None:
     ver.add_argument("--publica", action="append")
     ver.add_argument("--publicas")
     ver.set_defaults(func=cmd_revocados_ver)
+
+    k = sub.add_parser("clave", help="Llave de un paquete cifrado, envuelta para un equipo sellado")
+    ks = k.add_subparsers(dest="sub", required=True)
+    ke = ks.add_parser("emitir", help="Envuelve la llave K de una version del paquete para un equipo (por su serie)")
+    ke.add_argument("--serie", required=True)
+    ke.add_argument("--llave-paquete", required=True, help="El archivo con K en hexadecimal que dejo Cifrar-Backend.py")
+    ke.add_argument("--privada", required=True, help="La llave de sello (sello-....avkey)")
+    ke.add_argument("--version", help="Version del producto (informativa)")
+    ke.add_argument("--salida")
+    ke.add_argument("--registro")
+    ke.set_defaults(func=cmd_clave_emitir)

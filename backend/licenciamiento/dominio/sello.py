@@ -20,9 +20,11 @@ Mismo envoltorio TLV que la licencia (`tlv.py`): la firma cubre todo lo anterior
    10 lote            texto ≤ 32                                                                                               informativa
    11 mac             texto ≤ 17: INFORMATIVA, no decide nunca                                                                 informativa
    12 evidencia       u8: 1 inventario de fábrica · 2 cadena de EKCert · 3 activación de credencial del TPM                    crítica   cómo se comprobó que el equipo era de AVACOM
+   13 uefi_id         texto: el `AVACOM_DEVICE_ID` de la variable UEFI del equipo que AVACOM autoriza (`AVACOM-OPS-…`)            informativa para el formato, DECISIVA para el Host: sin él el sello no autoriza ningún equipo
 
 `.avsol` (magic AVSO): la solicitud, firmada por el propio equipo con su clave de identidad (ECDSA P-256 · SHA-256 · 64 bytes IEEE P1363 en el lugar de la firma). Su `kid` es siempre `equipo`.
     1 id              16 bytes · 2 serie · 3 modelo · 4 clave_publica (SPKI de la identidad) · 5 cifrado_publica (SPKI RSA de cifrado) · 6 ek_publica (opcional) · 7 mac · 8 proveedor u8 (1 TPM, 0 software) · 9 creada u64
+    10 uefi_id        texto: el `AVACOM_DEVICE_ID` que el equipo leyó de su firmware (UEFI) al pedir el sello
 
 `.avrev` (magic AVRV): lista de revocados firmada con la llave de sello. 1 numero u32 (sube con cada lista) · 2 emitida u64 · 3 huellas (n × 32 bytes de `clave_huella`, ≤ 128).
 
@@ -31,6 +33,7 @@ El dominio no toca hardware: la PRUEBA DE POSESIÓN (firmar un reto con la clave
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
@@ -40,24 +43,28 @@ from .errores import LicenciaInvalida
 MAGIC_SELLO = b"AVSL"
 MAGIC_SOLICITUD_SELLO = b"AVSO"
 MAGIC_REVOCADOS = b"AVRV"
+MAGIC_CLAVE = b"AVKY"
 
 # Los magic de `tlv.MAGICS` sólo se comprueban al escribir; aquí se amplía el conjunto con los propios sin tocar el formato de licencias.
-tlv.MAGICS = tuple(dict.fromkeys((*tlv.MAGICS, MAGIC_SELLO, MAGIC_SOLICITUD_SELLO, MAGIC_REVOCADOS)))
-licencia.PREFIJO_TEXTO.update({MAGIC_SELLO: "AVS1.", MAGIC_SOLICITUD_SELLO: "AVO1.", MAGIC_REVOCADOS: "AVV1."})
+tlv.MAGICS = tuple(dict.fromkeys((*tlv.MAGICS, MAGIC_SELLO, MAGIC_SOLICITUD_SELLO, MAGIC_REVOCADOS, MAGIC_CLAVE)))
+licencia.PREFIJO_TEXTO.update({MAGIC_SELLO: "AVS1.", MAGIC_SOLICITUD_SELLO: "AVO1.", MAGIC_REVOCADOS: "AVV1.", MAGIC_CLAVE: "AVK1."})
 
-T_ID, T_SERIE, T_MODELO, T_ORIGEN, T_CLAVE_HUELLA, T_CIFRADO_HUELLA, T_EK_HUELLA, T_EMITIDO, T_VENCE, T_LOTE, T_MAC, T_EVIDENCIA = range(1, 13)
+T_ID, T_SERIE, T_MODELO, T_ORIGEN, T_CLAVE_HUELLA, T_CIFRADO_HUELLA, T_EK_HUELLA, T_EMITIDO, T_VENCE, T_LOTE, T_MAC, T_EVIDENCIA, T_UEFI_ID = range(1, 14)
 CONOCIDOS_SELLO: dict[int, tuple[int, bool]] = {
     T_ID: (16, True), T_SERIE: (64, False), T_MODELO: (64, False), T_ORIGEN: (1, True), T_CLAVE_HUELLA: (32, True), T_CIFRADO_HUELLA: (32, False), T_EK_HUELLA: (32, False),
-    T_EMITIDO: (8, True), T_VENCE: (8, True), T_LOTE: (32, False), T_MAC: (17, False), T_EVIDENCIA: (1, True),
+    T_EMITIDO: (8, True), T_VENCE: (8, True), T_LOTE: (32, False), T_MAC: (17, False), T_EVIDENCIA: (1, True), T_UEFI_ID: (32, False),
 }
 OBLIGATORIOS_SELLO = (T_ID, T_ORIGEN, T_CLAVE_HUELLA, T_EMITIDO, T_VENCE, T_EVIDENCIA)
 
-S_ID, S_SERIE, S_MODELO, S_CLAVE, S_CIFRADO, S_EK, S_MAC, S_PROVEEDOR, S_CREADA = range(1, 10)
+S_ID, S_SERIE, S_MODELO, S_CLAVE, S_CIFRADO, S_EK, S_MAC, S_PROVEEDOR, S_CREADA, S_UEFI_ID = range(1, 11)
 CONOCIDOS_SOLICITUD: dict[int, tuple[int, bool]] = {
     S_ID: (16, True), S_SERIE: (64, False), S_MODELO: (64, False), S_CLAVE: (128, True), S_CIFRADO: (600, False), S_EK: (600, False), S_MAC: (17, False),
-    S_PROVEEDOR: (1, True), S_CREADA: (8, True),
+    S_PROVEEDOR: (1, True), S_CREADA: (8, True), S_UEFI_ID: (32, False),
 }
 OBLIGATORIAS_SOLICITUD = (S_ID, S_CLAVE, S_PROVEEDOR, S_CREADA)
+
+K_ID, K_CIFRADO_HUELLA, K_KID_PAQUETE, K_ENVUELTA, K_EMITIDA, K_VERSION = range(1, 7)
+CONOCIDOS_CLAVE: dict[int, tuple[int, bool]] = {K_ID: (16, True), K_CIFRADO_HUELLA: (32, True), K_KID_PAQUETE: (8, True), K_ENVUELTA: (512, True), K_EMITIDA: (8, True), K_VERSION: (32, False)}
 
 R_NUMERO, R_EMITIDA, R_HUELLAS = 1, 2, 3
 CONOCIDOS_REVOCADOS: dict[int, tuple[int, bool]] = {R_NUMERO: (4, True), R_EMITIDA: (8, True), R_HUELLAS: (32 * 128, True)}
@@ -67,6 +74,14 @@ _ORIGENES = {ORIGEN_FABRICA: "fabrica", ORIGEN_ENTREGA: "entrega"}
 EVIDENCIA_INVENTARIO, EVIDENCIA_EKCERT, EVIDENCIA_ACTIVACION = 1, 2, 3
 _EVIDENCIAS = {EVIDENCIA_INVENTARIO: "inventario", EVIDENCIA_EKCERT: "ekcert", EVIDENCIA_ACTIVACION: "activacion"}
 CONTEXTO_POSESION = b"AVACOM-SELLO1"
+
+# El identificador que el firmware de un dispositivo AVACOM trae en la variable UEFI `AVACOM_DEVICE_ID` (GUID {8b7f9c20-3e51-4c8a-a7d1-91c62e0f4b35}). El formato es el MISMO que comprueba el Host
+# (`IdentidadUefi.EsFormatoValido`): un identificador que no lo cumple no se sella ni se acepta. Cumplir el formato NO prueba nada: lo que autoriza es que el sello firmado por AVACOM lo traiga.
+FORMATO_UEFI_ID = re.compile(r"AVACOM-OPS-[0-9A-Z]{8,16}")
+
+
+def uefi_id_valido(texto: str) -> bool:
+    return bool(FORMATO_UEFI_ID.fullmatch(texto))
 KID_SOLICITUD = "equipo"
 
 # Veredictos de `evaluar` (los mismos que imprime `verificar-dispositivo`).
@@ -89,6 +104,7 @@ class Sello:
     evidencia: str
     kid: str
     sha256: str
+    uefi_id: str = ""
 
     def vencido(self, ahora_ms: int) -> bool:
         return self.vence != 0 and ahora_ms > self.vence
@@ -144,6 +160,8 @@ def codificar_sello(kid: str, s: Sello, firmar) -> bytes:
         campos[T_CIFRADO_HUELLA] = s.cifrado_huella
     if s.ek_huella:
         campos[T_EK_HUELLA] = s.ek_huella
+    if s.uefi_id:
+        campos[T_UEFI_ID] = s.uefi_id.encode("ascii")
     return tlv.sellar(tlv.escribir(MAGIC_SELLO, kid, campos, CONOCIDOS_SELLO), firmar)
 
 
@@ -163,9 +181,12 @@ def leer_sello(datos: bytes, claves: Mapping[str, bytes]) -> Sello:
     emitido, vence = _u(c, T_EMITIDO, 8), _u(c, T_VENCE, 8)
     if vence and vence <= emitido:
         raise LicenciaInvalida("campo_invalido")
+    uefi_id = _texto(c, T_UEFI_ID)
+    if uefi_id and not uefi_id_valido(uefi_id):
+        raise LicenciaInvalida("campo_invalido")
     ident = c[T_ID].hex()
     return Sello(f"{ident[:8]}-{ident[8:12]}-{ident[12:16]}-{ident[16:20]}-{ident[20:]}", _texto(c, T_SERIE), _texto(c, T_MODELO), origen, c[T_CLAVE_HUELLA],
-                 c.get(T_CIFRADO_HUELLA), c.get(T_EK_HUELLA), emitido, vence, _texto(c, T_LOTE), _texto(c, T_MAC), evidencia, abierto.kid, abierto.sha256)
+                 c.get(T_CIFRADO_HUELLA), c.get(T_EK_HUELLA), emitido, vence, _texto(c, T_LOTE), _texto(c, T_MAC), evidencia, abierto.kid, abierto.sha256, uefi_id)
 
 
 # --------------------------------------------------------------------------------------------------------------------------------- revocados
@@ -197,12 +218,13 @@ class Solicitud:
     en_tpm: bool
     creada: int
     clave_huella: bytes
+    uefi_id: str = ""
 
 
 def codificar_solicitud(s: Solicitud, firmar_ecdsa) -> bytes:
     """`firmar_ecdsa(bytes) → 64 bytes P1363`: lo hace la clave de identidad del equipo (en el TPM; no sale de él)."""
     campos: dict[int, bytes] = {S_ID: bytes.fromhex(s.id.replace("-", "")), S_CLAVE: s.clave_publica, S_PROVEEDOR: bytes([1 if s.en_tpm else 0]), S_CREADA: s.creada.to_bytes(8, "big")}
-    for etiqueta, valor in ((S_SERIE, s.serie), (S_MODELO, s.modelo), (S_MAC, s.mac)):
+    for etiqueta, valor in ((S_SERIE, s.serie), (S_MODELO, s.modelo), (S_MAC, s.mac), (S_UEFI_ID, s.uefi_id)):
         if valor:
             campos[etiqueta] = valor.encode("ascii")
     if s.cifrado_publica:
@@ -235,7 +257,7 @@ def leer_solicitud(datos: bytes) -> Solicitud:
         raise LicenciaInvalida("firma_invalida") from None
     ident = c[S_ID].hex()
     return Solicitud(f"{ident[:8]}-{ident[8:12]}-{ident[12:16]}-{ident[16:20]}-{ident[20:]}", _texto(c, S_SERIE), _texto(c, S_MODELO), c[S_CLAVE], c.get(S_CIFRADO), c.get(S_EK),
-                     _texto(c, S_MAC), c[S_PROVEEDOR] == b"\x01", _u(c, S_CREADA, 8), huella_de_spki(c[S_CLAVE]))
+                     _texto(c, S_MAC), c[S_PROVEEDOR] == b"\x01", _u(c, S_CREADA, 8), huella_de_spki(c[S_CLAVE]), _texto(c, S_UEFI_ID))
 
 
 # --------------------------------------------------------------------------------------------------------------------------------- veredicto
@@ -268,3 +290,36 @@ def evaluar(datos_sello: bytes | None, claves: Mapping[str, bytes], clave_huella
     if posesion is not True:
         return Veredicto(CLAVE_DISTINTA if posesion is False else NO_VERIFICABLE, "sin_posesion" if posesion is False else "no_firmo", sello)
     return Veredicto(AUTENTICADO, "", sello)
+
+
+# --------------------------------------------------------------------------------------------------------------------------------- clave del paquete (.avclave)
+@dataclass(frozen=True)
+class ClaveDePaquete:
+    """La llave `K` de UNA version del paquete, ENVUELTA para la clave de cifrado de UN equipo (RSA-OAEP-SHA256, S2). Sólo el TPM de ese equipo la desenvuelve; sin ella el código no se abre."""
+    id: str
+    cifrado_huella: bytes     # SHA-256 del SPKI de la clave de cifrado del equipo a la que va envuelta
+    kid_paquete: bytes        # `kid_de(K)`: qué paquete abre (8 bytes)
+    envuelta: bytes           # RSA-OAEP(K): 256 bytes con RSA-2048
+    emitida: int
+    version: str
+    kid: str
+    sha256: str
+
+
+def codificar_clave(kid: str, c: ClaveDePaquete, firmar) -> bytes:
+    campos = {K_ID: bytes.fromhex(c.id.replace("-", "")), K_CIFRADO_HUELLA: c.cifrado_huella, K_KID_PAQUETE: c.kid_paquete, K_ENVUELTA: c.envuelta, K_EMITIDA: c.emitida.to_bytes(8, "big")}
+    if c.version:
+        campos[K_VERSION] = c.version.encode("ascii")
+    return tlv.sellar(tlv.escribir(MAGIC_CLAVE, kid, campos, CONOCIDOS_CLAVE), firmar)
+
+
+def leer_clave(datos: bytes, claves: Mapping[str, bytes]) -> ClaveDePaquete:
+    abierto = firma.abrir(datos, MAGIC_CLAVE, claves, CONOCIDOS_CLAVE)
+    c = abierto.campos
+    if any(t not in c for t in (K_ID, K_CIFRADO_HUELLA, K_KID_PAQUETE, K_ENVUELTA, K_EMITIDA)):
+        raise LicenciaInvalida("campo_faltante")
+    if len(c[K_ID]) != 16 or len(c[K_CIFRADO_HUELLA]) != 32 or len(c[K_KID_PAQUETE]) != 8 or not 64 <= len(c[K_ENVUELTA]) <= 512:
+        raise LicenciaInvalida("campo_invalido")
+    ident = c[K_ID].hex()
+    return ClaveDePaquete(f"{ident[:8]}-{ident[8:12]}-{ident[12:16]}-{ident[16:20]}-{ident[20:]}", c[K_CIFRADO_HUELLA], c[K_KID_PAQUETE], c[K_ENVUELTA], _u(c, K_EMITIDA, 8), _texto(c, K_VERSION),
+                           abierto.kid, abierto.sha256)

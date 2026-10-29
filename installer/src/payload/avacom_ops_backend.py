@@ -97,7 +97,7 @@ def _garantizar_la_salida() -> None:
 
 
 def main() -> int:
-    if not (BACKEND / "manage.py").exists():
+    if not (BACKEND / "manage.py").exists() and not (BACKEND / "codigo.avpkg").exists():      # un paquete cifrado trae su manage.py dentro de codigo.avpkg (avacom_boot.py)
         _decir(f"No se encontro el backend en {BACKEND}", error=True)
         return 2
 

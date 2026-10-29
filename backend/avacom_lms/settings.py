@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "nodo",
     "actualizacion",
     "respaldo",
+    "agente_ia",
 ]
 
 MIDDLEWARE = [
@@ -255,6 +256,27 @@ AVACOM_LMS_AUDITORIA_ESTRICTA = os.environ.get("AVACOM_LMS_AUDITORIA_ESTRICTA", 
 # Tope de renglones por entrega y por minuto que acepta POST /api/logs/clientes/ de cada equipo (§4.2).
 AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES", "200"))
 AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO", "1000"))
+
+# ----------------------------------------------------------- AI Agent (agente_ia)
+# App `agente_ia` (`/api/agente-ia/`, sin tablas): el asistente de IA de OPS Master. Es el ÚNICO cliente de AVACOM Local AI (Qwen por Ollama + la voz Piper), que corre en este mismo equipo.
+# AVACOM_IA_HABILITADA=0 lo apaga (la pantalla lo dice; nada se rompe). AVACOM_IA_URL fija la dirección del servicio; si no está, se lee el puerto del `.env` del propio servicio
+# (%ProgramData%\AVACOM\LocalAI\config\.env) y, si tampoco, http://127.0.0.1:12000. Los tiempos son los del contrato: el modelo puede tardar ≈150 s en una CPU lenta (por eso 160 s) y la voz hasta
+# 60 s por trozo (75 s). Detalle: spec-driven/19-ai-agent/01-integracion-ia-local.md.
+AVACOM_IA_HABILITADA = os.environ.get("AVACOM_IA_HABILITADA", "1") != "0"
+AVACOM_IA_URL = os.environ.get("AVACOM_IA_URL", "").strip()
+# En pruebas NO se lee el equipo real: sin archivo.
+AVACOM_IA_ENV_ARCHIVO = (os.environ["AVACOM_IA_ENV_ARCHIVO"] if "AVACOM_IA_ENV_ARCHIVO" in os.environ else
+                         "" if AVACOM_LMS_ENTORNO == "pruebas" else
+                         str(Path(os.environ.get("ProgramData") or os.environ.get("PROGRAMDATA") or "C:/ProgramData") / "AVACOM" / "LocalAI" / "config" / ".env"))
+AVACOM_IA_TIEMPO_LLM_S = float(os.environ.get("AVACOM_IA_TIEMPO_LLM_S", "160"))
+AVACOM_IA_TIEMPO_VOZ_S = float(os.environ.get("AVACOM_IA_TIEMPO_VOZ_S", "75"))
+AVACOM_IA_TIEMPO_VOZ_TOTAL_S = float(os.environ.get("AVACOM_IA_TIEMPO_VOZ_TOTAL_S", "120"))
+AVACOM_IA_TIEMPO_SALUD_S = float(os.environ.get("AVACOM_IA_TIEMPO_SALUD_S", "5"))
+AVACOM_IA_TROZO_MAX = int(os.environ.get("AVACOM_IA_TROZO_MAX", "450"))
+AVACOM_IA_PREGUNTA_MAX = int(os.environ.get("AVACOM_IA_PREGUNTA_MAX", "2000"))
+AVACOM_IA_VOZ_TEXTO_MAX = int(os.environ.get("AVACOM_IA_VOZ_TEXTO_MAX", "3000"))
+AVACOM_IA_MAX_TOKENS = int(os.environ.get("AVACOM_IA_MAX_TOKENS", "256"))
+AVACOM_IA_VOZ_TURNO_S = float(os.environ.get("AVACOM_IA_VOZ_TURNO_S", "45"))
 
 # ------------------------------------------------ Node Platform y Cola de Salida (MOD-015)
 # App `nodo` (`/api/nodo/`, tablas m15_*): la cola única con secuencia global (`m15_evento`), el registro de consumidores con sus marcas, la cola de problemas, el corte de cada

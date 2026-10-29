@@ -1,0 +1,10 @@
+{
+  "codigo": null,
+  "disponible": true,
+  "habilitada": true,
+  "modelo": "qwen3:8b",
+  "motivo": null,
+  "motivo_voz": null,
+  "servicio_activo": true,
+  "voz_disponible": true
+}

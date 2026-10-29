@@ -23,6 +23,8 @@
     <None Include="Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- El cuerpo real de un reporte exportado en CSV (MOD-013): sus bytes y su huella son parte del contrato -->
     <None Include="Fixtures\**\*.csv" CopyToOutputDirectory="PreserveNewest" />
+    <!-- AI Agent: el WAV real que contesta /api/agente-ia/hablar/ (capturado por backend/agente_ia/tests/test_capturar_contrato.py) -->
+    <None Include="Fixtures\**\*.wav" CopyToOutputDirectory="PreserveNewest" />
     <!-- MOD-018 · Licencia: archivos de verdad capturados por backend/licenciamiento/tests/test_capturar_contrato.py (una licencia binaria, la misma en texto, una alterada, una solicitud y una liberación) -->
     <None Include="Fixtures\**\*.avlic;Fixtures\**\*.avreq;Fixtures\**\*.avrel" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

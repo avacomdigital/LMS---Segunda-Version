@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.AgenteIa;
 using Avacom.Lms.Core.IdentidadDeDispositivo;
 using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Diagnostico;
@@ -276,6 +277,30 @@ public static class Sesion
                 _baseNodo = actual;
             }
             return _nodo;
+        }
+    }
+
+    // El asistente de IA tarda: el modelo local puede necesitar minutos en un equipo lento. El HttpClient de los demás clientes se rinde a los 15 s y ningún «preguntar» llegaría a responder, así
+    // que este cliente tiene el suyo, con un tope MAYOR que lo que AgenteIaApi espera (185 s): quien corta la espera es AgenteIaApi, con su mensaje, y no el HttpClient con un «sin conexión».
+    private static readonly HttpClient HttpAgenteIa = new HttpClient(new HandlerDeMedicion()) { Timeout = TimeSpan.FromSeconds(210) };
+    private static AgenteIaApi? _agenteIa;
+    private static Uri? _baseAgenteIa;
+
+    /// <summary>
+    /// El cliente de <c>/api/agente-ia/</c> (AI Agent), una instancia por dirección: preguntarle al modelo local (Qwen), pedir la voz de la respuesta y saber si el servicio de IA está disponible.
+    /// La app NO habla con el servicio de IA: habla con el nodo, que es su único cliente.
+    /// </summary>
+    public static AgenteIaApi AgenteIa
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_agenteIa is null || _baseAgenteIa != actual)
+            {
+                _agenteIa = new AgenteIaApi(HttpAgenteIa, actual);
+                _baseAgenteIa = actual;
+            }
+            return _agenteIa;
         }
     }
 

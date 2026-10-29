@@ -125,6 +125,7 @@ internal static class Interprete
         {
             using var proceso = Process.Start(inicio);
             if (proceso is null) return new Salida(-1, "");
+            ProcesoBackend.EntregarClave(proceso);
             var tareaErrores = proceso.StandardError.ReadToEndAsync();
             var tareaSalida = proceso.StandardOutput.ReadToEndAsync();
             if (!proceso.WaitForExit((int)Math.Max(1000, limite.TotalMilliseconds)))

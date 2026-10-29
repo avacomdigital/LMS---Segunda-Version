@@ -17,6 +17,7 @@
     "licenciamiento": {"modulo": "MOD-018", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["licencia"], "consume": {"acceso": [1, 1], "device_manager": [1, 1], "audit": [1, 1]}},
     "nodo": {"modulo": "MOD-015", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["nodo"], "consume": {"acceso": [1, 1], "audit": [1, 1]}},
     "actualizacion": {"modulo": "MOD-017", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["actualizacion"], "consume": {"acceso": [1, 1], "audit": [1, 1], "nodo": [1, 1], "classroom_engine": [1, 1], "biblioteca": [1, 2]}},
-    "respaldo": {"modulo": "MOD-016", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["respaldo"], "consume": {"acceso": [1, 1], "audit": [1, 1], "nodo": [1, 1], "classroom_engine": [1, 1], "licenciamiento": [1, 1]}}
+    "respaldo": {"modulo": "MOD-016", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": ["respaldo"], "consume": {"acceso": [1, 1], "audit": [1, 1], "nodo": [1, 1], "classroom_engine": [1, 1], "licenciamiento": [1, 1]}},
+    "agente_ia": {"modulo": "AI Agent (sin ficha propia)", "version": "1.0.0", "version_contrato": 1, "serie": 1, "actualizable": true, "produce": [], "consume": {"acceso": [1, 1], "audit": [1, 1]}}
   }
 }
