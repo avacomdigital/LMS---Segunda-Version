@@ -64,7 +64,7 @@ public partial class CalificacionesConfigPage
         modos.Add(EstudioUi.Chip("Calificaciones", EnCalificaciones, CalificacionesUi.Seguro(nameof(CalificacionesConfigPage), "Modo", () => ElegirModoAsync(ModosDeNivel.Calificaciones)), $"config-{nivel.NivelClave}-modo-calificaciones", 56));
         pila.Add(modos);
         pila.Add(Ds.Secundario(EnCalificaciones
-            ? "Calificaciones: el estudiante ve su nota presentada con la escala que elijas, cuando el profesor la publica."
+            ? "Calificaciones: el estudiante ve su nota presentada con la escala que elijas, cuando el docente la publica."
             : "Simple: el estudiante ve sólo si completó cada evaluación (○ ◐ ●), sin notas, letras ni números. Es lo más sencillo para los más pequeños.", 14));
 
         // ---- escala

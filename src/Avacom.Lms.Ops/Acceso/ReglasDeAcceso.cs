@@ -196,7 +196,7 @@ public sealed record HojaDeAcceso(
 public sealed record OfertaDeCuenta(bool CrearMiUsuario, bool OlvideMiContrasena, string? Nota, string? AvisoAlTocar)
 {
     public const string SinPinMaestro = "Crear tu usuario y recuperar tu contraseña se activan cuando la administración configure el PIN maestro.";
-    public const string RegistroCerrado = "El registro de profesores está cerrado. Si aún no tienes usuario, pídeselo a la administración.";
+    public const string RegistroCerrado = "El registro de docentes está cerrado. Si aún no tienes usuario, pídeselo a la administración.";
     public const string PinVencido = "El PIN maestro venció. Pídele a administración que lo cambie y vuelve a intentarlo.";
 
     public static OfertaDeCuenta Para(ConfiguracionAcceso? configuracion)
@@ -226,11 +226,11 @@ public static class AvisoDelPinMaestro
         if (configurado is null) return null;
         if (configurado == false)
             return admin
-                ? "Este equipo todavía no tiene PIN maestro. Configúralo en Seguridad del aula: sin él, los profesores no pueden crear su usuario ni recuperar su contraseña."
+                ? "Este equipo todavía no tiene PIN maestro. Configúralo en Seguridad del aula: sin él, los docentes no pueden crear su usuario ni recuperar su contraseña."
                 : "Este equipo todavía no tiene PIN maestro. Pídele a la administración que lo configure.";
         if (fino?.Vencido ?? publico?.Vencido ?? false)
             return admin
-                ? "El PIN maestro venció. Mientras no lo cambies, los profesores no pueden crear su usuario ni recuperar su contraseña. Cámbialo en Seguridad del aula."
+                ? "El PIN maestro venció. Mientras no lo cambies, los docentes no pueden crear su usuario ni recuperar su contraseña. Cámbialo en Seguridad del aula."
                 : "El PIN maestro venció. Avisa a la administración para que lo cambie.";
         if (!(fino?.Aviso ?? publico?.PorVencer ?? false)) return null;
         if (!admin || fino?.DiasRestantes is not { } dias) return "El PIN maestro vence en menos de 30 días. Avisa a la administración para que lo cambie.";

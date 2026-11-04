@@ -262,7 +262,7 @@ public static class Ds
 
     /// <summary>
     /// Botón del DS, en píldora. Primary: verde 600 → 700, texto blanco y sombra difusa verde. Secondary: blanco con
-    /// contorno de 2 px. Quiet: sólo texto azul 700. Destructive: rojo 600 → 700. Pulsado: escala 0,97.
+    /// contorno de 2 px. Quiet: sólo texto verde 700 (terciario del DS). Destructive: rojo 600 → 700. Pulsado: escala 0,97.
     /// </summary>
     public static Button Boton(string texto, Rango rango, EventHandler? alPulsar = null, double alto = 64, double? ancho = null)
     {
@@ -285,14 +285,169 @@ public static class Ds
             case Rango.Secondary:
                 PintarRelieve(boton, Superficie, Tinta); break;
             case Rango.Quiet:
-                boton.BackgroundColor = Colors.Transparent; boton.TextColor = Azul700; break;
+                boton.BackgroundColor = Colors.Transparent; boton.TextColor = Verde700; break;
             case Rango.Destructive:
                 PintarRelieve(boton, Peligro, Colors.White); break;
         }
+        IconoDelTexto(boton);
         Hundir(boton);
         if (alPulsar is not null) boton.Clicked += alPulsar;
         return boton;
     }
+
+    // ------------------------------------------------------------- iconos del DS
+    /// <summary>Glifos de texto que llevaban los botones y el icono sólido del DS que los sustituye (antes o después del texto).</summary>
+    private static readonly (string Glifo, string? Icono, bool Delante)[] GlifosDeBoton =
+    [
+        ("‹", "boton_atras.png", true), ("◀", "boton_atras.png", true), ("←", "boton_atras.png", true), ("✋", "boton_mano.png", true),
+        ("★", "boton_estrella.png", true), ("☆", "boton_estrella.png", true), ("✎", null, true), ("▶", "boton_adelante.png", false),
+        ("›", "boton_adelante.png", false), ("→", "boton_adelante.png", false),
+    ];
+
+    /// <summary>El icono «adelante» del DS donde antes iba un «›»: al final de una fila que se abre o de un enlace.</summary>
+    public static Image Flecha(double lado = 28, LayoutOptions? horizontal = null, LayoutOptions? vertical = null)
+    {
+        var icono = IconoDs("ico_adelante.png", lado);
+        if (horizontal is { } h) icono.HorizontalOptions = h;
+        if (vertical is { } v) icono.VerticalOptions = v;
+        return icono;
+    }
+
+    /// <summary>Un texto de enlace («Ver», «Elegir»…) seguido del icono «adelante» del DS.</summary>
+    public static View ConFlecha(Label texto)
+    {
+        texto.VerticalOptions = LayoutOptions.Center;
+        return new HorizontalStackLayout { Spacing = 8, VerticalOptions = LayoutOptions.Center, Children = { texto, Flecha(30) } };
+    }
+
+    /// <summary>
+    /// Lleva el botón de volver («Menú principal») de las acciones de la derecha a la esquina superior izquierda de la cabecera, encima
+    /// de los textos, con la flecha «atrás» del DS: arriba a la izquierda es donde se busca para regresar. <paramref name="volver"/> es el
+    /// botón o su cápsula, ya puesto en el contenedor de acciones; la cabecera es la cuadrícula que contiene ese contenedor. Se le abre una
+    /// fila propia al principio, de todo el ancho, y el resto baja una. Si las acciones todavía no están en la cabecera, se hace en cuanto lleguen.
+    /// </summary>
+    public static void VolverALaIzquierda(Layout acciones, View volver)
+    {
+        acciones.Add(volver);
+        VolverALaIzquierda(volver);
+    }
+
+    /// <inheritdoc cref="VolverALaIzquierda(Layout, View)"/>
+    public static void VolverALaIzquierda(View volver)
+    {
+        if (volver is Button boton) PonerIconoDeVolver(boton);
+        else if (volver is Border { Content: Button interior } capsula) { PonerIconoDeVolver(interior); capsula.Shadow = null!; }
+        if (volver.Parent is not Layout acciones) return;
+        if (acciones.Parent is Grid) { Mover(); return; }
+        // Grid.Add(vista, columna, fila) cuelga la vista ANTES de ponerle la columna: se mueve después, cuando ya tiene la suya, o la
+        // columna de la llamada pisaría el corrimiento y las acciones caerían encima del título.
+        void AlLlegar(object? s, EventArgs e)
+        {
+            acciones.ParentChanged -= AlLlegar;
+            // Dispatch encola (BeginInvokeOnMainThread correría ya mismo, porque ya estamos en el hilo de la interfaz).
+            var despachador = acciones.Dispatcher ?? Application.Current?.Dispatcher;
+            if (despachador is null) { if (acciones.Parent is Grid) Mover(); return; }
+            despachador.Dispatch(() => { if (acciones.Parent is Grid) Mover(); });
+        }
+        acciones.ParentChanged += AlLlegar;
+
+        void Mover()
+        {
+            var cabecera = (Grid)acciones.Parent;
+            if (volver.Parent != acciones) return;
+            acciones.Remove(volver);
+            // Una pantalla que repinta su cabecera (Estudio: lista, detalle, nueva) reusa la fila que ya abrió, sin abrir otra.
+            if (ColumnaDeVolver.TryGetValue(cabecera, out var anterior))
+            {
+                if (anterior.TryGetTarget(out var viejo) && viejo.Parent == cabecera) cabecera.Remove(viejo);
+                ColumnaDeVolver.AddOrUpdate(cabecera, new WeakReference<View>(volver));
+            }
+            else
+            {
+                foreach (var hijo in cabecera.Children.OfType<BindableObject>())
+                    Grid.SetRow(hijo, Grid.GetRow(hijo) + 1);
+                if (cabecera.RowDefinitions.Count == 0) cabecera.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                cabecera.RowDefinitions.Insert(0, new RowDefinition(GridLength.Auto));
+                ColumnaDeVolver.Add(cabecera, new WeakReference<View>(volver));
+            }
+            volver.VerticalOptions = LayoutOptions.Start;
+            volver.HorizontalOptions = LayoutOptions.Start;
+            volver.Margin = new Thickness(0, 0, 0, 4);
+            cabecera.Add(volver, 0, 0);
+            Grid.SetColumnSpan(volver, Math.Max(1, cabecera.ColumnDefinitions.Count));
+        }
+    }
+
+    private static readonly ConditionalWeakTable<Grid, WeakReference<View>> ColumnaDeVolver = new();
+
+    // Volver siempre igual en todas las pantallas: la flecha «atrás» del DS y el texto en verde 700, sin caja ni borde.
+    private static void PonerIconoDeVolver(Button boton)
+    {
+        if (boton.ImageSource is null) PonerIcono(boton, "boton_atras.png");
+        boton.Background = null!;
+        boton.BackgroundColor = Colors.Transparent;
+        boton.BorderWidth = 0;
+        boton.TextColor = Verde700;
+        boton.Shadow = null!;
+        // Sin el relleno de píldora a la izquierda: la flecha queda alineada con el borde de los textos de debajo.
+        boton.Padding = new Thickness(0, 0, 14, 0);
+        boton.WidthRequest = -1;   // ancho por contenido: con la flecha delante, un ancho fijo cortaba el texto o dejaba aire
+    }
+
+    /// <summary>Si el texto del botón empieza (o acaba) con un glifo de flecha, mano o estrella, lo quita y pone el icono del DS.</summary>
+    private static void IconoDelTexto(Button boton)
+    {
+        var texto = boton.Text?.Trim() ?? string.Empty;
+        foreach (var (glifo, icono, delante) in GlifosDeBoton)
+        {
+            var hay = delante ? texto.StartsWith(glifo, StringComparison.Ordinal) : texto.EndsWith(glifo, StringComparison.Ordinal);
+            if (!hay || texto.Length == glifo.Length) continue;
+            boton.Text = (delante ? texto[glifo.Length..] : texto[..^glifo.Length]).Trim();
+            if (icono is not null) PonerIcono(boton, icono, delante);
+            return;
+        }
+        // «Actualizar» lleva el icono de actualizar del DS: así no se confunde con el botón de volver que suele tener al lado.
+        if (texto == "Actualizar") PonerIcono(boton, "boton_actualiza.png");
+    }
+
+    /// <summary>Cambia el texto de un botón y, si lleva flecha, mano o estrella, pone el icono del DS en su lugar (o lo quita si ya no la lleva).</summary>
+    public static void PonerTexto(Button boton, string texto)
+    {
+        boton.ImageSource = null;
+        boton.Text = texto;
+        IconoDelTexto(boton);
+    }
+
+    /// <summary>Icono del DS (22 DIU) junto al texto del botón: delante o detrás, a 10 de separación.</summary>
+    public static void PonerIcono(Button boton, string icono, bool delante = true)
+    {
+        boton.ImageSource = icono;
+        boton.ContentLayout = new Button.ButtonContentLayout(delante ? Button.ButtonContentLayout.ImagePosition.Left : Button.ButtonContentLayout.ImagePosition.Right, 10);
+    }
+
+    /// <summary>El icono sólido del DS que representa un componente o tipo de contenido.</summary>
+    public static string ArchivoDeIcono(string? componente) => componente switch
+    {
+        "presentacion" => "ico_proyectar.png",
+        "leccion" or "lectura" or "texto" or "titulo" or "lista" => "ico_libros.png",
+        "pdf" or "documento" => "ico_reporte.png",
+        "laboratorio_web" or "webview" or "interactivo" => "ico_ciencia.png",
+        "video" => "ico_play.png",
+        "imagen" => "ico_lamina.png",
+        "audio" => "ico_lenguaje.png",
+        "examen" or "evaluacion" or "exam" => "ico_examen.png",
+        "actividad" or "opcion_multiple" or "verdadero_falso" or "completar" or "relacionar" or "ordenar" or "abierta" => "ico_estudio.png",
+        "curso" => "ico_libros.png",
+        "clase" => "ico_clase.png",
+        _ => "ico_lamina.png",
+    };
+
+    /// <summary>Un icono sólido del DS a su tamaño (los PNG del catálogo, enlazados en las dos apps).</summary>
+    public static Image IconoDs(string archivo, double lado) => new()
+    {
+        Source = archivo, WidthRequest = lado, HeightRequest = lado, Aspect = Aspect.AspectFit,
+        HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center,
+    };
 
     /// <summary>
     /// Viste un botón del DS: relleno del color dado (degradado 600 → 700 si es de rol) y sombra difusa del mismo
@@ -481,24 +636,34 @@ public static class Ds
         VerticalOptions = LayoutOptions.Center,
     };
 
+    /// <summary>Píldora con un icono sólido del DS delante del texto (mano levantada, aviso…).</summary>
+    public static Border PildoraConIcono(string texto, string icono, Color fondo, Color? tinta = null, double tamano = 13)
+    {
+        var pildora = Pildora(texto, fondo, tinta, tamano);
+        var etiqueta = (Label)pildora.Content!;
+        pildora.Content = null;
+        etiqueta.VerticalOptions = LayoutOptions.Center;
+        var fila = new HorizontalStackLayout { Spacing = 8 };
+        fila.Add(IconoDs(icono, tamano + 6));
+        fila.Add(etiqueta);
+        pildora.Content = fila;
+        return pildora;
+    }
+
     /// <summary>Punto de estado de conexión (CMP-001): conectado, reconectando o sin señal. Sin porcentajes. El punto y la palabra, nunca sólo el color.</summary>
     public static Border PuntoEstado(string texto, Color color) => Pildora($"●  {texto}", Superficie2, color, 13);
 
-    /// <summary>Icono de categoría en un cuadrado redondeado (26–34 px).</summary>
+    /// <summary>Icono de categoría: el icono sólido del DS sobre el tono suave (50) de su categoría, en un cuadrado redondeado.</summary>
     public static Border IconoCategoria(string? componente, double lado = 44)
     {
         var color = Categoria(componente);
         return new Border
         {
-            BackgroundColor = color,
+            BackgroundColor = FamiliaDe(color) is null ? Lienzo : Suave(color),
             StrokeThickness = 0,
             WidthRequest = lado, HeightRequest = lado,
             StrokeShape = new RoundRectangle { CornerRadius = RadioControl },
-            Content = new Label
-            {
-                Text = Icono(componente), FontSize = lado * 0.5, TextColor = TintaSobre(color),
-                HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center,
-            },
+            Content = IconoDs(ArchivoDeIcono(componente), lado * 0.78),
             VerticalOptions = LayoutOptions.Center,
         };
     }

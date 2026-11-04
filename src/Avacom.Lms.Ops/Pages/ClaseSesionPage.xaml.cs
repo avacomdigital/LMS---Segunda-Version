@@ -31,6 +31,36 @@ namespace Avacom.Lms.Ops.Pages;
 public partial class ClaseSesionPage : ContentPage
 {
     private static readonly string[] Frases = ["Miren al frente", "Dos minutos", "Guarden lo que llevan", "Levanten la mano si terminaron", "Vamos a cerrar"];
+    private static readonly string[] IconosDeFrase = ["ico_proyectar.png", "ico_historial.png", "ico_descarga.png", "ico_mano.png", "ico_terminar.png"];
+
+    /// <summary>Una frase del aviso como ficha: icono del DS arriba y la frase debajo, todas del mismo tamaño para que la hoja se lea ordenada.</summary>
+    private View FichaDeFrase(string frase, string icono)
+    {
+        var pila = new VerticalStackLayout
+        {
+            Spacing = 10, VerticalOptions = LayoutOptions.Center,
+            Children =
+            {
+                Ds.IconoDs(icono, 40),
+                new Label
+                {
+                    Text = frase, FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap,
+                    HorizontalTextAlignment = TextAlignment.Center, HorizontalOptions = LayoutOptions.Center,
+                },
+            },
+        };
+        var ficha = Ds.Tarjeta(pila, Ds.RadioInterno, new Thickness(14, 16));
+        ficha.Stroke = new SolidColorBrush(Ds.Linea);
+        ficha.StrokeThickness = 2;
+        // Sin sombra: la hoja se abre y se cierra, y en Windows un borde con sombra que se oculta deja un rectángulo gris.
+        ficha.Shadow = null!;
+        ficha.WidthRequest = 168;
+        ficha.MinimumHeightRequest = 128;
+        ficha.Margin = new Thickness(6);
+        SemanticProperties.SetDescription(ficha, $"Enviar «{frase}»");
+        Ds.Tocable(ficha, () => AvisarAsync(frase));
+        return ficha;
+    }
     private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
 
     /// <summary>MSG-045: por debajo de este espacio libre una tableta puede no poder guardar el paquete de una actividad.</summary>
@@ -75,14 +105,9 @@ public partial class ClaseSesionPage : ContentPage
         _participantesBtn.FontSize = 16;
         ParticipantesSlot.Content = Ds.Capsula(_participantesBtn);
         PintarControles();
-        foreach (var frase in Frases)
-        {
-            var b = Ds.Boton(frase, Ds.Rango.Secondary, async (_, _) => await AvisarAsync(frase), 64);
-            b.Margin = new Thickness(0, 0, 10, 10);
-            FrasesHost.Add(Ds.Capsula(b));
-        }
-        var cerrarAviso = Ds.Boton("Cerrar", Ds.Rango.Quiet, (_, _) => CerrarAviso(), 64);
-        FrasesHost.Add(cerrarAviso);
+        for (var i = 0; i < Frases.Length; i++)
+            FrasesHost.Add(FichaDeFrase(Frases[i], IconosDeFrase[i]));
+        AvisoCerrarSlot.Content = Ds.Boton("Cerrar", Ds.Rango.Quiet, (_, _) => CerrarAviso(), 52);
 
         // 007-12 · el código en grande: se abre tocando el código; el profesor puede cambiarlo o volver a la clase.
         Ds.Tocable(CodigoCard, () => { AbrirCodigoGrande(); return Task.CompletedTask; });
@@ -362,7 +387,7 @@ public partial class ClaseSesionPage : ContentPage
             AvisosDeEstado.Add(Ds.Pildora($"Aula llena · {lleno.Activos} de {lleno.Pico} · las nuevas tabletas esperan", Ds.AlertaSuave, Ds.Tinta, 13));
         if (manos > 0)
         {
-            var mano = Ds.Pildora(manos == 1 ? "✋ 1 alumno pide ayuda" : $"✋ {manos} alumnos piden ayuda", Ds.InfoSuave, Ds.Tinta, 14);
+            var mano = Ds.PildoraConIcono(manos == 1 ? "1 alumno pide ayuda" : $"{manos} alumnos piden ayuda", "ico_mano.png", Ds.InfoSuave, Ds.Tinta, 14);
             Ds.Tocable(mano, () => { AbrirParticipantes(); return Task.CompletedTask; });
             SemanticProperties.SetDescription(mano, "Ver quién pide ayuda");
             AvisosDeEstado.Add(mano);
@@ -959,9 +984,9 @@ public partial class ClaseSesionPage : ContentPage
             Grid.SetRowSpan(avatar, 2);
             // Nombre (con la mano levantada al lado), estado y la tableta con la que entró (MOD-009); lo importante se ve de un vistazo.
             var textos = new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Spacing = 2 };
-            textos.Add(Ds.Cuerpo(p.ManoLevantada ? $"✋ {p.Nombre}" : p.Nombre, 16));
+            textos.Add(Ds.Cuerpo(p.Nombre, 16));
             textos.Add(Ds.Secundario(string.Join(" · ", new[] { p.EstadoLegible, SinSenalTexto(p, s.ServidorEn), p.AdmisionNominal ? "invitado" : null, string.IsNullOrWhiteSpace(p.Dispositivo) ? null : p.Dispositivo }.Where(x => x is not null)), 13));
-            if (p.ManoLevantada) textos.Add(EtiquetaDeFila(Ds.Pildora("Pide ayuda", Ds.InfoSuave, Ds.Tinta, 13)));
+            if (p.ManoLevantada) textos.Add(EtiquetaDeFila(Ds.PildoraConIcono("Pide ayuda", "ico_mano.png", Ds.InfoSuave, Ds.Tinta, 13)));
             if (p.Proyectado) textos.Add(EtiquetaDeFila(Ds.Pildora("Su pantalla se proyecta", Ds.VioletaSuave, Ds.Tinta, 13)));
             if (p.TabletaBloqueada) textos.Add(EtiquetaDeFila(Ds.Pildora("Tableta bloqueada · sin lanzamientos", Ds.PeligroSuave, TintaPeligro, 13)));
             fila.Add(textos, 1, 0);
@@ -1056,7 +1081,7 @@ public partial class ClaseSesionPage : ContentPage
     private string TextoDeError(ErrorAula? error, string? motivo)
     {
         if (Sesion.MensajeDePermiso(error, _sesion?.ProfesorRotulo) is { } permiso) return permiso;
-        if (error?.Estado == 403) return "Esta clase la lleva otra persona. Sólo su profesor o la administración puede hacerlo.";
+        if (error?.Estado == 403) return "Esta clase la lleva otra persona. Sólo su docente o la administración puede hacerlo.";
         if (error?.Frenado == true) return "Demasiados intentos seguidos. Espera un momento y vuelve a probar.";
         if (error?.AulaLlena == true) return "El aula llegó a su capacidad máxima. Las tabletas nuevas esperan hasta que alguien salga.";
         return error?.Detalle ?? motivo ?? "Sin detalle.";

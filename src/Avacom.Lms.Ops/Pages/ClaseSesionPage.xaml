@@ -95,10 +95,18 @@
                 </Grid>
             </Border>
             <!-- Hoja de avisos (frases prehechas, sin teclado) -->
-            <Border x:Name="AvisoPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,12" Padding="18" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 20">
-                <VerticalStackLayout Spacing="10">
-                    <Label x:Name="AvisoTitulo" Text="Enviar un aviso al grupo" FontFamily="LexendMedium" FontSize="18" />
-                    <FlexLayout x:Name="FrasesHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Center" />
+            <Border x:Name="AvisoPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,12" Padding="24,20" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 24">
+                <VerticalStackLayout Spacing="16">
+                    <!-- Cabecera: a quién va el aviso y, en la esquina, «Cerrar» (fuera de las frases, para no confundirlo con una de ellas). -->
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+                        <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                            <Label x:Name="AvisoTitulo" Text="Enviar un aviso al grupo" FontFamily="LexendMedium" FontSize="20" TextColor="#1F2433" />
+                            <Label Text="Toca una frase: aparece al instante en las tabletas." FontFamily="Lexend" FontSize="15" TextColor="#4F5566" />
+                        </VerticalStackLayout>
+                        <ContentView x:Name="AvisoCerrarSlot" Grid.Column="1" VerticalOptions="Center" />
+                    </Grid>
+                    <!-- Las frases, en fichas iguales con su icono del DS. -->
+                    <FlexLayout x:Name="FrasesHost" Wrap="Wrap" Direction="Row" JustifyContent="Center" AlignItems="Stretch" />
                 </VerticalStackLayout>
             </Border>
             <!-- Pantalla de proyección: resolución y escala de Windows contra las que se ajusta el video (responsive.md) -->

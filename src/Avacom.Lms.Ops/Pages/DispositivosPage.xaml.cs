@@ -39,7 +39,7 @@ public partial class DispositivosPage : ContentPage
         foreach (var b in new[] { actualizar, _todosBtn, volver }) b.FontSize = 16;
         AccionesHost.Add(Ds.Capsula(actualizar));
         AccionesHost.Add(Ds.Capsula(_todosBtn));
-        AccionesHost.Add(volver);
+        Ds.VolverALaIzquierda(AccionesHost, volver);
     }
 
     protected override async void OnAppearing()
@@ -152,8 +152,10 @@ public partial class DispositivosPage : ContentPage
             capsulaDueno.VerticalOptions = LayoutOptions.Center;
             botones.Add(capsulaDueno);
 
-            var bloqueo = Ds.Boton(d.Bloqueado ? "Desbloquear" : "Bloquear", d.Bloqueado ? Ds.Rango.Secondary : Ds.Rango.Quiet, async (_, _) => await BloqueoAsync(d), 56, 190);
+            // Secundario como «Asignar a un alumno», con el candado del DS (abierto para desbloquear): un terciario de ancho fijo se veía como un bloque vacío.
+            var bloqueo = Ds.Boton(d.Bloqueado ? "Desbloquear" : "Bloquear", Ds.Rango.Secondary, async (_, _) => await BloqueoAsync(d), 56, 190);
             bloqueo.FontSize = 16;
+            Ds.PonerIcono(bloqueo, d.Bloqueado ? "mando_candado_abierto.png" : "mando_candado.png");
             var capsula = Ds.Capsula(bloqueo);
             capsula.VerticalOptions = LayoutOptions.Center;
             botones.Add(capsula);

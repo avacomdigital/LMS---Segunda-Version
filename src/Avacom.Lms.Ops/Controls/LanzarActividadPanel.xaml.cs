@@ -358,15 +358,15 @@ public partial class LanzarActividadPanel : ContentView
     }
 
     /// <summary>
-    /// Activa: tinta oscura con texto blanco (cambia la luminosidad, no sólo el tono) y la marca de estado en el texto. Inactiva: gris
+    /// Activa: verde principal del DS con texto blanco (cambia la luminosidad, no sólo el tono) y la marca de estado en el texto. Inactiva: gris
     /// claro con filo. Deshabilitada: atenuada. Las dos marcas ocupan el mismo ancho para que la cuadrícula no salte al tocar.
     /// </summary>
     private static void Vestir(Button ficha, string texto, bool activa, bool habilitada, string marcaSi, string marcaNo)
     {
         ficha.Text = $"{(activa ? marcaSi : marcaNo)}  {texto}";
-        ficha.BackgroundColor = activa ? Ds.Tinta : FondoFicha;
+        ficha.BackgroundColor = activa ? Ds.Principal : FondoFicha;
         ficha.TextColor = activa ? Colors.White : Ds.Tinta;
-        ficha.BorderColor = activa ? Ds.Tinta : FiloFicha;
+        ficha.BorderColor = activa ? Ds.Principal : FiloFicha;
         ficha.IsEnabled = habilitada;
         ficha.Opacity = habilitada ? 1 : 0.5;
         SemanticProperties.SetDescription(ficha, $"{texto}, {(activa ? "elegido" : "sin elegir")}");

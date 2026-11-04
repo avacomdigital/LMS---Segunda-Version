@@ -16,8 +16,8 @@ namespace Avacom.Lms.Student.Pages;
 /// </summary>
 public partial class ConnectionPage : ContentPage
 {
-    private const string DescripcionPrototipo = "Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor.";
-    private const string DescripcionConSesion = "Escribe la dirección que aparece en la pantalla principal del profesor y toca «Entrar al aula».";
+    private const string DescripcionPrototipo = "Escribe tu nombre y la dirección que aparece en la pantalla principal del docente.";
+    private const string DescripcionConSesion = "Escribe la dirección que aparece en la pantalla principal del docente y toca «Entrar al aula».";
     private const string Verde = "#047857", VerdeSuave = "#E1F5EC", Rojo = "#C81E24", RojoSuave = "#FDE7E7", Azul = "#075985", AzulSuave = "#E3F5FC";
 
     private readonly ILmsApiClient apiClient = new LmsApiClient(new HttpClient { Timeout = TimeSpan.FromSeconds(3) });

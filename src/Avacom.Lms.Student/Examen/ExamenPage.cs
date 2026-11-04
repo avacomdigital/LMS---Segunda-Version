@@ -156,7 +156,7 @@ public sealed class ExamenPage : ContentPage
                     Avisos.Mostrar(espera is { } e ? $"Demasiados intentos. Espera {Math.Ceiling(e.TotalMinutes)} min." : "Demasiados intentos. Espera un momento.");
                     break;
                 default:
-                    Avisos.Mostrar("Esta tableta no tiene PIN de salida. Pide a tu profesor que cierre tu examen desde su pantalla.");
+                    Avisos.Mostrar("Esta tableta no tiene PIN de salida. Pide a tu docente que cierre tu examen desde su pantalla.");
                     break;
             }
         }

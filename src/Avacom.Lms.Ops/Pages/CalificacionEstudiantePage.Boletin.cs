@@ -83,7 +83,7 @@ public partial class CalificacionEstudiantePage
     private View Recomendaciones(BoletinDelEstudiante b)
     {
         var pila = new VerticalStackLayout { Spacing = 12 };
-        pila.Add(Ds.Titulo("Recomendaciones del profesor", 24));
+        pila.Add(Ds.Titulo("Recomendaciones del docente", 24));
         var catalogo = b.RecomendacionesDisponibles ?? [];
         var general = b.Observaciones?.FirstOrDefault(o => o.EsGeneral);
         if (CalificacionesUi.PuedeCalificar && catalogo.Count > 0)
@@ -206,7 +206,7 @@ public partial class CalificacionEstudiantePage
 
         if (calif)
         {
-            pila.Add(BoletinUi.Rotulo("Lo que escribió el profesor", 12));
+            pila.Add(BoletinUi.Rotulo("Lo que escribió el docente", 12));
             if (!ins.Comentarios.HayAlgo)
                 pila.Add(Ds.Secundario("Todavía no hay comentarios sobre este estudiante. Se escriben en el detalle de cada calificación (fortalezas, dificultades y oportunidades).", 14));
             else
@@ -419,7 +419,7 @@ public partial class CalificacionEstudiantePage
         }
         else if (e.CalificacionId is { } detalle)
         {
-            fila.Add(new Label { Text = "›", FontSize = 22, TextColor = Ds.TintaSuave, VerticalOptions = LayoutOptions.Center, HorizontalOptions = LayoutOptions.End }, 6, 0);
+            fila.Add(Ds.Flecha(26, LayoutOptions.End), 6, 0);
             fila.AutomationId = $"boletin-evaluacion-{e.AsignacionId}";
             SemanticProperties.SetDescription(fila, $"{e.Titulo}. Toca para ver el detalle de la calificación.");
             Ds.Tocable(fila, () => Shell.Current.GoToAsync($"calificacion-detalle?id={Uri.EscapeDataString(detalle)}&alumno={Uri.EscapeDataString(_boletin?.Alumno.Rotulo ?? Nombre)}&titulo={Uri.EscapeDataString(e.Titulo)}"));

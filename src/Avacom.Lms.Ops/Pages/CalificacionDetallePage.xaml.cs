@@ -261,7 +261,7 @@ public partial class CalificacionDetallePage : ContentPage
             : (p.Provisional && !c.Publicada ? "Provisional: puede cambiar hasta que se publique. " : "Estampada al publicar. ") + (p.Escala is { } e ? $"Escala: {e.Nombre}" : string.Empty), 280, "calificacion-bloque-presentada"));
         fila.Add(CalificacionesUi.Bloque("Nivel de desempeño", TextoDeCalificaciones.Desempeno(p),
             p?.Desempeno.ValoradoPorElDocente == true
-                ? (string.IsNullOrWhiteSpace(c.DesempenoMotivo) ? "Lo fijó el profesor con su criterio pedagógico" : $"Motivo: {c.DesempenoMotivo}")
+                ? (string.IsNullOrWhiteSpace(c.DesempenoMotivo) ? "Lo fijó el docente con su criterio pedagógico" : $"Motivo: {c.DesempenoMotivo}")
                 : "Sale de la escala del nivel", 280, "calificacion-bloque-desempeno"));
         fila.Add(CalificacionesUi.Bloque("Criterio de aprobación", GradebookTexto.Aprobacion(p?.Aprobacion),
             GradebookTexto.MinimoParaAprobar(_detalle?.Sistema) is { } minimo

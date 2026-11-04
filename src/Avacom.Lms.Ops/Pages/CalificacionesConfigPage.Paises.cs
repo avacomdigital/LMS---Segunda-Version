@@ -42,7 +42,7 @@ public partial class CalificacionesConfigPage
     {
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(ExamenUi.Seccion("Sistema de calificación por país"));
-        pila.Add(Ds.Secundario("Elige el país de tu institución y el sistema con que se califica cada nivel. El profesor lo ve en el libro de calificaciones al calificar y cada estudiante lo ve junto a su nota cuando el profesor la publica.", 14));
+        pila.Add(Ds.Secundario("Elige el país de tu institución y el sistema con que se califica cada nivel. El docente lo ve en el libro de calificaciones al calificar y cada estudiante lo ve junto a su nota cuando el docente la publica.", 14));
         var actual = Ds.Secundario(SistemaActual(c), 14);
         actual.AutomationId = "sistema-actual";
         pila.Add(actual);

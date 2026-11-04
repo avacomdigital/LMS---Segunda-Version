@@ -93,9 +93,9 @@ public partial class AsignaturasPage : ContentPage
         };
         grid.Add(new Border
         {
-            BackgroundColor = Color.FromArgb(color), StrokeThickness = 0, WidthRequest = 48, HeightRequest = 48,
+            BackgroundColor = Ds.Suave(Color.FromArgb(color)), StrokeThickness = 0, WidthRequest = 48, HeightRequest = 48,
             StrokeShape = new RoundRectangle { CornerRadius = 14 },
-            Content = new Label { Text = "▤", TextColor = Colors.White, FontSize = 22, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+            Content = Ds.IconoDs("ico_libros.png", 38),
         }, 0, 0);
         var textos = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
         textos.Add(new Label { Text = curso.Titulo, FontSize = 18, FontFamily = "LexendSemiBold" });

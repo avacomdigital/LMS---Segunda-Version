@@ -9,7 +9,7 @@
     <ui:MarcoDs>
     <Grid RowDefinitions="68,Auto,*">
         <Grid BackgroundColor="Transparent" Padding="48,0" ColumnDefinitions="Auto,*,Auto">
-            <Button Text="←  Asignaturas" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" FontSize="16" FontFamily="LexendMedium" HeightRequest="48" Padding="18,0" VerticalOptions="Center" Clicked="OnBack" />
+            <Button Text="Asignaturas" ImageSource="boton_atras.png" ContentLayout="Left,10" BackgroundColor="Transparent" TextColor="#0B5E3E" BorderColor="#BFE6D3" BorderWidth="0" CornerRadius="24" FontSize="16" FontFamily="LexendMedium" HeightRequest="48" Padding="18,0" VerticalOptions="Center" Clicked="OnBack" />
             <Label x:Name="TituloLabel" Grid.Column="1" Text="Curso" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18" FontFamily="LexendSemiBold" LineBreakMode="TailTruncation" />
             <Border Grid.Column="2" BackgroundColor="#E3F5FC" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
                 <Label Text="Contenido de AVACOM Biblioteca · vista docente" TextColor="#075985" FontSize="13" />

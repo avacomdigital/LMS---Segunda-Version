@@ -56,7 +56,7 @@ public abstract class PaginaDeReporte : ContentPage, IQueryAttributable
 
         _exportarHost.IsVisible = false;
         AccionesHost.Add(_exportarHost);
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, ReportesUi.Seguro(GetType().Name, "Actualizar", () => CargarAsync(forzar: true)), 170, "reporte-actualizar").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, ReportesUi.Seguro(GetType().Name, "Actualizar", () => CargarAsync(forzar: true)), null, "reporte-actualizar").Vista);
         AccionesHost.Add(ExamenUi.Accion("‹  Reportes", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 170, "reporte-volver").Vista);
 
         FijoHost.Add(ConexionHost);

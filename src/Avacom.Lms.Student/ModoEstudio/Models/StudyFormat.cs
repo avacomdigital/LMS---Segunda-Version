@@ -89,5 +89,5 @@ public static class StudyFormat
 
     /// <summary>«Disponible desde el 20 de octubre».</summary>
     public static string DisponibleDesde(DateTimeOffset? desde) =>
-        desde is { } d ? $"Disponible desde el {d.ToString("d 'de' MMMM", Es)}" : "Te la presentará tu profesor";
+        desde is { } d ? $"Disponible desde el {d.ToString("d 'de' MMMM", Es)}" : "Te la presentará tu docente";
 }

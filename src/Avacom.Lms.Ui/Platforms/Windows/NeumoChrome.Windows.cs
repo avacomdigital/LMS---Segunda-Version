@@ -42,7 +42,8 @@ public static partial class NeumoChrome
         });
 
         // Botones del DS en todas las pantallas: sin el contorno gris de Windows cuando el botón no pide borde, en píldora cuando no
-        // declara radio (el de Windows es de 4) y, si es sólo texto azul sobre transparente, como terciario del DS: texto subrayado.
+        // declara radio (el de Windows es de 4) y, si es sólo texto sobre transparente, como terciario del DS: texto verde 700 sobre
+        // transparente, sin subrayado; al pasar o pulsar, el fondo verde 50 de la píldora.
         ButtonHandler.Mapper.AppendToMapping("BotonDs", (handler, view) =>
         {
             if (view is not Button boton) return;
@@ -60,14 +61,11 @@ public static partial class NeumoChrome
             }
             if (EsTerciario(boton))
             {
+                nativo.Foreground = Pincel(Design.Ds.Verde700);
                 foreach (var clave in new[] { "ButtonBackgroundPointerOver", "ButtonBackgroundPressed" })
-                    Recurso(nativo, clave, Pincel(Design.Ds.Azul50));
-                nativo.Loaded -= SubrayarAlCargar;
-                nativo.Loaded += SubrayarAlCargar;
-                // El texto se vuelve a crear al mostrarse o cambiar: también se subraya al cambiar de tamaño.
-                nativo.SizeChanged -= SubrayarAlCambiar;
-                nativo.SizeChanged += SubrayarAlCambiar;
-                Subrayar(nativo);
+                    Recurso(nativo, clave, Pincel(Design.Ds.Verde50));
+                foreach (var clave in new[] { "ButtonForegroundPointerOver", "ButtonForegroundPressed" })
+                    Recurso(nativo, clave, Pincel(Design.Ds.Verde700));
             }
         });
 
@@ -105,11 +103,11 @@ public static partial class NeumoChrome
         Recurso(caja, "TextControlBorderBrushFocused", Pincel(Design.Ds.Foco));
     }
 
-    /// <summary>Terciario del DS: sólo texto azul sobre transparente, sin borde ni icono.</summary>
+    /// <summary>Terciario del DS: sólo texto (azul o verde 700) sobre transparente, sin borde ni icono.</summary>
     private static bool EsTerciario(Button b) =>
         b.ImageSource is null && b.BorderWidth <= 0 && !string.IsNullOrWhiteSpace(b.Text) && b.Text.Trim().Length > 2
         && (b.Background is null || b.Background.IsEmpty) && b.BackgroundColor is { } fondo && fondo.Alpha == 0
-        && b.TextColor is { } tinta && (Igual(tinta, Design.Ds.Azul700) || Igual(tinta, Design.Ds.Azul600));
+        && b.TextColor is { } tinta && (Igual(tinta, Design.Ds.Azul700) || Igual(tinta, Design.Ds.Azul600) || Igual(tinta, Design.Ds.Verde700));
 
     private static bool Igual(Color a, Color b) => Math.Abs(a.Red - b.Red) < 0.01 && Math.Abs(a.Green - b.Green) < 0.01 && Math.Abs(a.Blue - b.Blue) < 0.01;
 
@@ -117,27 +115,6 @@ public static partial class NeumoChrome
     {
         if (sender is Microsoft.UI.Xaml.Controls.Button b && e.NewSize.Height > 0)
             b.CornerRadius = new Microsoft.UI.Xaml.CornerRadius(e.NewSize.Height / 2);
-    }
-
-    private static void SubrayarAlCargar(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        if (sender is Microsoft.UI.Xaml.DependencyObject d) Subrayar(d);
-    }
-
-    private static void SubrayarAlCambiar(object sender, Microsoft.UI.Xaml.SizeChangedEventArgs e)
-    {
-        if (sender is Microsoft.UI.Xaml.DependencyObject d) Subrayar(d);
-    }
-
-    private static void Subrayar(Microsoft.UI.Xaml.DependencyObject raiz)
-    {
-        var n = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(raiz);
-        for (var i = 0; i < n; i++)
-        {
-            var hijo = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(raiz, i);
-            if (hijo is Microsoft.UI.Xaml.Controls.TextBlock texto) texto.TextDecorations = Windows.UI.Text.TextDecorations.Underline;
-            Subrayar(hijo);
-        }
     }
 
     private static void Recurso(Microsoft.UI.Xaml.FrameworkElement elemento, string clave, object valor)

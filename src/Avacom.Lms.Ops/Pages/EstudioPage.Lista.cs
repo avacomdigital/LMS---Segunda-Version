@@ -16,7 +16,7 @@ public partial class EstudioPage
         Entrar(Vista.Lista);
         var nueva = EstudioUi.Accion("Asignar una lección", Ds.Rango.Primary, async () => await MostrarNuevaAsync(), 250, "estudio-nueva");
         PonerCabecera("MODO DE ESTUDIO", "Lecciones asignadas para estudiar",
-            "Asigna una lección a un grupo o a algunos alumnos y mira en vivo quién la completó. Los alumnos entran a «Modo de estudio» en su tableta, eligen su nombre (sin código) y estudian.",
+            "Asigna una lección y mira quién la completó.",
             nueva.Vista, AccionActualizar().Vista, AccionMenu().Vista);
         Vaciar(true);
         ContenidoHost.Add(Cargando("Buscando tus asignaciones…"));
@@ -86,7 +86,7 @@ public partial class EstudioPage
         pila.Add(Ds.Titulo(_filtroLista == "cerrada" ? "No hay asignaciones cerradas" : "Todavía no has asignado ninguna lección", 22));
         pila.Add(Ds.Secundario(_filtroLista == "cerrada"
             ? "Cuando cierres una asignación, quedará aquí con lo que cada alumno alcanzó."
-            : "Elige un grupo (o unos alumnos), una lección del curso y, si quieres, una fecha límite. Los alumnos la verán en «Modo de estudio»: eligen su nombre y no necesitan ningún código.", 16));
+            : "Elige un grupo, una lección y, si quieres, una fecha límite.", 16));
         if (_filtroLista != "cerrada")
         {
             var primera = EstudioUi.Accion("Asignar mi primera lección", Ds.Rango.Primary, async () => await MostrarNuevaAsync(), 300, "estudio-primera");
@@ -148,7 +148,7 @@ public partial class EstudioPage
 
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 18 };
         fila.Add(izquierda, 0, 0);
-        fila.Add(new Label { Text = "Ver quién completó  ›", FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.TintaMedia, VerticalOptions = LayoutOptions.Center }, 1, 0);
+        fila.Add(Ds.ConFlecha(new Label { Text = "Ver quién completó", FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.TintaMedia, VerticalOptions = LayoutOptions.Center }), 1, 0);
 
         var id = a.Id;
         return EstudioUi.TarjetaElegible(fila, false, async () => await MostrarDetalleAsync(id, null),

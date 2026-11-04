@@ -1,6 +1,7 @@
 using System.Net;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
+using Avacom.Lms.Ui.Design;
 
 namespace Avacom.Lms.Ui.Controls;
 
@@ -131,14 +132,13 @@ public partial class CourseContentView : ContentView
             ColumnSpacing = 8, Padding = new Thickness(6, 8), Opacity = item.Visible ? 1 : 0.5,
             BackgroundColor = seleccionado ? Color.FromArgb("#FDE7E7") : Colors.Transparent,
         };
-        var iconoColor = item.Completado ? "#047857" : item.Abierto ? "#0A72A6" : "#4F5566";
-        fila.Add(new Label { Text = item.Completado ? "✓" : item.Icono, FontSize = 18, TextColor = Color.FromArgb(iconoColor), HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center }, 0, 0);
+        fila.Add(Ds.IconoDs(item.Completado ? "ico_check.png" : Ds.ArchivoDeIcono(item.Tipo), 26), 0, 0);
         var textos = new VerticalStackLayout { Spacing = 0 };
         textos.Add(new Label { Text = item.Titulo, FontSize = 14, TextColor = Color.FromArgb("#1F2433"), LineBreakMode = LineBreakMode.WordWrap });
         var estado = item.EstadoTexto;
         textos.Add(new Label { Text = string.IsNullOrEmpty(estado) ? item.TipoLegible : $"{item.TipoLegible} · {estado}", FontSize = 11, TextColor = Color.FromArgb("#4F5566") });
         fila.Add(textos, 1, 0);
-        fila.Add(new Label { Text = "›", FontSize = 22, TextColor = Color.FromArgb("#6A788E"), VerticalOptions = LayoutOptions.Center }, 2, 0);
+        fila.Add(Ds.Flecha(24), 2, 0);
         if (item.Visible)
         {
             var tap = new TapGestureRecognizer();
@@ -337,7 +337,7 @@ public partial class CourseContentView : ContentView
             textos.Add(new Label { Text = paso.Titulo ?? paso.ElementoRef, FontFamily = "LexendSemiBold", TextColor = Color.FromArgb("#1F2433"), LineBreakMode = LineBreakMode.WordWrap });
             textos.Add(new Label { Text = string.Join(" · ", new[] { TipoLegible(paso.Tipo), paso.Nota, paso.Disponible ? null : "no disponible en este equipo" }.Where(t => !string.IsNullOrWhiteSpace(t))), FontSize = 12, TextColor = Color.FromArgb("#4F5566") });
             fila.Add(textos, 1, 0);
-            fila.Add(new Label { Text = "›", FontSize = 22, TextColor = Color.FromArgb("#6A788E"), VerticalOptions = LayoutOptions.Center }, 2, 0);
+            fila.Add(Ds.Flecha(24), 2, 0);
             if (paso.Disponible)
             {
                 var tap = new TapGestureRecognizer();

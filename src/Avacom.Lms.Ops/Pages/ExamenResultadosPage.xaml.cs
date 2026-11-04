@@ -29,7 +29,7 @@ public partial class ExamenResultadosPage : ContentPage
     public ExamenResultadosPage()
     {
         InitializeComponent();
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, () => CargarAsync(forzar: true), 170, "resultados-actualizar").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, () => CargarAsync(forzar: true), null, "resultados-actualizar").Vista);
         AccionesHost.Add(ExamenUi.Accion("‹  Volver al panel", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "resultados-volver").Vista);
     }
 
@@ -285,7 +285,7 @@ public partial class ExamenResultadosPage : ContentPage
 
         if (f.IntentoId is { } intento)
         {
-            g.Add(new Label { Text = "›", FontFamily = Ds.FuenteLigera, FontSize = 28, TextColor = Ds.TintaSuave, VerticalOptions = LayoutOptions.Center }, 7, 0);
+            g.Add(Ds.Flecha(28), 7, 0);
             Ds.Tocable(g, () => Shell.Current.GoToAsync($"examen-expediente?intento={Uri.EscapeDataString(intento)}"));
             SemanticProperties.SetDescription(g, $"Expediente de {f.Rotulo}");
         }

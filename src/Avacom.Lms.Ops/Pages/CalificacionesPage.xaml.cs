@@ -51,8 +51,8 @@ public partial class CalificacionesPage : ContentPage
         InitializeComponent();
         Raiz.Add(_hojaAjuste);
         _aviso = new AvisoTemporal(ResultadoHost);
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "calificaciones-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "calificaciones-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesPage), "Actualizar", () => CargarAsync(forzar: true)), null, "calificaciones-actualizar").Vista);
+        Ds.VolverALaIzquierda(AccionesHost, ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "calificaciones-volver").Vista);
         // El filtro de evaluación y el buscador sólo cambian lo que se ve: no vuelven a pedir nada al nodo.
         _evaluaciones.SelectionChanged += (_, _) => Repintar();
         Buscador.AgregarFiltro(_evaluaciones);

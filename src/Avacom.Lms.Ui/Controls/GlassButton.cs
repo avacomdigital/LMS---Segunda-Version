@@ -26,6 +26,8 @@ public class GlassButton : ContentView
     private readonly Border cuerpo;
     private readonly Border luz;
     private readonly Label etiqueta;
+    // «Ver lecciones  ›»: la flecha del texto se cambia por el icono «adelante» del DS.
+    private readonly Image flecha = Ds.Flecha(24);
 
     public GlassButton()
     {
@@ -48,7 +50,7 @@ public class GlassButton : ContentView
         cuerpo = new Border
         {
             BackgroundColor = Colors.Transparent, StrokeThickness = 1, Padding = new Thickness(22, 0),
-            Content = new Grid { Children = { reflejo, luz, etiqueta } },
+            Content = new Grid { Children = { reflejo, luz, new HorizontalStackLayout { Spacing = 10, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, Children = { etiqueta, flecha } } } },
         };
         Content = cuerpo;
         Pintar();
@@ -93,7 +95,9 @@ public class GlassButton : ContentView
         cuerpo.StrokeThickness = acento is null ? 2 : 0;
         cuerpo.Background = acento is null ? new SolidColorBrush(Ds.Superficie) : Glass.RellenoAcento(acento);
         cuerpo.Shadow = acento is null ? Ds.SombraDe(Ds.Superficie) : Glass.Halo(acento, 0.30);
-        etiqueta.Text = Text;
+        var texto = Text?.TrimEnd() ?? string.Empty;
+        flecha.IsVisible = texto.EndsWith('›') || texto.EndsWith('→');
+        etiqueta.Text = flecha.IsVisible ? texto[..^1].TrimEnd() : Text;
         etiqueta.FontSize = FontSize;
         etiqueta.TextColor = acento is null ? TextColor : Glass.TintaSobre(acento);
     }

@@ -362,7 +362,7 @@ public sealed class ActividadResponderView : ContentView
             return;
         }
         if (_preguntas.Count == 0)
-            PonerCuerpo(TarjetaMensaje("Esta actividad todavía no tiene preguntas.", "Avísale a tu profesor.", "act-sin-preguntas"));
+            PonerCuerpo(TarjetaMensaje("Esta actividad todavía no tiene preguntas.", "Avísale a tu docente.", "act-sin-preguntas"));
         else if (_entregado || _entregaPedida)
             PonerCuerpo(TarjetaEntrega());
         else if (_confirmando && PuedeEntregar)
@@ -457,8 +457,9 @@ public sealed class ActividadResponderView : ContentView
     /// <summary>«Marcar para revisar» (CMP-030): una ayuda para el alumno. No cambia lo que se guarda ni lo que se envía.</summary>
     private View BotonMarcar(PreguntaAula p)
     {
-        string Texto() => _marcadas.Contains(p.PreguntaRef) ? "★  Marcada para revisar" : "☆  Marcar para revisar";
+        string Texto() => _marcadas.Contains(p.PreguntaRef) ? "Marcada para revisar" : "Marcar para revisar";
         var boton = Ds.Boton(Texto(), Ds.Rango.Secondary, null, Math.Max(44, _area * 0.85));
+        Ds.PonerIcono(boton, "boton_estrella.png");
         boton.HorizontalOptions = LayoutOptions.End;
         boton.AutomationId = "act-marcar";
         boton.Clicked += (_, _) =>
@@ -542,7 +543,7 @@ public sealed class ActividadResponderView : ContentView
         var respondidas = $"Respondiste {_respondidas.Count} de {_preguntas.Count} {(_preguntas.Count == 1 ? "pregunta" : "preguntas")}.";
         if (_enviadoAlNodo == true)
         {
-            principal = "Entregado. Tu profesor ya lo tiene.";                                              // MSG-012
+            principal = "Entregado. Tu docente ya lo tiene.";                                              // MSG-012
             secundaria = respondidas;
         }
         else if (_enviadoAlNodo == false)
@@ -553,7 +554,7 @@ public sealed class ActividadResponderView : ContentView
         else
         {
             principal = "Tu entrega quedó guardada.";
-            secundaria = "Se la estamos enviando a tu profesor.";
+            secundaria = "Se la estamos enviando a tu docente.";
         }
         var visto = new Border
         {

@@ -168,7 +168,7 @@ public partial class EstudioPage
 
         var (valido, pista) = ValidarPaso();
         var siguiente = _paso < 3
-            ? EstudioUi.Accion("Siguiente  ›", Ds.Rango.Primary, () => { _paso++; PintarPaso(); Iniciar(); return Task.CompletedTask; }, 190, "estudio-siguiente")
+            ? EstudioUi.Accion("Siguiente  ▶", Ds.Rango.Primary, () => { _paso++; PintarPaso(); Iniciar(); return Task.CompletedTask; }, 190, "estudio-siguiente")
             : EstudioUi.Accion(_enviando ? "Asignando…" : "Asignar la lección", Ds.Rango.Primary, AsignarAsync, 250, "estudio-asignar");
         Ds.Habilitar(siguiente.Boton, valido && !_enviando);
         PieSiguiente.Add(siguiente.Vista);

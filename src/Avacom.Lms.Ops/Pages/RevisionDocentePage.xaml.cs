@@ -63,9 +63,9 @@ public partial class RevisionDocentePage : ContentPage
             }
             if (!CalificacionesUi.PuedeCalificar)
             {
-                TituloLabel.Text = "La revisión es del profesorado";
+                TituloLabel.Text = "La revisión es del cuerpo docente";
                 ResumenHost.Clear();
-                ResumenHost.Add(CalificacionesUi.SinAcceso("Sólo lectura", "Revisar y puntuar respuestas lo hace el profesor del grupo."));
+                ResumenHost.Add(CalificacionesUi.SinAcceso("Sólo lectura", "Revisar y puntuar respuestas lo hace el docente del grupo."));
                 return;
             }
             // Sólo se lee al entrar: una revisión en marcha no cambia sola, y releerla pisaría lo que el profesor tiene a medio elegir.

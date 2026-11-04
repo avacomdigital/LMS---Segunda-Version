@@ -114,7 +114,7 @@ public partial class ExamenPanelPage
         // Tocar la información abre el expediente; los botones de abajo no, para que un toque en «Reactivar» nunca abra otra pantalla.
         if (f.IntentoId is { } intento)
         {
-            info.Add(new Label { Text = "›", FontFamily = Ds.FuenteLigera, FontSize = 32, TextColor = Ds.TintaSuave, VerticalOptions = LayoutOptions.Center }, 5, 0);
+            info.Add(Ds.Flecha(28), 5, 0);
             Ds.Tocable(info, () => Shell.Current.GoToAsync($"examen-expediente?intento={Uri.EscapeDataString(intento)}"));
             SemanticProperties.SetDescription(info, $"Expediente de {f.Rotulo}");
         }

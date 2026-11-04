@@ -61,7 +61,7 @@
                             <!-- RF-05: «Iniciar como profesor» sin credenciales sólo existe con el nodo en modo prototipo (no exige sesión). Nunca se simula un acceso. -->
                             <Border x:Name="IniciarCapsula" IsVisible="False" Style="{StaticResource NeuButtonShell}" BackgroundColor="{StaticResource Principal}" Margin="0,4,0,0">
                                 <Border.Shadow><Shadow Brush="{StaticResource Principal}" Opacity="0.22" Offset="0,4" Radius="10"/></Border.Shadow>
-                                <Button x:Name="IniciarButton" Text="Entra como profesor" Style="{StaticResource PrimaryButton}" BorderWidth="0" Clicked="OnEnterDemo"/>
+                                <Button x:Name="IniciarButton" Text="Entra como docente" Style="{StaticResource PrimaryButton}" BorderWidth="0" Clicked="OnEnterDemo"/>
                             </Border>
                             <Label x:Name="PrototipoNota" IsVisible="False" Text="Modo de prueba: se entra sin identificarse." Style="{StaticResource Muted}" HorizontalTextAlignment="Center" FontSize="13" LineBreakMode="WordWrap"/>
                         </VerticalStackLayout>

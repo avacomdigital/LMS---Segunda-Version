@@ -60,7 +60,6 @@ public partial class ClaseUnirsePage : ContentPage
     {
         if (Height <= 0) return;
         var alto = Math.Clamp((Height - 410 - 3 * 10) / 4, 56, 76);
-        for (var r = 0; r < Teclado.RowDefinitions.Count; r++) Teclado.RowDefinitions[r].Height = alto;
         foreach (var b in _teclas)
         {
             b.HeightRequest = alto;
@@ -160,15 +159,15 @@ public partial class ClaseUnirsePage : ContentPage
     private static (string Titulo, string? Detalle) MensajeDeError(ErrorAula? error, IAulaApi aula) => error switch
     {
         { Frenado: true } => ("Demasiados códigos equivocados", "Espera un momento y vuelve a intentarlo."),
-        { AulaLlena: true } => ("El aula está llena ahora mismo", "Avisa a tu profesor; tu lugar no se pierde."),
+        { AulaLlena: true } => ("El aula está llena ahora mismo", "Avisa a tu docente; tu lugar no se pierde."),
         // MOD-017 (P-20): el aula se actualiza. Sólo se le pide esperar: nada de lo que hizo se pierde y esto nunca bloquea una tableta ya registrada.
         { ActualizacionEnCurso: true } => (ActualizacionTexto.EnCursoParaTableta, ActualizacionTexto.EnCursoDetalleTableta),
         _ => error?.Codigo switch
         {
-            "codigo_invalido" => ("Ese código no es", "Pídele a tu profesor que lo muestre en la pantalla."),
-            "participante_expulsado" => ("No puedes entrar por ahora", "Habla con tu profesor para volver a la clase."),
-            "dispositivo_bloqueado" => ("Esta tableta está bloqueada", "Tu profesor la bloqueó desde el aula. Pídele que la desbloquee o usa otra tableta."),
-            "dispositivo_inactivo" => ("Esta tableta fue retirada del aula", "Habla con tu profesor para usar otra tableta."),
+            "codigo_invalido" => ("Ese código no es", "Pídele a tu docente que lo muestre en la pantalla."),
+            "participante_expulsado" => ("No puedes entrar por ahora", "Habla con tu docente para volver a la clase."),
+            "dispositivo_bloqueado" => ("Esta tableta está bloqueada", "Tu docente la bloqueó desde el aula. Pídele que la desbloquee o usa otra tableta."),
+            "dispositivo_inactivo" => ("Esta tableta fue retirada del aula", "Habla con tu docente para usar otra tableta."),
             "sin_conexion" => ("No hay conexión con el aula", error?.Sugerencia ?? "Revisa la red."),
             _ => ("No se pudo entrar", error?.Detalle ?? aula.UltimoMotivo),
         },
@@ -201,7 +200,7 @@ public partial class ClaseUnirsePage : ContentPage
             Sesion.ClaseCodigo = _codigo;
             if (estado.EnEspera == true)
             {
-                AvisoHost.Add(Ds.Alerta_("Tu profesor te va a admitir", "Espera un momento en esta pantalla.", Ds.AlertaSuave, Ds.Tinta));
+                AvisoHost.Add(Ds.Alerta_("Tu docente te va a admitir", "Espera un momento en esta pantalla.", Ds.AlertaSuave, Ds.Tinta));
                 EsperarAdmision(estado.Sesion.Id, estado.Participante!.Id);
                 return;
             }
@@ -235,7 +234,7 @@ public partial class ClaseUnirsePage : ContentPage
             {
                 _esperaTimer.Stop();
                 AvisoHost.Clear();
-                AvisoHost.Add(Ds.Alerta_("No puedes entrar por ahora", "Habla con tu profesor para volver a la clase.", Ds.PeligroSuave, Color.FromArgb("#A51C20")));
+                AvisoHost.Add(Ds.Alerta_("No puedes entrar por ahora", "Habla con tu docente para volver a la clase.", Ds.PeligroSuave, Color.FromArgb("#A51C20")));
                 Sesion.OlvidarClase();
             }
         }

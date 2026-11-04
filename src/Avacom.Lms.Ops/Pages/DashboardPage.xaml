@@ -31,7 +31,7 @@
                     <HorizontalStackLayout Spacing="12">
                         <VerticalStackLayout Spacing="0" VerticalOptions="Center">
                             <Label x:Name="NombreLabel" FontFamily="LexendSemiBold" FontSize="16" Text="Ms. Carter" HorizontalTextAlignment="End" />
-                            <Label x:Name="RolLabel" FontSize="13" Text="Profesora" TextColor="#5F6474" HorizontalTextAlignment="End" />
+                            <Label x:Name="RolLabel" FontSize="13" Text="Docente" TextColor="#5F6474" HorizontalTextAlignment="End" />
                         </VerticalStackLayout>
                         <Border BackgroundColor="#A81D81" HeightRequest="48" StrokeThickness="0" WidthRequest="48" StrokeShape="RoundRectangle 24">
                             <Label x:Name="InicialesLabel" FontFamily="LexendSemiBold" HorizontalOptions="Center" Text="EC" TextColor="White" VerticalOptions="Center" />
@@ -186,7 +186,9 @@
             </Grid>
         </Border>
 
-        <Border Grid.RowSpan="3" Margin="0,0,18,18" Padding="4" BackgroundColor="White" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 21" HeightRequest="42" HorizontalOptions="End" VerticalOptions="End" WidthRequest="82" ZIndex="6">
+        <!-- Selector ES/EN del diseño, oculto: las pantallas sólo existen en español y el idioma del aula se elige en la instalación.
+             Se vuelve a mostrar cuando haya traducción. -->
+        <Border Grid.RowSpan="3" IsVisible="False" Margin="0,0,18,18" Padding="4" BackgroundColor="White" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 21" HeightRequest="42" HorizontalOptions="End" VerticalOptions="End" WidthRequest="82" ZIndex="6">
             <Grid ColumnDefinitions="*,*"><Border BackgroundColor="#A81D81" StrokeThickness="0" StrokeShape="RoundRectangle 17"><Label FontFamily="LexendSemiBold" FontSize="12" HorizontalOptions="Center" Text="ES" TextColor="White" VerticalOptions="Center" /></Border><Label Grid.Column="1" FontFamily="LexendSemiBold" FontSize="12" HorizontalOptions="Center" Text="EN" TextColor="#4F5566" VerticalOptions="Center" /></Grid>
         </Border>
     </Grid>

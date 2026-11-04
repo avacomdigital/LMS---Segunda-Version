@@ -32,8 +32,10 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="28" RowDefinitions="Auto,*">
                     <VerticalStackLayout Grid.RowSpan="2" Spacing="8" VerticalOptions="Center">
                         <Label Style="{StaticResource GlassEyebrow}" Text="¡Hola!" />
-                        <Label Style="{StaticResource GlassHero}" Text="¿Qué vas a dar hoy?" />
-                        <Label Style="{StaticResource GlassLead}" Text="Toca una materia para ver sus cursos y elige la lección con la que empieza la clase." />
+                        <!-- La explicación no queda a la vista siempre: se abre con la «i» junto al título y se cierra con «Volver». -->
+                        <ui:AyudaView Texto="Toca una materia para ver sus cursos y elige la lección con la que empieza la clase.">
+                            <Label Style="{StaticResource GlassHero}" Text="¿Qué vas a dar hoy?" />
+                        </ui:AyudaView>
                         <Label x:Name="SubtituloLabel" Margin="0,6,0,0" Style="{StaticResource GlassCaption}" Text="Materias asignadas" />
                     </VerticalStackLayout>
                     <ui:SourceStatusChip x:Name="FuenteChip" Grid.Column="1" Grid.Row="0" HorizontalOptions="End" Text="Comprobando…" VerticalOptions="Start" />

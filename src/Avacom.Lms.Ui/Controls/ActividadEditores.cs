@@ -903,7 +903,7 @@ internal sealed class EditorNoSoportado : EditorPregunta
         {
             BackgroundColor = Ds.Lienzo, StrokeThickness = 0, Padding = new Thickness(18, 16), AutomationId = "act-no-soportada",
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno },
-            Content = Ds.Cuerpo("Esta pregunta se responde con tu profesor.", 19 * cx.Escala),
+            Content = Ds.Cuerpo("Esta pregunta se responde con tu docente.", 19 * cx.Escala),
         };
     }
 

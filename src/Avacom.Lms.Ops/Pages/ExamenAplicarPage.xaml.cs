@@ -220,17 +220,27 @@ public partial class ExamenAplicarPage : ContentPage
         foreach (var nivel in Niveles.Todos)   // Abierto · Supervisado · Controlado, sin ninguno elegido de antemano
         {
             var n = nivel;
-            var condicion = ExamenTexto.Condiciones(n);
+            var explicado = ExamenTexto.ParaElDocente(n);
             var elegido = _nivel == n;
-            var pila = new VerticalStackLayout { Spacing = 2 };
+            var pila = new VerticalStackLayout { Spacing = 4 };
             var cabeza = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 10 };
             cabeza.Add(new Label { Text = Niveles.Rotulo(n), FontFamily = Ds.FuenteMedia, FontSize = 19, TextColor = Ds.Tinta, VerticalOptions = LayoutOptions.Center }, 0, 0);
             if (elegido) cabeza.Add(ExamenUi.Pildora("✓  Elegido", Tono.Exito, 13), 1, 0);
             pila.Add(cabeza);
-            pila.Add(new Label { Text = condicion.TextoAlumno, FontFamily = Ds.FuenteRegular, FontSize = 15, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap });
-            pila.Add(Ds.Secundario($"Tú verás: {condicion.QueVes}", 13));
+            // Explicado para quien decide: qué puede hacer el alumno, para qué sirve y qué verás en el panel (no el texto que lee el alumno).
+            pila.Add(new Label { Text = explicado.QueHaceElAlumno, FontFamily = Ds.FuenteRegular, FontSize = 15, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap });
+            pila.Add(new Label { Text = explicado.ParaQueSirve, FontFamily = Ds.FuenteRegular, FontSize = 14, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap });
+            pila.Add(new Label
+            {
+                FontSize = 14, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap,
+                FormattedText = new FormattedString { Spans =
+                {
+                    new Span { Text = "En tu panel verás: ", FontFamily = Ds.FuenteMedia, TextColor = Ds.Tinta },
+                    new Span { Text = explicado.QueVes, FontFamily = Ds.FuenteRegular },
+                } },
+            });
             var tarjeta = EstudioUi.TarjetaElegible(pila, elegido, () => ElegirNivelAsync(n),
-                $"Nivel {Niveles.Rotulo(n)}. {condicion.TextoAlumno}", $"examen-nivel-{n}");
+                $"Nivel {Niveles.Rotulo(n)}. {explicado.QueHaceElAlumno}", $"examen-nivel-{n}");
             tarjeta.Padding = new Thickness(18, 10);
             tarjetas.Add(tarjeta);
         }
@@ -240,7 +250,7 @@ public partial class ExamenAplicarPage : ContentPage
             _bloqueElegibilidad = BloqueDeElegibilidad(calculo);
             contenido.Add(_bloqueElegibilidad);
         }
-        CuerpoHost.Add(Seccion("¿Qué nivel de control tendrá?", null, contenido.ToArray()));
+        CuerpoHost.Add(Seccion("¿Qué nivel de control tendrá?", "Decide qué puede hacer cada alumno con su tableta mientras responde y qué queda registrado.", contenido.ToArray()));
     }
 
     private Task ElegirNivelAsync(string nivel)

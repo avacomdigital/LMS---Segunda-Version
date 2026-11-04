@@ -22,17 +22,39 @@ internal static class ExamenTexto
     public static Condicion Condiciones(string? nivel) => Niveles.Normalizar(nivel) switch
     {
         Niveles.Controlado => new("Examen controlado",
-            "Durante este examen tu tableta solo muestra el examen. Si sales, tu profesor lo verá, y tus respuestas se guardan igual.",
+            "Durante este examen tu tableta solo muestra el examen. Si sales, tu docente lo verá, y tus respuestas se guardan igual.",
             "Estado por alumno e incidentes conforme ocurren, sin sonido ni alarma.",
             "El dispositivo queda dedicado al examen. Salir de la aplicación se registra como incidente informativo."),
         Niveles.Supervisado => new("Examen supervisado",
-            "Puedes consultar los materiales que tu profesor dejó disponibles. Quedará registrado qué consultaste.",
+            "Puedes consultar los materiales que tu docente dejó disponibles. Quedará registrado qué consultaste.",
             "Qué recursos consultó cada alumno y cuánto tiempo.",
-            "El alumno puede consultar los recursos que el profesor habilitó. Las consultas quedan registradas."),
+            "El alumno puede consultar los recursos que el docente habilitó. Las consultas quedan registradas."),
         _ => new("Examen abierto",
             "Este examen es de consulta libre. Solo se registra tu respuesta y el tiempo que tomaste.",
             "Avance y entregas, sin registro de conducta.",
             "Sin restricción de uso del dispositivo. Solo se registran entrega y tiempo."),
+    };
+
+    /// <summary>
+    /// Un nivel explicado al docente que lo elige: qué puede hacer el alumno con la tableta, qué queda registrado, para qué sirve y qué verá él en el
+    /// panel. El texto del alumno (<see cref="Condicion.TextoAlumno"/>) le habla al alumno y no basta para decidir.
+    /// </summary>
+    public sealed record NivelExplicado(string QueHaceElAlumno, string ParaQueSirve, string QueVes);
+
+    public static NivelExplicado ParaElDocente(string? nivel) => Niveles.Normalizar(nivel) switch
+    {
+        Niveles.Controlado => new(
+            "La tableta queda dedicada al examen: el alumno no puede abrir otras aplicaciones ni materiales. Si sale del examen, queda anotado como un aviso para ti y sus respuestas no se pierden.",
+            "Ideal para evaluaciones finales o que cuentan para la nota. Pide tabletas que admitan este nivel.",
+            "El estado de cada alumno en vivo y cada salida del examen apenas ocurra, sin sonidos ni alarmas."),
+        Niveles.Supervisado => new(
+            "El alumno solo puede consultar los materiales que tú dejaste disponibles para el examen. Cada consulta queda registrada, con cuánto tiempo la tuvo abierta.",
+            "Ideal cuando quieres permitir apoyo, pero saber qué usó cada uno.",
+            "Qué material abrió cada alumno y durante cuánto tiempo."),
+        _ => new(
+            "El alumno usa la tableta sin restricciones: puede abrir otras aplicaciones o consultar sus apuntes. Solo se guardan sus respuestas, cuándo entregó y cuánto tardó.",
+            "Ideal para prácticas, tareas en clase o exámenes de libro abierto. Sirve con cualquier tableta.",
+            "Quién va avanzando y quién ya entregó. No se registra lo que hace fuera del examen."),
     };
 
     /// <summary>Los niveles más bajos que <paramref name="nivel"/>, del más exigente al más libre: lo que se puede elegir al admitir o al bajar el nivel.</summary>
@@ -296,14 +318,14 @@ internal static class ExamenTexto
     /// </summary>
     public static string Persona(string? id)
     {
-        if (string.IsNullOrWhiteSpace(id)) return "una persona del profesorado";
+        if (string.IsNullOrWhiteSpace(id)) return "una persona del cuerpo docente";
         if (string.Equals(id, Sesion.ProfesorId, StringComparison.Ordinal)) return Sesion.ProfesorRotulo;
         if (id.StartsWith("docente-", StringComparison.OrdinalIgnoreCase))
         {
             var partes = id["docente-".Length..].Split('-', StringSplitOptions.RemoveEmptyEntries);
-            return partes.Length == 0 ? "el profesor" : string.Join(' ', partes.Select(p => char.ToUpper(p[0], Es) + p[1..]));
+            return partes.Length == 0 ? "el docente" : string.Join(' ', partes.Select(p => char.ToUpper(p[0], Es) + p[1..]));
         }
-        return Guid.TryParse(id, out _) ? "otra persona del profesorado o de la administración" : id;
+        return Guid.TryParse(id, out _) ? "otra persona del cuerpo docente o de la administración" : id;
     }
 
     // -------------------------------------------------------------------------------------- motivos prehechos
@@ -384,7 +406,7 @@ internal static class ExamenTexto
             "fuente_no_disponible" => "AVACOM Biblioteca no está disponible. Abre la aplicación de contenido y vuelve a intentarlo.",
             "fuente_error" => "AVACOM Biblioteca respondió con un problema. Espera un momento y vuelve a intentarlo.",
             "no_instalado" => "El aula todavía no está configurada: aún no hay grupos ni alumnos.",
-            "sin_permiso" or "no_es_el_titular" => "Sólo el profesor titular del grupo o la administración puede hacerlo.",
+            "sin_permiso" or "no_es_el_titular" => "Sólo el docente titular del grupo o la administración puede hacerlo.",
             "no_encontrado" => "Eso ya no existe en el aula. Vuelve atrás y actualiza la pantalla.",
             "intentos_abiertos" => "Todavía hay alumnos presentando. Cuando terminen, o cuando cierres el examen, podrás hacerlo.",
             "reactivos_pendientes" => $"{(string.IsNullOrWhiteSpace(error.Detalle) ? "Quedan reactivos sin puntuar." : error.Detalle)} Puntúalos y vuelve a publicar.",

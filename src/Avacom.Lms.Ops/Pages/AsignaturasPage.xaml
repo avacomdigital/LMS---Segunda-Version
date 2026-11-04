@@ -9,7 +9,7 @@
     <ui:MarcoDs>
     <Grid RowDefinitions="68,*">
         <Grid BackgroundColor="Transparent" Padding="48,0" ColumnDefinitions="Auto,*,Auto">
-            <Button Text="←  Volver" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="26" FontSize="17" FontFamily="LexendMedium" HeightRequest="52" Padding="20,0" VerticalOptions="Center" Clicked="OnBack" />
+            <Button Text="Volver" ImageSource="boton_atras.png" ContentLayout="Left,10" BackgroundColor="Transparent" TextColor="#0B5E3E" BorderColor="#BFE6D3" BorderWidth="0" CornerRadius="26" FontSize="17" FontFamily="LexendMedium" HeightRequest="52" Padding="20,0" VerticalOptions="Center" Clicked="OnBack" />
             <Label Grid.Column="1" Text="Asignaturas" HorizontalOptions="Center" VerticalOptions="Center" FontSize="18" FontFamily="LexendSemiBold" />
             <Border x:Name="EstadoChip" Grid.Column="2" BackgroundColor="{StaticResource ErrorSoft}" Padding="12,7" StrokeThickness="0" VerticalOptions="Center">
                 <Label x:Name="EstadoChipLabel" Text="●  Comprobando biblioteca…" TextColor="{StaticResource Azul700}" FontSize="13" />

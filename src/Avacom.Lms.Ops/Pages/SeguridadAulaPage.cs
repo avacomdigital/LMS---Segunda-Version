@@ -50,6 +50,7 @@ public sealed class SeguridadAulaPage : ContentPage
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, HorizontalOptions = LayoutOptions.Center, WidthRequest = 1280 };
         cabecera.Add(encabezado, 0, 0);
         cabecera.Add(acciones, 1, 0);
+        Ds.VolverALaIzquierda(volver);
 
         var columnas = new Grid { ColumnDefinitions = [new ColumnDefinition(560), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 20, HorizontalOptions = LayoutOptions.Center, WidthRequest = 1280 };
         columnas.Add(new ScrollView { Content = _izquierda }, 0, 0);
@@ -96,7 +97,7 @@ public sealed class SeguridadAulaPage : ContentPage
                 _izquierda.Clear();
                 _derecha.Clear();
                 _izquierda.Add(Ds.Alerta_("Sólo para la administración",
-                    "Aquí se cambia el PIN maestro y se revisan los profesores que se registraron con él. Entra con una cuenta de administración para verla.",
+                    "Aquí se cambia el PIN maestro y se revisan los docentes que se registraron con él. Entra con una cuenta de administración para verla.",
                     Ds.AlertaSuave, Ds.Tinta));
                 return;
             }
@@ -140,7 +141,7 @@ public sealed class SeguridadAulaPage : ContentPage
         if (!e.Configurado)
         {
             pila.Add(Ds.Titulo("Aún no hay PIN maestro", 22));
-            pila.Add(Ds.Cuerpo("Sin él, los profesores no pueden crear su usuario ni recuperar su contraseña. Configúralo ahora: seis números que sólo conocerá la escuela.", 16));
+            pila.Add(Ds.Cuerpo("Sin él, los docentes no pueden crear su usuario ni recuperar su contraseña. Configúralo ahora: seis números que sólo conocerá la escuela.", 16));
         }
         else
         {
@@ -155,7 +156,7 @@ public sealed class SeguridadAulaPage : ContentPage
             pila.Add(Fila("Vence el", Fecha(e.VenceEl)));
             pila.Add(Fila("Días restantes", e.Vencido ? "0 · ya venció" : e.DiasRestantes?.ToString(Es) ?? "—"));
             if (e.Vencido)
-                pila.Add(Ds.Alerta_("El PIN maestro venció", "Las clases y los profesores ya registrados siguen como siempre, pero nadie puede crear un profesor ni recuperar su contraseña hasta que lo cambies.", Ds.PeligroSuave, TintaPeligro));
+                pila.Add(Ds.Alerta_("El PIN maestro venció", "Las clases y los docentes ya registrados siguen como siempre, pero nadie puede crear un docente ni recuperar su contraseña hasta que lo cambies.", Ds.PeligroSuave, TintaPeligro));
             else if (e.Aviso)
                 pila.Add(Ds.Alerta_("Faltan 30 días o menos", "Cámbialo antes de que venza: cambiarlo reinicia el año de vigencia.", Ds.AlertaSuave, Glass.TintaAlerta));
             if (e.BloqueadoHasta is { } hasta && hasta > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
@@ -206,7 +207,7 @@ public sealed class SeguridadAulaPage : ContentPage
             pila.Add(Ds.Secundario("No pudimos leer cómo está configurada el aula. Toca «Actualizar».", 15));
             return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(22, 18), Colors.White);
         }
-        pila.Add(Interruptor("Registro de profesores con el PIN maestro", "Con el PIN maestro, un profesor crea su propio usuario.", c.AutoregistroDocentes,
+        pila.Add(Interruptor("Registro de docentes con el PIN maestro", "Con el PIN maestro, un docente crea su propio usuario.", c.AutoregistroDocentes,
             nuevo => ("teacher", new { autoregistro = nuevo })));
         pila.Add(Ds.Separador());
         pila.Add(Interruptor("Registro propio de alumnos", "Un alumno que no está en la lista crea su usuario con su nombre y su PIN.", c.AutoregistroAlumnos,
@@ -251,7 +252,7 @@ public sealed class SeguridadAulaPage : ContentPage
     private void PintarDocentes()
     {
         var pila = new VerticalStackLayout { Spacing = 8 };
-        pila.Add(Ds.Titulo("Profesores registrados con el PIN maestro", 22));
+        pila.Add(Ds.Titulo("Docentes registrados con el PIN maestro", 22));
         if (_docentes is null)
         {
             pila.Add(Ds.Secundario(MensajesDeAcceso.Texto(Sesion.Acceso.UltimoError) + " Toca «Actualizar».", 15));

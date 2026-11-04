@@ -46,8 +46,8 @@ public partial class EvaluacionesPage : ContentPage
     public EvaluacionesPage()
     {
         InitializeComponent();
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, () => CargarAsync(forzar: true), 170, "evaluaciones-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "evaluaciones-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, () => CargarAsync(forzar: true), null, "evaluaciones-actualizar").Vista);
+        Ds.VolverALaIzquierda(AccionesHost, ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "evaluaciones-volver").Vista);
         // País y Nivel a la vista; Grado y Materia bajo «Más filtros»: la misma disposición que «Clase de hoy». Cualquier cambio repinta sólo la lista de exámenes.
         foreach (var filtro in new[] { _pais, _nivel })
         {

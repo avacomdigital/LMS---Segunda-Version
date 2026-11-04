@@ -47,8 +47,8 @@ public sealed class LicenciaPage : ContentPage
         textos.Add(new Label { Text = "Licencia de este equipo", FontFamily = Ds.FuenteMedia, FontSize = 30, TextColor = Ds.Tinta, AutomationId = "licencia-titulo" });
         textos.Add(_subtitulo);
         var acciones = new HorizontalStackLayout { Spacing = 12, VerticalOptions = LayoutOptions.Center };
-        acciones.Add(LicenciaUi.Accion("Actualizar", Ds.Rango.Secondary, LicenciaUi.Seguro("Actualizar", CargarAsync), "licencia-actualizar", 170).Vista);
-        acciones.Add(LicenciaUi.Accion("‹  Menú principal", Ds.Rango.Secondary, LicenciaUi.Seguro("Volver", AlMenuPrincipalAsync), "licencia-volver", 220).Vista);
+        acciones.Add(LicenciaUi.Accion("Actualizar", Ds.Rango.Secondary, LicenciaUi.Seguro("Actualizar", CargarAsync), "licencia-actualizar").Vista);
+        Ds.VolverALaIzquierda(acciones, LicenciaUi.Accion("‹  Menú principal", Ds.Rango.Secondary, LicenciaUi.Seguro("Volver", AlMenuPrincipalAsync), "licencia-volver", 220).Vista);
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, Padding = new Thickness(44, 24, 48, 0), VerticalOptions = LayoutOptions.Start };
         cabecera.Add(textos, 0, 0);
         cabecera.Add(acciones, 1, 0);
@@ -61,7 +61,7 @@ public sealed class LicenciaPage : ContentPage
         var pie = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], Padding = new Thickness(0, 12, 0, 12) };
         pie.Add(new ContentView { Margin = new Thickness(Aire, 0), Content = _pie }, 1, 0);
 
-        var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Star), new RowDefinition(new GridLength(4, GridUnitType.Star)), new RowDefinition(GridLength.Star)] };
+        var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(new GridLength(4, GridUnitType.Star)), new RowDefinition(GridLength.Star)] };
         raiz.Add(cabecera, 0, 0);
         raiz.Add(tarjetas, 0, 1);
         raiz.Add(pie, 0, 2);

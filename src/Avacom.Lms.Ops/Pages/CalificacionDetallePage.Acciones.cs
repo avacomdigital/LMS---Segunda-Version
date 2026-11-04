@@ -20,7 +20,7 @@ public partial class CalificacionDetallePage
         pila.Add(ExamenUi.Seccion("Qué puedes hacer"));
         if (!CalificacionesUi.PuedeCalificar)
         {
-            pila.Add(Ds.Secundario("Esta pantalla es de sólo lectura con tu rol: calificar, ajustar, reabrir y publicar lo hace el profesor del grupo.", 15));
+            pila.Add(Ds.Secundario("Esta pantalla es de sólo lectura con tu rol: calificar, ajustar, reabrir y publicar lo hace el docente del grupo.", 15));
             return ExamenUi.Tarjeta(pila);
         }
         if (c.Estado == EstadosDeCalificacion.Anulada)

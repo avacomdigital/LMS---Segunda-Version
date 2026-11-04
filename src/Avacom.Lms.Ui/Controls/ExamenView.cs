@@ -288,7 +288,7 @@ public sealed class ExamenView : ContentView
                 PonerCuerpo(TarjetaDeSalida("Este examen continúa en otra tableta.", "Puedes cerrar esta pantalla: lo que respondiste está guardado.", "exa-otra-tableta"), estado: true);
                 return;
             case FaseDeExamen.Liberada:
-                PonerCuerpo(TarjetaDeSalida("Esta tableta se liberó del examen.", "Habla con tu profesor para continuar.", "exa-liberada"), estado: true);
+                PonerCuerpo(TarjetaDeSalida("Esta tableta se liberó del examen.", "Habla con tu docente para continuar.", "exa-liberada"), estado: true);
                 return;
             case FaseDeExamen.Entregando:
                 PonerCuerpo(TarjetaEntregando(s), estado: true);
@@ -388,8 +388,9 @@ public sealed class ExamenView : ContentView
     /// <summary>«Marcar para revisar»: una ayuda del alumno. No cambia lo que se guarda ni lo que se envía.</summary>
     private View BotonMarcar(PreguntaAula p)
     {
-        string Texto() => _marcadas.Contains(p.PreguntaRef) ? "★  Marcada para revisar" : "☆  Marcar para revisar";
+        string Texto() => _marcadas.Contains(p.PreguntaRef) ? "Marcada para revisar" : "Marcar para revisar";
         var boton = Ds.Boton(Texto(), Ds.Rango.Secondary, null, Math.Max(44, _area * 0.85));
+        Ds.PonerIcono(boton, "boton_estrella.png");
         boton.HorizontalOptions = LayoutOptions.End;
         boton.AutomationId = "exa-marcar";
         boton.Clicked += (_, _) =>
@@ -431,10 +432,10 @@ public sealed class ExamenView : ContentView
         var titulo = Ds.Titulo("Tu examen está en pausa", 25 * _escala);
         titulo.HorizontalTextAlignment = TextAlignment.Center;
         pila.Add(titulo);
-        var cuerpo = Ds.Cuerpo(s.Mensaje?.Texto ?? "Todo lo que respondiste está guardado y el tiempo está detenido. Avisa a tu profesor para continuar.", 19 * _escala);
+        var cuerpo = Ds.Cuerpo(s.Mensaje?.Texto ?? "Todo lo que respondiste está guardado y el tiempo está detenido. Avisa a tu docente para continuar.", 19 * _escala);
         cuerpo.HorizontalTextAlignment = TextAlignment.Center;
         pila.Add(cuerpo);
-        var nota = Ds.Secundario("No necesitas hacer nada más: cuando tu profesor te reactive, sigues justo donde ibas.", 16 * _escala);
+        var nota = Ds.Secundario("No necesitas hacer nada más: cuando tu docente te reactive, sigues justo donde ibas.", 16 * _escala);
         nota.HorizontalTextAlignment = TextAlignment.Center;
         pila.Add(nota);
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(28, 40));
@@ -512,7 +513,7 @@ public sealed class ExamenView : ContentView
         pila.Add(titulo);
         var detalle = Ds.Secundario(s.SinConexion || s.PendientesEnDispositivo > 0
             ? "Se enviará en cuanto haya conexión con el aula. No cierres el examen."
-            : "Un momento: estamos enviando tus respuestas a tu profesor.", 17 * _escala);
+            : "Un momento: estamos enviando tus respuestas a tu docente.", 17 * _escala);
         detalle.HorizontalTextAlignment = TextAlignment.Center;
         pila.Add(detalle);
         return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(28, 40));
@@ -588,7 +589,7 @@ public sealed class ExamenView : ContentView
         catch (Exception ex)
         {
             RegistroDeFallos.Escribir(AulaContenidoView.NombreApp, "examen · guardar respuesta en el dispositivo", ex);
-            _aviso = "Tu tableta no pudo guardar esta respuesta. Inténtalo otra vez o avisa a tu profesor.";
+            _aviso = "Tu tableta no pudo guardar esta respuesta. Inténtalo otra vez o avisa a tu docente.";
             _claveCuerpo = null;
         }
         Refrescar();

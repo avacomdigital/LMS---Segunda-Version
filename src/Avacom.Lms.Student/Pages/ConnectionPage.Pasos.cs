@@ -397,7 +397,7 @@ public partial class ConnectionPage
     private void PintarCodigo()
     {
         Titulo.Text = "Entrar con mi código o documento";
-        Descripcion.Text = "Escribe tu código y tu clave. Si eres del profesorado, tu documento y tu contraseña: te abrimos AVACOM OPS con tu sesión.";
+        Descripcion.Text = "Escribe tu código y tu clave. Si eres del cuerpo docente, tu documento y tu contraseña: te abrimos AVACOM OPS con tu sesión.";
         PonerAviso(aviso);
         if (avisoSinRed && flujo!.PuedeReintentar) PasoHost.Add(BotonReintentar());
         PasoHost.Add(Etiqueta("Tu código o documento"));

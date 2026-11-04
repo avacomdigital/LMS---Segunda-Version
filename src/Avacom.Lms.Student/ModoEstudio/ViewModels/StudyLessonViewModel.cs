@@ -141,7 +141,7 @@ public sealed class StudyLessonViewModel : ObservableObject
             IsReadOnly = _sesion.IsReadOnly;
             Chips.Clear();
             foreach (var b in _sesion.Blocks) Chips.Add(new StudyBlockChip(b.Index, b.Title, chip => _ = IrAsync(chip.Index - 1)));
-            if (_sesion.IsReadOnly) Notice = "El profesor ya cerró esta tarea: puedes releerla, pero no se guardará más avance.";
+            if (_sesion.IsReadOnly) Notice = "El docente ya cerró esta tarea: puedes releerla, pero no se guardará más avance.";
             IsLoading = false;
             await MostrarAsync(Math.Clamp(_sesion.StartIndex, 0, Math.Max(0, _sesion.Blocks.Count - 1)));
         }

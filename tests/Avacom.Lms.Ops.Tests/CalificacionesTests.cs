@@ -783,9 +783,9 @@ public sealed class CalificacionesTests
         Assert.Equal(Matiz.Exito, TextoDeCalificaciones.MatizDeEstado(c with { Estado = "definitiva" }));
         Assert.Equal(Matiz.Ambar, TextoDeCalificaciones.MatizDeEstado(c with { Estado = "reabierta" }));
         Assert.Equal(Matiz.Gris, TextoDeCalificaciones.MatizDeEstado(c with { Estado = "anulada" }));
-        Assert.Equal("Revisión del profesor sobre la evaluación", TextoDeCalificaciones.Regla(c.ReglaPuntuacion));
+        Assert.Equal("Revisión del docente sobre la evaluación", TextoDeCalificaciones.Regla(c.ReglaPuntuacion));
         Assert.Equal("Superior", TextoDeCalificaciones.Desempeno(c.Presentacion));
-        Assert.Equal("Superior · valorado por el profesor",
+        Assert.Equal("Superior · valorado por el docente",
             TextoDeCalificaciones.Desempeno(c.Presentacion! with { Desempeno = c.Presentacion.Desempeno with { Origen = "docente" } }));
         Assert.Equal("—", TextoDeCalificaciones.Desempeno(null));
     }

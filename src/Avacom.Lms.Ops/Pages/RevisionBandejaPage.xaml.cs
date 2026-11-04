@@ -43,7 +43,7 @@ public partial class RevisionBandejaPage : ContentPage
     {
         InitializeComponent();
         _aviso = new AvisoTemporal(ResultadoHost);
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(RevisionBandejaPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "bandeja-actualizar").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(RevisionBandejaPage), "Actualizar", () => CargarAsync(forzar: true)), null, "bandeja-actualizar").Vista);
         AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 150, "bandeja-volver").Vista);
     }
 
@@ -77,7 +77,7 @@ public partial class RevisionBandejaPage : ContentPage
             {
                 SubtituloLabel.Text = string.Empty;
                 ContenidoHost.Clear();
-                ContenidoHost.Add(CalificacionesUi.SinAcceso("La revisión es del profesorado", "Revisar y calificar respuestas lo hace el profesor de cada grupo. La administración configura las escalas y los reportes sólo leen."));
+                ContenidoHost.Add(CalificacionesUi.SinAcceso("La revisión es del cuerpo docente", "Revisar y calificar respuestas lo hace el docente de cada grupo. La administración configura las escalas y los reportes sólo leen."));
                 return;
             }
             if (_bandeja is null)
@@ -247,7 +247,7 @@ public partial class RevisionBandejaPage : ContentPage
 
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(24)], ColumnSpacing = 12 };
         fila.Add(textos, 0, 0);
-        fila.Add(new Label { Text = "›", FontFamily = Ds.FuenteLigera, FontSize = 28, TextColor = Ds.TintaSuave, VerticalOptions = LayoutOptions.Center }, 1, 0);
+        fila.Add(Ds.Flecha(28), 1, 0);
         var tarjeta = CalificacionesUi.Fila(fila);
         tarjeta.AutomationId = $"bandeja-intento-{i.IntentoId}";
         Ds.Tocable(tarjeta, () => Shell.Current.GoToAsync($"revision-docente?intento={Uri.EscapeDataString(i.IntentoId)}"));

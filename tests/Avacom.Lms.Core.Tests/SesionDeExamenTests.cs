@@ -794,7 +794,7 @@ public sealed class SesionDeExamenTests : IDisposable
     public async Task Entregar_Suspendido_NoLlamaAlNodo_DiceQueSeEsperaAlProfesor()
     {
         using var s = await Abierta();
-        api.EstadoFijo = Estado(EstadosIntento.Pausado, espera: true, mensaje: new MensajeDeIntento("suspendido", "Tu examen queda en pausa. Avisa a tu profesor."));
+        api.EstadoFijo = Estado(EstadosIntento.Pausado, espera: true, mensaje: new MensajeDeIntento("suspendido", "Tu examen queda en pausa. Avisa a tu docente."));
         await s.LatirAsync();
         var salida = await s.EntregarAsync(confirmar: true);
         Assert.Equal(ResultadoDeEntrega.Suspendido, salida.Resultado);

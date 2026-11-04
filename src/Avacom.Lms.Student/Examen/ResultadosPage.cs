@@ -191,7 +191,7 @@ public sealed class ResultadosPage : ContentPage
             textos.Add(Ds.Secundario("Las estrellas llenas son lo que ya sabes; las vacías, lo que puedes repasar.", 14));
         }
         else if (item.EstadoSimple == EstadosSimples.Completado)
-            textos.Add(Ds.Secundario("Terminaste. Tu profesor te mostrará cómo te fue.", 15));
+            textos.Add(Ds.Secundario("Terminaste. Tu docente te mostrará cómo te fue.", 15));
         if (item.Nota is { } publicada)
         {
             var texto = GradebookTexto.NotaSimple(publicada);
@@ -213,7 +213,7 @@ public sealed class ResultadosPage : ContentPage
             textos.Add(puntos);
         }
         if (nota.Aprobacion?.CumpleCriterio is { } cumple)
-            textos.Add(Ds.Secundario(cumple ? "Alcanzaste lo esperado." : "Todavía puedes mejorar: tu profesor te dirá cómo.", 15));
+            textos.Add(Ds.Secundario(cumple ? "Alcanzaste lo esperado." : "Todavía puedes mejorar: tu docente te dirá cómo.", 15));
         // Con qué sistema se leyó la nota (el de su país o institución, tal como se publicó) y desde dónde se aprueba: así «4,0» o «NT» significan algo.
         if (nota.Escala is { } sistema && !string.IsNullOrWhiteSpace(sistema.Nombre))
         {
@@ -225,7 +225,7 @@ public sealed class ResultadosPage : ContentPage
         }
         if (nota.Retroalimentacion is { Count: > 0 } retro)
         {
-            foreach (var (clave, rotulo) in new[] { ("fortalezas", "Lo que haces bien"), ("dificultades", "Lo que te cuesta"), ("oportunidades", "Para mejorar"), ("comentario", "Tu profesor dice") })
+            foreach (var (clave, rotulo) in new[] { ("fortalezas", "Lo que haces bien"), ("dificultades", "Lo que te cuesta"), ("oportunidades", "Para mejorar"), ("comentario", "Tu docente dice") })
                 if (retro.TryGetValue(clave, out var texto) && !string.IsNullOrWhiteSpace(texto))
                 {
                     var bloque = new VerticalStackLayout { Spacing = 0, Margin = new Thickness(0, 6, 0, 0) };

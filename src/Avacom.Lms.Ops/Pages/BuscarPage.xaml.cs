@@ -58,7 +58,7 @@ public partial class BuscarPage : ContentPage
         InitializeComponent();
         AccionesHost.Add(ExamenUi.Accion("Buscar", Ds.Rango.Primary, () => { Programar(inmediata: true, reciente: true); return Task.CompletedTask; }, 150, "buscar-buscar").Vista);
         AccionesHost.Add(ExamenUi.Accion("Limpiar", Ds.Rango.Secondary, () => { Reiniciar(); return Task.CompletedTask; }, 150, "buscar-limpiar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "buscar-volver").Vista);
+        Ds.VolverALaIzquierda(AccionesHost, ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "buscar-volver").Vista);
 
         Buscador.CampoAutomationId = "buscar-campo";
         // Tipo y Grupo a la vista; Ciclo, País, Nivel, Grado y Materia bajo «Más filtros». Cualquier cambio vuelve a buscar con lo ya escrito.

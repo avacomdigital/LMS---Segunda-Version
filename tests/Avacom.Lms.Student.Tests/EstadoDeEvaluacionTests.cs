@@ -38,8 +38,8 @@ public sealed class EstadoDeEvaluacionTests
     [Theory]
     [InlineData(EstadosIntento.EnCurso, "Tienes un examen en curso")]
     [InlineData(EstadosIntento.EnCursoFueraDePlazo, "Tienes un examen en curso")]
-    [InlineData(EstadosIntento.Pausado, "Tu examen está en pausa: avisa a tu profesor")]
-    [InlineData(EstadosIntento.Restaurando, "Tu examen está en pausa: avisa a tu profesor")]
+    [InlineData(EstadosIntento.Pausado, "Tu examen está en pausa: avisa a tu docente")]
+    [InlineData(EstadosIntento.Restaurando, "Tu examen está en pausa: avisa a tu docente")]
     public void EnCurso_OfreceContinuar(string estado, string frase)
     {
         var v = EstadoDeEvaluacion.Calcular(Eval(intento: Intento(estado)));
@@ -64,12 +64,12 @@ public sealed class EstadoDeEvaluacionTests
         var espera = EstadoDeEvaluacion.Calcular(Eval(intento: Intento(EstadosIntento.Entregado, pendiente: true)));
         Assert.Equal((EstadoVisual.PendienteDeCalificacion, "Entregado · pendiente de calificación"), (espera.Estado, espera.Frase));
         var revision = EstadoDeEvaluacion.Calcular(Eval(intento: Intento(EstadosIntento.EnRevision)));
-        Assert.Equal((EstadoVisual.PendienteDeCalificacion, "Entregado · algunas respuestas las revisa tu profesor"), (revision.Estado, revision.Frase));
+        Assert.Equal((EstadoVisual.PendienteDeCalificacion, "Entregado · algunas respuestas las revisa tu docente"), (revision.Estado, revision.Frase));
     }
 
     [Theory]
-    [InlineData(PoliticasDeResultados.TrasLiberar, "Calificado · tu profesor publicará los resultados")]
-    [InlineData("manual", "Calificado · tu profesor publicará los resultados")]
+    [InlineData(PoliticasDeResultados.TrasLiberar, "Calificado · tu docente publicará los resultados")]
+    [InlineData("manual", "Calificado · tu docente publicará los resultados")]
     [InlineData(PoliticasDeResultados.AlFinalizarGrupo, "Calificado · verás tu resultado cuando todo el grupo haya terminado")]
     [InlineData(PoliticasDeResultados.AlEntregar, "Calificado · tu resultado estará disponible en cuanto termine de calificarse")]
     [InlineData(PoliticasDeResultados.Nunca, "Calificado · este examen no muestra el resultado en la tableta")]
@@ -88,7 +88,7 @@ public sealed class EstadoDeEvaluacionTests
     {
         var intento = new MiIntento("i-1", 1, EstadosIntento.Calificado, false, false, false, "libro_de_calificaciones");
         var v = EstadoDeEvaluacion.Calcular(Eval(intento: intento, resultados: politica), hora: Hora);
-        Assert.Equal((EstadoVisual.CalificadaNoPublicada, false, "Calificado · tu profesor publicará tu calificación"), (v.Estado, v.TieneBoton, v.Frase));
+        Assert.Equal((EstadoVisual.CalificadaNoPublicada, false, "Calificado · tu docente publicará tu calificación"), (v.Estado, v.TieneBoton, v.Frase));
         Assert.DoesNotContain("termine de calificarse", v.Frase);                  // ya está calificado: lo que falta es la publicación, no la nota
     }
 
@@ -109,7 +109,7 @@ public sealed class EstadoDeEvaluacionTests
     [Theory]
     [InlineData("ya_entregado", "Ya presentaste este examen")]
     [InlineData("intentos_agotados", "Ya presentaste este examen")]
-    [InlineData("rechazada", "Tu profesor no admitió esta tableta: pídele que te indique cómo continuar")]
+    [InlineData("rechazada", "Tu docente no admitió esta tableta: pídele que te indique cómo continuar")]
     [InlineData("no_abierta", "Este examen ya cerró")]
     public void Cerrada_SinBoton_ConSuMotivo(string motivo, string frase)
     {

@@ -59,7 +59,7 @@ public partial class ExamenPanelPage
         if (a.Abierta) pastillas.Add(ExamenUi.PildoraEnFila(ExamenTexto.Fecha(a.LimiteEn, ahora), a.LimiteEn is { } l && l <= ahora ? Tono.Ambar : Tono.Neutro, 13));
         else if (a.LimiteEn is { } limite) pastillas.Add(ExamenUi.PildoraEnFila($"Fecha límite: {ExamenTexto.Hora(limite)}", Tono.Neutro, 13));
         if (a.LimiteEn is not null) pastillas.Add(ExamenUi.PildoraEnFila(ExamenTexto.PlazoLegible(a.Plazo), Tono.Neutro, 13));
-        pastillas.Add(ExamenUi.PildoraEnFila(a.Reactivacion == "automatica" ? "Reactivación automática" : "Reactivación por el profesor", Tono.Neutro, 13));
+        pastillas.Add(ExamenUi.PildoraEnFila(a.Reactivacion == "automatica" ? "Reactivación automática" : "Reactivación por el docente", Tono.Neutro, 13));
         pastillas.Add(ExamenUi.PildoraEnFila(ExamenTexto.Publicacion(a.Resultados, a.PublicarEn, a.LiberadosEn, a.LiberadosPor),
             a.LiberadosEn is null ? Tono.Neutro : Tono.Exito, 13));
 

@@ -70,7 +70,7 @@ public partial class ClaseCierrePage : ContentPage
                 // «Cargando» sólo si la lectura pasa de 1 s: si llega antes, nadie ve un parpadeo.
                 sesion = await EsperarAsync(aula.SesionAsync(SesionId), () => SeccionesHost.Add(Cargando("Leyendo el resumen de la clase…")));
             SeccionesHost.Clear();
-            VerticalStackLayout? temaHost = null;
+            ContentView? temaHost = null;
             if (sesion is null)
             {
                 PintarSinSesion(aula);
@@ -99,8 +99,8 @@ public partial class ClaseCierrePage : ContentPage
                     Tarjeta("Pendientes", r.Pendientes.ToString(), r.Pendientes == 0 ? "ningún intento abierto" : "intentos abiertos al cierre", r.Pendientes == 0 ? Ds.Exito : Ds.Alerta);
                     // Un resumen sin detalle (clase anterior a 007-09) se queda con sus tarjetas.
                     if (r.Detalle is { } detalle) PintarDetalle(sesion, detalle);
-                    temaHost = new VerticalStackLayout();
-                    SeccionesHost.Add(temaHost);
+                    temaHost = new ContentView();
+                    SeccionesHost.Add(Ds.Tarjeta(temaHost, Ds.RadioTarjeta, new Thickness(24, 20)));
                 }
             }
             if (sesion is null && !string.IsNullOrWhiteSpace(SesionId))
@@ -133,7 +133,7 @@ public partial class ClaseCierrePage : ContentPage
 
     private static string CierreLegible(string? origen) => origen switch
     {
-        "profesor" => "cerrada por el profesor",
+        "profesor" => "cerrada por el docente",
         "inactividad" => "cerrada por inactividad",
         "administrador" => "cerrada por la administración",
         "sistema" => "cerrada por el aula",
@@ -164,7 +164,7 @@ public partial class ClaseCierrePage : ContentPage
     }
 
     /// <summary>Una sección del cierre: tarjeta con su píldora de título, una frase de apoyo a la derecha y el contenido debajo.</summary>
-    private static Border Seccion(string titulo, Color color, string? apoyo, View contenido)
+    private static View Seccion(string titulo, Color color, string? apoyo, View contenido, bool tarjeta = true)
     {
         var pila = new VerticalStackLayout { Spacing = 14 };
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 14 };
@@ -177,7 +177,7 @@ public partial class ClaseCierrePage : ContentPage
         }
         pila.Add(cabecera);
         pila.Add(contenido);
-        return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(24, 20));
+        return tarjeta ? Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(24, 20)) : pila;
     }
 
     /// <summary>Estados vacío y «sin datos» del Maestro: qué pasó y qué sigue, centrado y sin adornos.</summary>
@@ -401,29 +401,29 @@ public partial class ClaseCierrePage : ContentPage
 
     // ---- Tema de la clase (anclaje curricular)
 
-    private async Task CargarTemaAsync(SesionDeClase sesion, VerticalStackLayout host)
+    // La tarjeta del tema ya está en pantalla (creada una vez, con su sombra); aquí sólo se cambia su contenido. Quitar y volver a poner
+    // una tarjeta con sombra dejaba en WinUI un rectángulo gris detrás.
+    private async Task CargarTemaAsync(SesionDeClase sesion, ContentView host)
     {
-        host.Clear();
         var aula = Sesion.Aula;
-        var datos = await EsperarAsync(aula.AnclajeAsync(sesion.Id), () => host.Add(Seccion(TituloTema, Ds.CatClaseEnVivo, null, Vacio("Buscando los temas que tocó la clase…"))));
-        host.Clear();
+        var datos = await EsperarAsync(aula.AnclajeAsync(sesion.Id), () => host.Content = Seccion(TituloTema, Ds.CatClaseEnVivo, null, Vacio("Buscando los temas de la clase…"), tarjeta: false));
         if (datos is null)
         {
             // Degradado: el anclaje no se pudo leer. Nunca impide salir ni cerrar; se puede hacer más tarde.
             var permiso = Sesion.MensajeDePermiso(aula.UltimoError, sesion.ProfesorRotulo);
             var contenido = new VerticalStackLayout { Spacing = 12 };
-            contenido.Add(Vacio(permiso is null ? "No pudimos leer los temas de la clase." : "No puedes anclar esta clase.",
-                permiso ?? "La clase quedó guardada. Puedes anclarla más tarde; no hace falta para salir."));
+            contenido.Add(Vacio(permiso is null ? "No pudimos leer los temas de la clase." : "No puedes guardar los temas de esta clase.",
+                permiso ?? "La clase quedó guardada. Puedes elegir sus temas más tarde; no hace falta para salir."));
             if (permiso is null)
             {
                 var reintentar = Ds.Capsula(Ds.Boton("Reintentar", Ds.Rango.Secondary, async (_, _) => await CargarTemaAsync(sesion, host), 56, 200));
                 reintentar.HorizontalOptions = LayoutOptions.Center;
                 contenido.Add(reintentar);
             }
-            host.Add(Seccion(TituloTema, Ds.CatClaseEnVivo, "Opcional", contenido));
+            host.Content = Seccion(TituloTema, Ds.CatClaseEnVivo, "Opcional", contenido, tarjeta: false);
             return;
         }
-        host.Add(SeccionTema(sesion, datos));
+        host.Content = SeccionTema(sesion, datos);
     }
 
     private View SeccionTema(SesionDeClase sesion, AnclajeAula datos)
@@ -437,16 +437,16 @@ public partial class ClaseCierrePage : ContentPage
             if (nodos.All(n => n.Ref != sugerido.Ref)) nodos.Add(sugerido);
         if (nodos.Count == 0)
             return Seccion(TituloTema, Ds.CatClaseEnVivo, "Opcional",
-                Vacio("No hay sugerencias de tema para esta clase. Puedes anclarla más tarde.", string.IsNullOrWhiteSpace(datos.Motivo) ? null : datos.Motivo));
+                Vacio("No hay temas sugeridos para esta clase. Puedes elegirlos más tarde.", string.IsNullOrWhiteSpace(datos.Motivo) ? null : datos.Motivo), tarjeta: false);
 
         var seleccion = new HashSet<string>(guardados, StringComparer.Ordinal);
         var pila = new VerticalStackLayout { Spacing = 12 };
-        pila.Add(Ds.Secundario("Toca los temas que tocó la clase y pulsa Anclar. Sirve para ubicarla en el plan de estudios; no hace falta para salir.", 14));
+        pila.Add(Ds.Secundario("Marca los temas que se vieron en esta clase y pulsa «Guardar temas». Así la clase queda ubicada en el plan de estudios.", 14));
         var chips = new FlexLayout { Wrap = FlexWrap.Wrap, Direction = FlexDirection.Row, AlignItems = FlexAlignItems.Start };
         pila.Add(chips);
         var mensaje = new Label { FontFamily = Ds.FuenteMedia, FontSize = 14, LineBreakMode = LineBreakMode.WordWrap, IsVisible = false };
         pila.Add(mensaje);
-        var anclar = Ds.Boton("Anclar", Ds.Rango.Secondary, null, 56, 170);
+        var anclar = Ds.Boton("Guardar temas", Ds.Rango.Secondary, null, 56, 210);
         var pendiente = Ds.Boton("Dejar pendiente", Ds.Rango.Quiet, null, 56, 210);
         var acciones = new HorizontalStackLayout { Spacing = 12 };
         acciones.Add(Ds.Capsula(anclar));
@@ -457,7 +457,7 @@ public partial class ClaseCierrePage : ContentPage
         {
             chips.Children.Clear();
             foreach (var nodo in nodos)
-                chips.Add(Chip(nodo.Texto, guardados.Contains(nodo.Ref) ? "anclado" : nodo.Origen, seleccion.Contains(nodo.Ref), () =>
+                chips.Add(Chip(nodo.Texto, guardados.Contains(nodo.Ref) ? "guardado" : OrigenLegible(nodo.Origen), seleccion.Contains(nodo.Ref), () =>
                 {
                     if (!seleccion.Add(nodo.Ref)) seleccion.Remove(nodo.Ref);
                     mensaje.IsVisible = false;
@@ -477,7 +477,7 @@ public partial class ClaseCierrePage : ContentPage
                 var respuesta = await aula.AnclarAsync(sesion.Id, Sesion.ProfesorId, elegidos);
                 if (respuesta is null)
                 {
-                    Avisar(mensaje, TextoDeError(aula.UltimoError, "No pudimos anclar los temas"), TintaMal);
+                    Avisar(mensaje, TextoDeError(aula.UltimoError, "No pudimos guardar los temas"), TintaMal);
                     return;
                 }
                 var vigentes = respuesta.Anclajes ?? elegidos;
@@ -487,35 +487,42 @@ public partial class ClaseCierrePage : ContentPage
                 seleccion.Clear();
                 foreach (var nodo in vigentes) { guardados.Add(nodo.Ref); seleccion.Add(nodo.Ref); }
                 Avisar(mensaje, vigentes.Count == 0
-                    ? "Listo · la clase quedó sin tema anclado. Puedes anclarla más tarde."
-                    : $"Listo · quedó anclado: {string.Join(", ", vigentes.Select(n => n.Texto))}. Se guardó con la clase.", TintaBien);
+                    ? "Listo · la clase quedó sin temas. Puedes elegirlos más tarde."
+                    : $"Listo · temas guardados: {string.Join(", ", vigentes.Select(n => n.Texto))}.", TintaBien);
             }
             finally { Pintar(); }
         }
 
         anclar.Clicked += async (_, _) => await AnclarAsync();
         // «Dejar pendiente» no exige ni hace nada más que seguir (BR-039, UXR-001): la clase queda como está.
-        pendiente.Clicked += (_, _) => Avisar(mensaje, "Quedó pendiente. Puedes anclar el tema de esta clase más tarde; nada te lo exige.", Ds.TintaSuave);
+        pendiente.Clicked += (_, _) => Avisar(mensaje, "Quedó pendiente. Puedes elegir los temas de esta clase más tarde.", Ds.TintaSuave);
         Pintar();
-        return Seccion(TituloTema, Ds.CatClaseEnVivo, "Opcional · puedes salir sin anclar", pila);
+        return Seccion(TituloTema, Ds.CatClaseEnVivo, "Opcional · puedes salir sin hacerlo", pila, tarjeta: false);
     }
 
-    /// <summary>Chip tocable de selección: el estado lo dicen el ✓ y el fondo oscuro, no sólo el color. Al menos 44 px de alto.</summary>
+    /// <summary>De dónde sale la sugerencia, dicho para el docente (el nodo manda «tema del curso» u «objeto usado»).</summary>
+    private static string? OrigenLegible(string? origen) => origen switch
+    {
+        "objeto usado" => "se usó en la clase",
+        _ => origen,
+    };
+
+    /// <summary>Chip tocable de selección: el estado lo dicen el ✓ y el borde verde, no sólo el color. Al menos 44 px de alto.</summary>
     private static Border Chip(string texto, string? pie, bool elegido, Func<Task> alTocar)
     {
         var pila = new VerticalStackLayout { Spacing = 1, VerticalOptions = LayoutOptions.Center };
         pila.Add(new Label
         {
             Text = (elegido ? "✓  " : string.Empty) + texto, FontFamily = Ds.FuenteMedia, FontSize = 15,
-            TextColor = elegido ? Colors.White : Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap,
+            TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap,
         });
         if (!string.IsNullOrWhiteSpace(pie))
-            pila.Add(new Label { Text = pie, FontFamily = Ds.FuenteRegular, FontSize = 11, TextColor = elegido ? Color.FromArgb("#D9FFFFFF") : Ds.TintaSuave });
+            pila.Add(new Label { Text = pie, FontFamily = Ds.FuenteRegular, FontSize = 11, TextColor = Ds.TintaSuave });
         var chip = new Border
         {
-            BackgroundColor = elegido ? Ds.Tinta : Colors.White,
-            Stroke = new SolidColorBrush(elegido ? Ds.Tinta : Color.FromArgb("#33000000")),
-            StrokeThickness = 1,
+            BackgroundColor = elegido ? Ds.Verde50 : Ds.Superficie,
+            Stroke = new SolidColorBrush(elegido ? Ds.Principal : Ds.Linea),
+            StrokeThickness = elegido ? 2 : 1,
             StrokeShape = new RoundRectangle { CornerRadius = 22 },
             Padding = new Thickness(16, 8),
             MinimumHeightRequest = 44,

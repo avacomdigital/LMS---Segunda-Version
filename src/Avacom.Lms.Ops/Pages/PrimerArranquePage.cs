@@ -156,7 +156,7 @@ public sealed class PrimerArranquePage : ContentPage
                 break;
             case BorradorDeInstalacion.PasoAula:
                 _marco.Titulo.Text = "Primer arranque del aula";
-                _marco.Mensaje.Text = "Paso 2 de 5 · El nombre del aula, tal como lo verán los profesores.";
+                _marco.Mensaje.Text = "Paso 2 de 5 · El nombre del aula, tal como lo verán los docentes.";
                 PintarCodigo();
                 break;
             case BorradorDeInstalacion.PasoAdministrador:

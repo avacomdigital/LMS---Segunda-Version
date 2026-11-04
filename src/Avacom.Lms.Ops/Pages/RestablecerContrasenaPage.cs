@@ -92,7 +92,7 @@ public sealed class RestablecerContrasenaPage : ContentPage
         _teclado.Habilitado = true;
         _marco.Mensaje.Text = paso switch
         {
-            PasoDocumento => "Paso 1 de 3 · Tu documento. Así sabemos de qué profesor es la contraseña.",
+            PasoDocumento => "Paso 1 de 3 · Tu documento. Así sabemos de qué docente es la contraseña.",
             PasoPin => "Paso 2 de 3 · El PIN maestro de la escuela. Si no lo tienes, pide el PIN maestro a administración.",
             _ => "Paso 3 de 3 · Tu contraseña nueva. Al cambiarla cerramos tus sesiones abiertas en otros equipos.",
         };

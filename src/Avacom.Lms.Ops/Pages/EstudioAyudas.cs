@@ -77,7 +77,7 @@ internal static class EstudioTexto
         {
             "no_instalado" => "El aula todavía no está configurada: aún no hay grupos ni alumnos a quienes asignar.",
             "fuente_no_disponible" => "AVACOM Contenido no responde. Una lección no se asigna a ciegas: vuelve a intentarlo cuando la biblioteca esté conectada.",
-            "sin_permiso" or "no_es_el_titular" => "Sólo el profesor titular del grupo o la administración puede hacerlo.",
+            "sin_permiso" or "no_es_el_titular" => "Sólo el docente titular del grupo o la administración puede hacerlo.",
             "dispositivo_ya_asignado" => "Esta tableta ya es de otro alumno. Primero hay que devolverla al fondo compartido.",
             "paquete_sin_integrar" => "El alumno todavía tiene lecciones descargadas o trabajo sin enviar en esta tableta. Que abra el modo de estudio con conexión para que se envíe y se limpie, y vuelve a intentarlo.",
             _ => detalle.Length > 0 ? detalle : "Sin detalle.",
@@ -107,9 +107,9 @@ internal static class EstudioUi
             FontSize = 16,
             Padding = new Thickness(22, 0),
             BorderWidth = 2,
-            BackgroundColor = activo ? Ds.Tinta : Colors.White,
+            BackgroundColor = activo ? Ds.Principal : Colors.White,
             TextColor = activo ? Colors.White : Ds.TintaMedia,
-            BorderColor = activo ? Ds.Tinta : Color.FromArgb("#29000000"),
+            BorderColor = activo ? Ds.Principal : Color.FromArgb("#29000000"),
             Margin = new Thickness(0, 0, 10, 10),
         };
         if (id is not null) b.AutomationId = id;

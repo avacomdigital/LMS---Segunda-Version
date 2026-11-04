@@ -64,7 +64,7 @@ public partial class CalificacionesPage
                 var error = padron.UltimoError;
                 _aviso.Mostrar("No se pudo poner el nivel",
                     GradebookTexto.SinConexion(error) ? "Sin conexión con el aula: nada cambió. Puedes volver a tocar el botón."
-                    : error?.Codigo == "sin_permiso" ? "Sólo el profesor del grupo o la administración pueden cambiar su nivel."
+                    : error?.Codigo == "sin_permiso" ? "Sólo el docente del grupo o la administración pueden cambiar su nivel."
                     : error?.Detalle ?? padron.UltimoMotivo ?? "El aula no respondió.", Tono.Ambar);
                 return;
             }

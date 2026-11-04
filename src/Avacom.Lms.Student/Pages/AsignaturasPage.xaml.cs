@@ -49,7 +49,7 @@ public partial class AsignaturasPage : ContentPage
             if (!respuesta.Disponible)
             {
                 AvisoTitulo.Text = sinBackend ? "No hay conexión con el aula." : "Los cursos no están disponibles en este momento.";
-                AvisoDetalle.Text = (sinBackend ? "Revisa que la tableta esté conectada a la red del aula." : "Avisa a tu profesor.") +
+                AvisoDetalle.Text = (sinBackend ? "Revisa que la tableta esté conectada a la red del aula." : "Avisa a tu docente.") +
                     (respuesta.Cursos.Count > 0 ? " Puedes seguir viendo tu progreso; el contenido se abrirá cuando vuelva." : string.Empty);
                 DemoBtn.IsVisible = sinBackend;
             }
@@ -87,9 +87,9 @@ public partial class AsignaturasPage : ContentPage
         var grid = new Grid { ColumnDefinitions = [new ColumnDefinition(52), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14 };
         grid.Add(new Border
         {
-            BackgroundColor = Color.FromArgb(curso.Disponible == false ? "#6A788E" : color), StrokeThickness = 0, WidthRequest = 46, HeightRequest = 46,
-            StrokeShape = new RoundRectangle { CornerRadius = 14 },
-            Content = new Label { Text = "▤", TextColor = Colors.White, FontSize = 20, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+            BackgroundColor = curso.Disponible == false ? Ds.Lienzo : Ds.Suave(Color.FromArgb(color)), StrokeThickness = 0, WidthRequest = 46, HeightRequest = 46,
+            StrokeShape = new RoundRectangle { CornerRadius = 14 }, Opacity = curso.Disponible == false ? 0.6 : 1,
+            Content = Ds.IconoDs("ico_libros.png", 36),
         }, 0, 0);
         var textos = new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center };
         textos.Add(new Label { Text = curso.Titulo, FontSize = 17, FontFamily = "LexendSemiBold" });

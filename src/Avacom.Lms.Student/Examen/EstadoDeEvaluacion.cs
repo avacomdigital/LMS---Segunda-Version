@@ -57,14 +57,14 @@ public static class EstadoDeEvaluacion
             {
                 case EstadosIntento.EnCurso or EstadosIntento.EnCursoFueraDePlazo or EstadosIntento.Pausado or EstadosIntento.Restaurando:
                     return new(EstadoVisual.EnCurso, AccionDeEvaluacion.Continuar, "Continuar",
-                        EstadosIntento.Suspendido(intento.Estado) ? "Tu examen está en pausa: avisa a tu profesor" : "Tienes un examen en curso");
+                        EstadosIntento.Suspendido(intento.Estado) ? "Tu examen está en pausa: avisa a tu docente" : "Tienes un examen en curso");
                 case EstadosIntento.Entregado or EstadosIntento.EnRevision:
                     if (pendientesEnDispositivo > 0)
                         return new(EstadoVisual.EntregaPendienteDeSincronizacion, AccionDeEvaluacion.Nada, string.Empty,
                             "Entregado · algo quedó guardado en esta tableta y se enviará solo cuando haya conexión");
                     return new(EstadoVisual.PendienteDeCalificacion, AccionDeEvaluacion.Nada, string.Empty,
                         intento.Estado == EstadosIntento.EnRevision || intento.RequiereRevision
-                            ? "Entregado · algunas respuestas las revisa tu profesor"
+                            ? "Entregado · algunas respuestas las revisa tu docente"
                             : "Entregado · pendiente de calificación");
                 case EstadosIntento.Calificado:
                     if (intento.ResultadoDisponible)
@@ -74,16 +74,16 @@ public static class EstadoDeEvaluacion
                             "Entregado · algo quedó guardado en esta tableta y se enviará solo cuando haya conexión");
                     // Si lo retiene el libro de calificaciones (la política de la evaluación ya lo mostraría), lo que falta es que el profesor publique la calificación.
                     return new(EstadoVisual.CalificadaNoPublicada, AccionDeEvaluacion.Nada, string.Empty,
-                        "Calificado · " + (intento.RetenidoPor is { Length: > 0 } ? "tu profesor publicará tu calificación" : CuandoSePublica(e, hora)));
+                        "Calificado · " + (intento.RetenidoPor is { Length: > 0 } ? "tu docente publicará tu calificación" : CuandoSePublica(e, hora)));
                 case EstadosIntento.Anulado:
-                    return new(EstadoVisual.Cerrada, AccionDeEvaluacion.Nada, string.Empty, "Este intento no cuenta: habla con tu profesor");
+                    return new(EstadoVisual.Cerrada, AccionDeEvaluacion.Nada, string.Empty, "Este intento no cuenta: habla con tu docente");
             }
         }
         if (e.PuedeComenzar) return new(EstadoVisual.Disponible, AccionDeEvaluacion.Comenzar, "Comenzar", "Lee las condiciones antes de empezar");
         return e.Motivo switch
         {
-            "espera_admision" => new(EstadoVisual.Disponible, AccionDeEvaluacion.Comenzar, "Ver", "Esperando que tu profesor decida sobre esta tableta"),
-            "rechazada" => new(EstadoVisual.Cerrada, AccionDeEvaluacion.Nada, string.Empty, "Tu profesor no admitió esta tableta: pídele que te indique cómo continuar"),
+            "espera_admision" => new(EstadoVisual.Disponible, AccionDeEvaluacion.Comenzar, "Ver", "Esperando que tu docente decida sobre esta tableta"),
+            "rechazada" => new(EstadoVisual.Cerrada, AccionDeEvaluacion.Nada, string.Empty, "Tu docente no admitió esta tableta: pídele que te indique cómo continuar"),
             "no_abierta" when e.Estado == "programada" => new(EstadoVisual.Programada, AccionDeEvaluacion.Nada, string.Empty,
                 e.AbreEn is { } abre ? $"Abre {hora(abre)}" : "Todavía no abre"),
             "no_abierta" => new(EstadoVisual.Cerrada, AccionDeEvaluacion.Nada, string.Empty, "Este examen ya cerró"),
@@ -101,8 +101,8 @@ public static class EstadoDeEvaluacion
             PoliticasDeResultados.Nunca => "este examen no muestra el resultado en la tableta",
             PoliticasDeResultados.AlEntregar => "tu resultado estará disponible en cuanto termine de calificarse",
             PoliticasDeResultados.AlFinalizarGrupo => "verás tu resultado cuando todo el grupo haya terminado",
-            PoliticasDeResultados.Programada => e.PublicarEn is { } cuando ? $"verás tu resultado {hora(cuando)}" : "verás tu resultado en la fecha que fijó tu profesor",
-            _ => "tu profesor publicará los resultados",
+            PoliticasDeResultados.Programada => e.PublicarEn is { } cuando ? $"verás tu resultado {hora(cuando)}" : "verás tu resultado en la fecha que fijó tu docente",
+            _ => "tu docente publicará los resultados",
         };
     }
 }

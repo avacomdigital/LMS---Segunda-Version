@@ -30,7 +30,7 @@ public partial class CalificacionesConfigPage : ContentPage
     {
         InitializeComponent();
         _aviso = new AvisoTemporal(ResultadoHost);
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesConfigPage), "Actualizar", CargarAsync), 170, "config-actualizar").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionesConfigPage), "Actualizar", CargarAsync), null, "config-actualizar").Vista);
         AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 150, "config-volver").Vista);
     }
 
@@ -54,7 +54,7 @@ public partial class CalificacionesConfigPage : ContentPage
                 SistemaHost.Clear();
                 PoliticaHost.Clear();
                 PoliticaHost.Add(CalificacionesUi.SinAcceso("El sistema de calificación lo elige la administración",
-                    "Sólo la administración elige el país, el sistema y la escala de cada nivel. El profesorado ve el sistema en el libro de calificaciones y cada estudiante lo ve junto a su nota publicada."));
+                    "Sólo la administración elige el país, el sistema y la escala de cada nivel. El cuerpo docente ve el sistema en el libro de calificaciones y cada estudiante lo ve junto a su nota publicada."));
                 return;
             }
             if (_config is null)
@@ -239,7 +239,7 @@ public partial class CalificacionesConfigPage : ContentPage
         if (nivel.Escala is { } escala) pastillas.Add(CalificacionesUi.PildoraEnFila($"Escala: {escala.Nombre}", Matiz.Exito, 13));
         textos.Add(pastillas);
         textos.Add(Ds.Secundario(nivel.EnModoCalificaciones
-            ? "Los estudiantes ven su nota presentada con esta escala cuando el profesor la publica."
+            ? "Los estudiantes ven su nota presentada con esta escala cuando el docente la publica."
             : "Los estudiantes ven sólo el estado de cada evaluación, sin notas.", 14));
         cabecera.Add(textos, 0, 0);
         var editar = ExamenUi.Accion(enEdicion ? "Cerrar" : "Cambiar", enEdicion ? Ds.Rango.Quiet : Ds.Rango.Secondary,

@@ -56,7 +56,7 @@ public partial class CalificacionEstudiantePage : ContentPage
         Raiz.Add(_hojaAjuste);
         _aviso = new AvisoTemporal(ResultadoHost);
         AccionesHost.Add(_edicionHost);
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionEstudiantePage), "Actualizar", CargarAsync), 170, "boletin-actualizar").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(CalificacionEstudiantePage), "Actualizar", CargarAsync), null, "boletin-actualizar").Vista);
         AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 150, "boletin-volver").Vista);
         PintarBotonDeEdicion();
     }

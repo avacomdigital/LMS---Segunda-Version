@@ -441,7 +441,7 @@ public static class LicenciaTexto
         if (error is null || !error.PorLicencia) return null;
         if (error.EsModuloNoDisponible)
         {
-            if (audiencia == Audiencia.Alumno) return "Esto no está disponible ahora en el aula. Pídele ayuda a tu profesor.";
+            if (audiencia == Audiencia.Alumno) return "Esto no está disponible ahora en el aula. Pídele ayuda a tu docente.";
             var modulo = error.Texto("modulo") is { Length: > 0 } m ? m : error.Texto("capacidad") is { Length: > 0 } c ? Capacidad(c) : null;
             var cual = modulo is null ? "Este módulo no está disponible" : $"«{modulo}» no está disponible";
             return $"{cual} con la licencia de este equipo. Tu permiso se conserva: vuelve a funcionar cuando se renueve la licencia. " +
@@ -450,8 +450,8 @@ public static class LicenciaTexto
         var usuarios = error.Texto("tipo") == "usuarios";
         if (audiencia == Audiencia.Alumno)
             return usuarios
-                ? "Ahora no se pueden crear usuarios nuevos en esta aula. Pídele ayuda a tu profesor; si ya tienes usuario, búscate en la lista."
-                : "Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu profesor.";
+                ? "Ahora no se pueden crear usuarios nuevos en esta aula. Pídele ayuda a tu docente; si ya tienes usuario, búscate en la lista."
+                : "Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu docente.";
         var cifras = error.Numero("en_uso") is { } u && error.Numero("limite") is { } l ? $" ({u} de {l})" : string.Empty;
         return usuarios
             ? $"Se llegó al cupo de usuarios de la licencia{cifras}. Quienes ya tienen usuario siguen entrando; para crear más hay que ampliar la licencia con AVACOM. Lo gestiona la administración del colegio en «Licencia»."

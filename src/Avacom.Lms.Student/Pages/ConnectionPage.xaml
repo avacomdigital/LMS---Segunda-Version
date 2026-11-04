@@ -29,11 +29,11 @@
                             <!-- El SVG lleva aire dentro de su viewBox (≈6% a la izquierda, ≈24% abajo); el margen negativo alinea el dibujo con el texto -->
                             <Image x:Name="Logo" IsVisible="False" Source="avacom_lms_kit_logo.png" Aspect="AspectFit" HeightRequest="100" HorizontalOptions="Start" Margin="-8,0,0,-18"/>
                             <Label x:Name="Titulo" Text="Conéctate a tu aula" FontSize="34" FontFamily="LexendSemiBold" HorizontalTextAlignment="Center" LineBreakMode="TailTruncation" AutomationId="acceso-titulo"/>
-                            <Label x:Name="Descripcion" Text="Escribe tu nombre y la dirección que aparece en la pantalla principal del profesor." FontSize="17" TextColor="{StaticResource Tinta2}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
+                            <Label x:Name="Descripcion" Text="Escribe tu nombre y la dirección que aparece en la pantalla principal del docente." FontSize="17" TextColor="{StaticResource Tinta2}" HorizontalTextAlignment="Center" LineBreakMode="WordWrap"/>
                             <Label x:Name="Aviso" IsVisible="False" FontSize="15" FontFamily="LexendMedium" TextColor="#1F2433" LineBreakMode="WordWrap" MaxLines="3" AutomationId="acceso-aviso"/>
                         </VerticalStackLayout>
                         <!-- Un paso atrás (grupo ← nombre ← PIN), arriba a la izquierda en su propia línea: nunca pisa el título ni el aviso. -->
-                        <Button x:Name="VolverButton" IsVisible="False" Text="‹  Volver" HorizontalOptions="Start" VerticalOptions="Start" Margin="-14,-16,0,0" HeightRequest="48" MinimumWidthRequest="104"
+                        <Button x:Name="VolverButton" IsVisible="False" Text="Volver" ImageSource="boton_atras.png" ContentLayout="Left,10" HorizontalOptions="Start" VerticalOptions="Start" Margin="-14,-16,0,0" HeightRequest="48" MinimumWidthRequest="104"
                                 BackgroundColor="Transparent" BorderWidth="0" TextColor="{StaticResource Azul700}" FontSize="17" Padding="14,0" Clicked="OnVolver" AutomationId="acceso-volver"/>
                     </Grid>
                     <!-- Debajo, todo el resto de la tarjeta: acción (antes la cabecera ocupaba un tercio fijo y el formulario no cabía

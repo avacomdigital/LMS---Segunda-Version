@@ -388,7 +388,7 @@ public partial class CalificacionesPage
         var contenido = new Grid();
         contenido.Add(pila);
         if (accion is not null)
-            contenido.Add(new Label { Text = "›", FontFamily = Ds.FuenteLigera, FontSize = 24, TextColor = Ds.TintaSuave, HorizontalOptions = LayoutOptions.End, VerticalOptions = LayoutOptions.Start });
+            contenido.Add(Ds.Flecha(26, LayoutOptions.End, LayoutOptions.Start));
         var tarjeta = new Border
         {
             BackgroundColor = Colors.White, Stroke = new SolidColorBrush(accion is null ? Ds.Filo : Color.FromArgb("#33000000")), StrokeThickness = 1, Padding = new Thickness(12, 8),

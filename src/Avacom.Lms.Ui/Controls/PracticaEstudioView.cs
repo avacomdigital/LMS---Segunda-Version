@@ -198,7 +198,7 @@ public sealed class PracticaEstudioView : ContentView
         }
         else if (_preguntas.Count == 0)
         {
-            PonerCuerpo(TarjetaMensaje("Esta práctica todavía no tiene preguntas.", "Avísale a tu profesor."));
+            PonerCuerpo(TarjetaMensaje("Esta práctica todavía no tiene preguntas.", "Avísale a tu docente."));
         }
         else if (_resultado is not null && !_revision)
         {
@@ -419,6 +419,7 @@ public sealed class PracticaEstudioView : ContentView
             BorderColor = Color.FromArgb("#E3E6EC"),
         };
         if (ancho is { } w) b.WidthRequest = w;
+        Ds.PonerTexto(b, texto);
         Ds.Hundir(b);
         b.Clicked += (_, _) => accion();
         return b;
@@ -503,10 +504,10 @@ public sealed class PracticaEstudioView : ContentView
             texto = _comprobando ? "Comprobando…" : PuedeCalificarAhora ? "Comprobar" : "Guardar respuesta";
             activo = !_comprobando && _respuestas.ContainsKey(p.PreguntaRef);
         }
-        _btnPrincipal.Text = texto;
+        Ds.PonerTexto(_btnPrincipal, texto);
         _btnPrincipal.IsEnabled = activo;
         _btnPrincipal.Opacity = activo ? 1 : 0.45;
-        SemanticProperties.SetDescription(_btnPrincipal, texto);
+        SemanticProperties.SetDescription(_btnPrincipal, _btnPrincipal.Text);
     }
 
     private void Ir(int indice)
@@ -608,7 +609,7 @@ public sealed class PracticaEstudioView : ContentView
         {
             WidthRequest = 96, HeightRequest = 96, BackgroundColor = fondo, StrokeThickness = 0, HorizontalOptions = LayoutOptions.Center,
             StrokeShape = new RoundRectangle { CornerRadius = 48 },
-            Content = new Label { Text = pendiente ? "●" : bien ? "✓" : "↻", FontSize = 44, FontFamily = Ds.FuenteMedia, TextColor = tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+            Content = Ds.IconoDs(pendiente ? "ico_nube_descarga.png" : bien ? "ico_check.png" : "ico_actualiza.png", 64),
         });
         var titulo = Ds.Titulo(titular, 30);
         titulo.HorizontalTextAlignment = TextAlignment.Center;

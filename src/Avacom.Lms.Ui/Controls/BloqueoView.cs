@@ -14,9 +14,9 @@ public sealed class BloqueoView : ContentView
     public BloqueoView()
     {
         var pila = new VerticalStackLayout { Spacing = 14, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, Padding = 40 };
-        pila.Add(new Label { Text = "◉", FontSize = 96, TextColor = Colors.White, HorizontalTextAlignment = TextAlignment.Center });
+        pila.Add(Ds.IconoDs("ico_candado.png", 112));
         pila.Add(new Label { Text = "Mira al frente", FontSize = 40, FontFamily = Ds.FuenteSemi, TextColor = Colors.White, HorizontalTextAlignment = TextAlignment.Center });
-        _detalle = new Label { Text = "Tu profesor está explicando. Tu trabajo sigue guardado.", FontSize = 20, TextColor = Color.FromArgb("#E3E6EC"), HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap };
+        _detalle = new Label { Text = "Tu docente está explicando. Tu trabajo sigue guardado.", FontSize = 20, TextColor = Color.FromArgb("#E3E6EC"), HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap };
         pila.Add(_detalle);
         Content = new Grid { BackgroundColor = Color.FromArgb("#1F2433"), Children = { pila } };
         IsVisible = false;

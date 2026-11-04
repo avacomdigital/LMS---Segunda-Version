@@ -167,7 +167,7 @@ public partial class DashboardPage : ContentPage
         InicialesLabel.Text = Avacom.Lms.Core.Models.Identidad.InicialesDe(nombre);
         RolLabel.Text = usuario.Rol switch
         {
-            "TEACHER" => "Profesorado",
+            "TEACHER" => "Docente",
             "ADMIN" => "Administración",
             "REPORTS" => "Reportes",
             "TECHNICIAN" => "Soporte técnico",

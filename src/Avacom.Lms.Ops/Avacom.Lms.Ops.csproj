@@ -99,6 +99,13 @@
 		<MauiImage Include="..\..\assets\iconos\ico_lenguaje.png" Link="Resources\Images\ilus_lenguaje.png" BaseSize="160,160" />
 		<MauiImage Include="..\..\assets\iconos\ico_mundo.png" Link="Resources\Images\ilus_mundo.png" BaseSize="160,160" />
 
+		<!-- Los iconos del DS que acompañan el texto de un botón (volver, siguiente, pedir ayuda, marcar): flechas a 36 DIU, el resto a 30. -->
+		<MauiImage Include="..\..\assets\iconos\ico_atras.png" Link="Resources\Images\boton_atras.png" BaseSize="36,36" />
+		<MauiImage Include="..\..\assets\iconos\ico_adelante.png" Link="Resources\Images\boton_adelante.png" BaseSize="36,36" />
+		<MauiImage Include="..\..\assets\iconos\ico_mano.png" Link="Resources\Images\boton_mano.png" BaseSize="30,30" />
+		<MauiImage Include="..\..\assets\iconos\ico_estrella.png" Link="Resources\Images\boton_estrella.png" BaseSize="30,30" />
+		<MauiImage Include="..\..\assets\iconos\ico_actualiza.png" Link="Resources\Images\boton_actualiza.png" BaseSize="30,30" />
+
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 

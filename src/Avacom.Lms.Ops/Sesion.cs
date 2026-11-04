@@ -500,7 +500,7 @@ public static class Sesion
     /// al detalle técnico; nulo en cualquier otro caso. <paramref name="profesor"/> es quien lleva la clase, si se sabe.
     /// </summary>
     public static string? MensajeDePermiso(ErrorAula? error, string? profesor = null) => error?.Codigo is "sin_permiso" or "no_es_el_titular"
-        ? $"Esta clase la lleva {(string.IsNullOrWhiteSpace(profesor) ? "otro profesor" : profesor)}. Sólo su profesor o la administración puede hacerlo."
+        ? $"Esta clase la lleva {(string.IsNullOrWhiteSpace(profesor) ? "otro docente" : profesor)}. Sólo su docente o la administración puede hacerlo."
         : null;
 
     /// <summary>Con sesión (MOD-001) el profesor es quien se identificó; sin ella, la identidad estable del equipo (Q-04).</summary>

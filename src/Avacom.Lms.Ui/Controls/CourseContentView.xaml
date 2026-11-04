@@ -37,7 +37,7 @@
         <Border x:Name="PanelVisor" Grid.Column="1" Padding="0" Stroke="#E3E6EC" StrokeShape="RoundRectangle 20" BackgroundColor="White">
             <Grid RowDefinitions="Auto,*">
                 <Grid Padding="18,12" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" BackgroundColor="#1F2433">
-                    <Button x:Name="VolverListaBtn" Text="←" IsVisible="False" BackgroundColor="Transparent" TextColor="White" FontSize="20" Clicked="OnVolverLista" />
+                    <Button x:Name="VolverListaBtn" Text="" ImageSource="boton_atras.png" IsVisible="False" BackgroundColor="Transparent" TextColor="White" FontSize="20" Clicked="OnVolverLista" />
                     <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
                         <Label x:Name="VisorTitulo" Text="Contenido del curso" TextColor="White" FontFamily="LexendSemiBold" FontSize="15" LineBreakMode="TailTruncation" />
                         <Label x:Name="VisorSubtitulo" Text="Elige un material para verlo aquí" TextColor="#E3E6EC" FontSize="12" LineBreakMode="TailTruncation" />
@@ -81,8 +81,8 @@
                             </Grid>
                             <Label x:Name="EvalRetro" Text="" FontSize="14" TextColor="#047857" IsVisible="False" LineBreakMode="WordWrap" />
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,8,0,0">
-                                <Button x:Name="EvalAnteriorBtn" Text="← Anterior" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" HeightRequest="48" Padding="22,0" Clicked="OnAnterior" />
-                                <Button x:Name="EvalSiguienteBtn" Grid.Column="2" Text="Siguiente →" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" HeightRequest="48" Padding="22,0" Clicked="OnSiguiente" />
+                                <Button x:Name="EvalAnteriorBtn" Text="Anterior" ImageSource="boton_atras.png" ContentLayout="Left,10" BackgroundColor="Transparent" TextColor="#0B5E3E" BorderColor="#BFE6D3" BorderWidth="0" CornerRadius="24" HeightRequest="48" Padding="22,0" Clicked="OnAnterior" />
+                                <Button x:Name="EvalSiguienteBtn" Grid.Column="2" Text="Siguiente" ImageSource="boton_adelante.png" ContentLayout="Right,10" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="24" HeightRequest="48" Padding="22,0" Clicked="OnSiguiente" />
                             </Grid>
                             <Button x:Name="EvalFinalizarBtn" Text="Finalizar y registrar la nota" Background="{StaticResource DegradadoPrincipal}" TextColor="White" CornerRadius="26" HeightRequest="52" Clicked="OnFinalizar" />
                             <Border x:Name="EvalResultado" IsVisible="False" Padding="20" Stroke="Transparent" StrokeShape="RoundRectangle 16" BackgroundColor="#E1F5EC">

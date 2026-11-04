@@ -99,7 +99,7 @@ public sealed class EvaluacionesPage : ContentPage
             {
                 _quien.Text = string.Empty;
                 if (_firma != "visitante")
-                    Pintar(Mensaje("Estás como visitante", "Las evaluaciones son de quien entra con su nombre y su PIN. Si olvidaste tu PIN, pídele a tu profesor que te ayude."), "visitante");
+                    Pintar(Mensaje("Estás como visitante", "Las evaluaciones son de quien entra con su nombre y su PIN. Si olvidaste tu PIN, pídele a tu docente que te ayude."), "visitante");
                 return;
             }
             if (!Sesion.SabeQuienEvalua)
@@ -158,7 +158,7 @@ public sealed class EvaluacionesPage : ContentPage
     {
         var pila = new VerticalStackLayout { Spacing = 14 };
         if (mis.Pendientes.Count == 0 && mis.Recientes.Count == 0)
-            return Mensaje("No tienes evaluaciones por ahora", "Cuando tu profesor aplique una, aparecerá aquí.");
+            return Mensaje("No tienes evaluaciones por ahora", "Cuando tu docente aplique una, aparecerá aquí.");
         if (mis.Pendientes.Count > 0)
         {
             pila.Add(Ds.Cuerpo("Para presentar", 19, Ds.Tinta));
@@ -248,7 +248,7 @@ public sealed class EvaluacionesPage : ContentPage
         }
         if (_estudiantes.Grupos.Count == 0)
         {
-            Pintar(Mensaje("No hay evaluaciones abiertas", "Cuando tu profesor aplique una, aquí podrás elegir quién eres y presentarla."), "quien-vacio");
+            Pintar(Mensaje("No hay evaluaciones abiertas", "Cuando tu docente aplique una, aquí podrás elegir quién eres y presentarla."), "quien-vacio");
             _estudiantes = null;
             return;
         }

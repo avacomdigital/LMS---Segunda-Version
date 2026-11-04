@@ -15,7 +15,7 @@ public static class MensajesDeAcceso
     public const string AvisoVisitante = "Entraste como visitante. Lo que hagas no se guardará en tu historial.";
     public const string BandaVisitante = "Entraste como visitante: lo que hagas no se guarda en tu historial.";
     public const string PinPendiente = "Todavía no tienes PIN. Elige uno de 4 números que recuerdes.";
-    public const string DesdeElEquipoDelProfesor = "Esto se hace desde el equipo del profesor.";
+    public const string DesdeElEquipoDelProfesor = "Esto se hace desde el equipo del docente.";
     public const string SinConexion = "No hay conexión con el aula. Revisa que el equipo del aula esté encendido y en la misma red.";
     public const string Generico = "No pudimos hacerlo ahora. Vuelve a intentarlo en un momento.";
 
@@ -54,11 +54,11 @@ public static class MensajesDeAcceso
             // ---------- dónde se hace
             case "dispositivo_no_autorizado":
                 return audiencia == Audiencia.Alumno
-                    ? "Esta tableta no está registrada en el aula. Pídele ayuda al profesor."
+                    ? "Esta tableta no está registrada en el aula. Pídele ayuda al docente."
                     : DesdeElEquipoDelProfesor;
             case "dispositivo_bloqueado" or "dispositivo_inactivo":
                 // UXR-007: la tableta nunca aparece bloqueada ni ocupada ante el alumno.
-                return "No pudimos abrir tu sesión en esta tableta. Avisa a tu profesor; tu trabajo está a salvo.";
+                return "No pudimos abrir tu sesión en esta tableta. Avisa a tu docente; tu trabajo está a salvo.";
 
             // ---------- alumnos
             case "dispositivo_en_pausa":
@@ -78,14 +78,14 @@ public static class MensajesDeAcceso
             }
             case "registro_cerrado":
                 return error.Texto("motivo") == "tope_por_tableta"
-                    ? "Esta tableta creó varios usuarios hace poco. Pídele ayuda al profesor."
+                    ? "Esta tableta creó varios usuarios hace poco. Pídele ayuda al docente."
                     : audiencia == Audiencia.Alumno
-                        ? "Crear un usuario nuevo está apagado. Pídele al profesor que te anote en el grupo."
-                        : "El registro de profesores está cerrado. Pídele a la administración que te cree el usuario.";
+                        ? "Crear un usuario nuevo está apagado. Pídele al docente que te anote en el grupo."
+                        : "El registro de docentes está cerrado. Pídele a la administración que te cree el usuario.";
             case "visitante_no_permitido":
-                return "Hoy no se puede entrar como visitante. Pídele ayuda al profesor.";
+                return "Hoy no se puede entrar como visitante. Pídele ayuda al docente.";
             case "sesion_visitante_limitada":
-                return "Estás como visitante: esto no está disponible. Pídele a tu profesor que te anote en el grupo.";
+                return "Estás como visitante: esto no está disponible. Pídele a tu docente que te anote en el grupo.";
             case "pin_ya_establecido":
                 return "Ese nombre ya tiene PIN: escríbelo para entrar.";
 
@@ -101,7 +101,7 @@ public static class MensajesDeAcceso
                 return error.ReintentarEnSeg is { } bloqueo and > 0
                     ? $"Demasiados intentos. Vuelve a intentarlo en {Minutos(bloqueo)} min."
                     : audiencia == Audiencia.Alumno
-                        ? "Demasiados intentos. Pide a tu profesor que te ayude."
+                        ? "Demasiados intentos. Pide a tu docente que te ayude."
                         : "Tu cuenta está bloqueada. Pide a la administración que la desbloquee.";
             case "demasiados_intentos":
                 return error.Numero("reintentar_en_ms") is { } milisegundos and > 0
@@ -117,7 +117,7 @@ public static class MensajesDeAcceso
                 return "Ese documento ya tiene un usuario. Si es tuyo, usa «Olvidé mi contraseña».";
             case "no_encontrado":
                 return error.Estado == 404 && error.Detalle.Contains("profesor", StringComparison.OrdinalIgnoreCase)
-                    ? "No encontramos un profesor con ese documento. Revisa que esté bien escrito."
+                    ? "No encontramos un docente con ese documento. Revisa que esté bien escrito."
                     : "No encontramos lo que buscabas. Vuelve a intentarlo.";
             case "datos_invalidos":
                 return string.IsNullOrWhiteSpace(error.Detalle) ? Generico : error.Detalle;

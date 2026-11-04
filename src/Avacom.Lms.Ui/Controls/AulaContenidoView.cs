@@ -51,6 +51,10 @@ public sealed class AulaContenidoView : ContentView
     // «Layout cycle detected» ni deje la capa del video con un tamaño viejo. Ver 02-classroom-engine/responsive.md.
     private double _anchoUtil, _altoUtil;
     private readonly List<Action> _ajustes = [];
+    // Lo que ocupa la lámina SIN sus medios (cabecera, título, textos, márgenes): el medio se queda con el resto del alto, para
+    // que la lámina entera quepa sin desplazarse. Se mide la pila ya maquetada menos el alto de sus medios, que no depende del medio.
+    private readonly List<View> _medios = [];
+    private double _altoOcupado;
     private int _versionAjuste;
 
     /// <summary>Esquema con el que el HTML de un reproductor avisa a MAUI (`avacom-aula://fallo?tipo=audio&codigo=3`).</summary>
@@ -217,7 +221,9 @@ public sealed class AulaContenidoView : ContentView
         _indiceEnPantalla = indice;
 
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
-        cabecera.Add(Ds.Secundario($"{objeto.ComponenteLegible} · {objeto.Titulo}", 15 * Escala), 0, 0);
+        // La duración de referencia va en esta línea y no en un renglón propio al pie: es una línea menos de alto, para que la lámina quepa sin desplazarse.
+        var duracion = unidad.DuracionSeg is > 0 ? $" · ~{Math.Max(1, unidad.DuracionSeg.Value / 60)} min" : string.Empty;
+        cabecera.Add(Ds.Secundario($"{objeto.ComponenteLegible} · {objeto.Titulo}{duracion}", 15 * Escala), 0, 0);
         cabecera.Add(Ds.Pildora(objeto.Componente == "presentacion" ? $"Lámina {indice + 1} de {unidades.Count}" : $"Página {indice + 1} de {unidades.Count}", Ds.Categoria(objeto.Componente)), 1, 0);
 
         // Contrato 2: el curso trae la cátedra o explicación maquetada (html con sus estilos). Se muestra ESA página, en la sección de la
@@ -239,11 +245,20 @@ public sealed class AulaContenidoView : ContentView
             }
         }
 
-        var pila = new VerticalStackLayout { Spacing = 18 * Escala, Padding = new Thickness(28 * Escala, 24 * Escala) };
+        // Arriba y sin estirarse: la tarjeta llena el visor, pero la pila mide sólo su contenido; si se estirara, «lo que ocupa sin el medio» saldría
+        // igual al visor entero y el video se quedaría en su tamaño mínimo.
+        var pila = new VerticalStackLayout { Spacing = 18 * Escala, Padding = new Thickness(28 * Escala, 24 * Escala), VerticalOptions = LayoutOptions.Start };
         pila.Add(cabecera);
         if (!string.IsNullOrWhiteSpace(unidad.Titulo)) pila.Add(Ds.Titulo(unidad.Titulo!, 30 * Escala));
         foreach (var bloque in unidad.Bloques) pila.Add(Bloque(bloque));
-        if (unidad.DuracionSeg is > 0) pila.Add(Ds.Secundario($"Referencia: ~{Math.Max(1, unidad.DuracionSeg.Value / 60)} min", 14 * Escala));
+        if (_medios.Count > 0)
+            pila.SizeChanged += (_, _) =>
+            {
+                var ocupado = pila.Height - _medios.Sum(m => m.HeightRequest > 0 ? m.HeightRequest : 0);
+                if (pila.Height <= 0 || Math.Abs(ocupado - _altoOcupado) < 1) return;
+                _altoOcupado = ocupado;
+                AjustarMedios();
+            };
 
         _cuerpo.Content = new ScrollView { Content = Ds.Tarjeta(pila, Ds.RadioGrande, new Thickness(0)) };
         PintarMandos(unidades, indice);
@@ -454,14 +469,22 @@ public sealed class AulaContenidoView : ContentView
         var web = Web(html, null, uri => AvisarFallo("video", b, uri, avisos));
         pila.Add(CajaAjustada(web, b.Ancho, b.Alto));
         pila.Add(avisos);
-        if (!string.IsNullOrWhiteSpace(b.Pie)) pila.Add(Ds.Secundario(b.Pie!, 16 * Escala));
         var detalle = string.Join(" · ", new[]
         {
             b.DesdeSeg is not null ? $"desde {Mmss(b.DesdeSeg.Value)}" : null,
             b.HastaSeg is not null ? $"hasta {Mmss(b.HastaSeg.Value)}" : null,
             !string.IsNullOrWhiteSpace(b.SubtitulosUrl) ? "con subtítulos" : null,
         }.Where(x => x is not null));
-        if (detalle.Length > 0) pila.Add(Ds.Pildora(detalle, Ds.CatVideo));
+        // El pie y el detalle (tramo, subtítulos) comparten renglón, para que el video se quede con más alto.
+        var pie = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
+        if (!string.IsNullOrWhiteSpace(b.Pie)) pie.Add(Ds.Secundario(b.Pie!, 16 * Escala), 0, 0);
+        if (detalle.Length > 0)
+        {
+            var pildora = Ds.Pildora(detalle, Ds.CatVideo);
+            pildora.VerticalOptions = LayoutOptions.Center;
+            pie.Add(pildora, 1, 0);
+        }
+        if (pie.Count > 0) pila.Add(pie);
         return pila;
     }
 
@@ -708,7 +731,7 @@ public sealed class AulaContenidoView : ContentView
         }
         // Lo que esta pantalla puede y no puede hacer con la actividad, dicho según quién la mira (QA 2026-10-07: «no se podían seleccionar»).
         pila.Add(Ds.Secundario(NombreApp == "student"
-            ? "Puedes marcar opciones para pensarlas. Para responder de verdad, espera a que tu profesor lance la actividad: te aparecerá abajo con el botón «Responder»."
+            ? "Puedes marcar opciones para pensarlas. Para responder de verdad, espera a que tu docente lance la actividad: te aparecerá abajo con el botón «Responder»."
             : "Marca opciones en pantalla para comentarlas con la clase; nada se envía. Para que los alumnos respondan en sus tabletas, pulsa «Lanzar actividad».", 13 * Escala));
         return pila;
     }
@@ -909,7 +932,7 @@ public sealed class AulaContenidoView : ContentView
         var ultima = CajaDeMedio.Vacia;
         void Ajustar()
         {
-            var caja = AjusteDeMedio.Ajustar(_anchoUtil, _altoUtil, proporcion, AjustesDePantalla.Actual);
+            var caja = AjusteDeMedio.Ajustar(_anchoUtil, Math.Max(0, _altoUtil - _altoOcupado), proporcion, AjustesDePantalla.Actual);
             if (caja.EsVacia || (Math.Abs(caja.Ancho - ultima.Ancho) < 1 && Math.Abs(caja.Alto - ultima.Alto) < 1)) return;
             ultima = caja;
             medio.WidthRequest = caja.Ancho;
@@ -917,6 +940,7 @@ public sealed class AulaContenidoView : ContentView
             aplicado?.Invoke(caja);
         }
         _ajustes.Add(Ajustar);
+        _medios.Add(medio);
         Ajustar();
         return contenedor;
     }
@@ -1008,6 +1032,8 @@ public sealed class AulaContenidoView : ContentView
         if (conservarHtml && _webHtml is not null) _webs.Add(_webHtml);
         else { _webHtml = null; _webHtmlPagina = null; _htmlContenedor = null; _htmlCabecera = null; }
         _ajustes.Clear();
+        _medios.Clear();
+        _altoOcupado = 0;
     }
 
     /// <summary>

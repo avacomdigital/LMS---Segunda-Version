@@ -32,7 +32,7 @@ public partial class BitacoraPage
         pila.Add(Ds.Cuerpo("Recursos recientes", 16));
         var recursos = lista?.Recursos ?? [];
         if (recursos.Count == 0)
-            pila.Add(Vacio("Todavía no hay recursos en la caché", "Aparecen cuando una tableta pide un medio, el profesor proyecta o lanza algo, un alumno prepara un paquete de estudio o empieza un examen con imágenes."));
+            pila.Add(Vacio("Todavía no hay recursos en la caché", "Aparecen cuando una tableta pide un medio, el docente proyecta o lanza algo, un alumno prepara un paquete de estudio o empieza un examen con imágenes."));
         foreach (var r in recursos) pila.Add(FilaDeRecurso(r));
         if (lista is { Total: var total } && total > recursos.Count) pila.Add(Ds.Secundario($"Se muestran {recursos.Count} de {total}.", 13));
         return pila;

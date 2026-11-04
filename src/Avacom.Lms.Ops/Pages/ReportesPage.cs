@@ -17,7 +17,7 @@ namespace Avacom.Lms.Ops.Pages;
 /// </summary>
 public sealed class ReportesPage : ContentPage
 {
-    private const double Aire = 10;       // lo que separa cada tarjeta de las líneas de tercios: así quedan DENTRO de su tercio y separadas entre sí
+    private const double Aire = 24;       // lo que separa las tarjetas entre sí (espaciado de las columnas)
 
     private readonly Grid _raiz;
     private readonly VerticalStackLayout _tarjetasHost = new();
@@ -36,33 +36,34 @@ public sealed class ReportesPage : ContentPage
         var textos = new VerticalStackLayout { Spacing = 6, VerticalOptions = LayoutOptions.Center };
         textos.Add(new Label { Text = "REPORTES", FontFamily = "Lexend", FontSize = 12, TextColor = Color.FromArgb("#4F5566"), CharacterSpacing = 2.5 });
         textos.Add(new Label { Text = "Reportes", FontFamily = "LexendMedium", FontSize = 30, TextColor = Color.FromArgb("#1F2433"), AutomationId = "reportes-titulo" });
-        textos.Add(new Label { Text = "Elige qué quieres ver. Todos los reportes dicen hasta qué momento llegan sus datos.", FontFamily = "Lexend", FontSize = 15, TextColor = Color.FromArgb("#4F5566"), LineBreakMode = LineBreakMode.WordWrap });
+        textos.Add(new Label { Text = "Elige qué quieres ver.", FontFamily = "Lexend", FontSize = 15, TextColor = Color.FromArgb("#4F5566"), LineBreakMode = LineBreakMode.WordWrap });
 
         // La demo «Monitor de actividad» (con la lista de visitantes y «Vincular a un alumno», RF-09c) abría desde este hexágono antes de MOD-013: sigue a un toque de aquí.
-        _acciones.Add(ExamenUi.Accion("Visitantes y actividad", Ds.Rango.Quiet, () => Shell.Current.GoToAsync("activity-monitor"), 250, "reportes-visitantes").Vista);
-        _acciones.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, ReportesUi.Seguro(nameof(ReportesPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "reportes-actualizar").Vista);
-        _acciones.Add(ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "reportes-volver").Vista);
+        _acciones.Add(ExamenUi.Accion("Visitantes y actividad", Ds.Rango.Quiet, () => Shell.Current.GoToAsync("activity-monitor"), null, "reportes-visitantes").Vista);
+        _acciones.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, ReportesUi.Seguro(nameof(ReportesPage), "Actualizar", () => CargarAsync(forzar: true)), null, "reportes-actualizar").Vista);
+        Ds.VolverALaIzquierda(_acciones, ExamenUi.Accion("‹  Menú principal", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 220, "reportes-volver").Vista);
 
-        var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, Padding = new Thickness(44, 24, 48, 0), VerticalOptions = LayoutOptions.Start };
+        var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, VerticalOptions = LayoutOptions.Start };
         cabecera.Add(textos, 0, 0);
         cabecera.Add(_acciones, 1, 0);
 
         // Las tres tarjetas, cada una en su tercio; el aviso (sin conexión, sin acceso) ocupa el tercio central.
-        _tarjetas = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)] };
+        _tarjetas = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], ColumnSpacing = Aire };
 
-        var pie = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], Padding = new Thickness(0, 10, 0, 12), VerticalOptions = LayoutOptions.Start };
-        var recientes = new VerticalStackLayout { Spacing = 6, Margin = new Thickness(44, 0, 20, 0) };
+        var pie = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], ColumnSpacing = Aire, VerticalOptions = LayoutOptions.Start };
+        var recientes = new VerticalStackLayout { Spacing = 6 };
         recientes.Add(_avisosHost);
         recientes.Add(_recientesHost);
         pie.Add(recientes, 0, 0);
         Grid.SetColumnSpan(recientes, 2);
         pie.Add(_usoHost, 2, 0);
 
-        _raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Star), new RowDefinition(new GridLength(4, GridUnitType.Star)), new RowDefinition(GridLength.Star)] };
+        // Filas a su medida (las tarjetas ya no se estiran hasta llenar la pantalla) dentro de un desplazable por si la ventana es baja.
+        _raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Auto)], RowSpacing = 24, Padding = new Thickness(44, 8, 48, 32) };
         _raiz.Add(cabecera, 0, 0);
         _raiz.Add(_tarjetas, 0, 1);
         _raiz.Add(pie, 0, 2);
-        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = _raiz };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = new ScrollView { Content = _raiz } };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
     }
 
     protected override async void OnAppearing()
@@ -161,12 +162,12 @@ public sealed class ReportesPage : ContentPage
         var alumnos = grupos.Sum(g => g.Alumnos ?? 0);
         var atencion = grupos.Sum(g => g.EnAtencion ?? 0);
 
-        Agregar(0, "ico_clase.png", "Una clase", "Lo que hizo cada estudiante en una clase ya cerrada: participación y aciertos.", datoClase, p.Clase, RutasDeReportes.DeElegir(RutasDeReportes.ElegirClase), "reportes-tarjeta-clase",
+        Agregar(0, "ico_clase.png", "Una clase", "Participación y aciertos de una clase ya cerrada.", datoClase, p.Clase, RutasDeReportes.DeElegir(RutasDeReportes.ElegirClase), "reportes-tarjeta-clase",
             "La participación y los aciertos de cada estudiante", "Cómo quedó la tableta de cada uno al cerrar", "El promedio de la clase, abajo");
-        Agregar(1, "ico_perfil.png", "Un estudiante", "Cómo va un estudiante: asistencia, participación, evaluaciones y estudio.", alumnos > 0 ? $"{FormatoDeReportes.Plural(alumnos, "estudiante", "estudiantes")} en {FormatoDeReportes.Plural(grupos.Count, "grupo", "grupos")}" : grupos.Count == 0 ? EstadosVaciosDeReportes.SinGrupos : null,
+        Agregar(1, "ico_perfil.png", "Un estudiante", "Asistencia, participación, evaluaciones y estudio.", alumnos > 0 ? $"{FormatoDeReportes.Plural(alumnos, "estudiante", "estudiantes")} en {FormatoDeReportes.Plural(grupos.Count, "grupo", "grupos")}" : grupos.Count == 0 ? EstadosVaciosDeReportes.SinGrupos : null,
             p.Alumno, RutasDeReportes.DeElegir(RutasDeReportes.ElegirAlumno), "reportes-tarjeta-alumno",
             "Su asistencia y su participación", "Sus evaluaciones, con la nota de su nivel", "Sus tareas de estudio y sus clases");
-        Agregar(2, "ico_grupo.png", "Un grupo", "Quién necesita atención y cómo va todo el grupo.", atencion > 0 ? (atencion == 1 ? "1 estudiante necesita atención" : $"{atencion} estudiantes necesitan atención") : grupos.Count > 0 ? "Nadie necesita atención ahora" : EstadosVaciosDeReportes.SinGrupos,
+        Agregar(2, "ico_grupo.png", "Un grupo", "Quién necesita atención en el grupo.", atencion > 0 ? (atencion == 1 ? "1 estudiante necesita atención" : $"{atencion} estudiantes necesitan atención") : grupos.Count > 0 ? "Nadie necesita atención ahora" : EstadosVaciosDeReportes.SinGrupos,
             p.Grupo, RutasDeReportes.DeElegir(RutasDeReportes.ElegirGrupo), "reportes-tarjeta-grupo",
             "Quién necesita atención, primero y con su motivo", "Todos los estudiantes del grupo", "Sus clases cerradas y sus evaluaciones");
     }
@@ -174,7 +175,7 @@ public sealed class ReportesPage : ContentPage
     private void Agregar(int columna, string icono, string titulo, string descripcion, string? dato, bool activa, string ruta, string id, params string[] veras)
     {
         // El icono arriba, el texto debajo y «Elegir ›» siempre al pie: así las tres tarjetas alinean aunque una descripción ocupe una línea más que otra.
-        var texto = new VerticalStackLayout { Spacing = 12, Margin = new Thickness(0, 22, 0, 0), VerticalOptions = LayoutOptions.Start };
+        var texto = new VerticalStackLayout { Spacing = 10, Margin = new Thickness(0, 16, 0, 20), VerticalOptions = LayoutOptions.Start };
         texto.Add(new Label { Text = titulo, FontFamily = Ds.FuenteSemi, FontSize = 26, TextColor = Ds.Tinta });
         texto.Add(Ds.Secundario(descripcion, 17));
         if (!string.IsNullOrWhiteSpace(dato)) texto.Add(new Label { Text = dato, FontFamily = Ds.FuenteMedia, FontSize = 15, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap, Margin = new Thickness(0, 6, 0, 0) });
@@ -183,13 +184,14 @@ public sealed class ReportesPage : ContentPage
         var cuerpo = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star), new RowDefinition(GridLength.Auto)] };
         cuerpo.Add(new Image { Source = icono, WidthRequest = 64, HeightRequest = 64, HorizontalOptions = LayoutOptions.Start }, 0, 0);
         cuerpo.Add(texto, 0, 1);
-        cuerpo.Add(new Label { Text = activa ? "Elegir  ›" : "Tu rol no puede ver este reporte", FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = activa ? Ds.Azul700 : Ds.TintaSuave }, 0, 2);
+        var elegir = new Label { Text = activa ? "Elegir" : "Tu rol no puede ver este reporte", FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = activa ? Ds.Azul700 : Ds.TintaSuave };
+        cuerpo.Add(activa ? Ds.ConFlecha(elegir) : elegir, 0, 2);
 
         var tarjeta = ReportesUi.Tocable(cuerpo, activa ? ReportesUi.Seguro(nameof(ReportesPage), id, () => Shell.Current.GoToAsync(ruta)) : () => Task.CompletedTask, $"{titulo}. {descripcion}", id,
-            Colors.White, new Thickness(32, 30));
+            Colors.White, new Thickness(28, 26));
         tarjeta.StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioGrande };
         tarjeta.Shadow = Ds.SombraTarjeta();
-        tarjeta.Margin = new Thickness(Aire, 0);
+        tarjeta.MinimumHeightRequest = 340;
         tarjeta.Opacity = activa ? 1 : 0.6;
         _tarjetas.Add(tarjeta, columna, 0);
     }
@@ -201,7 +203,7 @@ public sealed class ReportesPage : ContentPage
         // En el tercio derecho del pie: el boletín académico (un archivo por estudiante, con la plantilla del país) y el uso de equipos, según lo que el nodo deja a esta persona.
         var secundarias = new VerticalStackLayout { Spacing = 8 };
         if (filtros.Puede.Alumno)
-            secundarias.Add(TarjetaPequena("ico_reporte.png", "Boletín académico", "Un boletín por estudiante: puntos, calificación, competencias, progreso y recomendaciones.",
+            secundarias.Add(TarjetaPequena("ico_reporte.png", "Boletín académico", "Un boletín por estudiante.",
                 RutasDeReportes.DeElegir(RutasDeReportes.ElegirBoletin), "reportes-tarjeta-boletin", "Boletin"));
         if (filtros.Puede.Uso)
             secundarias.Add(TarjetaPequena("ico_dispositivos.png", "Uso de equipos", "Qué tabletas se usaron y cuánto.", RutasDeReportes.DeUso(), "reportes-tarjeta-uso", "Uso"));
@@ -228,21 +230,16 @@ public sealed class ReportesPage : ContentPage
 
     private static Border TarjetaPequena(string icono, string titulo, string descripcion, string ruta, string id, string donde)
     {
-        var tarjeta = ReportesUi.Tocable(new HorizontalStackLayout
+        var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 14 };
+        fila.Add(new Image { Source = icono, WidthRequest = 40, HeightRequest = 40, VerticalOptions = LayoutOptions.Center }, 0, 0);
+        fila.Add(new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center, Children =
         {
-            Spacing = 14, Children =
-            {
-                new Image { Source = icono, WidthRequest = 40, HeightRequest = 40, VerticalOptions = LayoutOptions.Center },
-                new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center, Children =
-                {
-                    new Label { Text = titulo, FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta },
-                    Ds.Secundario(descripcion, 14),
-                } },
-            },
-        }, ReportesUi.Seguro(nameof(ReportesPage), donde, () => Shell.Current.GoToAsync(ruta)), $"{titulo}. {descripcion}", id, Colors.White, new Thickness(18, 12));
+            new Label { Text = titulo, FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta },
+            Ds.Secundario(descripcion, 14),
+        } }, 1, 0);
+        var tarjeta = ReportesUi.Tocable(fila, ReportesUi.Seguro(nameof(ReportesPage), donde, () => Shell.Current.GoToAsync(ruta)), $"{titulo}. {descripcion}", id, Colors.White, new Thickness(18, 12));
         tarjeta.StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioTarjeta };
         tarjeta.Shadow = Ds.SombraTarjeta();
-        tarjeta.Margin = new Thickness(Aire, 0);
         return tarjeta;
     }
 

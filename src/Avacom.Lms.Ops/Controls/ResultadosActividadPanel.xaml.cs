@@ -424,7 +424,7 @@ public partial class ResultadosActividadPanel : ContentView
         // Estado en texto y la marca de atención (texto, no sólo color)
         v.Estado = new Label { FontFamily = Ds.FuenteMedia, FontSize = 18, TextColor = Ds.Tinta };
         v.Detalle = new Label { FontFamily = Ds.FuenteRegular, FontSize = 14, TextColor = Ds.TintaSuave, IsVisible = false };
-        v.Marca = Ds.Pildora("⚠  Necesita atención", Ds.AlertaSuave, Ds.Naranja700, 13);
+        v.Marca = Ds.PildoraConIcono("Necesita atención", "ico_avisos.png", Ds.AlertaSuave, Ds.Naranja700, 13);
         v.Marca.IsVisible = false;
         v.Marca.HorizontalOptions = LayoutOptions.Start;
         cuadricula.Add(new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center, Children = { v.Estado, v.Detalle, v.Marca } }, 3, 0);

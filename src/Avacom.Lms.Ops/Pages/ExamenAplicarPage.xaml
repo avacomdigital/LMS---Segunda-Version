@@ -8,10 +8,10 @@
     Shell.NavBarIsVisible="False">
     <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo liso (evaluar); la raíz de la pantalla va debajo, sin cambios. -->
     <ui:MarcoDs Aurora="False">
-    <!-- Aplicar un examen (MOD-010 · Guion, pasos 1 a 4). Una sola tarjeta en el tercio central de la ventana: Grid *,*,* de ancho y, de alto, todo lo que deja la isla de marca (8 arriba, 40 abajo),
+    <!-- Aplicar un examen (MOD-010 · Guion, pasos 1 a 4). Una sola tarjeta en la mitad central de la ventana (antes el tercio, y quedaba apiñada): Grid *,2*,* de ancho y, de alto, todo lo que deja la isla de marca (8 arriba, 40 abajo),
          con la tarjeta llenando la celda del centro (sin márgenes ni anchos máximos). La cabecera y el pie quedan fijos;
          sólo el cuerpo se desplaza. Nada exige teclado: todo son fichas y tarjetas que se tocan. El nivel nunca viene elegido. -->
-    <Grid x:Name="Raiz" ColumnDefinitions="*,*,*" RowDefinitions="8,*,40">
+    <Grid x:Name="Raiz" ColumnDefinitions="*,2*,*" RowDefinitions="8,*,40">
         <Border Grid.Row="1" Grid.Column="1" Padding="28,22,22,22" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 24">
             <Border.Shadow><Shadow Brush="#1F2433" Offset="0,10" Radius="28" Opacity="0.10" /></Border.Shadow>
             <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">

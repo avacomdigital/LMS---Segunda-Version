@@ -49,7 +49,7 @@ public partial class GruposPage : ContentPage
         var volver = Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 56);
         foreach (var b in new[] { actualizar, volver }) b.FontSize = 16;
         AccionesHost.Add(Ds.Capsula(actualizar));
-        AccionesHost.Add(volver);
+        Ds.VolverALaIzquierda(AccionesHost, volver);
         _formGrupo = ConstruirFormularioGrupo();
         _formEstudiante = ConstruirFormularioEstudiante();
     }

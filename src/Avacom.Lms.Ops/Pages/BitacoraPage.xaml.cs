@@ -38,7 +38,7 @@ public partial class BitacoraPage : ContentPage
         var volver = Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 56);
         actualizar.FontSize = volver.FontSize = 16;
         AccionesHost.Add(Ds.Capsula(actualizar));
-        AccionesHost.Add(volver);
+        Ds.VolverALaIzquierda(AccionesHost, volver);
     }
 
     protected override async void OnAppearing()
@@ -95,13 +95,13 @@ public partial class BitacoraPage : ContentPage
         PestanasHost.Add(boton);
     }
 
-    /// <summary>La pestaña activa en tinta con texto blanco; las demás, blancas con tinta: legibles sobre el lienzo claro.</summary>
+    /// <summary>La pestaña activa en el verde principal del DS con texto blanco; las demás, blancas con tinta: legibles sobre el lienzo claro.</summary>
     private void PintarPestanas()
     {
         foreach (var (pestana, boton) in _pestanas)
         {
             var activa = pestana == _actual;
-            boton.BackgroundColor = activa ? Ds.Tinta : Colors.White;
+            boton.BackgroundColor = activa ? Ds.Principal : Colors.White;
             boton.TextColor = activa ? Colors.White : Ds.Tinta;
         }
     }
