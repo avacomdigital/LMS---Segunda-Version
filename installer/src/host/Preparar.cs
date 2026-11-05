@@ -88,7 +88,7 @@ internal static class Preparar
             {
                 return Terminar(registro, 2, "No se encontro el runtime del backend en la carpeta de instalacion.");
             }
-            if (!File.Exists(Rutas.ManagePy))
+            if (!File.Exists(Rutas.ManagePy) && !Dispositivo.LiberacionDeClave.HayPaqueteCifrado)
             {
                 return Terminar(registro, 3, "No se encontro el backend en la carpeta de instalacion.");
             }
@@ -338,6 +338,7 @@ internal static class Preparar
         {
             using var proceso = Process.Start(inicio);
             if (proceso is null) return new Resultado(-1, string.Empty);
+            ProcesoBackend.EntregarClave(proceso);
 
             // Las dos salidas se leen a la vez: leerlas una tras otra bloquea el
             // proceso si un traceback largo llena el pipe de stderr mientras

@@ -1,0 +1,30 @@
+AVACOM · CONSTANCIA DE RESPALDO
+----------------------------------------------------------------
+Institución:        Institución Educativa San José
+Respaldo:           0F1E2D3C  (Incremental (sólo lo que cambió desde el anterior))
+Hecho el:           21/10/2026 02:00
+Cómo se pidió:      Automático, según el calendario
+Estado:             No terminó (falló)
+Qué pasó:           No había espacio suficiente en el destino.
+Verificado el:      Todavía no (se verifica sola poco después)
+Copiado a memoria:  No
+Tamaño del archivo: 0 KB
+
+QUÉ CONTIENE
+  · La base de datos del aula completa: usuarios, grupos, clases, evaluaciones, calificaciones, asistencia y bitácora de auditoría.
+  · Archivos de la institución: 0.
+  · Es incremental: para restaurar hace falta también el respaldo completo anterior.
+  · NO incluye el contenido reinstalable (cursos de la biblioteca y medios en caché) salvo que el personal técnico lo haya pedido: se vuelve a descargar.
+
+PROTECCIÓN
+  · El archivo está cifrado (AES-256). Ni el personal técnico puede leer los datos de los alumnos.
+  · Sólo se restaura en este mismo equipo o en otro con el CÓDIGO DE CUSTODIA de la institución (hoja de custodia).
+  · Restaurar o sacar una copia del equipo sólo lo hace el personal técnico de AVACOM WORLD, con una autorización firmada por AVACOM.
+
+DATOS DE CONTROL
+  Versión del producto:  2.14.0
+  Huella del archivo:    62f8b2dcb104f063
+  Copia local hasta:     según la política de retención
+
+Esta constancia no contiene datos de personas.
+----------------------------------------------------------------

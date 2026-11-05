@@ -12,7 +12,7 @@ import time
 
 from .aplicacion import casos_uso as cu
 from .dominio import dispositivo as dom
-from .infraestructura.unidad_trabajo import Cajones
+from .infraestructura.unidad_trabajo import Cajones, UnidadDeTrabajoDispositivos
 
 
 def _ahora(momento: int | None) -> int:
@@ -46,6 +46,30 @@ def resolver(identificador_hw: str, nombre: str = "", tipo: str = dom.TABLETA, p
     dispositivo, _ = cu.resolver(cajones, _ahora(momento), identificador_hw, nombre, tipo, plataforma, version_app, actor,
                                  capacidad_control=capacidad_control)
     return dispositivo
+
+
+def registrar_identidad(identificador_hw: str, clave_publica: str, clave_huella: str, garantia: str | None, detalle: dict | None = None, momento: int | None = None,
+                        actor: str = "") -> dict:
+    """MOD-018 · Fase 5: `licenciamiento` guarda aquí la identidad por clave que ya verificó (no escribe `m09_*`). Lanza `NoEncontrado`, `ClaveDistinta` o `ClaveEnUso`."""
+    with UnidadDeTrabajoDispositivos() as uow:
+        return cu.registrar_identidad(uow, _ahora(momento), identificador_hw, clave_publica, clave_huella, garantia, detalle, actor)
+
+
+def identidad_de(identificador_hw: str) -> dict | None:
+    """La identidad por clave de un equipo registrado (`id`, `clave_publica`, `clave_huella`, `garantia`, `garantia_detalle`, `garantia_en`) o None si no existe o no tiene clave."""
+    cajones = Cajones()
+    org = cajones.organizaciones.unica_id()
+    if not org or not str(identificador_hw or "").strip():
+        return None
+    d = cajones.dispositivos.por_identificador(org, str(identificador_hw).strip())
+    if not d or not d.get("clave_huella"):
+        return None
+    return {k: d[k] for k in ("id", "clave_publica", "clave_huella", "garantia", "garantia_detalle", "garantia_en")}
+
+
+def reiniciar_identidad(dispositivo_id: str, momento: int | None = None, actor: str = "") -> dict:
+    with UnidadDeTrabajoDispositivos() as uow:
+        return cu.reiniciar_identidad(uow, _ahora(momento), dispositivo_id, actor)
 
 
 def por_id(dispositivo_id: str) -> dict | None:

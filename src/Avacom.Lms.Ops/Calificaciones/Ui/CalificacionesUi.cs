@@ -42,7 +42,7 @@ internal static class CalificacionesUi
     /// <summary>Una fila de una lista: fondo suave, filo de 1 px y las esquinas del kit (el renglón de un alumno, de una revisión, de una versión).</summary>
     public static Border Fila(View contenido, Thickness? relleno = null) => new()
     {
-        BackgroundColor = Color.FromArgb("#FAFAFB"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = relleno ?? new Thickness(16, 12),
+        BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = relleno ?? new Thickness(16, 12),
         StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = contenido,
     };
 
@@ -80,7 +80,7 @@ internal static class CalificacionesUi
         if (!string.IsNullOrWhiteSpace(nota)) pila.Add(Ds.Secundario(nota!, 13));
         var caja = new Border
         {
-            BackgroundColor = Color.FromArgb("#F7F7F8"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(18, 14),
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(18, 14),
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = pila, WidthRequest = ancho,
             Margin = new Thickness(0, 0, 12, 12),
         };

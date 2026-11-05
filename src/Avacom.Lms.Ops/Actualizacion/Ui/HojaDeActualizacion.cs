@@ -44,7 +44,7 @@ internal sealed class HojaDeActualizacion : ContentView
         IsVisible = false;
         ZIndex = 50;
         // El velo es hermano de la tarjeta: un toque dentro de la tarjeta nunca llega a él. Tocar fuera NO cierra la hoja (nada de esto se cancela de un roce).
-        var velo = new Border { BackgroundColor = Color.FromArgb("#73141417"), StrokeThickness = 0 };
+        var velo = new Border { BackgroundColor = Color.FromArgb("#731F2433"), StrokeThickness = 0 };
         _eyebrow = ActualizacionUi.Eyebrow(string.Empty);
         _titulo = new Label { FontFamily = Ds.FuenteMedia, FontSize = 24, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap, AutomationId = "actualizaciones-hoja-titulo" };
         _subtitulo = new Label { FontFamily = Ds.FuenteLigera, FontSize = 15, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.WordWrap, AutomationId = "actualizaciones-hoja-subtitulo" };

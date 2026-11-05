@@ -4,17 +4,11 @@ using Microsoft.Maui.Controls.Shapes;
 namespace Avacom.Lms.Ui.Controls;
 
 /// <summary>
-/// Lámina Liquid Glass: un <see cref="GlassBorder"/> (en Windows, lo de detrás desenfocado, saturado y teñido; en las
-/// demás plataformas el tinte plano) vestido con el canto luminoso, un canto interior a 2 px, el reflejo del tercio
-/// superior y una sombra de tinta amplia y suave (fondo claro). Sirve igual desde XAML (<c>&lt;ui:LiquidGlassPanel&gt;…&lt;/ui:LiquidGlassPanel&gt;</c>)
-/// que desde código (<c>new LiquidGlassPanel { Content = … }</c>): el contenido va en <see cref="ContentView.Content"/>
-/// y lo presenta la plantilla, así que las capas del material nunca estorban a lo que se pone dentro.
-///
-/// El aire interior se da con <see cref="ContentPadding"/>: el <c>Padding</c> heredado de <c>TemplatedView</c>
-/// separa la lámina entera del borde del control (hace de margen), no el contenido de la lámina.
-///
-/// Niveles del lenguaje (<see cref="Glass"/>): el menú lateral usa tinte 0,14 y desenfoque 14 con radio 28; las
-/// tarjetas, tinte 0,14 y desenfoque 10 con radio 22; los avisos semánticos, el tinte de su color al 50–60 %.
+/// Caja del Aula · Design System con la API de la antigua lámina Liquid Glass: superficie opaca (blanca, o el tinte
+/// pedido ya compuesto sobre blanco), contorno completo de 1 px en <see cref="Ds.Linea"/> y sombra difusa sh-1. Sin
+/// desenfoque, canto interior ni reflejo: esas propiedades se conservan para no tocar las pantallas, pero no pintan.
+/// Sirve igual desde XAML (<c>&lt;ui:LiquidGlassPanel&gt;…&lt;/ui:LiquidGlassPanel&gt;</c>) que desde código; el
+/// aire interior se da con <see cref="ContentPadding"/> (el <c>Padding</c> heredado hace de margen).
 /// </summary>
 public class LiquidGlassPanel : ContentView
 {
@@ -121,21 +115,24 @@ public class LiquidGlassPanel : ContentView
     private void Aplicar()
     {
         if (lamina is null || canto is null || reflejo is null || cuerpo is null) return;
+        // Aula · Design System: la lámina es una caja opaca (el tinte ya compuesto sobre blanco), con contorno completo
+        // en Linea y sombra difusa sh-1. Sin desenfoque, canto interior ni reflejo; las propiedades se conservan.
         lamina.StrokeShape = new RoundRectangle { CornerRadius = CornerRadius };
-        lamina.Stroke = Glass.CantoLuminoso(EdgeOpacity);
-        lamina.TintColor = TintColor;
-        lamina.TintOpacity = TintOpacity;
-        lamina.BlurRadius = BlurRadius;
-        lamina.Brightness = Brightness;
-        lamina.Saturation = Saturation;
-        lamina.Backdrop = Backdrop;
+        lamina.Stroke = new SolidColorBrush(Ds.Linea);
+        lamina.TintColor = Ds.Mezcla(TintColor ?? Colors.White, (float)Math.Clamp(TintOpacity, 0, 1) * (TintColor ?? Colors.White).Alpha);
+        lamina.TintOpacity = 1;
+        lamina.BlurRadius = 0;
+        lamina.Brightness = 0;
+        lamina.Saturation = 1;
+        lamina.Backdrop = false;
         lamina.Shadow = new Shadow
         {
-            Brush = new SolidColorBrush(ShadowColor), Offset = new Point(0, ShadowOffsetY), Radius = (float)ShadowRadius, Opacity = (float)ShadowOpacity,
+            Brush = new SolidColorBrush(Ds.Tinta), Offset = new Point(0, 8), Radius = 20, Opacity = (float)Math.Min(ShadowOpacity, 0.09),
         };
         canto.StrokeShape = new RoundRectangle { CornerRadius = Math.Max(0, CornerRadius - 2) };
         canto.Stroke = Glass.CantoInterior(EdgeOpacity);
-        reflejo.IsVisible = Sheen;
+        canto.StrokeThickness = 0;
+        reflejo.IsVisible = false;
         reflejo.HeightRequest = SheenHeight;
         reflejo.Background = Glass.Reflejo(SheenOpacity);
         cuerpo.Padding = ContentPadding;

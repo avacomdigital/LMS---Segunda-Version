@@ -64,8 +64,8 @@ public static class GradebookTexto
         "no_iniciado" => "Aún no empiezas",
         "en_progreso" => "En progreso",
         "entregado" => "Entregado",
-        "en_revision" => "Tu profesor la está revisando",
-        "resultado_no_publicado" => "Calificada: tu profesor aún no publica el resultado",
+        "en_revision" => "Tu docente la está revisando",
+        "resultado_no_publicado" => "Calificada: tu docente aún no publica el resultado",
         "publicado" => "Resultado publicado",
         _ => estado ?? "—",
     };
@@ -123,7 +123,7 @@ public static class GradebookTexto
         _ => tipo ?? "—",
     };
 
-    public static string Origen(string? origen) => origen == "docente" ? "Revisada por el profesor" : "Calificada por el sistema";
+    public static string Origen(string? origen) => origen == "docente" ? "Revisada por el docente" : "Calificada por el sistema";
 
     // ------------------------------------------------------------------------------------------ números
 

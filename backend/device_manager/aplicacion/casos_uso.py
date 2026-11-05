@@ -22,6 +22,8 @@ from dataclasses import dataclass
 
 from ..dominio import dispositivo as dom
 from ..dominio.errores import (
+    ClaveDistinta,
+    ClaveEnUso,
     DispositivoBloqueado,
     DispositivoInactivo,
     DispositivoYaAsignado,
@@ -53,7 +55,7 @@ def dto(dispositivo: dict, ahora: int, sesion_abierta: dict | None = None, rotul
     (009-06) dicen si el equipo es del aula o de una persona, y de quién."""
     dueno = dispositivo.get("asignado_a_id")
     return {
-        **dispositivo,
+        **{k: v for k, v in dispositivo.items() if k != "clave_publica"},          # la llave (pública) no viaja en los listados: con la huella basta para reconocerla
         "identificador": dispositivo["identificador_hw"],
         "perfil": dispositivo.get("perfil") or dom.COMPARTIDO,
         "asignado_a": {"id": dueno, "rotulo": rotulo_asignado} if dueno else None,
@@ -87,7 +89,7 @@ def _campos_de_capacidad(actual: dict | None, capacidad_control, capacidad_detal
 
 def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: str = "", tipo: str = dom.TABLETA,
              plataforma: str = "", version_app: str = "", actor: str = "", capacidad_control=None, capacidad_detalle=None,
-             cupo: CupoDeEquipos | None = None) -> tuple[dict, bool]:
+             cupo: CupoDeEquipos | None = None, identidad: dict | None = None) -> tuple[dict, bool]:
     """CAP-052/053: registra la tableta la primera vez que se presenta y, después, sólo la reconoce
     (idempotente por organización + huella). Devuelve (dispositivo, creado). Nunca la bloquea ni la
     activa: eso lo decide el aula o el administrador.
@@ -112,20 +114,71 @@ def resolver(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, nombre: st
             uow.outbox.publicar("Dispositivo", existente["id"], dom.EV_RECONECTADO,
                                 {"dispositivo_id": existente["id"], "silencio_ms": ahora - existente["ultimo_latido_en"], "instante": ahora})
         return uow.dispositivos.actualizar(existente["id"], **campos), False
+    verificada = None
     if cupo is not None and dom.validar_tipo(tipo) != dom.MASTER:
-        cupo.exigir_equipo_nuevo(sum(1 for d in uow.dispositivos.listar(org, True) if d.get("tipo") != dom.MASTER))
+        # Fase 5: junto al cupo viaja la prueba de clave que trae el equipo nuevo (si la trae). `licenciamiento` la verifica y devuelve lo que se guarda; un equipo sin prueba entra como `declarada`.
+        verificada = cupo.exigir_equipo_nuevo(sum(1 for d in uow.dispositivos.listar(org, True) if d.get("tipo") != dom.MASTER), identidad, identificador_hw)
+    campos_de_identidad: dict = {}
+    if verificada and not uow.dispositivos.con_clave(org, verificada["clave_huella"]):
+        campos_de_identidad = {"clave_publica": verificada["clave_publica"], "clave_huella": verificada["clave_huella"], "garantia": dom.validar_garantia(verificada["garantia"]),
+                               "garantia_detalle": dict(verificada.get("garantia_detalle") or {}), "garantia_en": ahora}
     dispositivo = uow.dispositivos.crear({
         "id": _id(), "organizacion_id": org, "identificador_hw": identificador_hw,
         "nombre": dom.normalizar_nombre(nombre, por_defecto=identificador_hw), "tipo": dom.validar_tipo(tipo),
         "plataforma": plataforma, "version_app": str(version_app or "")[:32], "activo": True, "bloqueado": False,
-        "registrado_en": ahora, "ultimo_latido_en": ahora, **_campos_de_capacidad(None, capacidad_control, capacidad_detalle, ahora),
+        "registrado_en": ahora, "ultimo_latido_en": ahora, **_campos_de_capacidad(None, capacidad_control, capacidad_detalle, ahora), **campos_de_identidad,
     })
     uow.outbox.publicar("Dispositivo", dispositivo["id"], dom.EV_REGISTRADO, {
         "dispositivo_id": dispositivo["id"], "nombre": dispositivo["nombre"], "tipo": dispositivo["tipo"],
         "plataforma": plataforma, "instante": ahora})
     uow.auditoria.registrar(actor or "sistema", "dispositivos.registrado", "m09_dispositivo", dispositivo["id"],
-                            nuevo={"identificador_hw": identificador_hw, "nombre": dispositivo["nombre"]})
+                            nuevo={"identificador_hw": identificador_hw, "nombre": dispositivo["nombre"],
+                                   **({"garantia": dispositivo["garantia"], "clave_huella": dispositivo["clave_huella"]} if dispositivo.get("clave_huella") else {})})
     return dispositivo, True
+
+
+def registrar_identidad(uow: UnidadDeTrabajo, ahora: int, identificador_hw: str, clave_publica: str, clave_huella: str, garantia: str | None, detalle: dict | None = None,
+                        actor: str = "") -> dict:
+    """MOD-018 · Fase 5 (P-24): guarda la identidad por clave de un equipo YA registrado, o la confirma si es la misma. No verifica nada de criptografía: eso lo hizo `licenciamiento`.
+
+    · Equipo sin clave          → se guarda con la `garantia` que trae (si trae None, `software`: probó poseerla y nada más).
+    · Misma clave               → se confirma (`garantia_en`); `garantia` None conserva el nivel que ya tenía, y uno nuevo sólo cambia el nivel si trae una atestación (no un «refrescar»).
+    · Otra clave                → `ClaveDistinta` (409): una identidad se enrola una vez; el técnico la reinicia.
+    · Clave de otro equipo      → `ClaveEnUso` (409): una clave no cuenta como dos equipos.
+    Nunca bloquea ni retira el equipo: la clase no depende de esto."""
+    org = organizacion_de(uow)
+    existente = uow.dispositivos.por_identificador(org, dom.normalizar_identificador(identificador_hw))
+    if not existente:
+        raise NoEncontrado("Ese equipo todavía no se registró en el aula.")
+    otro = uow.dispositivos.con_clave(org, clave_huella)
+    if otro and otro["id"] != existente["id"]:
+        raise ClaveEnUso("Esa clave ya identifica a otro equipo del aula.")
+    if existente.get("clave_huella") and existente["clave_huella"] != clave_huella:
+        raise ClaveDistinta("Este equipo ya tiene registrada otra clave.")
+    campos: dict = {"garantia_en": ahora}
+    if not existente.get("clave_huella"):
+        campos.update({"clave_publica": clave_publica, "clave_huella": clave_huella, "garantia": dom.validar_garantia(garantia or dom.SOFTWARE),
+                       "garantia_detalle": dict(detalle or {})})
+        uow.auditoria.registrar(actor or "sistema", "dispositivos.identidad_registrada", "m09_dispositivo", existente["id"],
+                                nuevo={"garantia": campos["garantia"], "clave_huella": clave_huella})
+    elif garantia is not None:
+        campos.update({"garantia": dom.validar_garantia(garantia), "garantia_detalle": dict(detalle or {})})
+        if campos["garantia"] != existente.get("garantia"):
+            uow.auditoria.registrar(actor or "sistema", "dispositivos.identidad_registrada", "m09_dispositivo", existente["id"],
+                                    anterior={"garantia": existente.get("garantia")}, nuevo={"garantia": campos["garantia"], "clave_huella": clave_huella})
+    return uow.dispositivos.actualizar(existente["id"], **campos)
+
+
+def reiniciar_identidad(uow: UnidadDeTrabajo, ahora: int, dispositivo_id: str, actor: str = "") -> dict:
+    """El técnico borra la identidad por clave de un equipo (se reinstaló la app, cambió de tableta…): vuelve a `declarada` y puede enrolar una clave nueva."""
+    existente = uow.dispositivos.por_id(dispositivo_id)
+    if not existente:
+        raise NoEncontrado()
+    if not existente.get("clave_huella"):
+        return existente
+    uow.auditoria.registrar(actor or "sistema", "dispositivos.identidad_reiniciada", "m09_dispositivo", existente["id"],
+                            anterior={"garantia": existente.get("garantia"), "clave_huella": existente.get("clave_huella")})
+    return uow.dispositivos.actualizar(existente["id"], clave_publica="", clave_huella="", garantia=dom.DECLARADA, garantia_detalle={}, garantia_en=ahora)
 
 
 def latido(uow: UnidadDeTrabajo, ahora: int, dispositivo_id: str, plataforma: str = "", version_app: str = "",
@@ -238,7 +291,8 @@ class RegistrarDispositivo(_CasoDeUso):
             dispositivo, creado = resolver(
                 uow, ahora, datos.get("identificador_hw") or datos.get("identificador"), nombre=datos.get("nombre"),
                 tipo=datos.get("tipo") or dom.TABLETA, plataforma=datos.get("plataforma"), version_app=datos.get("version_app"),
-                actor=actor, capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"), cupo=self.s.cupo)
+                actor=actor, capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"), cupo=self.s.cupo,
+                identidad=datos.get("identidad"))
             return self._dto(uow, dispositivo, ahora), creado
 
 
@@ -252,7 +306,7 @@ class RegistrarLatido(_CasoDeUso):
             dispositivo, _ = resolver(
                 uow, ahora, datos.get("identificador_hw") or datos.get("identificador"), nombre=datos.get("nombre"),
                 tipo=datos.get("tipo") or dom.TABLETA, plataforma=datos.get("plataforma"), version_app=datos.get("version_app"),
-                capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"), cupo=self.s.cupo)
+                capacidad_control=datos.get("capacidad_control"), capacidad_detalle=datos.get("capacidad_detalle"), cupo=self.s.cupo, identidad=datos.get("identidad"))
             return {**self._dto(uow, dispositivo, ahora), "servidor_en": ahora}
 
 

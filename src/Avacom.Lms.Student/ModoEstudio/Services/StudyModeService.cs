@@ -121,7 +121,7 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
         var ultimo = _local.AlumnoId is { } u ? new StudyStudent(u, _local.AlumnoRotulo ?? u) : null;
         if (aviso is null && grupos.Count == 0)
             aviso = visible
-                ? "Todavía no hay lecciones asignadas para ningún grupo. Cuando tu profesor las asigne, tu nombre aparecerá aquí."
+                ? "Todavía no hay lecciones asignadas para ningún grupo. Cuando tu docente las asigne, tu nombre aparecerá aquí."
                 : "Sin conexión con el aula y todavía no hay nombres guardados. Conéctate al aula una vez para elegir el tuyo.";
         return new StudyRoster(grupos, dueno, ultimo, FromCache: !visible && grupos.Count > 0, AulaReachable: visible, aviso);
     }
@@ -206,10 +206,10 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
 
     private static string AvisoDeEstado(string? motivo) => motivo switch
     {
-        "dispositivo_bloqueado" => "Esta tableta está bloqueada. Habla con tu profesor.",
+        "dispositivo_bloqueado" => "Esta tableta está bloqueada. Habla con tu docente.",
         "dispositivo_desconocido" => "Esta tableta todavía no está registrada en el aula. Conéctate al aula e inténtalo otra vez.",
         "dispositivo_inactivo" => "Esta tableta fue retirada del aula.",
-        "nodo_no_instalado" => "El aula todavía no está lista. Avisa a tu profesor.",
+        "nodo_no_instalado" => "El aula todavía no está lista. Avisa a tu docente.",
         _ => "El modo de estudio no está disponible en esta tableta por ahora.",
     };
 
@@ -406,7 +406,7 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
     private static string MotivoDeDenegacion(string? codigo) => codigo switch
     {
         "dispositivo_compartido" => "Este material está disponible durante la clase. Para llevártelo necesitas una tableta asignada a ti.",
-        "paquete_no_permitido" => "Tu profesor no dejó este material para llevártelo. Puedes estudiarlo con la tableta conectada al aula.",
+        "paquete_no_permitido" => "Tu docente no dejó este material para llevártelo. Puedes estudiarlo con la tableta conectada al aula.",
         "dispositivo_ajeno" => "Esta tableta es de otra persona.",
         _ => "Este material se estudia con la tableta conectada al aula.",
     };
@@ -642,9 +642,9 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
         return error.Codigo switch
         {
             "fuente_no_disponible" => Falla($"No pudimos abrir {queSe}", "La biblioteca no responde ahora. Inténtalo en un momento o descarga la lección cuando tengas conexión."),
-            "dispositivo_bloqueado" => Falla("Esta tableta está bloqueada", "Habla con tu profesor."),
+            "dispositivo_bloqueado" => Falla("Esta tableta está bloqueada", "Habla con tu docente."),
             "dispositivo_ajeno" => Falla("Esta tableta es de otra persona", null),
-            "no_encontrado" => Falla("Ya no encontramos esta lección", "Tu profesor pudo haberla quitado. Vuelve a la lista."),
+            "no_encontrado" => Falla("Ya no encontramos esta lección", "Tu docente pudo haberla quitado. Vuelve a la lista."),
             _ => Falla($"No pudimos abrir {queSe}", "Inténtalo de nuevo en un momento."),
         };
     }
@@ -819,7 +819,7 @@ internal sealed class StudyModeService : IStudyModeService, IDisposable
     }
 
     public string ExamExplanation(string lessonId) =>
-        "La evaluación de la unidad la aplica tu profesor en clase o cuando él la abra. No es parte de la práctica: aquí puedes prepararte todas las veces que quieras, sin que cuente como nota.";
+        "La evaluación de la unidad la aplica tu docente en clase o cuando él la abra. No es parte de la práctica: aquí puedes prepararte todas las veces que quieras, sin que cuente como nota.";
 
     private static readonly Regex Medio = new(@"/medios/([^/?#]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 

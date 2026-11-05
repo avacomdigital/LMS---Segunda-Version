@@ -47,7 +47,9 @@ param(
     [switch] $Conservar,
     # MOD-017: el bloque F (el host aplica y revierte paquetes de modulo) tarda; -SinActualizaciones lo omite y -SoloActualizaciones corre unicamente ese bloque.
     [switch] $SinActualizaciones,
-    [switch] $SoloActualizaciones
+    [switch] $SoloActualizaciones,
+    # MOD-018 (P-23): el bloque G (integridad del despliegue) corre siempre; -SoloIntegridad corre unicamente ese bloque.
+    [switch] $SoloIntegridad
 )
 
 $ErrorActionPreference = 'Stop'
@@ -405,7 +407,7 @@ try {
         if (-not (Test-Path $necesario)) { throw "El paquete esta incompleto: falta $necesario." }
     }
 
-    if (-not $SoloActualizaciones) {
+    if (-not $SoloActualizaciones -and -not $SoloIntegridad) {
     # ========================================================== A · instalacion nueva
     Titulo 'A · Instalacion nueva, con el entorno de Windows envenenado'
     $instA = Join-Path $Raiz 'A\AVACOM\OPS Master'
@@ -873,7 +875,7 @@ print(c.execute("select count(*) from django_migrations where app = 'acceso' and
     # ======================================== F · MOD-017 Update Manager: el host aplica, verifica y revierte (TST-061, NFR-022)
     # El host (servicio SYSTEM) obedece Actualizaciones\orden.json con el backend PARADO, con un checkpoint antes de cada paso (comprobar, respaldar, instantanea, copiar, migrar,
     # verificar), y si algo falla vuelve atras SOLO (codigo desde la instantanea, base desde la copia). Aqui se ensaya sobre el backend empaquetado, con migraciones y archivos de verdad.
-    if (-not $SinActualizaciones) {
+    if (-not $SinActualizaciones -and -not $SoloIntegridad) {
         Titulo 'F · Update Manager (MOD-017): el host aplica, verifica y revierte un paquete de modulo'
         $instF = Join-Path $Raiz 'F\AVACOM\OPS Master'
         $datosF = Join-Path $Raiz 'F\datos'
@@ -1154,6 +1156,116 @@ print('listo')
                 Comprobar ($iss -match '(?m)^Name:\s*"\{commonappdata\}\\AVACOM\\\{#NombreCorto\}\\Actualizaciones";[^\r\n]*uninsneveruninstall') 'F9 · El instalador declara Actualizaciones\ como estado del nodo que la desinstalacion nunca borra (como Respaldos)' 'F9 · AvacomOpsMaster.iss no declara Actualizaciones\ con uninsneveruninstall'
                 Comprobar ($iss -notmatch '(?m)^Type:\s*filesandordirs;\s*Name:\s*"[^"]*Actualizaciones') 'F9 · Ni [InstallDelete] ni [UninstallDelete] mencionan Actualizaciones\' 'F9 · Una regla de borrado alcanza Actualizaciones\'
             } else { Falla 'F9 · No se encontro AvacomOpsMaster.iss' }
+        }
+    }
+    # ======================================== G · MOD-018 (P-23) integridad del despliegue
+    # El host verifica al arrancar el servicio la firma del manifiesto y las huellas de Backend, Runtime y la DLL nativa. Una diferencia deja un asiento y una senal para el backend, y EL NODO ARRANCA
+    # IGUAL: un antivirus o un parche de campo no pueden dejar un aula sin clase. Aqui se ensaya con el paquete firmado de verdad, sobre una carpeta de estado de pruebas.
+    if (-not $SoloActualizaciones) {
+        Titulo 'G · Integridad del despliegue (MOD-018, P-23): una alteracion se ve y el nodo arranca igual'
+        $instG = Join-Path $Raiz 'G\AVACOM\OPS Master'
+        $datosG = Join-Path $Raiz 'G\datos'
+        if (-not (Test-Path (Join-Path $Staging 'integridad.json'))) {
+            Falla 'G · El paquete no trae integridad.json (Sellar-Paquete.py no corrio)'
+        } else {
+            Armar-Instalacion $backendNuevo $runtimeNuevo $instG
+            # La lista firmada tambien vigila lo propio de App (Avacom.Lms.*.dll/.exe y avacom_lic.dll): el layout del ensayo trae SOLO esos archivos, no los 246 MB de la aplicacion.
+            $carpetaAppG = Join-Path $instG 'App'
+            New-Item -ItemType Directory -Force $carpetaAppG | Out-Null
+            foreach ($patronApp in 'Avacom.Lms.*.dll', 'Avacom.Lms.*.exe', 'avacom_lic.dll') {
+                Get-ChildItem (Join-Path $Staging 'App') -File -Filter $patronApp -ErrorAction SilentlyContinue | ForEach-Object { Copy-Item $_.FullName $carpetaAppG }
+            }
+            foreach ($archivoSellado in 'manifiesto.json', 'integridad.json', 'manifiesto.firma.json') {
+                if (Test-Path (Join-Path $Staging $archivoSellado)) { Copy-Item (Join-Path $Staging $archivoSellado) (Join-Path $instG $archivoSellado) }
+            }
+            $firmado = Test-Path (Join-Path $Staging 'manifiesto.firma.json')
+            Limpiar-Entorno
+            Fijar-Datos $datosG
+            $codigo = Host-Ejecutar $instG @('preparar')
+            Comprobar ($codigo -eq 0) 'G · preparar termina bien' "G · preparar devolvio $codigo"
+            $configG = Join-Path $datosG 'Config\backend.env'
+            $puertoG = Puerto-Libre
+            Poner-Valor $configG 'AVACOM_OPS_BACKEND_PORT' $puertoG
+            Poner-Valor $configG 'AVACOM_LICENCIA_INTERVALO_S' '5'          # el programador de la licencia recalcula cada 5 s en vez de cada 5 minutos: la senal se ve pronto
+            $senalG = Join-Path $datosG 'ProgramData\AVACOM\OPS Master\Config\integridad.json'
+
+            # ---- G1 · el paquete intacto verifica
+            $servicioG = Host-Servir $instG
+            $arrancoG = Esperar-Salud $puertoG 120
+            Comprobar $arrancoG "G1 · El nodo arranca con el paquete intacto (puerto $puertoG)" "G1 · El nodo no respondio en 120 s. Mira $(Join-Path $datosG 'Logs\servicio.log')"
+            # La PRIMERA verificacion lee ~7000 archivos recien copiados (el antivirus los escanea): en un equipo lento tarda minutos, y corre en segundo plano sin retrasar nada.
+            $limite = (Get-Date).AddSeconds(300)
+            while (-not (Test-Path $senalG) -and (Get-Date) -lt $limite) { Start-Sleep -Milliseconds 500 }
+            Comprobar (Test-Path $senalG) 'G1 · El host deja la senal de integridad en la carpeta de estado' "G1 · No hay $senalG"
+            $s1 = if (Test-Path $senalG) { (Leer-Texto $senalG) | ConvertFrom-Json } else { $null }
+            if ($s1) {
+                $esperado = if ($firmado) { 'ok' } else { 'sin_firma' }
+                Comprobar ($s1.estado -eq $esperado -and @($s1.hallazgos).Count -eq 0) "G1 · Paquete intacto: estado $($s1.estado), firma $($s1.firma), $($s1.archivos_comprobados) archivos, sin hallazgos" "G1 · Se esperaba estado $esperado sin hallazgos y es: $(Leer-Texto $senalG)"
+                if ($firmado) { Comprobar ($s1.firma -eq 'ok' -and $s1.kid) "G1 · La firma del manifiesto verifica con la llave $($s1.kid)" "G1 · La firma no verifico: $($s1.firma)" }
+            }
+            Matar-Host $servicioG
+
+            # ---- G2 · alterar un .py: el host lo ve, avisa y arranca igual
+            $objetivo = Join-Path $instG 'Backend\expediente\__init__.py'
+            [IO.File]::AppendAllText($objetivo, "`n# parche de campo (ensayo G2)`n")
+            Remove-Item $senalG -Force -ErrorAction SilentlyContinue
+            $servicioG = Host-Servir $instG
+            $arrancoG = Esperar-Salud $puertoG 120
+            Comprobar $arrancoG 'G2 · Con un .py alterado el nodo ARRANCA IGUAL (/health/ responde)' "G2 · El nodo no arranco con un .py alterado. Mira $(Join-Path $datosG 'Logs\servicio.log')"
+            $limite = (Get-Date).AddSeconds(60)
+            while (-not (Test-Path $senalG) -and (Get-Date) -lt $limite) { Start-Sleep -Milliseconds 500 }
+            $s2 = if (Test-Path $senalG) { (Leer-Texto $senalG) | ConvertFrom-Json } else { $null }
+            Comprobar ($null -ne $s2 -and $s2.estado -eq 'alterada') 'G2 · La senal dice «alterada»' "G2 · La senal no dice alterada: $(Leer-Texto $senalG)"
+            if ($s2) {
+                $h = @($s2.hallazgos | Where-Object { $_.tipo -eq 'backend' -and $_.detalle -eq 'modificado' })
+                Comprobar ($h.Count -eq 1 -and @($h[0].ejemplos) -contains 'Backend/expediente/__init__.py') 'G2 · El hallazgo dice QUE parte (backend) y CUAL archivo (expediente/__init__.py)' "G2 · Hallazgos inesperados: $(Leer-Texto $senalG)"
+            }
+            $registroG = Leer-Texto (Join-Path $datosG 'Logs\servicio.log')
+            Comprobar ($registroG -match 'INTEGRIDAD ALTERADA . backend . modificado') 'G2 · El asiento queda en servicio.log' 'G2 · servicio.log no tiene el asiento de integridad'
+
+            # ---- G3 · el backend recoge la senal: una observacion de integridad, y la clase sigue (la licencia no degrada nada por esto)
+            $consulta = Join-Path $Raiz 'G\integridad-bd.py'
+            Escribir-Texto $consulta @'
+import json, os, sqlite3
+c = sqlite3.connect(os.environ['AVACOM_LMS_DB'], timeout=20)
+filas = c.execute("select detalle from m18_observacion where tipo='integridad_alterada'").fetchall()
+print(json.dumps({'n': len(filas), 'detalle': [json.loads(f[0]) for f in filas]}))
+c.close()
+'@
+            $vista = $null
+            $limite = (Get-Date).AddSeconds(90)
+            while ((Get-Date) -lt $limite) {
+                $salida = Python-Del-Nodo $instG $datosG @($consulta)
+                Limpiar-Entorno; Fijar-Datos $datosG
+                $linea = @($salida.Salida -split "`r?`n" | Where-Object { $_.Trim().StartsWith('{') }) | Select-Object -Last 1
+                if ($linea) { $vista = $linea | ConvertFrom-Json; if ($vista.n -ge 1) { break } }
+                Start-Sleep -Seconds 3
+            }
+            Comprobar ($null -ne $vista -and $vista.n -ge 1 -and (@($vista.detalle | ForEach-Object { $_.anclas }) -contains 'despliegue:backend')) 'G3 · El backend asienta la observacion de integridad (despliegue:backend)' "G3 · El backend no recogio la senal: $($vista | ConvertTo-Json -Compress)"
+            $salud = Pedir "http://127.0.0.1:$puertoG/health/"
+            Comprobar ($salud.Estado -eq 200) 'G3 · Con la alteracion asentada, /health/ sigue en 200 (la clase no se detiene)' "G3 · /health/ respondio $($salud.Estado)"
+            Matar-Host $servicioG
+
+            # ---- G4 · devolver el archivo: el siguiente arranque ya no avisa
+            $textoOriginal = Leer-Texto (Join-Path $backendNuevo 'expediente\__init__.py')
+            [IO.File]::WriteAllText($objetivo, $textoOriginal, (New-Object Text.UTF8Encoding($false)))
+            $codigo = Host-Ejecutar $instG @('verificar-integridad') 120
+            $s4 = if (Test-Path $senalG) { (Leer-Texto $senalG) | ConvertFrom-Json } else { $null }
+            $esperado4 = if ($firmado) { 'ok' } else { 'sin_firma' }
+            Comprobar ($codigo -eq 0 -and $null -ne $s4 -and $s4.estado -eq $esperado4) 'G4 · Con el archivo restituido el host vuelve a decir que todo coincide' "G4 · verificar-integridad devolvio $codigo y la senal es: $(Leer-Texto $senalG)"
+
+            # ---- G5 · una firma que no es de AVACOM: se ve (solo si el paquete esta firmado)
+            if ($firmado) {
+                $firmaOriginal = Leer-Texto (Join-Path $instG 'manifiesto.firma.json')
+                [IO.File]::WriteAllText((Join-Path $instG 'manifiesto.firma.json'), ($firmaOriginal -replace '"firma":\s*"(.)', '"firma": "A'), (New-Object Text.UTF8Encoding($false)))
+                $codigo = Host-Ejecutar $instG @('verificar-integridad') 120
+                $s5 = (Leer-Texto $senalG) | ConvertFrom-Json
+                Comprobar ($codigo -eq 0 -and $s5.estado -eq 'alterada' -and $s5.firma -in 'invalida', 'ilegible') "G5 · Una firma alterada se rechaza ($($s5.firma)) y el verbo sigue saliendo con 0" "G5 · La senal con la firma alterada es: $(Leer-Texto $senalG)"
+                Remove-Item (Join-Path $instG 'manifiesto.firma.json') -Force
+                $codigo = Host-Ejecutar $instG @('verificar-integridad') 120
+                $s5 = (Leer-Texto $senalG) | ConvertFrom-Json
+                Comprobar ($s5.estado -eq 'alterada' -and $s5.firma -eq 'ausente') 'G5 · Quitar la firma tambien se ve (un host con llaves exige firma)' "G5 · Sin firma la senal es: $(Leer-Texto $senalG)"
+            }
         }
     }
 } catch {

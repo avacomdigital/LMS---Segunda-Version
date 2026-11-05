@@ -232,7 +232,7 @@ public sealed class AccesoAlumnoTests
         Assert.False(flujo.OfreceVisitante);
         Assert.False(flujo.OfreceRegistro);
         var r = await flujo.EntrarComoVisitanteAsync();
-        Assert.Equal("Hoy no se puede entrar como visitante. Pídele ayuda al profesor.", r.Mensaje);
+        Assert.Equal("Hoy no se puede entrar como visitante. Pídele ayuda al docente.", r.Mensaje);
     }
 
     [Fact]

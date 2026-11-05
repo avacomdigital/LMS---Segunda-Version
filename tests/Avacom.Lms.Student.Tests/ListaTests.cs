@@ -59,7 +59,7 @@ public sealed class ListaTests
             Assert.Equal(("Comprueba lo aprendido", 2, 2, 1, false), (leccion.PracticeTitle, leccion.PracticeQuestionCount, leccion.PracticeAttempts, leccion.PracticeBestScore, leccion.PracticeInProgress));
             Assert.True(leccion.HasExam);
             Assert.Equal("Evaluación de la unidad", leccion.ExamTitle);
-            Assert.Equal("Te la presentará tu profesor", leccion.ExamAvailability);   // se explica, nunca se practica (BR-055)
+            Assert.Equal("Te la presentará tu docente", leccion.ExamAvailability);   // se explica, nunca se practica (BR-055)
         }
     }
 

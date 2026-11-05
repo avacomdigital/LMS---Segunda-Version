@@ -108,14 +108,14 @@ public static class FormatoDeReportes
 /// <summary>Lo que dice cada pantalla cuando no hay nada que mostrar: su propio texto y qué hacer (nunca una tabla vacía sin explicación).</summary>
 public static class EstadosVaciosDeReportes
 {
-    public const string SinGrupos = "No tienes grupos con reportes. Pide a la administración que te asigne uno.";
+    public const string SinGrupos = "Aún no tienes grupos. Pide uno a la administración.";
     public const string SinClases = "No hay clases cerradas en este periodo. Elige otro periodo.";
     public const string SinClasesDelGrupo = "Este grupo todavía no tiene clases cerradas. Cuando termines una, su reporte aparece aquí.";
     public const string SinAlumnos = "Este grupo todavía no tiene alumnos. Pide a la administración que los registre.";
     public const string SinEvaluaciones = "Este grupo no tiene evaluaciones asignadas todavía.";
     public const string SinEstudio = "Este grupo no tiene tareas de estudio asignadas todavía.";
     public const string SinUso = "No hay clases finalizadas en este periodo. Elige otro periodo.";
-    public const string SinRecientes = "Todavía no has abierto ningún reporte. Elige uno arriba.";
+    public const string SinRecientes = "Aún no has abierto ningún reporte.";
     public const string SinExportaciones = "Todavía no has guardado ningún reporte en un archivo.";
     public const string SinEquipos = "Ninguna tableta quedó registrada en las clases de este periodo.";
     public const string ClaseEnCurso = "Esta clase aún no termina. Su reporte se arma cuando la cierres.";

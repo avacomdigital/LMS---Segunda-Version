@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MOD-018 · Fase 5 (P-25). Android 12 y posteriores: qué puede salir de la tableta por la copia en la nube o al pasar los datos a otro aparato. Aquí: NADA.
+  Lo guardado por la app (cola del modo estudio, paquetes cifrados, preferencias con la huella de esta instalación y el id con que el nodo conoce a la tableta) no se copia ni se transfiere:
+  una copia restaurada en otra tableta haría pasar a la segunda por la primera. (Las claves del Keystore tampoco se copian nunca; esto cierra además el resto de los datos.)
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

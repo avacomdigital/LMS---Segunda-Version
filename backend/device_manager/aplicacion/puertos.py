@@ -34,8 +34,9 @@ class Reloj(Protocol):
 class CupoDeEquipos(Protocol):
     """MOD-018 (FUN-091): el cupo de equipos de la licencia. Sólo se pregunta al REGISTRAR un equipo nuevo (nunca a uno que ya existe ni a su latido) y lanza `CupoAgotado` si no cabe."""
 
-    def exigir_equipo_nuevo(self, en_uso: int) -> None:
-        """`en_uso` = cuántos equipos activos hay ya, sin el equipo maestro."""
+    def exigir_equipo_nuevo(self, en_uso: int, identidad: dict | None = None, identificador_hw: str = "") -> dict | None:
+        """`en_uso` = cuántos equipos activos hay ya, sin el equipo maestro. `identidad` (Fase 5, opcional) es la prueba de clave que trae la tableta al registrarse; si es válida, se devuelve
+        verificada (`clave_publica`, `clave_huella`, `garantia`, `garantia_detalle`) para guardarla en el equipo nuevo; sin prueba (o con una que no pasa) se devuelve None."""
 
 
 class Outbox(Protocol):
@@ -83,6 +84,8 @@ class RepositorioDispositivos(Protocol):
     def crear(self, datos: dict) -> dict: ...
     def por_id(self, dispositivo_id: str) -> dict | None: ...
     def por_identificador(self, organizacion_id: str, identificador_hw: str) -> dict | None: ...
+    def con_clave(self, organizacion_id: str, clave_huella: str) -> dict | None:
+        """El equipo que ya tiene registrada esta clave (Fase 5), si lo hay."""
     def listar(self, organizacion_id: str, solo_activos: bool = True) -> list[dict]: ...
     def actualizar(self, dispositivo_id: str, **campos) -> dict: ...
     def bloqueados_entre(self, dispositivo_ids: list[str]) -> set[str]: ...

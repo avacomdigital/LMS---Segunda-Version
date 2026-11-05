@@ -1,0 +1,249 @@
+"""La estación de aprovisionamiento (S1): qué firma y qué se niega a firmar, y el recorrido por la línea de comandos."""
+from __future__ import annotations
+
+import contextlib
+import io
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+
+from avacom_licencias import cli, llaves, registro as reg, sellos
+from avacom_licencias.dominio_nodo import errores, firma, sello
+
+AHORA = 1_790_000_000_000
+FRASE = "una frase de paso larga y sin usar"
+SPKI = lambda k: k.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)  # noqa: E731
+
+
+UEFI_ID = "AVACOM-OPS-00001234"
+
+
+class Equipo:
+    def __init__(self, serie="OPS-0001", ek=b"\x04" + b"\x07" * 64, uefi_id=UEFI_ID):
+        self.clave = ec.generate_private_key(ec.SECP256R1())
+        self.serie, self.ek, self.uefi_id = serie, ek, uefi_id
+
+    def avsol(self) -> bytes:
+        def firmar(m):
+            r, t = decode_dss_signature(self.clave.sign(m, ec.ECDSA(hashes.SHA256())))
+            return r.to_bytes(32, "big") + t.to_bytes(32, "big")
+        s = sello.Solicitud("0a0b0c0d-0e0f-1011-1213-141516171819", self.serie, "Panel 86", SPKI(self.clave), b"\x30" * 90, self.ek, "00:11:22:33:44:55", True, AHORA, sello.huella_de_spki(SPKI(self.clave)), self.uefi_id)
+        return sello.codificar_solicitud(s, firmar)
+
+
+def inventario(**series) -> sellos.Inventario:
+    series = series or {"OPS-0001": {"ek_huella": sello.huella_de_spki(b"\x04" + b"\x07" * 64).hex(), "uefi_id": UEFI_ID}}
+    return sellos.Inventario.leer(json.dumps({"version": 1, "lote": "L-01", "modelo": "Panel 86", "series": series}))
+
+
+class EstacionTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.registro = reg.Registro(Path(self._tmp.name) / "registro.jsonl")
+        self.priv, self.pub = firma.par_nuevo()
+
+    def emitir(self, equipo=None, inv=None, **kw):
+        return sellos.emitir_sello((equipo or Equipo()).avsol(), self.priv, "sello-prueba", inv or inventario(), self.registro, kw.pop("origen", "entrega"), AHORA, **kw)
+
+    def test_emite_un_sello_que_el_nodo_verifica(self):
+        equipo = Equipo()
+        datos, s, renglon = self.emitir(equipo)
+        v = sello.evaluar(datos, {"sello-prueba": self.pub}, sello.huella_de_spki(SPKI(equipo.clave)), True, frozenset(), AHORA + 1)
+        self.assertEqual(v.estado, sello.AUTENTICADO)
+        self.assertEqual((s.serie, s.origen, s.evidencia, s.lote), ("OPS-0001", "entrega", "inventario", "L-01"))
+        self.assertEqual((renglon["accion"], renglon["serie"]), ("sello", "OPS-0001"))
+        self.assertNotIn("clave_huella", json.dumps(renglon).replace("clave_huella_sha256", ""))        # el registro no copia la huella entera
+
+    def test_el_sello_lleva_el_identificador_uefi_del_inventario(self):
+        datos, s, renglon = self.emitir()
+        self.assertEqual((s.uefi_id, renglon["uefi_id"]), (UEFI_ID, UEFI_ID))
+        self.assertEqual(sello.leer_sello(datos, {"sello-prueba": self.pub}).uefi_id, UEFI_ID)
+
+    def test_sin_identificador_uefi_en_la_solicitud_no_se_sella(self):
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "no trae el identificador UEFI"):
+            self.emitir(Equipo(uefi_id=""))
+
+    def test_un_identificador_distinto_al_del_inventario_se_niega(self):
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "no es el que el inventario registra"):
+            self.emitir(Equipo(uefi_id="AVACOM-OPS-00009999"))
+
+    def test_el_inventario_debe_registrar_el_identificador_uefi_de_la_serie(self):
+        inv = inventario(**{"OPS-0001": {"ek_huella": sello.huella_de_spki(b"\x04" + b"\x07" * 64).hex()}})
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "no registra el AVACOM_DEVICE_ID"):
+            self.emitir(inv=inv)
+
+    def test_el_inventario_rechaza_un_identificador_mal_formado(self):
+        for malo in ("DS2015", "avacom-ops-00001234", "AVACOM-OPS-12", "AVACOM-OPS-00001234\n"):
+            with self.assertRaisesRegex(sellos.ErrorDeSello, "no cumple el formato"):
+                inventario(**{"OPS-0001": {"uefi_id": malo}})
+
+    def test_dos_series_no_comparten_identidad_uefi(self):
+        inv = inventario(**{"OPS-0001": {"ek_huella": None, "uefi_id": UEFI_ID}, "OPS-0002": {"ek_huella": None, "uefi_id": UEFI_ID}})
+        self.emitir(Equipo(serie="OPS-0001"), inv=inv)
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "ya está sellado para otra serie"):
+            self.emitir(Equipo(serie="OPS-0002"), inv=inv)
+
+    def test_serie_fuera_del_inventario_es_un_equipo_ajeno(self):
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "no está en el inventario"):
+            self.emitir(Equipo(serie="PC-DE-UN-TERCERO"))
+
+    def test_ekpub_distinta_a_la_del_inventario_se_niega(self):
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "EKPub"):
+            self.emitir(Equipo(ek=b"\x04" + b"\x09" * 64))
+
+    def test_sin_ekpub_cuando_el_inventario_la_pide_se_niega(self):
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "EKPub"):
+            self.emitir(Equipo(ek=None))
+
+    def test_una_serie_se_sella_una_vez(self):
+        self.emitir()
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "ya tiene sello"):
+            self.emitir()
+        _, _, r2 = self.emitir(reemitir=True)
+        self.assertTrue(r2["reemite"])
+
+    def test_solicitud_alterada_se_rechaza(self):
+        datos = bytearray(Equipo().avsol())
+        datos[40] ^= 1
+        with self.assertRaises(sellos.ErrorDeSello):
+            sellos.emitir_sello(bytes(datos), self.priv, "sello-prueba", inventario(), self.registro, "entrega", AHORA)
+
+    def test_registro_alterado_no_se_firma_nada(self):
+        self.emitir()
+        texto = self.registro.ruta.read_text(encoding="utf-8").replace("OPS-0001", "OPS-0002")
+        self.registro.ruta.write_text(texto, encoding="utf-8")
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "alterado"):
+            self.emitir(Equipo(), reemitir=True)
+
+    def test_vencimiento_pasado_se_niega(self):
+        with self.assertRaisesRegex(sellos.ErrorDeSello, "vencimiento"):
+            self.emitir(vence_ms=AHORA - 1)
+
+    def test_origen_invalido(self):
+        with self.assertRaises(sellos.ErrorDeSello):
+            self.emitir(origen="mercado")
+
+    def test_revocados_parten_de_la_lista_anterior(self):
+        claves = {"sello-prueba": self.pub}
+        d1, n1 = sellos.emitir_revocados(self.priv, "sello-prueba", [b"\x01" * 32], None, claves, self.registro, AHORA)
+        d2, n2 = sellos.emitir_revocados(self.priv, "sello-prueba", [b"\x02" * 32], d1, claves, self.registro, AHORA + 1)
+        self.assertEqual((n1, n2), (1, 2))
+        self.assertEqual(sello.leer_revocados(d2, claves), (2, frozenset({b"\x01" * 32, b"\x02" * 32})))
+
+    def test_revocados_no_parten_de_una_lista_alterada(self):
+        claves = {"sello-prueba": self.pub}
+        d1, _ = sellos.emitir_revocados(self.priv, "sello-prueba", [b"\x01" * 32], None, claves, self.registro, AHORA)
+        malo = bytearray(d1)
+        malo[-2] ^= 1
+        with self.assertRaises(sellos.ErrorDeSello):
+            sellos.emitir_revocados(self.priv, "sello-prueba", [b"\x02" * 32], bytes(malo), claves, self.registro, AHORA)
+
+
+class RecorridoDeLaLineaDeComandosTests(unittest.TestCase):
+    """Genera la llave con la ceremonia real, sella, verifica, revoca: lo que haría quien opera, pero con la frase por la variable de pruebas."""
+
+    def correr(self, *args) -> tuple[int, str]:
+        salida, error = io.StringIO(), io.StringIO()
+        with mock.patch.dict(os.environ, {"AVACOM_EMISOR_FRASE": FRASE}), contextlib.redirect_stdout(salida), contextlib.redirect_stderr(error):
+            codigo = cli.main(list(args))
+        return codigo, salida.getvalue() + error.getvalue()
+
+    def test_recorrido_completo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            avkey, texto_pub, _ = llaves.generar("sello-prueba", FRASE, "2026-10-26T00:00:00Z")
+            (t / "sello-prueba.avkey").write_bytes(avkey)
+            (t / "sello-prueba.pub").write_text(texto_pub, encoding="utf-8")
+            (t / "equipo.avsol").write_bytes(Equipo().avsol())
+            (t / "inventario.json").write_text(json.dumps({"version": 1, "lote": "L-01", "series": {"OPS-0001": {"uefi_id": UEFI_ID}}}), encoding="utf-8")
+            registro = str(t / "registro.jsonl")
+            codigo, texto = self.correr("sello", "emitir", "--solicitud", str(t / "equipo.avsol"), "--privada", str(t / "sello-prueba.avkey"), "--inventario", str(t / "inventario.json"),
+                                        "--origen", "fabrica", "--salida", str(t / "salida"), "--registro", registro)
+            self.assertEqual(codigo, 0, texto)
+            archivo = t / "salida" / "OPS-0001.avsello"
+            self.assertTrue(archivo.is_file())
+            codigo, texto = self.correr("sello", "ver", str(archivo), "--publica", str(t / "sello-prueba.pub"))
+            self.assertEqual(codigo, 0, texto)
+            self.assertIn("La firma es válida", texto)
+            self.assertIn(UEFI_ID, texto)
+            huella = next(l.split(": ")[1] for l in texto.splitlines() if "Huella de la clave" in l)
+            codigo, texto = self.correr("sello", "revocar", "--privada", str(t / "sello-prueba.avkey"), "--huella", huella, "--salida", str(t / "salida"), "--registro", registro)
+            self.assertEqual(codigo, 0, texto)
+            codigo, texto = self.correr("sello", "revocados", "ver", str(t / "salida" / "revocados-0001.avrev"), "--publica", str(t / "sello-prueba.pub"))
+            self.assertEqual(codigo, 0, texto)
+            self.assertIn(huella, texto)
+
+    def test_la_llave_de_licencias_no_firma_sellos(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            t = Path(tmp)
+            avkey, _, _ = llaves.generar("prod-2026-1", FRASE, "2026-10-26T00:00:00Z")
+            (t / "prod.avkey").write_bytes(avkey)
+            (t / "equipo.avsol").write_bytes(Equipo().avsol())
+            (t / "inventario.json").write_text(json.dumps({"series": {"OPS-0001": {"uefi_id": UEFI_ID}}}), encoding="utf-8")
+            codigo, texto = self.correr("sello", "emitir", "--solicitud", str(t / "equipo.avsol"), "--privada", str(t / "prod.avkey"), "--inventario", str(t / "inventario.json"),
+                                        "--origen", "entrega", "--salida", str(t / "s"), "--registro", str(t / "r.jsonl"))
+            self.assertEqual(codigo, 1)
+            self.assertIn("llave de sello", texto)
+            self.assertFalse((t / "s").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class ClaveDelPaqueteTests(unittest.TestCase):
+    """S2: la llave K de una version del paquete, envuelta para el equipo. Sólo la privada RSA del equipo (en el TPM) la abre."""
+
+    def setUp(self):
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.registro = reg.Registro(Path(self._tmp.name) / "registro.jsonl")
+        self.priv, self.pub = firma.par_nuevo()
+        self.rsa = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        self.spki = self.rsa.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        self.k = bytes(range(32))
+
+    def test_la_llave_envuelta_se_abre_con_la_privada_del_equipo_y_con_ninguna_otra(self):
+        from cryptography.hazmat.primitives.asymmetric import padding, rsa
+        datos, c = sellos.emitir_clave(self.spki, self.k, self.priv, "sello-prueba", "2.17.0", AHORA, self.registro, "OPS-0001")
+        leida = sello.leer_clave(datos, {"sello-prueba": self.pub})
+        oaep = padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+        self.assertEqual(self.rsa.decrypt(leida.envuelta, oaep), self.k)
+        otra = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        with self.assertRaises(ValueError):
+            otra.decrypt(leida.envuelta, oaep)
+        self.assertEqual((leida.cifrado_huella, leida.version), (sello.huella_de_spki(self.spki), "2.17.0"))
+
+    def test_el_kid_del_paquete_es_el_mismo_que_calcula_el_lector(self):
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "installer" / "src" / "payload"))
+        import avacom_boot
+        self.assertEqual(sellos.kid_de_paquete(self.k), avacom_boot.kid_de(self.k))
+
+    def test_una_clave_alterada_no_verifica(self):
+        datos, _ = sellos.emitir_clave(self.spki, self.k, self.priv, "sello-prueba", "", AHORA, self.registro, "OPS-0001")
+        malo = bytearray(datos)
+        malo[60] ^= 1
+        with self.assertRaises(errores.LicenciaInvalida):
+            sello.leer_clave(bytes(malo), {"sello-prueba": self.pub})
+
+    def test_no_envuelve_para_una_clave_pequena(self):
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        chica = rsa.generate_private_key(public_exponent=65537, key_size=1024).public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        with self.assertRaises(sellos.ErrorDeSello):
+            sellos.emitir_clave(chica, self.k, self.priv, "sello-prueba", "", AHORA, self.registro, "OPS-0001")
+
+    def test_el_registro_anota_la_emision_sin_la_llave(self):
+        sellos.emitir_clave(self.spki, self.k, self.priv, "sello-prueba", "2.17.0", AHORA, self.registro, "OPS-0001")
+        texto = self.registro.ruta.read_text(encoding="utf-8")
+        self.assertIn('"accion":"clave"', texto)
+        self.assertNotIn(self.k.hex(), texto)

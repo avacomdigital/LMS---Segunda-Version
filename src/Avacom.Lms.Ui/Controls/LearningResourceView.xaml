@@ -5,9 +5,9 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
     <Grid RowDefinitions="Auto,*">
-        <Border BackgroundColor="#18181B" Padding="14,10" StrokeThickness="0">
+        <Border BackgroundColor="#1F2433" Padding="14,10" StrokeThickness="0">
             <Grid ColumnDefinitions="*,Auto">
-                <Label Text="Contenido de aprendizaje" TextColor="White" FontAttributes="Bold" />
+                <Label Text="Contenido de aprendizaje" TextColor="White" FontFamily="LexendSemiBold" />
                 <Button Grid.Column="1" Text="Abrir fuera" Command="{Binding OpenExternalCommand, Source={x:Reference Root}}" BackgroundColor="Transparent" TextColor="White" />
             </Grid>
         </Border>

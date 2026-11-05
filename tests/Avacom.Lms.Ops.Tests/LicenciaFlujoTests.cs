@@ -90,6 +90,76 @@ public sealed class LicenciaFlujoTests : IDisposable
         Assert.Equal((LicenciaTexto.SinArchivos, LicenciaTexto.SinArchivosAccion), (f.Aviso!.Texto, f.Aviso.Accion));
     }
 
+    // ---------------------------------------------------------------------------------------------------- el Explorador de Windows
+
+    private const string EnSubcarpeta = @"D:\licencias\colegio\licencia-b1b1-serie2.avlic";
+
+    [Fact]
+    public async Task ElArchivoEnUnaSubcarpetaDeOtroDisco_NoLoVeLaBusqueda_PeroSePuedeElegirEnElExplorador()
+    {
+        var (f, _) = Flujo(archivos: l => l.Archivo(EnSubcarpeta, FixturesDeLicencia.Bytes("ejemplo.avlic"), Hoy));
+        await f.BuscarAsync();
+        Assert.True(f.Busqueda!.Vacia);                                                   // la búsqueda sólo mira la raíz de las unidades
+
+        Assert.True(f.ElegirDelExplorador(EnSubcarpeta));
+        Assert.Equal(PasoDeActivacion.Confirmando, f.Paso);
+        Assert.Equal((@"D:\licencias\colegio", "licencia-b1b1-serie2.avlic", OrigenDeCandidato.Explorador), (f.Elegido!.Carpeta, f.Elegido.Nombre, f.Elegido.Origen));
+        Assert.Contains("«licencia-b1b1-serie2.avlic» (D:\\licencias\\colegio, guardado el", f.Confirmacion(TimeZoneInfo.Utc));
+
+        Assert.True(await f.InstalarAsync());
+        Assert.Equal(PasoDeActivacion.Instalada, f.Paso);
+        Assert.Equal(FixturesDeLicencia.Bytes("ejemplo.avlic"), Assert.Single(_api.Enviados));
+        Assert.Equal(@"D:\licencias\colegio", _recordadas[^1]);
+    }
+
+    [Fact]
+    public async Task ElExplorador_SeUsaDesdeElPaso2SinHaberBuscado()
+    {
+        var (f, _) = Flujo(archivos: l => l.Archivo(EnSubcarpeta, FixturesDeLicencia.Bytes("ejemplo.avlic"), Hoy));
+        await f.GuardarSolicitudAsync(Destino());
+        f.Continuar();
+        Assert.Equal(PasoDeActivacion.EsperandoLicencia, f.Paso);
+        Assert.True(f.ElegirDelExplorador(EnSubcarpeta));
+        Assert.Equal(PasoDeActivacion.Confirmando, f.Paso);
+    }
+
+    [Fact]
+    public async Task ElExplorador_UnArchivoQueNoEsLicenciaONoExiste_VuelveALasTarjetasConElMotivo()
+    {
+        var (f, _) = Flujo(archivos: l => l.Archivo(@"D:\basura.avlic", "esto no es una licencia"u8.ToArray(), Hoy));
+        await f.BuscarAsync();
+        foreach (var ruta in new[] { @"D:\basura.avlic", @"D:\no-existe.avlic", @"D:\basura.txt" })
+        {
+            Assert.False(f.ElegirDelExplorador(ruta));
+            Assert.Equal(PasoDeActivacion.Eligiendo, f.Paso);
+            Assert.Null(f.Elegido);
+            Assert.Equal(LicenciaTexto.ArchivoDelExploradorNoVale, f.Aviso!.Texto);
+        }
+        Assert.Empty(_api.Enviados);
+    }
+
+    [Fact]
+    public async Task ElExplorador_CerradoSinElegir_NoCambiaNada()
+    {
+        var (f, _) = Flujo();
+        await f.BuscarAsync();
+        Assert.False(f.ElegirDelExplorador(null));
+        Assert.False(f.ElegirDelExplorador("  "));
+        Assert.Equal(PasoDeActivacion.Eligiendo, f.Paso);
+        Assert.Null(f.Aviso);
+    }
+
+    [Fact]
+    public async Task ElExplorador_ElArchivoQueCambiaAntesDeInstalar_NoSeEnvia()
+    {
+        var (f, lector) = Flujo(archivos: l => l.Archivo(EnSubcarpeta, FixturesDeLicencia.Bytes("ejemplo.avlic"), Hoy));
+        Assert.True(f.ElegirDelExplorador(EnSubcarpeta));
+        lector.Cambiar(EnSubcarpeta, [.. FixturesDeLicencia.Bytes("ejemplo.avlic"), 0x20]);
+        Assert.False(await f.InstalarAsync());
+        Assert.Equal("El archivo cambió", f.Aviso!.Titulo);
+        Assert.Empty(_api.Enviados);
+    }
+
     [Fact]
     public async Task SinConfirmar_NoSeInstalaNada_NiSePuedeElegirLoQueNoEstaEnLaLista()
     {

@@ -33,7 +33,9 @@ from .anclas import AnclasDeLicencia, RegistroDeWindows
 from .autorizacion import AutorizacionLicencia
 from .claves import ClavesPublicas
 from .conteos import ConteosDeLosDuenos
+from .identidad import AtestacionEmpaquetada, EquiposDeDispositivos, RetosEnMemoria
 from .huella_windows import HuellaDeWindows
+from . import nativo
 from .nodo import NodoDeLicencia
 from .proteccion import ProtectorAutomatico
 from .unidad_trabajo import FabricaUoWLicencia
@@ -90,7 +92,8 @@ def version_del_nodo() -> str:
 
 def configuracion() -> ConfigLicencia:
     return ConfigLicencia(politica=POLITICA_PROVISIONAL, entorno=entorno(), modo=modo(), version_del_nodo=version_del_nodo(),
-                          concurrencia_normal=int(getattr(settings, "AVACOM_AULA_DISPOSITIVOS_NORMAL", 50)), concurrencia_pico=int(getattr(settings, "AVACOM_AULA_DISPOSITIVOS_PICO", 100)))
+                          concurrencia_normal=int(getattr(settings, "AVACOM_AULA_DISPOSITIVOS_NORMAL", 50)), concurrencia_pico=int(getattr(settings, "AVACOM_AULA_DISPOSITIVOS_PICO", 100)),
+                          identidad_minima=str(getattr(settings, "AVACOM_LICENCIA_IDENTIDAD_MINIMA", "declarada") or "declarada").strip().lower())
 
 
 _candado = threading.Lock()
@@ -106,12 +109,13 @@ def servicios() -> Servicios:
             almacen = AlmacenEnCarpeta(carpeta)
             nodo = NodoDeLicencia(almacen, ProtectorAutomatico())
             en_produccion = entorno() == ent.PRODUCCION
+            nativo.informar_al_nodo(nativo.preparar(entorno()), nodo)       # la biblioteca nativa se carga UNA vez por proceso; si falta o no carga, se sigue con la referencia (Fase 4, P-22)
             if len(_cache) > 8:
                 _cache.clear()
             _cache[llave] = Servicios(
                 uow=FabricaUoWLicencia(), reloj=RelojDelNodo(), huella=HuellaDeWindows(), nodo=nodo, anclas=AnclasDeLicencia(almacen, nodo, RegistroDeWindows() if en_produccion and os.name == "nt" else None),
                 almacen=almacen, claves=ClavesPublicas(CARPETA_DE_CLAVES, entorno()), conteos=ConteosDeLosDuenos(), autorizacion=AutorizacionLicencia(), vivo=EstadoVivo(),
-                config=configuracion())
+                config=configuracion(), retos=RetosEnMemoria(), atestacion=AtestacionEmpaquetada(), equipos=EquiposDeDispositivos())
         return _cache[llave]
 
 

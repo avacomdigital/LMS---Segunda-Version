@@ -1,0 +1,5 @@
+three 0.186.1 (MIT, ver LICENSE) - copiado de npm tal cual, sin modificar:
+  build/three.module.js, build/three.core.js
+  examples/jsm/loaders/GLTFLoader.js
+  examples/jsm/utils/BufferGeometryUtils.js, SkeletonUtils.js
+El specifier 'three' se resuelve con el import map de index.html. Sin CDN.

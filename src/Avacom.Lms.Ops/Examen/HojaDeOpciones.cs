@@ -32,7 +32,7 @@ internal sealed class HojaDeOpciones : ContentView
         ZIndex = 50;
 
         // El velo es hermano de la tarjeta (no su padre): un toque dentro de la tarjeta nunca llega aquí.
-        var velo = new Border { BackgroundColor = Color.FromArgb("#73141417"), StrokeThickness = 0 };
+        var velo = new Border { BackgroundColor = Color.FromArgb("#731F2433"), StrokeThickness = 0 };
         var tocar = new TapGestureRecognizer();
         tocar.Tapped += (_, _) => Completar(null, ocultar: true);
         velo.GestureRecognizers.Add(tocar);

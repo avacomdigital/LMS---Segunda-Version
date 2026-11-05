@@ -4,9 +4,11 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
-    BackgroundColor="#F1F1F1"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs>
     <!-- Buscar (MOD-021), la entrada «Buscar» del MENÚ PRINCIPAL. Es un buscador, no una tarjeta de formulario: la barra (campo de texto + Tipo y Grupo a la vista y, bajo «Más
          filtros», Ciclo, País, Nivel, Grado y Materia) es de una sola fila ancha y no cabe en el tercio central de la ventana, así que la pantalla usa el mismo diseño ancho que
          Evaluaciones (hasta 1280 px, cabecera fija y cuerpo que se desplaza). Arriba: título y acciones. Cuerpo: la barra, las sugerencias (para buscar tocando) y los resultados.
@@ -15,9 +17,9 @@
     <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
         <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
             <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
-                <Label Text="BUSCAR" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                <Label x:Name="TituloLabel" Text="Buscar" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
-                <Label x:Name="SubtituloLabel" Text="Encuentra cursos, lecciones, recursos, evaluaciones, estudios asignados y clases. Sólo ves lo que tu rol puede leer." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <Label Text="BUSCAR" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Buscar" FontFamily="LexendMedium" FontSize="30" TextColor="#1F2433" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Encuentra cursos, lecciones, recursos, evaluaciones y clases." FontFamily="Lexend" FontSize="15" TextColor="#4F5566" LineBreakMode="WordWrap" />
             </VerticalStackLayout>
             <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
         </Grid>
@@ -27,9 +29,10 @@
                 <!-- La barra vive fuera de los hosts que se repintan: lo escrito y lo elegido no se pierde al leer de nuevo. -->
                 <ui:SearchFilterBar x:Name="Buscador" Placeholder="Buscar cursos, lecciones, evaluaciones o clases" />
                 <VerticalStackLayout x:Name="SugerenciasHost" Spacing="10" />
-                <Label x:Name="ResumenLabel" FontFamily="InterMedium" FontSize="15" TextColor="#3F3F46" IsVisible="False" />
+                <Label x:Name="ResumenLabel" FontFamily="LexendMedium" FontSize="15" TextColor="#4F5566" IsVisible="False" />
                 <VerticalStackLayout x:Name="ResultadosHost" Spacing="10" />
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

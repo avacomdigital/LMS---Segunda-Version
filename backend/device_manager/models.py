@@ -59,6 +59,14 @@ class Dispositivo(models.Model):
     capacidad_control = models.CharField(max_length=12, blank=True, default="")
     capacidad_detalle = models.JSONField(default=dict, blank=True)
     capacidad_declarada_en = models.BigIntegerField(null=True, blank=True)
+    # MOD-018 · Fase 5 (P-24): la identidad por CLAVE del equipo. `clave_publica` es la llave EC P-256 (SubjectPublicKeyInfo en base64: pública, no secreta), `clave_huella` su SHA-256, y
+    # `garantia` el nivel que el nodo pudo comprobar (`declarada` · `software` · `hardware`; ver licenciamiento/dominio/atestacion.py). Los escribe SÓLO `registrar_identidad`, que llama
+    # `licenciamiento`; este módulo no verifica nada de criptografía.
+    clave_publica = models.TextField(blank=True, default="")
+    clave_huella = models.CharField(max_length=64, blank=True, default="")
+    garantia = models.CharField(max_length=12, default=dom.DECLARADA)
+    garantia_detalle = models.JSONField(default=dict, blank=True)
+    garantia_en = models.BigIntegerField(null=True, blank=True)
 
     class Meta:
         db_table = "m09_dispositivo"
@@ -71,6 +79,9 @@ class Dispositivo(models.Model):
                 name="ck_m09_dispositivo_perfil_dueno"),
             models.CheckConstraint(condition=Q(perfil__in=dom.PERFILES), name="ck_m09_dispositivo_perfil_valido"),
             models.CheckConstraint(condition=Q(capacidad_control__in=("",) + dom.NIVELES_CONTROL), name="ck_m09_dispositivo_capacidad_valida"),
+            # Fase 5: una clave identifica a UN equipo (dos huellas declaradas con la misma clave serían el mismo equipo contado dos veces), y la garantía es de un catálogo cerrado.
+            models.UniqueConstraint(fields=["organizacion", "clave_huella"], condition=~Q(clave_huella=""), name="ux_m09_dispositivo_clave"),
+            models.CheckConstraint(condition=Q(garantia__in=dom.GARANTIAS), name="ck_m09_dispositivo_garantia_valida"),
         ]
 
     def __str__(self) -> str:

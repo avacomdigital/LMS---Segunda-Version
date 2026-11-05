@@ -22,13 +22,14 @@ internal static class Disco
     }
 
     /// <summary>Escribe a un temporal junto al destino, lo vuelca a disco y lo renombra: un corte deja el archivo viejo o el nuevo, nunca la mitad.</summary>
-    public static void EscribirAtomico(string destino, string texto)
+    public static void EscribirAtomico(string destino, string texto) => EscribirAtomico(destino, Utf8SinMarca.GetBytes(texto));
+
+    public static void EscribirAtomico(string destino, byte[] bytes)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(destino)!);
         var temporal = destino + ".tmp";
         using (var flujo = new FileStream(temporal, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            var bytes = Utf8SinMarca.GetBytes(texto);
             flujo.Write(bytes, 0, bytes.Length);
             flujo.Flush(flushToDisk: true);
         }
@@ -124,6 +125,7 @@ internal static class Interprete
         {
             using var proceso = Process.Start(inicio);
             if (proceso is null) return new Salida(-1, "");
+            ProcesoBackend.EntregarClave(proceso);
             var tareaErrores = proceso.StandardError.ReadToEndAsync();
             var tareaSalida = proceso.StandardOutput.ReadToEndAsync();
             if (!proceso.WaitForExit((int)Math.Max(1000, limite.TotalMilliseconds)))

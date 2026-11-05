@@ -1,0 +1,4 @@
+salida-flota/
+*.json
+!*.template.json
+__pycache__/

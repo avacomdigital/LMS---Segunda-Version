@@ -35,6 +35,24 @@ public static class Ajustes
         return r;
     }
 
+    private static string? _preguntaDePrueba = Perfil is not null && Environment.GetEnvironmentVariable("AVACOM_OPS_AI_PREGUNTA") is { Length: > 0 } q ? q.Trim() : null;
+
+    /// <summary>
+    /// Sólo con el perfil de pruebas: una pregunta que AI Agent envía UNA vez, sola, al abrirse (<c>AVACOM_OPS_AI_PREGUNTA</c>). El visor 3D oculta el árbol de UI Automation y el campo de
+    /// texto no acepta el ValuePattern, así que sin esto el recorrido de interfaz no podría conversar sin tomar el ratón ni el teclado de quien trabaja en el equipo. Sin el perfil no hace nada.
+    /// </summary>
+    public static string? TomarPreguntaDePrueba()
+    {
+        var q = _preguntaDePrueba;
+        _preguntaDePrueba = null;
+        return q;
+    }
+
+    /// <summary>Sólo con el perfil de pruebas: el volumen (0 a 1) con que AI Agent reproduce la voz (<c>AVACOM_OPS_AI_VOLUMEN</c>); con 0 se recorre toda la tubería de audio sin hacer ruido en el aula.</summary>
+    public static double? VolumenDePrueba { get; } =
+        Perfil is not null && double.TryParse(Environment.GetEnvironmentVariable("AVACOM_OPS_AI_VOLUMEN"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)
+            ? Math.Clamp(v, 0, 1) : null;
+
     private static string? Contenedor => Perfil is null ? null : $"avacom_ops_{Perfil}";
 
     public static T Get<T>(string clave, T porDefecto) =>

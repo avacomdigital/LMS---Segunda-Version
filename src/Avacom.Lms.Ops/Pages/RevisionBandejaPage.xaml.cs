@@ -43,8 +43,8 @@ public partial class RevisionBandejaPage : ContentPage
     {
         InitializeComponent();
         _aviso = new AvisoTemporal(ResultadoHost);
-        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(RevisionBandejaPage), "Actualizar", () => CargarAsync(forzar: true)), 170, "bandeja-actualizar").Vista);
-        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Quiet, () => Shell.Current.GoToAsync(".."), 150, "bandeja-volver").Vista);
+        AccionesHost.Add(ExamenUi.Accion("Actualizar", Ds.Rango.Secondary, CalificacionesUi.Seguro(nameof(RevisionBandejaPage), "Actualizar", () => CargarAsync(forzar: true)), null, "bandeja-actualizar").Vista);
+        AccionesHost.Add(ExamenUi.Accion("‹  Volver", Ds.Rango.Secondary, () => Shell.Current.GoToAsync(".."), 150, "bandeja-volver").Vista);
     }
 
     protected override async void OnAppearing()
@@ -77,7 +77,7 @@ public partial class RevisionBandejaPage : ContentPage
             {
                 SubtituloLabel.Text = string.Empty;
                 ContenidoHost.Clear();
-                ContenidoHost.Add(CalificacionesUi.SinAcceso("La revisión es del profesorado", "Revisar y calificar respuestas lo hace el profesor de cada grupo. La administración configura las escalas y los reportes sólo leen."));
+                ContenidoHost.Add(CalificacionesUi.SinAcceso("La revisión es del cuerpo docente", "Revisar y calificar respuestas lo hace el docente de cada grupo. La administración configura las escalas y los reportes sólo leen."));
                 return;
             }
             if (_bandeja is null)
@@ -135,7 +135,7 @@ public partial class RevisionBandejaPage : ContentPage
                     // Un tropiezo no borra lo que ya se ve: se conserva la última bandeja y se avisa.
                     ConexionHost.Clear();
                     ConexionHost.Add(CalificacionesUi.SinConexion(api)
-                        ? ExamenUi.Aviso("Sin conexión con el nodo", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}. Se vuelve a intentar solo.", Tono.Ambar)
+                        ? ExamenUi.Aviso("Sin conexión con el aula", $"Se muestra lo último que se leyó, a las {ExamenTexto.Hora(_ultimaLectura)}. Se vuelve a intentar solo.", Tono.Ambar)
                         : ExamenUi.Aviso("No se pudo actualizar la bandeja", CalificacionesUi.Error(api), Tono.Ambar));
                     return;
                 }
@@ -186,7 +186,6 @@ public partial class RevisionBandejaPage : ContentPage
         {
             var pila = new VerticalStackLayout { Spacing = 8 };
             pila.Add(ExamenUi.Seccion(visibles.Count == 1 ? "1 esperando tu revisión" : $"{visibles.Count} esperando tu revisión"));
-            pila.Add(Ds.Secundario("Lo más antiguo está arriba. Toca un renglón para revisarlo. La cifra provisional es sólo lo ya calificado: la calificación llega cuando confirmes la revisión.", 14));
             foreach (var item in visibles) pila.Add(Renglon(item));
             ContenidoHost.Add(ExamenUi.Tarjeta(pila));
         }
@@ -248,7 +247,7 @@ public partial class RevisionBandejaPage : ContentPage
 
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(24)], ColumnSpacing = 12 };
         fila.Add(textos, 0, 0);
-        fila.Add(new Label { Text = "›", FontFamily = Ds.FuenteLigera, FontSize = 28, TextColor = Ds.TintaSuave, VerticalOptions = LayoutOptions.Center }, 1, 0);
+        fila.Add(Ds.Flecha(28), 1, 0);
         var tarjeta = CalificacionesUi.Fila(fila);
         tarjeta.AutomationId = $"bandeja-intento-{i.IntentoId}";
         Ds.Tocable(tarjeta, () => Shell.Current.GoToAsync($"revision-docente?intento={Uri.EscapeDataString(i.IntentoId)}"));

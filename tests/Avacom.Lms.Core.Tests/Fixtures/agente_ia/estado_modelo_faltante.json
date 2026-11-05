@@ -1,0 +1,10 @@
+{
+  "codigo": "llm_model_missing",
+  "disponible": false,
+  "habilitada": true,
+  "modelo": "qwen3:8b",
+  "motivo": "El asistente aún no está configurado en este equipo.",
+  "motivo_voz": null,
+  "servicio_activo": true,
+  "voz_disponible": true
+}

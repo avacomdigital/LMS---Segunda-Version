@@ -64,6 +64,36 @@ class CupoAgotado(ErrorLicencia):
     http = 402
 
 
+class RetoInvalido(ErrorLicencia):
+    """El reto que trae el equipo no existe, ya venció o ya se usó. Un reto vale una sola vez: se pide otro."""
+    codigo = "reto_invalido"
+    http = 400
+
+
+class IdentidadInvalida(ErrorLicencia):
+    """La prueba de clave del equipo no es válida (la clave o la firma del reto no cuadran)."""
+    codigo = "identidad_invalida"
+    http = 400
+
+
+class IdentidadRequerida(ErrorLicencia):
+    """La licencia exige que un equipo nuevo pruebe su clave (nivel mínimo de garantía) y este no lo hizo. Lo que ya está registrado sigue funcionando. 402, no 403: no es un permiso."""
+    codigo = "identidad_requerida"
+    http = 402
+
+
+class ClaveDistinta(ErrorLicencia):
+    """Este equipo ya tiene registrada otra clave: una identidad se enrola una vez. Para cambiarla, el técnico reinicia la identidad del equipo."""
+    codigo = "clave_distinta"
+    http = 409
+
+
+class ClaveEnUso(ErrorLicencia):
+    """Esa clave ya identifica a otro equipo del aula: una clave no puede contar como dos equipos."""
+    codigo = "clave_en_uso"
+    http = 409
+
+
 # Los motivos son parte del contrato con el cliente (OPS los convierte en frases): no se renombran.
 MENSAJES_DE_MOTIVO = {
     "demasiado_grande": "El archivo es demasiado grande para ser una licencia.",

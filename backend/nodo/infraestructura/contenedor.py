@@ -28,7 +28,7 @@ from ..dominio.estado import Umbrales
 from .anclas import AnclasEnCarpeta
 from .autorizacion import AutorizacionNodo
 from .contexto import ContextoDeAuditoria
-from .respaldo import RespaldoAusente, SincronizacionAusente
+from .respaldo import RespaldoVerificado, SincronizacionAusente
 from .salud import SaludDelEquipo
 from .unidad_trabajo import FabricaUoWNodo
 
@@ -136,7 +136,7 @@ def servicios() -> Servicios:
                 _cache.clear()
             carpeta = carpeta_de_anclas()
             _cache[llave] = Servicios(uow=FabricaUoWNodo(), reloj=RelojDelNodo(), contexto=ContextoDeAuditoria(), anclas=AnclasEnCarpeta(carpeta), autorizacion=AutorizacionNodo(),
-                                      respaldo=RespaldoAusente(), sincronizacion=SincronizacionAusente(), salud=SaludDelEquipo(), config=configuracion(),
+                                      respaldo=RespaldoVerificado(), sincronizacion=SincronizacionAusente(), salud=SaludDelEquipo(), config=configuracion(),
                                       legados=dict(_lectores_legados))
         return _cache[llave]
 

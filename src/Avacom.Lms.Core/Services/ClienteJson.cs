@@ -35,6 +35,18 @@ public abstract class ClienteJson(HttpClient http, Uri baseUri)
     /// <summary>El backend rechazó la sesión: <c>sesion_expirada</c>, <c>sesion_inactiva</c>, <c>sesion_cerrada_otro_dispositivo</c>…</summary>
     public static event Action<ErrorAula>? SesionRechazada;
 
+    /// <summary>
+    /// Se abrió una sesión de usuario (el login devolvió su pase). MOD-018 · Fase 5: es el momento en que el equipo firma el reto del nodo (la identidad se prueba al abrir sesión, no en cada
+    /// petición). Quien se suscribe nunca debe bloquear ni lanzar: el login no espera por esto.
+    /// </summary>
+    public static event Action? SesionIniciada;
+
+    protected static void AvisarSesionIniciada()
+    {
+        try { SesionIniciada?.Invoke(); }
+        catch { /* un suscriptor con un error no puede estropear un login */ }
+    }
+
     public Uri BaseUri { get; } = baseUri;
     public string? UltimoMotivo { get; private set; }
     public ErrorAula? UltimoError { get; private set; }

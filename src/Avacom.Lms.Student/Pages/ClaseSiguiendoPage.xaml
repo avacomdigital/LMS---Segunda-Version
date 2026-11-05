@@ -1,32 +1,35 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
     x:Class="Avacom.Lms.Student.Pages.ClaseSiguiendoPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
     Shell.NavBarIsVisible="False">
+    <!-- Estructura del Aula · Design System: isla de marca compacta, etiqueta de modo de la tableta y fondo Aurora; la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Tableta="True" Modo="Aprender">
     <Grid>
-        <Grid RowDefinitions="Auto,*" Padding="16,12,16,16" RowSpacing="12">
-            <Border Grid.Row="0" Padding="12,8" BackgroundColor="#B3FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 22">
+        <Grid RowDefinitions="Auto,*" Padding="16,4,16,12" RowSpacing="10">
+            <Border Grid.Row="0" Padding="12,8" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 22">
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
                     <VerticalStackLayout VerticalOptions="Center" Spacing="0">
-                        <Label x:Name="TituloLabel" Text="En clase" FontSize="18" FontAttributes="Bold" LineBreakMode="TailTruncation" />
-                        <Label x:Name="SubtituloLabel" Text="" FontSize="13" TextColor="#52525B" LineBreakMode="TailTruncation" />
+                        <Label x:Name="TituloLabel" Text="En clase" FontSize="18" FontFamily="LexendSemiBold" LineBreakMode="TailTruncation" />
+                        <Label x:Name="SubtituloLabel" Text="" FontSize="13" TextColor="#4F5566" LineBreakMode="TailTruncation" />
                     </VerticalStackLayout>
                     <!-- UXR-003: tres valores y nada más: Conectado · Reconectando · Trabajando en tu tableta -->
-                    <Border x:Name="ConexionChip" Grid.Column="1" BackgroundColor="#E6F5EE" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="12,7" VerticalOptions="Center">
-                        <Label x:Name="ConexionLabel" Text="●  Conectado" FontSize="13" FontAttributes="Bold" TextColor="#18181B" />
+                    <Border x:Name="ConexionChip" Grid.Column="1" BackgroundColor="#E1F5EC" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="12,7" VerticalOptions="Center">
+                        <Label x:Name="ConexionLabel" Text="●  Conectado" FontSize="13" FontFamily="LexendSemiBold" TextColor="#1F2433" />
                     </Border>
                     <!-- 007-13: la mano levantada. El botón se fabrica en código con el kit (Ds.Boton + Ds.Capsula). -->
                     <ContentView x:Name="AyudaSlot" Grid.Column="2" VerticalOptions="Center" />
-                    <Button Grid.Column="3" Text="Salir" BackgroundColor="Transparent" TextColor="#27272A" FontSize="17" FontAttributes="Bold" HeightRequest="52" Clicked="OnSalir" />
+                    <Button Grid.Column="3" Text="Salir" BackgroundColor="#FFFFFF" TextColor="#1F2433" BorderColor="#E3E6EC" BorderWidth="2" CornerRadius="26" FontSize="16" FontFamily="LexendMedium" HeightRequest="52" Padding="20,0" Clicked="OnSalir" />
                 </Grid>
             </Border>
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="10">
+            <!-- Sin espaciado de rejilla: las filas vacías (avisos, proyección, exámenes) no deben quitarle alto a la actividad. -->
+            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*,Auto,Auto" RowSpacing="0">
                 <!-- DEC-034 · CMP-063: mientras el profesor proyecta esta pantalla al grupo, se ve, siempre y con texto. -->
-                <Border x:Name="ProyectandoBanda" Grid.Row="0" IsVisible="False" BackgroundColor="#F5E8F1" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="16,10"
+                <Border x:Name="ProyectandoBanda" Grid.Row="0" Margin="0,0,0,8" IsVisible="False" BackgroundColor="#F7E5F1" StrokeThickness="0" StrokeShape="RoundRectangle 16" Padding="16,10"
                         SemanticProperties.Description="Tu pantalla se está proyectando al grupo">
-                    <Label x:Name="ProyectandoLabel" Text="Proyectando tu pantalla al grupo" FontSize="16" FontAttributes="Bold" TextColor="#18181B" VerticalOptions="Center" />
+                    <Label x:Name="ProyectandoLabel" Text="Proyectando tu pantalla al grupo" FontSize="16" FontFamily="LexendSemiBold" TextColor="#1F2433" VerticalOptions="Center" />
                 </Border>
                 <VerticalStackLayout x:Name="AvisosHost" Grid.Row="1" Spacing="8" />
                 <Grid Grid.Row="2">
@@ -35,26 +38,27 @@
                     <ui:ActividadResponderView x:Name="Responder" IsVisible="False" />
                     <!-- 007-02 · MSG-003: la pausa es serena, sin cuenta atrás. Se quita sola cuando el profesor reanuda. -->
                     <Border x:Name="PausaPanel" IsVisible="False" HorizontalOptions="Center" VerticalOptions="Center" MaximumWidthRequest="560"
-                            Padding="26" BackgroundColor="#F5FFFFFF" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 26">
-                        <Border.Shadow><Shadow Brush="#18181B" Offset="0,14" Radius="34" Opacity="0.2" /></Border.Shadow>
+                            Padding="26" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 26">
+                        <Border.Shadow><Shadow Brush="#1F2433" Offset="0,14" Radius="34" Opacity="0.2" /></Border.Shadow>
                         <VerticalStackLayout x:Name="PausaHost" Spacing="8" />
                     </Border>
                 </Grid>
-                <VerticalStackLayout x:Name="PendientesHost" Grid.Row="3" Spacing="8" />
+                <VerticalStackLayout x:Name="PendientesHost" Grid.Row="3" Spacing="8" Margin="0,8,0,0" />
                 <!-- MOD-010: el profesor aplicó un examen a esta clase. Se presenta aparte, con su antesala; aquí sólo se avisa y se ofrece. -->
                 <VerticalStackLayout x:Name="ExamenesHost" Grid.Row="4" Spacing="8" />
             </Grid>
         </Grid>
         <ui:BloqueoView x:Name="Bloqueo" />
         <!-- 007-09 · fin de la clase: qué se conservó, qué falta, qué sigue (UXR-005). Sin alertas ni códigos. -->
-        <Grid x:Name="CierreHoja" IsVisible="False" BackgroundColor="#F5F1F1F1">
+        <Grid x:Name="CierreHoja" IsVisible="False" BackgroundColor="#F5F5F6F8">
             <Border HorizontalOptions="Center" VerticalOptions="Center" MaximumWidthRequest="640" Margin="20" Padding="28"
-                    BackgroundColor="White" Stroke="#17000000" StrokeThickness="1" StrokeShape="RoundRectangle 28">
-                <Border.Shadow><Shadow Brush="#18181B" Offset="0,14" Radius="34" Opacity="0.16" /></Border.Shadow>
+                    BackgroundColor="White" Stroke="#E3E6EC" StrokeThickness="1" StrokeShape="RoundRectangle 28">
+                <Border.Shadow><Shadow Brush="#1F2433" Offset="0,14" Radius="34" Opacity="0.16" /></Border.Shadow>
                 <ScrollView>
                     <VerticalStackLayout x:Name="CierreHost" Spacing="10" />
                 </ScrollView>
             </Border>
         </Grid>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

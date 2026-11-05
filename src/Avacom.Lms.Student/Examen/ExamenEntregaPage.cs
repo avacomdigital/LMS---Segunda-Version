@@ -28,7 +28,7 @@ public sealed class ExamenEntregaPage : ContentPage
         BackgroundColor = Ds.Lienzo;
         var tarjeta = Ds.Tarjeta(new ScrollView { Content = _contenido }, Ds.RadioTarjeta, new Thickness(30, 28));
         tarjeta.AutomationId = "entrega-tarjeta";
-        Content = ExamenAyudas.ConTarjetaAnclada(tarjeta, this, out _);
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = ExamenAyudas.ConTarjetaAnclada(tarjeta, this, out _) };   // DS: isla de marca y modo; fondo liso al evaluar
     }
 
     protected override async void OnAppearing()
@@ -61,8 +61,8 @@ public sealed class ExamenEntregaPage : ContentPage
         {
             "tiempo" => "Se acabó el tiempo y tu examen se entregó solo. Lo que respondiste está guardado.",
             "plazo" => "Venció el plazo y tu examen se entregó solo. Lo que respondiste está guardado.",
-            "cierre" or "profesor" => "Tu profesor cerró el examen y tu trabajo se entregó. Lo que respondiste está guardado.",
-            "nodo" => "Tu examen se entregó solo (se acabó el tiempo o tu profesor lo cerró). Lo que respondiste está guardado.",
+            "cierre" or "profesor" => "Tu docente cerró el examen y tu trabajo se entregó. Lo que respondiste está guardado.",
+            "nodo" => "Tu examen se entregó solo (se acabó el tiempo o tu docente lo cerró). Lo que respondiste está guardado.",
             _ => null,
         };
         if (origen is not null)
@@ -105,8 +105,8 @@ public sealed class ExamenEntregaPage : ContentPage
     {
         var estado = sesion.Intento?.Estado;
         var resumen = sesion.Intento ?? new ResumenDeIntento(sesion.IntentoId ?? string.Empty, estado ?? EstadosIntento.Entregado, 1);
-        var queSigue = estado == EstadosIntento.EnRevision ? new QueSigue("en_revision", "Tu examen quedó entregado. Algunas respuestas las revisa tu profesor.")
-                                                          : new QueSigue("resultado_al_liberar", "Tu examen quedó entregado. Tu profesor publicará los resultados.");
+        var queSigue = estado == EstadosIntento.EnRevision ? new QueSigue("en_revision", "Tu examen quedó entregado. Algunas respuestas las revisa tu docente.")
+                                                          : new QueSigue("resultado_al_liberar", "Tu examen quedó entregado. Tu docente publicará los resultados.");
         Entregado(sesion, new EntregaDeIntento(resumen, null, "nodo", queSigue));      // entregó el nodo: no dice por qué en el estado
     }
 
@@ -158,7 +158,7 @@ public sealed class ExamenEntregaPage : ContentPage
         {
             var codigo = Sesion.Evaluacion.UltimoError?.Codigo;
             var sinRed = Sesion.Evaluacion.UltimoError is null or { Estado: 0 };
-            var t = Ds.Titulo(codigo == "resultados_no_liberados" ? "Tu profesor aún no publica los resultados" : sinRed ? "Sin conexión con el aula" : "No pudimos ver tu resultado ahora", 24);
+            var t = Ds.Titulo(codigo == "resultados_no_liberados" ? "Tu docente aún no publica los resultados" : sinRed ? "Sin conexión con el aula" : "No pudimos ver tu resultado ahora", 24);
             t.HorizontalTextAlignment = TextAlignment.Center;
             t.AutomationId = "resultado-no-disponible";
             _contenido.Add(t);
@@ -220,7 +220,7 @@ public sealed class ExamenEntregaPage : ContentPage
                 pila.Add(Ds.Cuerpo($"{marca}  Pregunta {n}" + (d.PuntajeMaximo is { } m ? $" · {d.Puntaje:0.##} de {m:0.##}" : string.Empty), 17, Ds.Tinta));
                 if (!d.Respondida) pila.Add(Ds.Secundario("No la respondiste.", 15));
                 foreach (var retro in d.Retroalimentacion ?? []) pila.Add(Ds.Secundario(retro, 15));
-                if (!string.IsNullOrWhiteSpace(d.Comentario)) pila.Add(Ds.Secundario($"Comentario de tu profesor: {d.Comentario}", 15));
+                if (!string.IsNullOrWhiteSpace(d.Comentario)) pila.Add(Ds.Secundario($"Comentario de tu docente: {d.Comentario}", 15));
                 _contenido.Add(new Border { BackgroundColor = tono, StrokeThickness = 0, Padding = new Thickness(16, 10), StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = pila });
                 n++;
             }

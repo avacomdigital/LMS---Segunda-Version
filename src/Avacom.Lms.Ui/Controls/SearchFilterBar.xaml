@@ -5,43 +5,29 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:controls="clr-namespace:Avacom.Lms.Ui.Controls">
-    <!-- Barra de búsqueda y filtros, neumórfica: tarjeta blanca con el bisel del kit y sombra suave, coronada por la
-         línea de 4 px con los seis colores de categoría (rojo, amarillo, verde, cyan, magenta y gris, en tono pastel).
+    <!-- Barra de búsqueda y filtros del Aula · Design System: caja blanca con contorno completo en Linea, radio 24 y sombra
+         difusa; sin franja de colores (el DS no admite bordes de un solo lado ni degradados entre colores distintos).
          Fila 1: el campo de búsqueda (cápsula hundida con lupa), los picklists principales (FiltrosHost) y el botón
          «Más filtros». Fila 2 (plegada): los picklists secundarios (ExtraHost) y «Limpiar filtros». Los picklists
          los añade la pantalla con AgregarFiltro, porque sus valores salen del catálogo. -->
-    <Border x:Name="Tarjeta" Padding="0" BackgroundColor="#F7FFFFFF" StrokeShape="RoundRectangle 22" StrokeThickness="1.5">
-        <Border.Stroke>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#FFFFFFFF" Offset="0" />
-                <GradientStop Color="#33FFFFFF" Offset="0.45" />
-                <GradientStop Color="#40000000" Offset="1" />
-            </LinearGradientBrush>
-        </Border.Stroke>
-        <Border.Shadow><Shadow Brush="#18181B" Opacity="0.10" Offset="0,6" Radius="22" /></Border.Shadow>
-        <Grid RowDefinitions="4,Auto,Auto">
-            <!-- Línea de categorías del cubo del logo -->
-            <Grid Grid.Row="0" ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="0">
-                <BoxView Color="#F28FA0" />
-                <BoxView Grid.Column="1" Color="#F8E27A" />
-                <BoxView Grid.Column="2" Color="#A9DBA9" />
-                <BoxView Grid.Column="3" Color="#A9D2F4" />
-                <BoxView Grid.Column="4" Color="#D8A5D2" />
-                <BoxView Grid.Column="5" Color="#B8BDC4" />
+    <Border x:Name="Tarjeta" Padding="0" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" StrokeShape="RoundRectangle 24" StrokeThickness="1">
+        <Border.Shadow><Shadow Brush="#1F2433" Opacity="0.09" Offset="0,8" Radius="20" /></Border.Shadow>
+        <Grid RowDefinitions="0,Auto,Auto">
+            <!-- Antigua línea de categorías: oculta (fila de alto 0). -->
+            <Grid Grid.Row="0" IsVisible="False" ColumnDefinitions="*,*,*,*,*,*" ColumnSpacing="0">
+                <BoxView Color="#F6C3C4" />
+                <BoxView Grid.Column="1" Color="#F3E29A" />
+                <BoxView Grid.Column="2" Color="#BFE6D3" />
+                <BoxView Grid.Column="3" Color="#BCE5F5" />
+                <BoxView Grid.Column="4" Color="#E8C2DD" />
+                <BoxView Grid.Column="5" Color="#E3E6EC" />
             </Grid>
-            <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" Padding="14,12">
-                <!-- Campo de búsqueda: cápsula hundida (bisel invertido: sombra arriba-izquierda, luz abajo-derecha) -->
-                <Border x:Name="Campo" BackgroundColor="#EEF0F3" HeightRequest="50" Padding="16,0" StrokeShape="RoundRectangle 999" StrokeThickness="1.5" VerticalOptions="Center">
-                    <Border.Stroke>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#26000000" Offset="0" />
-                            <GradientStop Color="#0D000000" Offset="0.5" />
-                            <GradientStop Color="#E6FFFFFF" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.Stroke>
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" Padding="16,14">
+                <!-- Campo de búsqueda del DS: blanco con contorno completo de 2 px y radio m 16. -->
+                <Border x:Name="Campo" BackgroundColor="#FFFFFF" Stroke="#E3E6EC" HeightRequest="52" Padding="16,0" StrokeShape="RoundRectangle 16" StrokeThickness="2" VerticalOptions="Center">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                        <Path Aspect="Uniform" Data="M229.66,218.34 L179.59,168.28 A88.11,88.11 0 1 0 168.28,179.59 L218.34,229.66 A8,8 0 0 0 229.66,218.34 Z M40,112 A72,72 0 1 1 112,184 A72.08,72.08 0 0 1 40,112 Z" Fill="#52525B" HeightRequest="20" VerticalOptions="Center" WidthRequest="20" />
-                        <Entry x:Name="Entrada" Grid.Column="1" BackgroundColor="Transparent" ClassId="neumo" FontFamily="InterRegular" FontSize="16" Placeholder="Buscar cursos, temas o códigos" PlaceholderColor="#71717A" ReturnType="Search" Completed="OnCompletado" TextChanged="OnTextoCambiado" TextColor="#18181B" VerticalOptions="Center" />
+                        <Path Aspect="Uniform" Data="M229.66,218.34 L179.59,168.28 A88.11,88.11 0 1 0 168.28,179.59 L218.34,229.66 A8,8 0 0 0 229.66,218.34 Z M40,112 A72,72 0 1 1 112,184 A72.08,72.08 0 0 1 40,112 Z" Fill="#4F5566" HeightRequest="20" VerticalOptions="Center" WidthRequest="20" />
+                        <Entry x:Name="Entrada" Grid.Column="1" BackgroundColor="Transparent" ClassId="neumo" FontFamily="Lexend" FontSize="16" Placeholder="Buscar cursos, temas o códigos" PlaceholderColor="#5F6474" ReturnType="Search" Completed="OnCompletado" TextChanged="OnTextoCambiado" TextColor="#1F2433" VerticalOptions="Center" />
                     </Grid>
                 </Border>
                 <HorizontalStackLayout x:Name="FiltrosHost" Grid.Column="1" Spacing="10" VerticalOptions="Center" />

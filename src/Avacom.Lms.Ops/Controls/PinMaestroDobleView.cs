@@ -12,8 +12,8 @@ namespace Avacom.Lms.Ops.Controls;
 public sealed class PinMaestroDobleView : ContentView
 {
     private readonly TecladoPinView _teclado = MarcoDeAcceso.TecladoMaestro();
-    private readonly Label _indicacion = new() { FontSize = 15, FontAttributes = FontAttributes.Bold, HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap };
-    private readonly Label _problema = new() { FontSize = 13, TextColor = Color.FromArgb("#8A1C1F"), HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap, IsVisible = false };
+    private readonly Label _indicacion = new() { FontSize = 15, FontFamily = "LexendSemiBold", HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap };
+    private readonly Label _problema = new() { FontSize = 13, TextColor = Color.FromArgb("#A51C20"), HorizontalTextAlignment = TextAlignment.Center, LineBreakMode = LineBreakMode.WordWrap, IsVisible = false };
     private string? _primero;
 
     /// <summary>Las dos marcas coincidieron y pasaron la regla local. Quien lo recibe lo envía al nodo.</summary>

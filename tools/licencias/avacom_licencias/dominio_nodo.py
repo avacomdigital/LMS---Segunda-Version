@@ -32,6 +32,6 @@ def _preparar() -> Path:
 
 ORIGEN = _preparar()
 
-from licenciamiento.dominio import catalogos, errores, firma, huella, licencia, politica, solicitud, tlv  # noqa: E402
+from licenciamiento.dominio import catalogos, errores, firma, huella, licencia, politica, sello, solicitud, tlv  # noqa: E402
 
-__all__ = ["ORIGEN", "RAIZ", "catalogos", "errores", "firma", "huella", "licencia", "politica", "solicitud", "tlv"]
+__all__ = ["ORIGEN", "RAIZ", "catalogos", "errores", "firma", "huella", "licencia", "politica", "sello", "solicitud", "tlv"]

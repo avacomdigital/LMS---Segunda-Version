@@ -20,7 +20,7 @@ namespace Avacom.Lms.Ui.Controls;
 public sealed class TecladoPinView : ContentView
 {
     private static readonly Color Fondo = Color.FromArgb("#FFFFFFFF");
-    private static readonly Color PuntoVacio = Color.FromArgb("#FFD4D4D8");
+    private static readonly Color PuntoVacio = Color.FromArgb("#FFE3E6EC");
 
     private readonly VerticalStackLayout _pila = new() { Spacing = 18, HorizontalOptions = LayoutOptions.Center };
     private readonly HorizontalStackLayout _puntos = new() { Spacing = 14, HorizontalOptions = LayoutOptions.Center };
@@ -33,7 +33,7 @@ public sealed class TecladoPinView : ContentView
 
     private int _longitud = 6, _longitudMinima;
     private double _teclaAncho = 68, _teclaAlto = 52, _separacion = 10;
-    private Color _acento = Ds.Rojo;
+    private Color _acento = Ds.Principal;
 
     /// <summary>Se entrega el PIN completo. El argumento es el PIN tal como se marcó (sólo dígitos).</summary>
     public event EventHandler<string>? PinCompleto;
@@ -171,7 +171,7 @@ public sealed class TecladoPinView : ContentView
             // El número va grande; «Borrar» y «Listo» son palabras: más chicas para que quepan en una tecla de 46 px de alto.
             FontSize = secundaria || destacada ? Math.Clamp(tamano * 0.26, 14, 20) : Math.Clamp(tamano * 0.42, 20, 32),
             FontFamily = Ds.FuenteMedia, TextColor = destacada ? Colors.White : Ds.Tinta,
-            BackgroundColor = destacada ? _acento : secundaria ? Color.FromArgb("#FFF1F1F1") : Fondo, Padding = new Thickness(0),
+            BackgroundColor = destacada ? _acento : secundaria ? Color.FromArgb("#FFF5F6F8") : Fondo, Padding = new Thickness(0),
         };
         SemanticProperties.SetDescription(boton, descripcion);
         // Un toque, una marca. Sólo se escucha Clicked (no Pressed/Released: en WinUI cada toque llegaba dos veces) y, por si el sistema repite el

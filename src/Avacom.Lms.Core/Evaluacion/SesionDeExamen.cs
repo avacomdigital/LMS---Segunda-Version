@@ -210,10 +210,10 @@ public sealed class SesionDeExamen : IDisposable
             return new SalidaDeApertura(ResultadoDeApertura.SinConexion, "No hay conexión con el aula. Tus respuestas no se pierden; vuelve a intentarlo en un momento.");
         return error.Codigo switch
         {
-            "admision_rechazada" => new SalidaDeApertura(ResultadoDeApertura.Rechazada, "Tu profesor no admitió esta tableta para el examen. Pídele que te indique cómo continuar.", error.Codigo),
+            "admision_rechazada" => new SalidaDeApertura(ResultadoDeApertura.Rechazada, "Tu docente no admitió esta tableta para el examen. Pídele que te indique cómo continuar.", error.Codigo),
             "asignacion_no_abierta" or "asignacion_cerrada" => new SalidaDeApertura(ResultadoDeApertura.NoDisponible, "Este examen no está abierto en este momento.", error.Codigo),
             "intentos_agotados" => new SalidaDeApertura(ResultadoDeApertura.NoDisponible, "Ya usaste todos los intentos de este examen.", error.Codigo),
-            "version_no_disponible" => new SalidaDeApertura(ResultadoDeApertura.NoDisponible, "El curso cambió de versión y este examen ya no se puede abrir. Avisa a tu profesor.", error.Codigo),
+            "version_no_disponible" => new SalidaDeApertura(ResultadoDeApertura.NoDisponible, "El curso cambió de versión y este examen ya no se puede abrir. Avisa a tu docente.", error.Codigo),
             "fuente_no_disponible" => new SalidaDeApertura(ResultadoDeApertura.NoDisponible, "El aula no puede leer el examen en este momento. Inténtalo de nuevo en un momento.", error.Codigo),
             _ => new SalidaDeApertura(ResultadoDeApertura.NoDisponible, error.Detalle, error.Codigo),
         };
@@ -542,7 +542,7 @@ public sealed class SesionDeExamen : IDisposable
             throw new InvalidOperationException("No hay un examen abierto que entregar.");
         if (Fase == FaseDeExamen.Terminado) return new SalidaDeEntrega(ResultadoDeEntrega.Entregado, Entrega);
         if (Fase == FaseDeExamen.Suspendido)
-            return new SalidaDeEntrega(ResultadoDeEntrega.Suspendido, null, 0, Mensaje?.Texto ?? "Tu examen está en pausa. Avisa a tu profesor para continuar.");
+            return new SalidaDeEntrega(ResultadoDeEntrega.Suspendido, null, 0, Mensaje?.Texto ?? "Tu examen está en pausa. Avisa a tu docente para continuar.");
 
         var faltan = Faltan;
         if (faltan > 0 && !confirmar) return new SalidaDeEntrega(ResultadoDeEntrega.NecesitaConfirmar, null, faltan);

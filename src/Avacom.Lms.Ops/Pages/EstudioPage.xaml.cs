@@ -110,7 +110,11 @@ public partial class EstudioPage : ContentPage
         SubtituloLabel.Text = subtitulo;
         SubtituloLabel.IsVisible = !string.IsNullOrWhiteSpace(subtitulo);
         AccionesHost.Clear();
-        foreach (var accion in acciones) AccionesHost.Add(accion);
+        foreach (var accion in acciones)
+        {
+            if (ReferenceEquals(accion, _vistaMenu)) Ds.VolverALaIzquierda(AccionesHost, accion);
+            else AccionesHost.Add(accion);
+        }
     }
 
     private void Vaciar(bool alInicio)
@@ -143,7 +147,7 @@ public partial class EstudioPage : ContentPage
         AvisoHost.Clear();
         AvisoHost.Add(error
             ? EstudioUi.Aviso(titulo, detalle, Ds.PeligroSuave, EstudioUi.TintaPeligro)
-            : EstudioUi.Aviso(titulo, detalle, Ds.ExitoSuave, Color.FromArgb("#0B5D3B")));
+            : EstudioUi.Aviso(titulo, detalle, Ds.ExitoSuave, Color.FromArgb("#0B5E3E")));
         var version = ++_versionAviso;
         if (!error)
             Dispatcher.DispatchDelayed(TimeSpan.FromSeconds(9), () => { if (version == _versionAviso) AvisoHost.Clear(); });
@@ -156,6 +160,13 @@ public partial class EstudioPage : ContentPage
     private (Button Boton, View Vista) AccionActualizar() =>
         EstudioUi.Accion("Actualizar", Ds.Rango.Secondary, async () => await RefrescarAsync(true), null, "estudio-actualizar");
 
-    private (Button Boton, View Vista) AccionMenu() =>
-        EstudioUi.Accion("Menú principal", Ds.Rango.Quiet, Volver, null, "estudio-menu");
+    // «Menú principal» va a la izquierda de la cabecera (Ds.VolverALaIzquierda); se reconoce por esta vista al poner la cabecera.
+    private View? _vistaMenu;
+
+    private (Button Boton, View Vista) AccionMenu()
+    {
+        var accion = EstudioUi.Accion("Menú principal", Ds.Rango.Quiet, Volver, null, "estudio-menu");
+        _vistaMenu = accion.Vista;
+        return accion;
+    }
 }

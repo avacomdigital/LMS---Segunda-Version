@@ -1,0 +1,5 @@
+{
+  "codigo": "identidad_invalida",
+  "detail": "La firma del reto no corresponde a esa clave y a este equipo.",
+  "motivo": "firma"
+}

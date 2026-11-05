@@ -57,8 +57,8 @@ public sealed class FlujoDeAcceso
     public const string FaltaNombre = "Escribe tu nombre para continuar.";
     public const string FaltaGrupo = "Elige tu grupo para continuar.";
     public const string FaltaCodigo = "Escribe tu código y tu clave para entrar.";
-    public const string CodigoNoCoincide = "Ese código o esa clave no coinciden. Prueba otra vez o pide ayuda a tu profesor.";
-    public const string SinGrupos = "Este aula todavía no tiene grupos con alumnos. Entra como visitante o pide ayuda al profesor.";
+    public const string CodigoNoCoincide = "Ese código o esa clave no coinciden. Prueba otra vez o pide ayuda a tu docente.";
+    public const string SinGrupos = "Este aula todavía no tiene grupos con alumnos. Entra como visitante o pide ayuda al docente.";
     private const long PausaPorDefectoSeg = 120;
 
     private readonly IAccesoApi _api;

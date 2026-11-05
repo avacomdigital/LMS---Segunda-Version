@@ -52,7 +52,7 @@ _TIPOS = {1: TIPO_PRODUCCION, 2: TIPO_EVALUACION, 3: TIPO_DESARROLLO}
 _CODIGOS_DE_TIPO = {v: k for k, v in _TIPOS.items()}
 
 PREFIJO_TEXTO = {tlv.MAGIC_LICENCIA: "AVL1.", tlv.MAGIC_SOLICITUD: "AVQ1.", tlv.MAGIC_LIBERACION: "AVR1."}
-_CODIGO_DE_CAPACIDAD = re.compile(r"^[a-z0-9_*]{1,24}$")
+_CODIGO_DE_CAPACIDAD = re.compile(r"^[a-z0-9_*]{1,24}\Z")      # \Z y no $: con $ un «\n» final también pasaba (lo halló la prueba diferencial contra la nativa, D-32)
 _BASE64_URL = re.compile(r"^[A-Za-z0-9_-]+$")
 
 

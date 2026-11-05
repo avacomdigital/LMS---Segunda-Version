@@ -48,10 +48,10 @@ public partial class CursoBibliotecaPage : ContentPage
     {
         Contenido.IsVisible = contenido;
         PanelEstudiantes.IsVisible = !contenido;
-        TabContenido.BackgroundColor = Color.FromArgb(contenido ? "#18181B" : "#FFFFFF");
-        TabContenido.TextColor = Color.FromArgb(contenido ? "#FFFFFF" : "#18181B");
-        TabEstudiantes.BackgroundColor = Color.FromArgb(contenido ? "#FFFFFF" : "#18181B");
-        TabEstudiantes.TextColor = Color.FromArgb(contenido ? "#18181B" : "#FFFFFF");
+        TabContenido.BackgroundColor = Color.FromArgb(contenido ? "#1F2433" : "#FFFFFF");
+        TabContenido.TextColor = Color.FromArgb(contenido ? "#FFFFFF" : "#1F2433");
+        TabEstudiantes.BackgroundColor = Color.FromArgb(contenido ? "#FFFFFF" : "#1F2433");
+        TabEstudiantes.TextColor = Color.FromArgb(contenido ? "#1F2433" : "#FFFFFF");
     }
 
     private async void OnActualizarEstudiantes(object? sender, EventArgs e) => await CargarEstudiantesAsync();
@@ -85,20 +85,20 @@ public partial class CursoBibliotecaPage : ContentPage
         };
         grid.Add(new Border
         {
-            BackgroundColor = Color.FromArgb("#3F3F46"), WidthRequest = 44, HeightRequest = 44, StrokeThickness = 0,
+            BackgroundColor = Color.FromArgb("#4F5566"), WidthRequest = 44, HeightRequest = 44, StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = 22 },
-            Content = new Label { Text = e.Iniciales, TextColor = Colors.White, FontAttributes = FontAttributes.Bold, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+            Content = new Label { Text = e.Iniciales, TextColor = Colors.White, FontFamily = "LexendSemiBold", HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
         }, 0, 0);
         var nombre = new VerticalStackLayout { VerticalOptions = LayoutOptions.Center };
-        nombre.Add(new Label { Text = e.PersonaRotulo, FontAttributes = FontAttributes.Bold });
+        nombre.Add(new Label { Text = e.PersonaRotulo, FontFamily = "LexendSemiBold" });
         nombre.Add(new Label { Text = $"Última actividad {e.UltimaActividadTexto} · {e.Aperturas} materiales · {e.TiempoTexto}", Style = Estilo("Muted") });
         grid.Add(nombre, 1, 0);
         var progreso = new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Spacing = 4 };
         progreso.Add(new Label { Text = $"Progreso {e.ProgresoTexto}", Style = Estilo("Muted") });
-        progreso.Add(new ProgressBar { Progress = e.ProgresoFraccion, ProgressColor = Color.FromArgb("#E5262B") });
+        progreso.Add(new ProgressBar { Progress = e.ProgresoFraccion, ProgressColor = Color.FromArgb("#047857") });
         grid.Add(progreso, 2, 0);
         grid.Add(new Label { Text = e.NotasTexto, Style = Estilo("Muted"), VerticalOptions = LayoutOptions.Center, LineBreakMode = LineBreakMode.WordWrap }, 3, 0);
-        grid.Add(new Label { Text = e.Notas.FirstOrDefault(n => n.Puntaje is not null) is { } n ? $"{n.Puntaje:0}/100" : "—", FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#019D60"), VerticalTextAlignment = TextAlignment.Center }, 4, 0);
+        grid.Add(new Label { Text = e.Notas.FirstOrDefault(n => n.Puntaje is not null) is { } n ? $"{n.Puntaje:0}/100" : "—", FontFamily = "LexendSemiBold", TextColor = Color.FromArgb("#047857"), VerticalTextAlignment = TextAlignment.Center }, 4, 0);
         return new Border { Padding = 18, Content = grid };
     }
 

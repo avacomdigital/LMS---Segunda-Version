@@ -5,11 +5,11 @@ using Path = Microsoft.Maui.Controls.Shapes.Path;
 namespace Avacom.Lms.Ui.Controls;
 
 /// <summary>
-/// Hexágono de módulo o materia (146 × 168) con icono vectorial y etiqueta. Dos materiales: el blanco de siempre
-/// (tablero y Asignaturas) y, con <see cref="Glass"/>, el Liquid Glass de «Clase de hoy»: cuerpo translúcido del
-/// color de acento con degradado, reflejo blanco superior, canto luminoso y resplandor del acento
-/// (<see cref="HexGlassDrawable"/>), con icono y texto en la tinta que contraste. La geometría del hexágono es la
-/// misma en ambos; sólo cambia cómo se pinta. Interacciones iguales: hover 1,04 · pressed 0,97 · release 1,0.
+/// Hexágono del panal (Aula · Design System, 146 × 168) con icono vectorial de color y etiqueta en tinta. Dos
+/// materiales: el blanco que flota con sombra difusa (menú principal y Asignaturas) y, con <see cref="Glass"/>, el
+/// lleno de rol: degradado 600 → 700 del acento con sombra difusa del mismo color (<see cref="HexGlassDrawable"/>),
+/// icono y texto en blanco (o tinta oscura sobre amarillo). La geometría es la misma en ambos.
+/// Interacciones del DS: encima sube 6 · pulsado 0,97 · vuelta en 120 ms.
 /// </summary>
 public partial class ProfessorHexTile : ContentView
 {
@@ -22,6 +22,7 @@ public partial class ProfessorHexTile : ContentView
         string.Empty,
         propertyChanged: OnIconGeometryChanged);
     public static readonly BindableProperty GlassProperty = BindableProperty.Create(nameof(Glass), typeof(bool), typeof(ProfessorHexTile), false, propertyChanged: OnGlassChanged);
+    public static readonly BindableProperty IconSourceProperty = BindableProperty.Create(nameof(IconSource), typeof(ImageSource), typeof(ProfessorHexTile), null, propertyChanged: OnGlassChanged);
 
     private readonly HexGlassDrawable vidrio = new();
 
@@ -35,6 +36,9 @@ public partial class ProfessorHexTile : ContentView
     public string Text { get => (string)GetValue(TextProperty); set => SetValue(TextProperty, value); }
     public Color AccentColor { get => (Color)GetValue(AccentColorProperty); set => SetValue(AccentColorProperty, value); }
     public string IconGeometry { get => (string)GetValue(IconGeometryProperty); set => SetValue(IconGeometryProperty, value); }
+
+    /// <summary>Icono sólido del catálogo del DS (p. ej. <c>ico_libros.png</c>). Si se da, sustituye al trazado de <see cref="IconGeometry"/>.</summary>
+    public ImageSource? IconSource { get => (ImageSource?)GetValue(IconSourceProperty); set => SetValue(IconSourceProperty, value); }
 
     /// <summary>Material Liquid Glass (cuerpo del acento translúcido, reflejo, canto y resplandor). Falso: el hexágono blanco de siempre.</summary>
     public bool Glass { get => (bool)GetValue(GlassProperty); set => SetValue(GlassProperty, value); }
@@ -60,6 +64,11 @@ public partial class ProfessorHexTile : ContentView
         var acento = AccentColor ?? Colors.Black;
         Sombra1.IsVisible = Sombra2.IsVisible = Sombra3.IsVisible = Cuerpo.IsVisible = !conVidrio;
         Vidrio.IsVisible = conVidrio;
+        var conImagen = IconSource is not null;
+        IconoImagen.Source = IconSource;
+        IconoImagen.IsVisible = conImagen;
+        IconoCirculo.IsVisible = conImagen && conVidrio;
+        IconPath.IsVisible = !conImagen;
         if (conVidrio)
         {
             vidrio.Accent = acento;
@@ -67,16 +76,16 @@ public partial class ProfessorHexTile : ContentView
             var tinta = Design.Glass.TintaSobre(acento);
             IconPath.Fill = new SolidColorBrush(tinta);
             Etiqueta.TextColor = tinta;
-            Etiqueta.FontFamily = Design.Ds.FuenteSemi;
+            Etiqueta.FontFamily = Design.Ds.FuenteMedia;
             Etiqueta.FontAttributes = FontAttributes.None;
-            Etiqueta.Shadow = tinta == Colors.White ? Design.Glass.SombraTexto(0.30) : null!;
+            Etiqueta.Shadow = null!;
         }
         else
         {
             IconPath.SetBinding(Path.FillProperty, new Binding(nameof(AccentColor), source: this));
-            Etiqueta.TextColor = Color.FromArgb("#3F3F46");
-            Etiqueta.FontFamily = "InterMedium";
-            Etiqueta.FontAttributes = FontAttributes.Bold;
+            Etiqueta.TextColor = Design.Ds.Tinta;
+            Etiqueta.FontFamily = Design.Ds.FuenteMedia;
+            Etiqueta.FontAttributes = FontAttributes.None;
             Etiqueta.Shadow = null!;
         }
     }
@@ -88,6 +97,6 @@ public partial class ProfessorHexTile : ContentView
         Tapped?.Invoke(this, EventArgs.Empty);
     }
 
-    private async void OnPointerEntered(object? sender, PointerEventArgs e) => await TileRoot.ScaleToAsync(1.04, 120, Easing.CubicOut);
-    private async void OnPointerExited(object? sender, PointerEventArgs e) => await TileRoot.ScaleToAsync(1, 120, Easing.CubicOut);
+    private async void OnPointerEntered(object? sender, PointerEventArgs e) => await TileRoot.TranslateToAsync(0, -6, Design.Ds.DurBase, Easing.CubicOut);
+    private async void OnPointerExited(object? sender, PointerEventArgs e) => await TileRoot.TranslateToAsync(0, 0, Design.Ds.DurBase, Easing.CubicOut);
 }

@@ -150,7 +150,7 @@ public sealed class ReporteBoletinPage : PaginaDeReporte
     private void PintarCompetencias(ModeloDeBoletin b)
     {
         var c = b.Competencias;
-        ContenidoHost.Add(ReportesUi.Seccion("2 · ¿Qué competencias alcanzó?", "Evidencias y logros que el profesor anotó, y los aprendizajes pendientes."));
+        ContenidoHost.Add(ReportesUi.Seccion("2 · ¿Qué competencias alcanzó?", "Evidencias y logros que el docente anotó, y los aprendizajes pendientes."));
         var pila = new VerticalStackLayout { Spacing = 12 };
         pila.Add(Lista("Logros", c.Logros.Select(x => Cita(x)).ToList(), "Todavía no hay logros anotados. Se escriben como «fortalezas» en la retroalimentación de cada calificación."));
         pila.Add(Lista("Aprendizajes pendientes", c.Pendientes.Select(x => Cita(x)).Concat(c.EvaluacionesNoAprobadas.Select(t => $"No cumple el criterio en «{t}»")).ToList(), "Nada pendiente anotado."));
@@ -191,9 +191,9 @@ public sealed class ReporteBoletinPage : PaginaDeReporte
     private void PintarQueDebeMejorar(ModeloDeBoletin b)
     {
         var rec = b.Recomendaciones;
-        ContenidoHost.Add(ReportesUi.Seccion("4 · ¿Qué debe mejorar?", "Las recomendaciones del profesor (se escriben en el boletín del libro de calificaciones) y lo que se desprende de sus notas."));
+        ContenidoHost.Add(ReportesUi.Seccion("4 · ¿Qué debe mejorar?", "Las recomendaciones del docente (se escriben en el boletín del libro de calificaciones) y lo que se desprende de sus notas."));
         var pila = new VerticalStackLayout { Spacing = 12 };
-        if (rec.DelDocente.Count == 0) pila.Add(Ds.Secundario("El profesor todavía no dejó recomendaciones para este periodo. Se eligen en Calificaciones → el boletín del estudiante → «Recomendaciones».", 14));
+        if (rec.DelDocente.Count == 0) pila.Add(Ds.Secundario("El docente todavía no dejó recomendaciones para este periodo. Se eligen en Calificaciones → el boletín del estudiante → «Recomendaciones».", 14));
         foreach (var o in rec.DelDocente)
         {
             var lineas = o.Recomendaciones.ToList();

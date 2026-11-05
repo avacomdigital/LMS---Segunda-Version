@@ -1,0 +1,5 @@
+{
+  "codigo": "ai_timeout",
+  "detail": "El asistente tardó demasiado en responder. Prueba con una pregunta más corta.",
+  "reintentable": true
+}

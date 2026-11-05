@@ -95,7 +95,7 @@ Se eligieron por cuatro razones: son los objetivos de la semana, tocan lo que m�
 
 **Ojo con las versiones.** El instalador 2.2.0 y el APK salieron de la revisión `ae8eefd4` con cambios sin confirmar; `main` está en `9ef86b74`. Para probar lo mismo que está en el repositorio, compila desde `main` (`dotnet build … -f net10.0-windows10.0.19041.0`) o compara las huellas de `installer/latest/SHA256.txt`.
 
-**OPS y Student en el mismo PC:** define `AVACOM_EXAM_NO_LOCKDOWN=1` antes de abrir Student, si no el examen supervisado se apodera del teclado y los monitores.
+**OPS y Student en el mismo PC:** define `AVACOM_EXAM_NO_LOCKDOWN=1` antes de abrir Student, si no el examen supervisado se apodera del teclado y los monitores. **Con el Student instalado (Release) la variable sola ya no basta** (MOD-018 · Fase 5): crea además un archivo vacío `AVACOM-DESARROLLO` en la carpeta del programa (administrador) y bórralo al terminar; ver `scripts/README.md`.
 
 ### 4.2 · Nodo de QA (sin ensuciar git)
 

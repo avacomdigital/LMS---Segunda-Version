@@ -132,6 +132,7 @@ public partial class StudyPracticePage : ContentPage
         if (Width <= 0 || Height <= 0) return;
         var estrecha = Width < 700;
         Modal.WidthRequest = Math.Max(320, Math.Min(AnchoMaximo, Width * (estrecha ? 0.96 : FraccionAncho)));
-        Modal.HeightRequest = Math.Max(440, Height * (Height < 820 ? 0.95 : FraccionAlto));
+        // Bajo la isla de marca (fila de 86 del MarcoDs) queda el alto útil: la hoja no lo pasa, así los mandos de abajo no se cortan.
+        Modal.HeightRequest = Math.Max(440, Math.Min(Height - 86 - 16, Height * (Height < 820 ? 0.95 : FraccionAlto)));
     }
 }

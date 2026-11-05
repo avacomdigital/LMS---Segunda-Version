@@ -42,7 +42,6 @@ public partial class ExamenExpedientePage
         if (i.Estado is EstadosIntento.Entregado or EstadosIntento.EnRevision or EstadosIntento.Calificado)
         {
             pila.Add(Ds.Separador());
-            pila.Add(Ds.Secundario("Anular es una decisión tuya, con un motivo, y queda registrada con tu nombre. Nadie más la toma: el sistema nunca anula por sí solo.", 14));
             var anular = ExamenUi.Accion("Anular este intento", Ds.Rango.Quiet, AnularAsync, null, "expediente-anular");
             anular.Vista.HorizontalOptions = LayoutOptions.Start;
             pila.Add(anular.Vista);

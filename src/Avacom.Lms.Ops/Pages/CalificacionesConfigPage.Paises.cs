@@ -42,7 +42,7 @@ public partial class CalificacionesConfigPage
     {
         var pila = new VerticalStackLayout { Spacing = 10 };
         pila.Add(ExamenUi.Seccion("Sistema de calificación por país"));
-        pila.Add(Ds.Secundario("Elige el país de tu institución y el sistema con que se califica cada nivel. El profesor lo ve en el libro de calificaciones al calificar y cada estudiante lo ve junto a su nota cuando el profesor la publica.", 14));
+        pila.Add(Ds.Secundario("Elige el país de tu institución y el sistema con que se califica cada nivel. El docente lo ve en el libro de calificaciones al calificar y cada estudiante lo ve junto a su nota cuando el docente la publica.", 14));
         var actual = Ds.Secundario(SistemaActual(c), 14);
         actual.AutomationId = "sistema-actual";
         pila.Add(actual);
@@ -153,7 +153,6 @@ public partial class CalificacionesConfigPage
         Ds.Habilitar(aplicar.Boton, pendientes > 0 && !_aplicandoSistema);
         aplicar.Vista.HorizontalOptions = LayoutOptions.Start;
         pila.Add(aplicar.Vista);
-        pila.Add(Ds.Secundario("Se adopta el sistema para la institución (queda versionado) y los niveles elegidos pasan a modo calificaciones con él. Las notas ya publicadas conservan el sistema con que se publicaron.", 13));
         return pila;
     }
 
@@ -216,7 +215,7 @@ public partial class CalificacionesConfigPage
                 {
                     _aviso.Mostrar("No se adoptó el sistema",
                         CalificacionesUi.SinConexion(api)
-                            ? "No se pudo llegar al nodo y no se sabe si el sistema llegó a adoptarse. Actualiza la pantalla y mira si ya está antes de volver a intentarlo."
+                            ? "No se pudo conectar con el aula y no se sabe si el sistema llegó a adoptarse. Actualiza la pantalla y mira si ya está antes de volver a intentarlo."
                             : CalificacionesUi.Error(api), Tono.Ambar);
                     return;
                 }

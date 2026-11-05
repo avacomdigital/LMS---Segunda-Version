@@ -85,7 +85,7 @@ public sealed class ReporteBoletinesPage : PaginaDeReporte
             b.SinCifras || !res.Bruto.TienePuntos ? "—" : $"{GradebookTexto.Puntaje(res.Bruto.Puntos)} de {GradebookTexto.Puntaje(res.Bruto.PuntosMaximos)}",
             ReportesUi.Celda(b.SinCifras ? "sin cifras" : BoletinTexto.Promedio(res.Presentado) + (res.Presentado?.Desempeno is { Length: > 0 } d ? " · " + d : string.Empty), derecha: true, medio: res.Presentado is not null,
                 color: res.Presentado?.CumpleCriterio == false ? Ds.Peligro : null),
-            recomendaciones > 0 ? ReportesUi.ConPunto(recomendaciones == 1 ? "1 del profesor" : $"{recomendaciones} del profesor", Ds.Exito) : ReportesUi.ConPunto("Sin recomendaciones", Ds.TintaSuave),
+            recomendaciones > 0 ? ReportesUi.ConPunto(recomendaciones == 1 ? "1 del docente" : $"{recomendaciones} del docente", Ds.Exito) : ReportesUi.ConPunto("Sin recomendaciones", Ds.TintaSuave),
         ], cebra: indice % 2 == 1, alTocar: ReportesUi.Seguro(nameof(ReporteBoletinesPage), "AbrirBoletin", () => Shell.Current.GoToAsync(RutasDeReportes.DeBoletin(b.Estudiante.Id, g.Id, _nodo))),
            id: $"reporte-boletines-alumno-{b.Estudiante.Id}", descripcion: $"Ver el boletín de {b.Estudiante.Rotulo}");
     }

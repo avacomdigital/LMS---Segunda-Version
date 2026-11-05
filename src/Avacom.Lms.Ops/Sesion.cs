@@ -1,3 +1,5 @@
+using Avacom.Lms.Core.AgenteIa;
+using Avacom.Lms.Core.IdentidadDeDispositivo;
 using Avacom.Lms.Core.Actualizacion;
 using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
@@ -94,6 +96,28 @@ public static class Sesion
                 _fuenteAula = fuente;
             }
             return _aula;
+        }
+    }
+
+    private static IdentidadDeEquipo? _identidadEquipo;
+    private static Uri? _baseIdentidad;
+
+    /// <summary>
+    /// MOD-018 · Fase 5: quien prueba ante el nodo la clave de este equipo (CNG de Windows: el TPM si lo hay, software si no). Mejor esfuerzo: sin clave o sin red no pasa nada. Se identifica al
+    /// presentarse y al abrir sesión, no en cada petición.
+    /// </summary>
+    public static IdentidadDeEquipo IdentidadEquipo
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_identidadEquipo is null || _baseIdentidad != actual)
+            {
+                _identidadEquipo = new IdentidadDeEquipo(new IdentidadApi(Http, actual), IdentidadDeEquipo.Proveedor,
+                    (evento, detalle) => RegistroLocal.Info(Canal.Dispositivo, evento, "Identidad por clave del equipo", new { detalle }));
+                _baseIdentidad = actual;
+            }
+            return _identidadEquipo;
         }
     }
 
@@ -256,6 +280,30 @@ public static class Sesion
         }
     }
 
+    // El asistente de IA tarda: el modelo local puede necesitar minutos en un equipo lento. El HttpClient de los demás clientes se rinde a los 15 s y ningún «preguntar» llegaría a responder, así
+    // que este cliente tiene el suyo, con un tope MAYOR que lo que AgenteIaApi espera (185 s): quien corta la espera es AgenteIaApi, con su mensaje, y no el HttpClient con un «sin conexión».
+    private static readonly HttpClient HttpAgenteIa = new HttpClient(new HandlerDeMedicion()) { Timeout = TimeSpan.FromSeconds(210) };
+    private static AgenteIaApi? _agenteIa;
+    private static Uri? _baseAgenteIa;
+
+    /// <summary>
+    /// El cliente de <c>/api/agente-ia/</c> (AI Agent), una instancia por dirección: preguntarle al modelo local (Qwen), pedir la voz de la respuesta y saber si el servicio de IA está disponible.
+    /// La app NO habla con el servicio de IA: habla con el nodo, que es su único cliente.
+    /// </summary>
+    public static AgenteIaApi AgenteIa
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_agenteIa is null || _baseAgenteIa != actual)
+            {
+                _agenteIa = new AgenteIaApi(HttpAgenteIa, actual);
+                _baseAgenteIa = actual;
+            }
+            return _agenteIa;
+        }
+    }
+
     private static ActualizacionApi? _actualizacion;
     private static Uri? _baseActualizacion;
 
@@ -381,6 +429,8 @@ public static class Sesion
         AparatoRegistrado.Cargar = () => Ajustes.Get<string?>("ops_dispositivo_id", null);
         AparatoRegistrado.Guardar = id => { if (id is null) Ajustes.Remove("ops_dispositivo_id"); else Ajustes.Set("ops_dispositivo_id", id); };
         RegistroLocal.Configurar("ops", AppInfo.Current.VersionString, () => AparatoRegistrado.Id);
+        // MOD-018 · Fase 5: la clave del equipo firma el reto del nodo al abrir sesión (en segundo plano: el login no espera ni se entera de si falla).
+        ClienteJson.SesionIniciada += () => { _ = Task.Run(async () => { try { await IdentidadEquipo.ConfirmarAsync(Dispositivo); } catch { /* nunca estorba al login */ } }); };
     }
 
     private static readonly object CandadoRegistro = new();
@@ -413,7 +463,8 @@ public static class Sesion
             if (equipo is not null)
             {
                 _registradoEn = base_;
-                RegistroLocal.Info(Canal.Dispositivo, "equipo.registrado", "Este equipo se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado });
+                RegistroLocal.Info(Canal.Dispositivo, "equipo.registrado", "Este equipo se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado, garantia = equipo.Garantia });
+                _ = Task.Run(async () => { try { await IdentidadEquipo.ConfirmarAsync(Dispositivo); } catch { /* mejor esfuerzo: la identidad nunca estorba */ } });
             }
         }
         catch (Exception ex) { RegistroLocal.Advertencia(Canal.Comunicacion, "equipo.registro_fallo", "No se pudo presentar el equipo ante el nodo", new { tipo = ex.GetType().Name }); }
@@ -500,7 +551,7 @@ public static class Sesion
     /// al detalle técnico; nulo en cualquier otro caso. <paramref name="profesor"/> es quien lleva la clase, si se sabe.
     /// </summary>
     public static string? MensajeDePermiso(ErrorAula? error, string? profesor = null) => error?.Codigo is "sin_permiso" or "no_es_el_titular"
-        ? $"Esta clase la lleva {(string.IsNullOrWhiteSpace(profesor) ? "otro profesor" : profesor)}. Sólo su profesor o la administración puede hacerlo."
+        ? $"Esta clase la lleva {(string.IsNullOrWhiteSpace(profesor) ? "otro docente" : profesor)}. Sólo su docente o la administración puede hacerlo."
         : null;
 
     /// <summary>Con sesión (MOD-001) el profesor es quien se identificó; sin ella, la identidad estable del equipo (Q-04).</summary>
@@ -521,7 +572,7 @@ public static class Sesion
         set { if (value is null) Ajustes.Remove(ClaveClaseAbierta); else Ajustes.Set(ClaveClaseAbierta, value); }
     }
 
-    public static readonly string[] Paleta = ["#E5262B", "#F3C701", "#01A4E1", "#019D60", "#A81D81", "#52525B"];
+    public static readonly string[] Paleta = ["#047857", "#C2410C", "#A81D81", "#0A72A6", "#0E7490", "#5B45D1"];
 
     /// <summary>El mismo libro abierto del hexágono «Asignaturas» del menú principal.</summary>
     public const string IconoLibro =

@@ -1,3 +1,4 @@
+using Avacom.Lms.Ui.Controls;
 using System.Text.Json;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
@@ -92,9 +93,9 @@ public partial class EstudioPage
             p.Margin = new Thickness(0, 0, 8, 8);
             estados.Add(p);
         }
-        Etiqueta(a.Cerrada ? "CERRADA" : "ABIERTA", a.Cerrada ? EstudioUi.PistaBarra : Ds.ExitoSuave, a.Cerrada ? Ds.TintaSuave : Color.FromArgb("#0B5D3B"));
-        Etiqueta(a.Plazo == "endurecido" ? "PLAZO ESTRICTO" : "PLAZO FLEXIBLE", Color.FromArgb("#F0F0F2"), Ds.TintaMedia);
-        Etiqueta(a.PaquetePermitido ? "SE PUEDE DESCARGAR" : "SÓLO EN LÍNEA", a.PaquetePermitido ? Ds.InfoSuave : Ds.AlertaSuave, a.PaquetePermitido ? Color.FromArgb("#02739E") : Color.FromArgb("#806600"));
+        Etiqueta(a.Cerrada ? "CERRADA" : "ABIERTA", a.Cerrada ? EstudioUi.PistaBarra : Ds.ExitoSuave, a.Cerrada ? Ds.TintaSuave : Color.FromArgb("#0B5E3E"));
+        Etiqueta(a.Plazo == "endurecido" ? "PLAZO ESTRICTO" : "PLAZO FLEXIBLE", Color.FromArgb("#E3E6EC"), Ds.TintaMedia);
+        Etiqueta(a.PaquetePermitido ? "SE PUEDE DESCARGAR" : "SÓLO EN LÍNEA", a.PaquetePermitido ? Ds.InfoSuave : Ds.AlertaSuave, a.PaquetePermitido ? Color.FromArgb("#075985") : Color.FromArgb("#9A3412"));
         texto.Add(estados);
         texto.Add(new Label
         {
@@ -106,9 +107,9 @@ public partial class EstudioPage
             texto.Add(new Label { Text = $"Consigna: {a.Consigna}", FontFamily = Ds.FuenteRegular, FontSize = 16, TextColor = Ds.TintaMedia, LineBreakMode = LineBreakMode.WordWrap, Margin = new Thickness(0, 4, 0, 0) });
 
         var totales = new HorizontalStackLayout { Spacing = 34, VerticalOptions = LayoutOptions.Center };
-        totales.Add(EstudioUi.Total(a.Completaron, "completaron", Color.FromArgb("#017A48")));
-        totales.Add(EstudioUi.Total(a.EnCurso, "en curso", Color.FromArgb("#02739E")));
-        totales.Add(EstudioUi.Total(a.Pendientes, "sin empezar", Color.FromArgb("#806600")));
+        totales.Add(EstudioUi.Total(a.Completaron, "completaron", Color.FromArgb("#0B5E3E")));
+        totales.Add(EstudioUi.Total(a.EnCurso, "en curso", Color.FromArgb("#075985")));
+        totales.Add(EstudioUi.Total(a.Pendientes, "sin empezar", Color.FromArgb("#9A3412")));
         totales.Add(EstudioUi.Total(a.FueraDePlazo, "fuera de plazo", EstudioUi.TintaPeligro));
 
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 30 };
@@ -168,7 +169,6 @@ public partial class EstudioPage
         descarga.Add(EstudioUi.Chip("Se puede descargar", a.PaquetePermitido, async () => await CambiarAsync(a, new CambiosAsignacion(PaquetePermitido: true), "Ahora se puede descargar."), "estudio-descarga-si"));
         descarga.Add(EstudioUi.Chip("Sólo en línea", !a.PaquetePermitido, async () => await CambiarAsync(a, new CambiosAsignacion(PaquetePermitido: false), "Ahora sólo se estudia en línea."), "estudio-descarga-no"));
         pila.Add(descarga);
-        pila.Add(Ds.Secundario("Sólo las tabletas asignadas a un alumno se llevan la lección; una tableta compartida nunca la descarga.", 14));
 
         pila.Add(Ds.Separador());
         var cerrar = EstudioUi.Accion("Cerrar la asignación", Ds.Rango.Destructive, async () => await CerrarAsync(a), 260, "estudio-cerrar");
@@ -210,7 +210,7 @@ public partial class EstudioPage
     private async Task CerrarAsync(AsignacionDocente a)
     {
         var quedan = a.Pendientes + a.EnCurso;
-        var seguro = await DisplayAlertAsync("¿Cerrar esta asignación?",
+        var seguro = await this.AlertaAsync("¿Cerrar esta asignación?",
             quedan > 0
                 ? $"{EstudioTexto.Plural(quedan, "alumno todavía no la termina", "alumnos todavía no la terminan")}. Al cerrarla ya no se acepta trabajo nuevo y desaparece de «Pendientes» en las tabletas. Lo ya hecho se conserva."
                 : "Todos la terminaron. Al cerrarla desaparece de «Pendientes» y lo hecho se conserva.",
@@ -359,7 +359,7 @@ public partial class EstudioPage
         var vencidaSinTerminar = f.Vencida && f.Estado != "completada";
         return new Border
         {
-            BackgroundColor = vencidaSinTerminar ? Color.FromArgb("#FFF8F8") : Color.FromArgb("#FAFAFB"),
+            BackgroundColor = vencidaSinTerminar ? Color.FromArgb("#F6F7F9") : Color.FromArgb("#F6F7F9"),
             Stroke = new SolidColorBrush(Ds.Filo),
             StrokeThickness = 1,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno },
@@ -384,8 +384,8 @@ public partial class EstudioPage
         var cuando = d.OcurridoEn is { } o ? EstudioTexto.Momento(o) : "sin hora";
         var llego = d.RecibidoEn is { } r ? EstudioTexto.Momento(r) : "sin hora";
         var texto = new VerticalStackLayout { Spacing = 3, VerticalOptions = LayoutOptions.Center };
-        texto.Add(new Label { Text = $"{nombre} {AccionDeEvento(d.Tipo)} y su tableta lo mandó tarde", FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Color.FromArgb("#5C0F45"), LineBreakMode = LineBreakMode.WordWrap });
-        texto.Add(new Label { Text = $"Lo hizo el {cuando} y llegó el {llego}, fuera de la gracia. ¿Lo aceptas?", FontFamily = Ds.FuenteRegular, FontSize = 14, TextColor = Color.FromArgb("#5C0F45"), LineBreakMode = LineBreakMode.WordWrap });
+        texto.Add(new Label { Text = $"{nombre} {AccionDeEvento(d.Tipo)} y su tableta lo mandó tarde", FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Color.FromArgb("#7D155F"), LineBreakMode = LineBreakMode.WordWrap });
+        texto.Add(new Label { Text = $"Lo hizo el {cuando} y llegó el {llego}, fuera de la gracia. ¿Lo aceptas?", FontFamily = Ds.FuenteRegular, FontSize = 14, TextColor = Color.FromArgb("#7D155F"), LineBreakMode = LineBreakMode.WordWrap });
 
         var aceptar = EstudioUi.Accion("Aceptar", Ds.Rango.Secondary, async () => await DecidirAsync(a, f, d, "aceptar"), 150, $"estudio-aceptar-{f.AlumnoId}-{d.Secuencia}");
         var descartar = EstudioUi.Accion("Descartar", Ds.Rango.Quiet, async () => await DecidirAsync(a, f, d, "descartar"), 150, $"estudio-descartar-{f.AlumnoId}-{d.Secuencia}");

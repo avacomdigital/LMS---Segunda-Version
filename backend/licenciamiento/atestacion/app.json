@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "nota": "La app que la atestacion de Android debe reconocer como de AVACOM: el paquete y el SHA-256 del certificado con que se firma el APK (publicos). Hoy el APK se firma con la llave de DEPURACION de Android (Build-StudentApk.ps1, por omision): su huella es la de abajo y la identidad de la app vale lo que vale esa llave. Si se pasa a una llave de lanzamiento propia, anadir su huella aqui (y retirar esta) ANTES de distribuir el APK nuevo. Variable AVACOM_LICENCIA_APP_FIRMAS: huellas adicionales separadas por comas (otras maquinas de desarrollo).",
+  "paquetes": ["com.avacom.lms.student"],
+  "firmas_sha256": [
+    {"nombre": "Android Debug (llave de depuracion del equipo de compilacion)", "sha256": "16efdeaffb023e8b5b6704d9412911652bc7e4f405fcc3faf23eb92511a65ce0"}
+  ]
+}

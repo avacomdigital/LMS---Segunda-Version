@@ -84,7 +84,7 @@ Con sesión de usuario (`$TOKEN`), el permiso lo da el rol; sin sesión, las rut
   * **La bitácora de auditoría no se puede borrar** (MOD-019): estas pruebas dejan asientos `evaluacion.*` permanentes y es lo esperado.
   * Las asignaciones de prueba se **cierran** al terminar (no hay borrado); a las 24 h pasan solas a `archivada`.
   * Device Owner en Android **sólo se deshace con un restablecimiento de fábrica**: usar una tableta de pruebas.
-  * Nunca definir `AVACOM_EXAM_NO_LOCKDOWN` en un equipo de producción.
+  * Nunca definir `AVACOM_EXAM_NO_LOCKDOWN` en un equipo de producción. (Desde MOD-018 · Fase 5 un instalador de entrega la ignora salvo que junto al programa exista el archivo `AVACOM-DESARROLLO`; en Debug sigue valiendo.)
 * **Tiempos**: salvo que el caso diga otra cosa, los alumnos usan el tiempo del examen. Los casos de tiempo/plazo crean su propia asignación con tiempo fijo corto para no esperar.
 
 ---

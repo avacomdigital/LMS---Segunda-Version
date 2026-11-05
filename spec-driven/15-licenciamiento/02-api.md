@@ -167,3 +167,7 @@ El profesor, el alumno y Reportes **no tienen ninguno**: ven «no disponible por
 ## 8 · Lo que añade a la lista de P-17
 
 `GET copia/` (CAP-111: la ficha del Maestro pide la copia y P-17 no le daba ruta), `POST reloj/confirmar/` (P-06: «esperar confirmación» exige un modo de confirmar), el permiso `license.read`, el campo `licencia` de `/health/` y los eventos y acciones marcados como extensión (D-13).
+
+## 9 · Identidad de dispositivo (Fase 5)
+
+Dos rutas **públicas** (como el latido: el equipo se identifica antes de tener sesión): `POST identidad/reto/` (un reto de 32 bytes, de un solo uso, vence a los 5 minutos) y `POST identidad/enrolar/` (la clave pública, la firma del reto y, en Android, la cadena de atestación). Además, `POST /api/dispositivos/latido/` y `POST /api/dispositivos/` aceptan un campo opcional `identidad` que sólo usa un equipo **nuevo**, y los equipos de `/api/dispositivos/` traen `garantia`, `clave_huella` y `garantia_detalle`. Errores nuevos: `400 reto_invalido` · `400 identidad_invalida` · `409 clave_distinta` · `409 clave_en_uso` · `402 identidad_requerida` (equipo nuevo sin la garantía mínima de la licencia). Los cuerpos reales capturados están en [08-identidad-de-dispositivo.md](08-identidad-de-dispositivo.md), anexo.
