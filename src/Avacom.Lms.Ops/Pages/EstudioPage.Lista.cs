@@ -16,7 +16,7 @@ public partial class EstudioPage
         Entrar(Vista.Lista);
         var nueva = EstudioUi.Accion("Asignar una lección", Ds.Rango.Primary, async () => await MostrarNuevaAsync(), 250, "estudio-nueva");
         PonerCabecera("MODO DE ESTUDIO", "Lecciones asignadas para estudiar",
-            "Asigna una lección a un grupo o a algunos alumnos y mira en vivo quién la completó. Los alumnos entran a «Modo de estudio» en su tableta, eligen su nombre (sin código) y estudian.",
+            "Asigna una lección y mira quién la completó.",
             nueva.Vista, AccionActualizar().Vista, AccionMenu().Vista);
         Vaciar(true);
         ContenidoHost.Add(Cargando("Buscando tus asignaciones…"));
@@ -38,7 +38,7 @@ public partial class EstudioPage
             {
                 Vaciar(false);
                 ContenidoHost.Add(Filtros());
-                ContenidoHost.Add(EstudioUi.Aviso(error?.Codigo == "no_instalado" ? "El nodo aún no está instalado" : "No se pudieron leer las asignaciones",
+                ContenidoHost.Add(EstudioUi.Aviso(error?.Codigo == "no_instalado" ? "El aula todavía no está configurada" : "No se pudieron leer las asignaciones",
                     EstudioTexto.Error(error, api.UltimoMotivo), Ds.PeligroSuave, EstudioUi.TintaPeligro));
             });
             return;
@@ -86,7 +86,7 @@ public partial class EstudioPage
         pila.Add(Ds.Titulo(_filtroLista == "cerrada" ? "No hay asignaciones cerradas" : "Todavía no has asignado ninguna lección", 22));
         pila.Add(Ds.Secundario(_filtroLista == "cerrada"
             ? "Cuando cierres una asignación, quedará aquí con lo que cada alumno alcanzó."
-            : "Elige un grupo (o unos alumnos), una lección del curso y, si quieres, una fecha límite. Los alumnos la verán en «Modo de estudio»: eligen su nombre y no necesitan ningún código.", 16));
+            : "Elige un grupo, una lección y, si quieres, una fecha límite.", 16));
         if (_filtroLista != "cerrada")
         {
             var primera = EstudioUi.Accion("Asignar mi primera lección", Ds.Rango.Primary, async () => await MostrarNuevaAsync(), 300, "estudio-primera");
@@ -106,7 +106,7 @@ public partial class EstudioPage
 
         var cabeza = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 14 };
         cabeza.Add(new Label { Text = a.Titulo, FontFamily = Ds.FuenteMedia, FontSize = 20, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap }, 0, 0);
-        cabeza.Add(Ds.Pildora(a.Cerrada ? "CERRADA" : "ABIERTA", a.Cerrada ? EstudioUi.PistaBarra : Ds.ExitoSuave, a.Cerrada ? Ds.TintaSuave : Color.FromArgb("#0B5D3B"), 12), 1, 0);
+        cabeza.Add(Ds.Pildora(a.Cerrada ? "CERRADA" : "ABIERTA", a.Cerrada ? EstudioUi.PistaBarra : Ds.ExitoSuave, a.Cerrada ? Ds.TintaSuave : Color.FromArgb("#0B5E3E"), 12), 1, 0);
         izquierda.Add(cabeza);
 
         var meta = string.Join(" · ", new[] { a.Asignatura, a.Unidad, a.GrupoRotulo ?? (a.Alcance == "seleccion" ? "Alumnos elegidos" : null) }
@@ -139,16 +139,16 @@ public partial class EstudioPage
             pildora.Margin = new Thickness(0, 0, 8, 8);
             cuentas.Add(pildora);
         }
-        Cuenta(a.Completaron, EstudioTexto.Plural(a.Completaron, "completó", "completaron"), Ds.ExitoSuave, Color.FromArgb("#017A48"));
-        Cuenta(a.EnCurso, $"{a.EnCurso} en curso", Color.FromArgb("#E5F5FB"), Color.FromArgb("#02739E"));
-        Cuenta(a.Pendientes, EstudioTexto.Plural(a.Pendientes, "sin empezar", "sin empezar"), Color.FromArgb("#FFF7D6"), Color.FromArgb("#806600"));
+        Cuenta(a.Completaron, EstudioTexto.Plural(a.Completaron, "completó", "completaron"), Ds.ExitoSuave, Color.FromArgb("#0B5E3E"));
+        Cuenta(a.EnCurso, $"{a.EnCurso} en curso", Color.FromArgb("#E3F5FC"), Color.FromArgb("#075985"));
+        Cuenta(a.Pendientes, EstudioTexto.Plural(a.Pendientes, "sin empezar", "sin empezar"), Color.FromArgb("#FFF6CF"), Color.FromArgb("#9A3412"));
         Cuenta(a.FueraDePlazo, $"{a.FueraDePlazo} fuera de plazo", Ds.PeligroSuave, EstudioUi.TintaPeligro);
-        Cuenta(a.PendientesDecision, EstudioTexto.Plural(a.PendientesDecision, "envío por decidir", "envíos por decidir"), Ds.VioletaSuave, Color.FromArgb("#7A1560"));
+        Cuenta(a.PendientesDecision, EstudioTexto.Plural(a.PendientesDecision, "envío por decidir", "envíos por decidir"), Ds.VioletaSuave, Color.FromArgb("#7D155F"));
         if (cuentas.Children.Count > 0) izquierda.Add(cuentas);
 
         var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 18 };
         fila.Add(izquierda, 0, 0);
-        fila.Add(new Label { Text = "Ver quién completó  ›", FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.TintaMedia, VerticalOptions = LayoutOptions.Center }, 1, 0);
+        fila.Add(Ds.ConFlecha(new Label { Text = "Ver quién completó", FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.TintaMedia, VerticalOptions = LayoutOptions.Center }), 1, 0);
 
         var id = a.Id;
         return EstudioUi.TarjetaElegible(fila, false, async () => await MostrarDetalleAsync(id, null),

@@ -96,7 +96,7 @@ internal sealed class PanelDeRetroalimentacion : ContentView
                 _estado.Add(ExamenUi.Aviso("Guardando…", null, Tono.Info));
                 break;
             case Fase.Pendiente:
-                _estado.Add(ExamenUi.Aviso("Pendiente de confirmación", _texto ?? "No se pudo llegar al nodo: nada se guardó todavía. Reintentar no lo duplica.", Tono.Ambar));
+                _estado.Add(ExamenUi.Aviso("Pendiente de confirmación", _texto ?? "No se pudo conectar con el aula: nada se guardó todavía. Reintentar no lo duplica.", Tono.Ambar));
                 break;
             case Fase.Rechazado:
                 _estado.Add(ExamenUi.Aviso("No se guardó la retroalimentación", _texto, Tono.Ambar));

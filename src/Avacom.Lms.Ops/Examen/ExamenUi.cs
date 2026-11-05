@@ -12,14 +12,14 @@ internal enum Tono { Neutro, Info, Ambar, AmbarFuerte, Exito, Violeta, Gris }
 /// <summary>Piezas visuales pequeñas que comparten las cuatro pantallas del examen. Sólo Border, Label y Button del kit: nada de Path ni Ellipse.</summary>
 internal static class ExamenUi
 {
-    public static readonly Color TintaAmbar = Color.FromArgb("#806600");
-    public static readonly Color TintaAmbarFuerte = Color.FromArgb("#5F4B00");
-    public static readonly Color FondoAmbarFuerte = Color.FromArgb("#FDEFB0");
-    public static readonly Color TintaInfo = Color.FromArgb("#02739E");
-    public static readonly Color TintaExito = Color.FromArgb("#0B5D3B");
-    public static readonly Color TintaVioleta = Color.FromArgb("#7A1560");
-    public static readonly Color FondoNeutro = Color.FromArgb("#F0F0F2");
-    public static readonly Color FondoGris = Color.FromArgb("#E7E7EA");
+    public static readonly Color TintaAmbar = Color.FromArgb("#9A3412");
+    public static readonly Color TintaAmbarFuerte = Color.FromArgb("#9A3412");
+    public static readonly Color FondoAmbarFuerte = Color.FromArgb("#FDD0AE");
+    public static readonly Color TintaInfo = Color.FromArgb("#075985");
+    public static readonly Color TintaExito = Color.FromArgb("#0B5E3E");
+    public static readonly Color TintaVioleta = Color.FromArgb("#7D155F");
+    public static readonly Color FondoNeutro = Color.FromArgb("#E3E6EC");
+    public static readonly Color FondoGris = Color.FromArgb("#E3E6EC");
 
     public static (Color Fondo, Color Tinta) Colores(Tono tono) => tono switch
     {
@@ -59,9 +59,9 @@ internal static class ExamenUi
     public static View Total(int valor, string rotulo, Color color)
     {
         var pila = new VerticalStackLayout { Spacing = 0, HorizontalOptions = LayoutOptions.Start, MinimumWidthRequest = 84 };
-        pila.Add(new Label { Text = valor.ToString(System.Globalization.CultureInfo.InvariantCulture), FontFamily = Ds.FuenteMedia, FontSize = 26, TextColor = color });
-        pila.Add(Ds.Secundario(rotulo, 12));
-        pila.Opacity = valor == 0 ? 0.55 : 1;
+        // En cero, el número va en tinta suave; el rótulo siempre legible (antes toda la columna se atenuaba y no se leía).
+        pila.Add(new Label { Text = valor.ToString(System.Globalization.CultureInfo.InvariantCulture), FontFamily = Ds.FuenteMedia, FontSize = 26, TextColor = valor == 0 ? Ds.TintaSuave : color });
+        pila.Add(Ds.Secundario(rotulo, 13));
         return pila;
     }
 

@@ -36,7 +36,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
     {
         RutasDeReportes.ElegirGrupo => ("Elegir un grupo", "Los grupos que puedes ver. Elige uno para ver quién necesita atención."),
         RutasDeReportes.ElegirAlumno => ("Elegir un estudiante", "Elige el grupo y, si hace falta, la inicial de su nombre."),
-        RutasDeReportes.ElegirBoletin => ("Boletines académicos", "Elige el grupo: se arma un boletín por estudiante, con sus puntos, su calificación y las recomendaciones del profesor."),
+        RutasDeReportes.ElegirBoletin => ("Boletines académicos", "Elige el grupo: se arma un boletín por estudiante, con sus puntos, su calificación y las recomendaciones del docente."),
         _ => ("Elegir una clase", "Las clases cerradas de tus grupos, la más reciente primero."),
     };
 
@@ -204,7 +204,7 @@ public sealed class ReportesElegirPage : PaginaDeReporte
             texto.Add(Ds.Secundario(ListasDeReportes.ResumenDeGrupo(g), 15));
             var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 18, MinimumHeightRequest = 52 };
             fila.Add(texto, 0, 0);
-            fila.Add(new Label { Text = boletines ? "Boletines  ›" : "Ver  ›", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Rojo, VerticalOptions = LayoutOptions.Center }, 1, 0);
+            fila.Add(Ds.ConFlecha(new Label { Text = boletines ? "Boletines" : "Ver", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Azul700, VerticalOptions = LayoutOptions.Center }), 1, 0);
             var id = g.Id;
             var ruta = boletines ? RutasDeReportes.DeBoletines(id) : RutasDeReportes.DeGrupo(id);
             ContenidoHost.Add(ReportesUi.Tocable(fila, ReportesUi.Seguro(nameof(ReportesElegirPage), boletines ? "AbrirBoletines" : "AbrirGrupo", () => Shell.Current.GoToAsync(ruta)),

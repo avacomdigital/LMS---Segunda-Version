@@ -60,14 +60,14 @@ public partial class ClaseSiguiendoPage : ContentPage
         Visor.Absoluta = ruta => Sesion.Aula.Absoluta(ruta);
         Visor.PuedeNavegar = false;
         Visor.UnidadPedida += (_, unidad) => { if (_objeto is not null) Visor.Mostrar(_objeto, unidad); };
-        Visor.MostrarVacio("Esperando a tu profesor", "Cuando proyecte algo, aparecerá aquí.");
+        Visor.MostrarVacio("Esperando a tu docente", "Cuando proyecte algo, aparecerá aquí.");
         _ayudaBtn = Ds.Boton("✋ Pedir ayuda", Ds.Rango.Secondary, OnAyuda, 52);
         _ayudaBtn.FontSize = 15;
-        SemanticProperties.SetDescription(_ayudaBtn, "Levantar la mano para pedir ayuda a tu profesor");
+        SemanticProperties.SetDescription(_ayudaBtn, "Levantar la mano para pedir ayuda a tu docente");
         AyudaSlot.Content = Ds.Capsula(_ayudaBtn);
         Responder.EntregaSolicitada += () => MainThread.BeginInvokeOnMainThread(async () => await TrasEntregaAsync());
         PausaHost.Add(Ds.Titulo("La clase está en pausa", 24));
-        PausaHost.Add(Ds.Cuerpo("Tu trabajo está guardado. Cuando tu profesor la reanude, seguimos solos.", 18));
+        PausaHost.Add(Ds.Cuerpo("Tu trabajo está guardado. Cuando tu docente la reanude, seguimos solos.", 18));
     }
 
     protected override async void OnAppearing()
@@ -221,7 +221,7 @@ public partial class ClaseSiguiendoPage : ContentPage
             _temporizador?.Stop();
             await DetenerCanalAsync();
             Sesion.OlvidarClase();
-            await DisplayAlertAsync("Saliste de la clase", "Habla con tu profesor para volver a entrar.", "Entendido");
+            await this.AlertaAsync("Saliste de la clase", "Habla con tu docente para volver a entrar.", "Entendido");
             await Shell.Current.GoToAsync("..");
             return;
         }
@@ -231,7 +231,7 @@ public partial class ClaseSiguiendoPage : ContentPage
         ProyectandoBanda.IsVisible = estado.Proyectando;
         PintarAyuda(estado.AyudaPedida);
         if (anterior?.AyudaPedida == true && !estado.AyudaPedida)
-            MostrarBanda("Tu profesor vio tu mano", "Ya va hacia ti.", Ds.InfoSuave, Ds.Tinta);
+            MostrarBanda("Tu docente vio tu mano", "Ya va hacia ti.", Ds.InfoSuave, Ds.Tinta);
 
         if (estado.PantallasBloqueadas) Bloqueo.Mostrar(); else Bloqueo.Ocultar();
         // Con seguimiento activo la tableta no navega sola; pero lo que el profesor le envió (un recurso
@@ -269,7 +269,7 @@ public partial class ClaseSiguiendoPage : ContentPage
                 {
                     var sigue = e.MiIntento is { Estado: "en_curso" or "en_curso_fuera_de_plazo" or "pausado_desconexion" or "restaurando" };
                     if (e.MiIntento is { Estado: "entregado" or "en_revision_docente" or "calificado" or "anulado" }) continue;
-                    tarjetas.Add((e.Titulo, sigue ? "Tienes un examen en curso" : "Tu profesor abrió un examen para la clase", sigue ? "Continuar" : "Ver el examen",
+                    tarjetas.Add((e.Titulo, sigue ? "Tienes un examen en curso" : "Tu docente abrió un examen para la clase", sigue ? "Continuar" : "Ver el examen",
                                   $"examen-antesala?asignacion={Uri.EscapeDataString(e.Id)}&reanudar={(sigue ? 1 : 0)}"));
                 }
             }
@@ -336,7 +336,7 @@ public partial class ClaseSiguiendoPage : ContentPage
         var selector = estado.Selector;
         if (selector is null || string.IsNullOrWhiteSpace(selector.ObjetoRef))
         {
-            if (_selectorPintado is not null) { Visor.MostrarVacio("Esperando a tu profesor", "Cuando proyecte algo, aparecerá aquí."); _selectorPintado = null; _objeto = null; }
+            if (_selectorPintado is not null) { Visor.MostrarVacio("Esperando a tu docente", "Cuando proyecte algo, aparecerá aquí."); _selectorPintado = null; _objeto = null; }
             return;
         }
         var llave = $"{selector.ObjetoRef}|{selector.UnidadRef}";
@@ -360,9 +360,9 @@ public partial class ClaseSiguiendoPage : ContentPage
     private void PintarAyuda(bool pedida)
     {
         // La cabecera es clara: en reposo el botón es blanco con tinta (el estilo de «interruptor» del kit es para la barra oscura del profesor).
-        if (pedida) Ds.PintarRelieve(_ayudaBtn, Ds.Info, Colors.White);
+        if (pedida) Ds.PintarRelieve(_ayudaBtn, Ds.Atencion, Colors.White);   // DS: «pide ayuda» es atención (naranja)
         else Ds.PintarRelieve(_ayudaBtn, Colors.White, Ds.Tinta);
-        _ayudaBtn.Text = pedida ? "✋ Ayuda pedida · bajar la mano" : "✋ Pedir ayuda";
+        _ayudaBtn.Text = pedida ? "Ayuda pedida · bajar la mano" : "Pedir ayuda";
     }
 
     private async void OnAyuda(object? sender, EventArgs e)
@@ -371,7 +371,7 @@ public partial class ClaseSiguiendoPage : ContentPage
         var activa = !_estado.AyudaPedida;
         if (!await Sesion.Aula.AyudaAsync(SesionId, ParticipanteId, activa))
         {
-            MostrarBanda("No pudimos avisar a tu profesor ahora", "Levanta la mano como siempre; lo intentamos de nuevo en un momento.", Ds.AlertaSuave, Ds.Tinta);
+            MostrarBanda("No pudimos avisar a tu docente ahora", "Levanta la mano como siempre; lo intentamos de nuevo en un momento.", Ds.AlertaSuave, Ds.Tinta);
             return;
         }
         _estado = _estado with { AyudaPedida = activa };
@@ -422,7 +422,7 @@ public partial class ClaseSiguiendoPage : ContentPage
             textos.Add(Ds.Cuerpo(d.Rotulo ?? (esActividad ? "Actividad" : "Recurso"), 17));
             textos.Add(Ds.Secundario(DetalleDe(d, esActividad), 13));
             grid.Add(textos, 1, 0);
-            var abrir = Ds.Boton(_mostrandoPendiente ? "Volver a la clase" : EtiquetaDeAbrir(d, esActividad), _mostrandoPendiente ? Ds.Rango.Quiet : Ds.Rango.Primary, async (_, _) => await AbrirPendienteAsync(d), 56);
+            var abrir = Ds.Boton(_mostrandoPendiente ? "Volver a la clase" : EtiquetaDeAbrir(d, esActividad), _mostrandoPendiente ? Ds.Rango.Secondary : Ds.Rango.Primary, async (_, _) => await AbrirPendienteAsync(d), 56);
             abrir.FontSize = 16;
             grid.Add(abrir, 2, 0);
             PendientesHost.Add(Ds.Tarjeta(grid, Ds.RadioInterno, new Thickness(14, 12), esActividad ? Ds.ExitoSuave : Ds.InfoSuave));
@@ -431,14 +431,14 @@ public partial class ClaseSiguiendoPage : ContentPage
 
     private static string DetalleDe(DistribucionAula d, bool esActividad)
     {
-        if (!esActividad) return d.Entrega == "entregado" ? "Recibido · ábrelo cuando quieras" : "Tu profesor te lo acaba de enviar";
+        if (!esActividad) return d.Entrega == "entregado" ? "Recibido · ábrelo cuando quieras" : "Tu docente te lo acaba de enviar";
         var reglas = d.ReglasTexto;
         var base_ = d.Intento switch
         {
             { Estado: "entregado" } => "Ya la entregaste",
-            { Estado: "pendiente_decision" } => "Llegó fuera de tiempo · tu profesor decidirá si la recibe",
+            { Estado: "pendiente_decision" } => "Llegó fuera de tiempo · tu docente decidirá si la recibe",
             { Estado: "en_curso", Respondidas: > 0 } i => $"Llevas {i.Respondidas} respuesta{(i.Respondidas == 1 ? "" : "s")} guardada{(i.Respondidas == 1 ? "" : "s")} · continúa cuando quieras",
-            _ => d.Entrega == "entregado" ? "Recibida · puedes empezar cuando quieras" : "Tu profesor te la acaba de enviar",
+            _ => d.Entrega == "entregado" ? "Recibida · puedes empezar cuando quieras" : "Tu docente te la acaba de enviar",
         };
         return string.IsNullOrEmpty(reglas) ? base_ : $"{base_} · {reglas}";
     }
@@ -480,7 +480,7 @@ public partial class ClaseSiguiendoPage : ContentPage
         if (string.IsNullOrWhiteSpace(d.ObjetoRef))
         {
             // Un lanzamiento sólo de medio (sin objeto del curso) lo abre el profesor en la pantalla del aula.
-            MostrarBanda("Tu profesor lo abre en la pantalla del aula", "Míralo allí; tu tableta sigue en la clase.", Ds.InfoSuave, Ds.Tinta);
+            MostrarBanda("Tu docente lo abre en la pantalla del aula", "Míralo allí; tu tableta sigue en la clase.", Ds.InfoSuave, Ds.Tinta);
             return;
         }
         var aula = Sesion.Aula;
@@ -602,18 +602,19 @@ public partial class ClaseSiguiendoPage : ContentPage
 
     private void PintarAvisos(EstadoTableta estado)
     {
-        // Lo que se envió antes de abrir esta pantalla no se repite: se cuenta desde la hora del nodo (BR-062), nunca la del aparato.
+        // Lo que se envió antes de abrir esta pantalla no se repite: se cuenta desde la hora del aula (BR-062), nunca la del aparato.
         if (_ultimoAvisoVisto == 0) { _ultimoAvisoVisto = estado.ServidorEn; return; }
         foreach (var aviso in (estado.Avisos ?? []).Where(a => a.EnviadoEn > _ultimoAvisoVisto).OrderBy(a => a.EnviadoEn))
         {
             _ultimoAvisoVisto = Math.Max(_ultimoAvisoVisto, aviso.EnviadoEn);
-            MostrarBanda(aviso.ParticipanteId is null ? "Aviso de tu profesor" : "Aviso para ti", aviso.Texto, Ds.InfoSuave, Ds.Tinta);
+            MostrarBanda(aviso.ParticipanteId is null ? "Aviso de tu docente" : "Aviso para ti", aviso.Texto, Ds.InfoSuave, Ds.Tinta);
         }
     }
 
     private void MostrarBanda(string titulo, string? detalle, Color fondo, Color tinta)
     {
         var banda = Ds.Alerta_(titulo, detalle, fondo, tinta);
+        banda.Margin = new Thickness(0, 0, 0, 8);   // el hueco con la actividad lo pone el aviso, no la rejilla
         AvisosHost.Add(banda);
         Dispatcher.StartTimer(TimeSpan.FromSeconds(8), () => { AvisosHost.Remove(banda); return false; });
     }
@@ -642,14 +643,14 @@ public partial class ClaseSiguiendoPage : ContentPage
         CierreHost.Add(Ds.Titulo("La clase terminó", 26));
         CierreHost.Add(Ds.Cuerpo(estado.Sesion.OrigenCierre == "inactividad"
             ? "La clase se cerró sola porque llevaba mucho tiempo sin actividad. Tu trabajo quedó guardado."
-            : "Tu profesor cerró la clase. Tu trabajo quedó guardado.", 18));
+            : "Tu docente cerró la clase. Tu trabajo quedó guardado.", 18));
         if (pendientes.Count > 0)
         {
             CierreHost.Add(Ds.Cuerpo("Te falta entregar", 17, Ds.Tinta));
             foreach (var p in pendientes) CierreHost.Add(Ds.Secundario($"•  {p.Rotulo ?? "Actividad"}", 16));
             CierreHost.Add(Ds.Secundario(Sesion.Cola.CantidadPendiente() > 0
                 ? "Lo que ya respondiste se enviará solo en cuanto tu tableta esté conectada."
-                : "Si quieres entregarla, habla con tu profesor.", 15));
+                : "Si quieres entregarla, habla con tu docente.", 15));
         }
         if (estudio.Count > 0)
         {
@@ -665,7 +666,7 @@ public partial class ClaseSiguiendoPage : ContentPage
 
     private async void OnSalir(object? sender, EventArgs e)
     {
-        if (!await DisplayAlertAsync("¿Salir de la clase?", "Tu trabajo queda guardado. Puedes volver con el mismo código.", "Salir", "Seguir en clase")) return;
+        if (!await this.AlertaAsync("¿Salir de la clase?", "Tu trabajo queda guardado. Puedes volver con el mismo código.", "Salir", "Seguir en clase")) return;
         _saliendo = true;
         _temporizador?.Stop();
         await Sesion.Aula.PresenciaAsync(SesionId, ParticipanteId, "salio", Sesion.Dispositivo);

@@ -551,7 +551,7 @@ public static class Sesion
     /// al detalle técnico; nulo en cualquier otro caso. <paramref name="profesor"/> es quien lleva la clase, si se sabe.
     /// </summary>
     public static string? MensajeDePermiso(ErrorAula? error, string? profesor = null) => error?.Codigo is "sin_permiso" or "no_es_el_titular"
-        ? $"Esta clase la lleva {(string.IsNullOrWhiteSpace(profesor) ? "otro profesor" : profesor)}. Sólo su profesor o la administración puede hacerlo."
+        ? $"Esta clase la lleva {(string.IsNullOrWhiteSpace(profesor) ? "otro docente" : profesor)}. Sólo su docente o la administración puede hacerlo."
         : null;
 
     /// <summary>Con sesión (MOD-001) el profesor es quien se identificó; sin ella, la identidad estable del equipo (Q-04).</summary>
@@ -572,7 +572,7 @@ public static class Sesion
         set { if (value is null) Ajustes.Remove(ClaveClaseAbierta); else Ajustes.Set(ClaveClaseAbierta, value); }
     }
 
-    public static readonly string[] Paleta = ["#E5262B", "#F3C701", "#01A4E1", "#019D60", "#A81D81", "#52525B"];
+    public static readonly string[] Paleta = ["#047857", "#C2410C", "#A81D81", "#0A72A6", "#0E7490", "#5B45D1"];
 
     /// <summary>El mismo libro abierto del hexágono «Asignaturas» del menú principal.</summary>
     public const string IconoLibro =

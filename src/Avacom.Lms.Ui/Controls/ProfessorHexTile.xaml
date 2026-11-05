@@ -47,22 +47,43 @@
             HorizontalOptions="Center"
             Spacing="9"
             VerticalOptions="Center">
-            <Path
-                x:Name="IconPath"
-                Aspect="Uniform"
-                Fill="{Binding AccentColor, Source={x:Reference Root}}"
-                HeightRequest="32"
-                WidthRequest="32" />
+            <!-- Icono: el sólido del catálogo del DS (IconSource) o, si no se da, el trazado de siempre (IconGeometry). En el
+                 hexágono lleno el icono va sobre un círculo blanco, como el principal del panal. -->
+            <Grid HorizontalOptions="Center">
+                <Border
+                    x:Name="IconoCirculo"
+                    BackgroundColor="White"
+                    HeightRequest="60"
+                    HorizontalOptions="Center"
+                    IsVisible="False"
+                    StrokeShape="RoundRectangle 30"
+                    StrokeThickness="0"
+                    VerticalOptions="Center"
+                    WidthRequest="60" />
+                <Image
+                    x:Name="IconoImagen"
+                    Aspect="AspectFit"
+                    HeightRequest="48"
+                    HorizontalOptions="Center"
+                    IsVisible="False"
+                    VerticalOptions="Center"
+                    WidthRequest="48" />
+                <Path
+                    x:Name="IconPath"
+                    Aspect="Uniform"
+                    Fill="{Binding AccentColor, Source={x:Reference Root}}"
+                    HeightRequest="40"
+                    WidthRequest="40" />
+            </Grid>
             <Label
                 x:Name="Etiqueta"
-                FontAttributes="Bold"
-                FontFamily="InterMedium"
-                FontSize="13"
+                FontFamily="LexendMedium"
+                FontSize="15"
                 HorizontalTextAlignment="Center"
                 LineBreakMode="WordWrap"
                 MaximumWidthRequest="118"
                 Text="{Binding Text, Source={x:Reference Root}}"
-                TextColor="#3F3F46" />
+                TextColor="#1F2433" />
         </VerticalStackLayout>
         <Grid.GestureRecognizers>
             <TapGestureRecognizer Tapped="OnTapped" />

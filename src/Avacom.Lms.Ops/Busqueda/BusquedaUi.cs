@@ -15,27 +15,34 @@ internal static class BusquedaUi
     /// <summary>El color y el glifo de cada tipo: el mismo de su módulo (Evaluaciones índigo, Modo de estudio verde, Clase de hoy magenta…).</summary>
     public static (Color Fondo, string Glifo) Marca(string? tipo) => tipo switch
     {
-        TiposDeBusqueda.Curso => (Color.FromArgb("#E5282C"), "▥"),
+        TiposDeBusqueda.Curso => (Color.FromArgb("#A81D81"), "▥"),
         TiposDeBusqueda.Leccion => (Ds.CatLectura, "▤"),
         TiposDeBusqueda.Recurso => (Ds.CatVideo, "▶"),
-        TiposDeBusqueda.Evaluacion => (Color.FromArgb("#4F46E5"), "✓"),
+        TiposDeBusqueda.Evaluacion => (Color.FromArgb("#5B45D1"), "✓"),
         TiposDeBusqueda.Estudio => (Ds.CatQuiz, "✎"),
         TiposDeBusqueda.Clase => (Ds.CatClaseEnVivo, "◉"),
         _ => (Ds.TintaSuave, "•"),
     };
 
-    /// <summary>El icono de un resultado: un cuadrado redondeado con el color de su tipo y su glifo.</summary>
+    /// <summary>El icono de un resultado: el icono sólido del DS de su tipo sobre el tono suave de su color.</summary>
     public static Border Icono(string? tipo, double lado = 52)
     {
-        var (fondo, glifo) = Marca(tipo);
+        var (fondo, _) = Marca(tipo);
+        var archivo = tipo switch
+        {
+            TiposDeBusqueda.Curso => "ico_libros.png",
+            TiposDeBusqueda.Leccion => "ico_reporte.png",
+            TiposDeBusqueda.Recurso => "ico_play.png",
+            TiposDeBusqueda.Evaluacion => "ico_examen.png",
+            TiposDeBusqueda.Estudio => "ico_estudio.png",
+            TiposDeBusqueda.Clase => "ico_clase.png",
+            _ => "ico_buscar.png",
+        };
         return new Border
         {
-            BackgroundColor = fondo, StrokeThickness = 0, WidthRequest = lado, HeightRequest = lado, VerticalOptions = LayoutOptions.Start,
+            BackgroundColor = Ds.Suave(fondo), StrokeThickness = 0, WidthRequest = lado, HeightRequest = lado, VerticalOptions = LayoutOptions.Start,
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioControl },
-            Content = new Label
-            {
-                Text = glifo, FontSize = lado * 0.46, TextColor = Ds.TintaSobre(fondo), HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center,
-            },
+            Content = Ds.IconoDs(archivo, lado * 0.78),
         };
     }
 

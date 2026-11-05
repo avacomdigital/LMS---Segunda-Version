@@ -37,7 +37,7 @@ public sealed class MensajesDeAccesoTests
     public void Pin_maestro_vencido_y_desde_una_tableta_de_alumno()
     {
         Assert.Equal("El PIN maestro venció. Pídele a administración que lo cambie y vuelve a intentarlo.", MensajesDeAcceso.Texto(Error(403, "pin_maestro_vencido")));
-        Assert.Equal("Esto se hace desde el equipo del profesor.", MensajesDeAcceso.Texto(Error(403, "dispositivo_no_autorizado")));
+        Assert.Equal("Esto se hace desde el equipo del docente.", MensajesDeAcceso.Texto(Error(403, "dispositivo_no_autorizado")));
         Assert.Contains("no está registrada", MensajesDeAcceso.Texto(Error(403, "dispositivo_no_autorizado"), Audiencia.Alumno));
     }
 
@@ -68,9 +68,9 @@ public sealed class MensajesDeAccesoTests
     public void Registro_cerrado_y_visitante_apagado()
     {
         Assert.Contains("está apagado", MensajesDeAcceso.Texto(Error(403, "registro_cerrado"), Audiencia.Alumno));
-        Assert.Contains("registro de profesores está cerrado", MensajesDeAcceso.Texto(Error(403, "registro_cerrado")));
+        Assert.Contains("registro de docentes está cerrado", MensajesDeAcceso.Texto(Error(403, "registro_cerrado")));
         Assert.Contains("creó varios usuarios", MensajesDeAcceso.Texto(Error(403, "registro_cerrado", """{"motivo":"tope_por_tableta"}""")));
-        Assert.Equal("Hoy no se puede entrar como visitante. Pídele ayuda al profesor.", MensajesDeAcceso.Texto(Error(403, "visitante_no_permitido")));
+        Assert.Equal("Hoy no se puede entrar como visitante. Pídele ayuda al docente.", MensajesDeAcceso.Texto(Error(403, "visitante_no_permitido")));
     }
 
     [Fact]

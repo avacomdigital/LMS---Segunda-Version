@@ -18,9 +18,9 @@ namespace Avacom.Lms.Ops.Pages;
 public sealed class SeguridadAulaPage : ContentPage
 {
     private static readonly CultureInfo Es = new("es-ES");
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
 
-    private readonly Label _subtitulo = new() { FontFamily = "InterLight", FontSize = 15, TextColor = Color.FromArgb("#52525B"), LineBreakMode = LineBreakMode.WordWrap, Text = "Cargando…" };
+    private readonly Label _subtitulo = new() { FontFamily = "Lexend", FontSize = 15, TextColor = Color.FromArgb("#4F5566"), LineBreakMode = LineBreakMode.WordWrap, Text = "Cargando…" };
     private readonly VerticalStackLayout _izquierda = new() { Spacing = 14, Padding = new Thickness(0, 0, 0, 40) };
     private readonly VerticalStackLayout _derecha = new() { Spacing = 10, Padding = new Thickness(0, 0, 0, 40) };
     // El teclado doble se construye UNA vez y se muestra u oculta dentro de la tarjeta del PIN.
@@ -37,11 +37,11 @@ public sealed class SeguridadAulaPage : ContentPage
     {
         Shell.SetNavBarIsVisible(this, false);
         Title = "Seguridad del aula";
-        BackgroundColor = Color.FromArgb("#F1F1F1");
+        BackgroundColor = Color.FromArgb("#EAF0F6");
 
         var encabezado = new VerticalStackLayout { Spacing = 6, VerticalOptions = LayoutOptions.Center };
-        encabezado.Add(new Label { Text = "SEGURIDAD", FontFamily = "InterRegular", FontSize = 12, TextColor = Color.FromArgb("#52525B"), CharacterSpacing = 2.5 });
-        encabezado.Add(new Label { Text = "Seguridad del aula", FontFamily = "InterMedium", FontSize = 30, TextColor = Color.FromArgb("#18181B") });
+        encabezado.Add(new Label { Text = "SEGURIDAD", FontFamily = "Lexend", FontSize = 12, TextColor = Color.FromArgb("#4F5566"), CharacterSpacing = 2.5 });
+        encabezado.Add(new Label { Text = "Seguridad del aula", FontFamily = "LexendMedium", FontSize = 30, TextColor = Color.FromArgb("#1F2433") });
         encabezado.Add(_subtitulo);
         var actualizar = Ds.Boton("Actualizar", Ds.Rango.Secondary, async (_, _) => await CargarAsync(), 48);
         var volver = Ds.Boton("Menú principal", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 48);
@@ -50,6 +50,7 @@ public sealed class SeguridadAulaPage : ContentPage
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, HorizontalOptions = LayoutOptions.Center, WidthRequest = 1280 };
         cabecera.Add(encabezado, 0, 0);
         cabecera.Add(acciones, 1, 0);
+        Ds.VolverALaIzquierda(volver);
 
         var columnas = new Grid { ColumnDefinitions = [new ColumnDefinition(560), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 20, HorizontalOptions = LayoutOptions.Center, WidthRequest = 1280 };
         columnas.Add(new ScrollView { Content = _izquierda }, 0, 0);
@@ -58,7 +59,7 @@ public sealed class SeguridadAulaPage : ContentPage
         var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)], Padding = new Thickness(44, 28, 48, 24), RowSpacing = 18 };
         raiz.Add(cabecera, 0, 0);
         raiz.Add(columnas, 0, 1);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = raiz };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
 
         _pin.PinConfirmado += async (_, pin) => await CambiarPinAsync(pin);
         _cambioHost.Add(_pin);
@@ -96,7 +97,7 @@ public sealed class SeguridadAulaPage : ContentPage
                 _izquierda.Clear();
                 _derecha.Clear();
                 _izquierda.Add(Ds.Alerta_("Sólo para la administración",
-                    "Aquí se cambia el PIN maestro y se revisan los profesores que se registraron con él. Entra con una cuenta de administración para verla.",
+                    "Aquí se cambia el PIN maestro y se revisan los docentes que se registraron con él. Entra con una cuenta de administración para verla.",
                     Ds.AlertaSuave, Ds.Tinta));
                 return;
             }
@@ -116,7 +117,7 @@ public sealed class SeguridadAulaPage : ContentPage
     {
         _izquierda.Clear();
         _derecha.Clear();
-        var organizacion = _configuracion?.SesionObligatoria == true ? "Con sesión obligatoria" : "En modo prototipo";
+        var organizacion = _configuracion?.SesionObligatoria == true ? "Con sesión obligatoria" : "En modo de prueba";
         _subtitulo.Text = $"{organizacion} · el PIN maestro, quién se registró con él y las puertas de entrada del aula.";
         if (_aviso is { } aviso)
             _izquierda.Add(Ds.Alerta_(aviso.Problema ? "No se pudo" : "Listo", aviso.Texto, aviso.Problema ? Ds.PeligroSuave : Ds.ExitoSuave, aviso.Problema ? TintaPeligro : Ds.Tinta));
@@ -140,7 +141,7 @@ public sealed class SeguridadAulaPage : ContentPage
         if (!e.Configurado)
         {
             pila.Add(Ds.Titulo("Aún no hay PIN maestro", 22));
-            pila.Add(Ds.Cuerpo("Sin él, los profesores no pueden crear su usuario ni recuperar su contraseña. Configúralo ahora: seis números que sólo conocerá la escuela.", 16));
+            pila.Add(Ds.Cuerpo("Sin él, los docentes no pueden crear su usuario ni recuperar su contraseña. Configúralo ahora: seis números que sólo conocerá la escuela.", 16));
         }
         else
         {
@@ -155,13 +156,12 @@ public sealed class SeguridadAulaPage : ContentPage
             pila.Add(Fila("Vence el", Fecha(e.VenceEl)));
             pila.Add(Fila("Días restantes", e.Vencido ? "0 · ya venció" : e.DiasRestantes?.ToString(Es) ?? "—"));
             if (e.Vencido)
-                pila.Add(Ds.Alerta_("El PIN maestro venció", "Las clases y los profesores ya registrados siguen como siempre, pero nadie puede crear un profesor ni recuperar su contraseña hasta que lo cambies.", Ds.PeligroSuave, TintaPeligro));
+                pila.Add(Ds.Alerta_("El PIN maestro venció", "Las clases y los docentes ya registrados siguen como siempre, pero nadie puede crear un docente ni recuperar su contraseña hasta que lo cambies.", Ds.PeligroSuave, TintaPeligro));
             else if (e.Aviso)
                 pila.Add(Ds.Alerta_("Faltan 30 días o menos", "Cámbialo antes de que venza: cambiarlo reinicia el año de vigencia.", Ds.AlertaSuave, Glass.TintaAlerta));
             if (e.BloqueadoHasta is { } hasta && hasta > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
                 pila.Add(Ds.Alerta_("Demasiados intentos desde este equipo",
                     $"El PIN maestro no se acepta aquí hasta las {DateTimeOffset.FromUnixTimeMilliseconds(hasta).ToLocalTime():HH:mm}.", Ds.AlertaSuave, Glass.TintaAlerta));
-            pila.Add(Ds.Secundario("Nadie puede ver el PIN maestro, ni la administración: si se olvida o se filtró, se reemplaza aquí sin necesidad de saber el actual.", 14));
         }
 
         if (_cambiando)
@@ -207,7 +207,7 @@ public sealed class SeguridadAulaPage : ContentPage
             pila.Add(Ds.Secundario("No pudimos leer cómo está configurada el aula. Toca «Actualizar».", 15));
             return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(22, 18), Colors.White);
         }
-        pila.Add(Interruptor("Registro de profesores con el PIN maestro", "Con el PIN maestro, un profesor crea su propio usuario.", c.AutoregistroDocentes,
+        pila.Add(Interruptor("Registro de docentes con el PIN maestro", "Con el PIN maestro, un docente crea su propio usuario.", c.AutoregistroDocentes,
             nuevo => ("teacher", new { autoregistro = nuevo })));
         pila.Add(Ds.Separador());
         pila.Add(Interruptor("Registro propio de alumnos", "Un alumno que no está en la lista crea su usuario con su nombre y su PIN.", c.AutoregistroAlumnos,
@@ -225,9 +225,9 @@ public sealed class SeguridadAulaPage : ContentPage
         texto.Add(Ds.Secundario(detalle, 14));
         var boton = new Button
         {
-            Text = encendido ? "Encendido" : "Apagado", HeightRequest = 40, WidthRequest = 120, CornerRadius = 12, BorderWidth = 1, FontSize = 14,
+            Text = encendido ? "Encendido" : "Apagado", HeightRequest = 40, WidthRequest = 120, CornerRadius = 20, BorderWidth = 2, FontSize = 14,
             BackgroundColor = encendido ? Ds.Exito : Colors.White, TextColor = encendido ? Colors.White : Ds.Tinta,
-            BorderColor = encendido ? Color.FromArgb("#017A4B") : Ds.Filo, VerticalOptions = LayoutOptions.Center,
+            BorderColor = encendido ? Color.FromArgb("#0B5E3E") : Ds.Filo, VerticalOptions = LayoutOptions.Center,
         };
         SemanticProperties.SetDescription(boton, $"{titulo}: {(encendido ? "encendido" : "apagado")}. Tocar para {(encendido ? "apagarlo" : "encenderlo")}.");
         AutomationProperties.SetName(boton, $"{titulo} · {(encendido ? "Encendido" : "Apagado")}");
@@ -252,7 +252,7 @@ public sealed class SeguridadAulaPage : ContentPage
     private void PintarDocentes()
     {
         var pila = new VerticalStackLayout { Spacing = 8 };
-        pila.Add(Ds.Titulo("Profesores registrados con el PIN maestro", 22));
+        pila.Add(Ds.Titulo("Docentes registrados con el PIN maestro", 22));
         if (_docentes is null)
         {
             pila.Add(Ds.Secundario(MensajesDeAcceso.Texto(Sesion.Acceso.UltimoError) + " Toca «Actualizar».", 15));

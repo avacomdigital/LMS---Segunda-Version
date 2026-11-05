@@ -17,8 +17,8 @@ public interface IStudyLessonNavigation
 /// <summary>Un número de la tira de actividades: ✓ atendida, el número si no, resaltada la actual. Lleva su propio comando de toque.</summary>
 public sealed class StudyBlockChip : ObservableObject
 {
-    private static readonly Color Blanco = Colors.White, VerdeSuave = Color.FromArgb("#E5F6ED"), VerdeTinta = Color.FromArgb("#017A48");
-    private static readonly Color Tinta = Color.FromArgb("#1D1D1F"), Gris = Color.FromArgb("#6E6E73"), Borde = Color.FromArgb("#D4D4D8");
+    private static readonly Color Blanco = Colors.White, VerdeSuave = Color.FromArgb("#E1F5EC"), VerdeTinta = Color.FromArgb("#0B5E3E");
+    private static readonly Color Tinta = Color.FromArgb("#1F2433"), Gris = Color.FromArgb("#5F6474"), Borde = Color.FromArgb("#E3E6EC");
     private bool _actual, _atendida;
 
     public StudyBlockChip(int indice, string titulo, Action<StudyBlockChip> alTocar)
@@ -141,7 +141,7 @@ public sealed class StudyLessonViewModel : ObservableObject
             IsReadOnly = _sesion.IsReadOnly;
             Chips.Clear();
             foreach (var b in _sesion.Blocks) Chips.Add(new StudyBlockChip(b.Index, b.Title, chip => _ = IrAsync(chip.Index - 1)));
-            if (_sesion.IsReadOnly) Notice = "El profesor ya cerró esta tarea: puedes releerla, pero no se guardará más avance.";
+            if (_sesion.IsReadOnly) Notice = "El docente ya cerró esta tarea: puedes releerla, pero no se guardará más avance.";
             IsLoading = false;
             await MostrarAsync(Math.Clamp(_sesion.StartIndex, 0, Math.Max(0, _sesion.Blocks.Count - 1)));
         }

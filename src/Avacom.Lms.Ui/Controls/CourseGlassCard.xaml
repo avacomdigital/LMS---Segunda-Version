@@ -10,12 +10,12 @@
          Abrir); el botón hace lo mismo. El bloque de icono se construye en el code-behind porque su degradado y su halo
          dependen de AccentColor. -->
     <controls:LiquidGlassPanel x:Name="Lamina" CornerRadius="22" TintOpacity="0.55" BlurRadius="10" ContentPadding="22,20" SheenHeight="90" SheenOpacity="0.45">
-        <Grid ColumnDefinitions="64,*,Auto" ColumnSpacing="20">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20">
             <Grid x:Name="BloqueHost" VerticalOptions="Center" />
             <VerticalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
-                <Label FontFamily="InterSemiBold" FontSize="21" LineBreakMode="WordWrap" Text="{Binding Titulo, Source={x:Reference Root}}" TextColor="#18181B" />
-                <Label x:Name="SubtituloLabel" FontFamily="InterRegular" FontSize="15" IsVisible="False" LineBreakMode="WordWrap" Text="{Binding Subtitulo, Source={x:Reference Root}}" TextColor="#3F3F46" />
-                <Label FontFamily="InterMedium" FontSize="13.5" LineBreakMode="WordWrap" Text="{Binding Detalle, Source={x:Reference Root}}" TextColor="#52525B" />
+                <Label FontFamily="LexendSemiBold" FontSize="21" LineBreakMode="WordWrap" Text="{Binding Titulo, Source={x:Reference Root}}" TextColor="#1F2433" />
+                <Label x:Name="SubtituloLabel" FontFamily="Lexend" FontSize="15" IsVisible="False" LineBreakMode="WordWrap" Text="{Binding Subtitulo, Source={x:Reference Root}}" TextColor="#4F5566" />
+                <Label FontFamily="LexendMedium" FontSize="13.5" LineBreakMode="WordWrap" Text="{Binding Detalle, Source={x:Reference Root}}" TextColor="#4F5566" />
             </VerticalStackLayout>
             <controls:GlassButton x:Name="VerBtn" Grid.Column="2" Clicked="OnVerClicked" HeightRequest="64" Text="Ver lecciones  ›" VerticalOptions="Center" WidthRequest="220" />
         </Grid>

@@ -5,23 +5,12 @@ using Path = Microsoft.Maui.Controls.Shapes.Path;
 namespace Avacom.Lms.Ui.Design;
 
 /// <summary>
-/// Lenguaje Liquid Glass de AVACOM para el tablero táctil del aula (estrenado en «Clase de hoy», 2026-09-28):
-/// fondo claro (la imagen de discos en relieve <c>fondo_discos.png</c>, blanca como el resto de la aplicación) y,
-/// encima, superficies de vidrio en niveles para que la interfaz tenga jerarquía y no se ahogue en desenfoque:
-/// <list type="number">
-///   <item><b>Fondo</b>: la imagen de discos, detrás de todo y sin captar toques.</item>
-///   <item><b>Menú lateral</b>: sólido <c>#5A5A56</c> (el mismo gris del dock del tablero), sin vidrio.</item>
-///   <item><b>Tarjetas</b>: <see cref="LiquidGlassPanel"/> (tinte blanco 0,45–0,55, desenfoque 10, radio 22) y
-///   avisos semánticos con tinte suave del color (<see cref="Alerta"/>).</item>
-///   <item><b>Botones, chips, píldoras y hexágonos</b>: sin desenfoque; degradado translúcido, bisel o canto luminoso
-///   y halo del color de acento (<see cref="GlassButton"/>, <see cref="SourceStatusChip"/>, <see cref="Pildora"/>,
-///   <see cref="Bloque"/>, <c>ProfessorHexTile.Glass</c>).</item>
-/// </list>
-/// El texto va en la tinta de <see cref="Ds"/> (Tinta / TintaMedia / TintaSuave) con Inter en pesos reales; sólo el
-/// menú sólido y las píldoras de acento llevan texto blanco. Los colores semánticos y el Primary rojo siguen siendo
-/// los de <see cref="Ds"/>: el vidrio cambia el material, no el significado.
-/// (La primera versión, de fondo lavanda con panal y textos blancos, se descartó el mismo día por oscura y ajena al
-/// resto de la aplicación; los tokens lavanda quedan por si vuelven a hacer falta.)
+/// Fábricas del antiguo lenguaje Liquid Glass, ya traducidas al <b>Aula · Design System</b>: sin desenfoque, cantos
+/// luminosos, reflejos ni sombras de texto. Una «lámina» es una caja blanca con contorno completo y sombra difusa;
+/// un control de color es un relleno 600 → 700 con sombra difusa del mismo color; un aviso es el 50 de su color con
+/// texto en el 700. Las firmas se conservan para no tocar las pantallas que las usan.
+/// Colores de materia del DS (sólo en chip e icono de materia): Ciencias verde, Matemáticas naranja, Lenguaje
+/// magenta, Idiomas y sociales azul.
 /// </summary>
 public static class Glass
 {
@@ -41,42 +30,61 @@ public static class Glass
     public static readonly Color Blanco75 = Color.FromArgb("#BFFFFFFF");
     public static readonly Color Blanco65 = Color.FromArgb("#A6FFFFFF");
     /// <summary>Tinta oscura para los avisos ámbar y verde: el blanco no contrasta sobre esos tintes.</summary>
-    public static readonly Color TintaAlerta = Color.FromArgb("#3A2A00");
-    public static readonly Color TintaExito = Color.FromArgb("#06301F");
+    public static readonly Color TintaAlerta = Ds.Naranja700;
+    public static readonly Color TintaExito = Ds.Verde700;
 
     // ------------------------------------------------------- acentos de materia
-    public static readonly Color AcentoRosa = Color.FromArgb("#E0409A");     // Ciencias naturales
-    public static readonly Color AcentoAzul = Color.FromArgb("#2F7BF6");     // Dimensión comunicativa
-    public static readonly Color AcentoAmbar = Color.FromArgb("#F5A524");    // Matemáticas
-    public static readonly Color AcentoVioleta = Color.FromArgb("#8A5CF6");  // Social Studies
-    public static readonly Color AcentoCian = Color.FromArgb("#1FB6E8");
-    public static readonly Color AcentoVerde = Color.FromArgb("#22B573");
-    private static readonly Color[] Acentos = [AcentoRosa, AcentoAzul, AcentoAmbar, AcentoVioleta, AcentoCian, AcentoVerde];
+    public static readonly Color AcentoRosa = Ds.Verde600;      // Ciencias (el nombre es histórico)
+    public static readonly Color AcentoAzul = Ds.Azul600;       // Idiomas y comunicación
+    public static readonly Color AcentoAmbar = Ds.Naranja600;   // Matemáticas
+    public static readonly Color AcentoVioleta = Ds.Azul700;    // Sociales (azul del DS, un tono más profundo)
+    public static readonly Color AcentoCian = Ds.Turquesa600;
+    public static readonly Color AcentoVerde = Ds.Magenta600;   // Lenguaje (el nombre es histórico)
+    private static readonly Color[] Acentos = [AcentoRosa, AcentoAzul, AcentoAmbar, AcentoVerde, AcentoCian, AcentoVioleta];
 
     /// <summary>
-    /// Acento de una materia: por su nombre cuando es una de las conocidas (ciencias → rosa, comunicación e idiomas →
-    /// azul, matemáticas → ámbar, sociales → violeta) y, si no, por su posición en el catálogo, para que dos materias
-    /// desconocidas no compartan color.
+    /// Acento de una materia (colores de materia del DS): por su nombre cuando es una de las conocidas (ciencias → verde,
+    /// lenguaje y comunicación → magenta, idiomas → azul, sociales → azul profundo, matemáticas → naranja) y, si no, por su posición en el catálogo,
+    /// para que dos materias desconocidas no compartan color.
     /// </summary>
     public static Color AcentoMateria(string? nombre, int indice)
     {
         var n = (nombre ?? string.Empty).ToLowerInvariant();
+        if (n.Contains("social") || n.Contains("histor") || n.Contains("geograf")) return AcentoVioleta;   // antes que «ciencias»: «Ciencias Sociales» es social
         if (n.Contains("cienc") || n.Contains("natur")) return AcentoRosa;
-        if (n.Contains("comunic") || n.Contains("leng") || n.Contains("idiom") || n.Contains("ingl") || n.Contains("english")) return AcentoAzul;
+        if ((n.Contains("leng") || n.Contains("comunic")) && !n.Contains("extranj")) return AcentoVerde;   // Lenguaje y comunicación: magenta
+        if (n.Contains("leng") || n.Contains("idiom") || n.Contains("ingl") || n.Contains("english")) return AcentoAzul;
         if (n.Contains("matem") || n.Contains("math")) return AcentoAmbar;
-        if (n.Contains("social") || n.Contains("histor") || n.Contains("geograf")) return AcentoVioleta;
         return Acentos[((indice % Acentos.Length) + Acentos.Length) % Acentos.Length];
     }
+
+    /// <summary>Icono sólido del Aula · Design System para una materia, con las mismas reglas de nombre que <see cref="AcentoMateria"/>; si no se reconoce, los libros.</summary>
+    public static string IconoMateria(string? nombre)
+    {
+        var n = (nombre ?? string.Empty).ToLowerInvariant();
+        if (n.Contains("social") || n.Contains("histor") || n.Contains("geograf")) return "ico_mundo.png";
+        if (n.Contains("cienc") || n.Contains("natur") || n.Contains("biolog") || n.Contains("fisic") || n.Contains("quimic")) return "ico_ciencia.png";
+        if (n.Contains("idiom") || n.Contains("ingl") || n.Contains("english") || n.Contains("extranj")) return "ico_idioma.png";
+        if (n.Contains("leng") || n.Contains("comunic") || n.Contains("espa") || n.Contains("lectur")) return "ico_lenguaje.png";
+        if (n.Contains("matem") || n.Contains("math")) return "ico_mate.png";
+        return "ico_libros.png";
+    }
+
+    /// <summary>Bloque de icono del DS: cuadrado redondeado en el tono 50 de la materia con su icono sólido encima.</summary>
+    public static Border BloqueIcono(Color acento, ImageSource icono, double lado = 64, double radio = 16) => new()
+    {
+        BackgroundColor = Ds.Suave(acento),
+        StrokeThickness = 0,
+        StrokeShape = new RoundRectangle { CornerRadius = radio },
+        WidthRequest = lado, HeightRequest = lado,
+        Content = new Image { Source = icono, Aspect = Aspect.AspectFit, WidthRequest = lado * 0.66, HeightRequest = lado * 0.66, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
+    };
 
     /// <summary>
     /// Tinta que contrasta sobre un acento: oscura sobre los claros (ámbar, amarillo, cian), blanca sobre el resto.
     /// Usa la luminancia percibida (0,299 R + 0,587 G + 0,114 B) con umbral 0,55, no la L de HSL.
     /// </summary>
-    public static Color TintaSobre(Color acento)
-    {
-        var luminancia = 0.299 * acento.Red + 0.587 * acento.Green + 0.114 * acento.Blue;
-        return luminancia > 0.55 ? Ds.Tinta : Blanco;
-    }
+    public static Color TintaSobre(Color acento) => Ds.TintaSobre(acento);
 
     // ---------------------------------------------------------------- semántica
     public enum Tono { Neutro, Exito, Info, Alerta, Peligro }
@@ -87,63 +95,40 @@ public static class Glass
         Tono.Info => Ds.Info,
         Tono.Alerta => Ds.Alerta,
         Tono.Peligro => Ds.Peligro,
-        _ => Blanco75,
+        _ => Ds.Tinta3,
     };
 
     // ---------------------------------------------------------------- material
-    /// <summary>Canto de una lámina: luz que entra arriba a la izquierda, se apaga en los lados y vuelve abajo a la derecha.</summary>
-    public static LinearGradientBrush CantoLuminoso(double intensidad = 1) => new(
-        new GradientStopCollection
-        {
-            new GradientStop(Blanco.WithAlpha((float)(0.95 * intensidad)), 0f),
-            new GradientStop(Blanco.WithAlpha((float)(0.45 * intensidad)), 0.35f),
-            new GradientStop(Blanco.WithAlpha((float)(0.18 * intensidad)), 0.55f),
-            new GradientStop(Blanco.WithAlpha((float)(0.40 * intensidad)), 0.75f),
-            new GradientStop(Blanco.WithAlpha((float)(0.80 * intensidad)), 1f),
-        },
-        new Point(0, 0), new Point(1, 1));
+    /// <summary>Contorno de una caja: 1 px en <see cref="Ds.Linea"/> (contorno completo, nunca de un solo lado).</summary>
+    public static LinearGradientBrush CantoLuminoso(double intensidad = 1) => Liso(Ds.Linea);
 
-    /// <summary>Canto interior, a 2 px del borde: el vidrio es más luminoso junto a su filo.</summary>
-    public static LinearGradientBrush CantoInterior(double intensidad = 1) => new(
-        new GradientStopCollection
-        {
-            new GradientStop(Blanco.WithAlpha((float)(0.50 * intensidad)), 0f),
-            new GradientStop(Blanco.WithAlpha((float)(0.06 * intensidad)), 0.5f),
-            new GradientStop(Blanco.WithAlpha((float)(0.32 * intensidad)), 1f),
-        },
-        new Point(0, 0), new Point(1, 1));
+    /// <summary>Sin canto interior en el DS: pincel transparente.</summary>
+    public static LinearGradientBrush CantoInterior(double intensidad = 1) => Liso(Colors.Transparent);
 
-    /// <summary>Reflejo del tercio superior: blanco que se funde hacia abajo.</summary>
-    public static LinearGradientBrush Reflejo(double intensidad = 0.32) => new(
-        new GradientStopCollection { new GradientStop(Blanco.WithAlpha((float)intensidad), 0f), new GradientStop(Blanco.WithAlpha(0f), 1f) },
-        new Point(0, 0), new Point(0, 1));
+    /// <summary>Sin reflejos en el DS: pincel transparente.</summary>
+    public static LinearGradientBrush Reflejo(double intensidad = 0.32) => Liso(Colors.Transparent);
 
-    /// <summary>Cuerpo translúcido de un control: el mismo tono, algo más presente arriba (donde da la luz) que abajo.</summary>
-    public static LinearGradientBrush Relleno(Color tono, double arriba, double abajo) => new(
-        new GradientStopCollection { new GradientStop(tono.WithAlpha((float)arriba), 0f), new GradientStop(tono.WithAlpha((float)abajo), 1f) },
-        new Point(0, 0), new Point(0, 1));
+    /// <summary>Relleno suave de un tono (fondos de estado y de selección): el tono a la opacidad media de las dos dadas.</summary>
+    public static LinearGradientBrush Relleno(Color tono, double arriba, double abajo) => Liso(tono.WithAlpha((float)((arriba + abajo) / 2)));
 
-    /// <summary>Cuerpo de un control de color: el acento algo más claro arriba y más oscuro abajo, casi opaco.</summary>
-    public static LinearGradientBrush RellenoAcento(Color acento, double alfa = 0.92) => new(
-        new GradientStopCollection
-        {
-            new GradientStop(acento.AddLuminosity(0.08f).WithAlpha((float)alfa), 0f),
-            new GradientStop(acento.WithAlpha((float)alfa), 0.55f),
-            new GradientStop(acento.AddLuminosity(-0.06f).WithAlpha((float)alfa), 1f),
-        },
-        new Point(0, 0), new Point(0, 1));
+    /// <summary>Relleno de un control de color: degradado 600 → 700 del mismo color (o liso si no es de rol).</summary>
+    public static LinearGradientBrush RellenoAcento(Color acento, double alfa = 0.92) => Ds.Degradado(acento);
 
-    /// <summary>Sombra amplia y suave (tinta) que despega una lámina del fondo claro.</summary>
+    /// <summary>Pincel de un solo color con la forma de un degradado, para conservar los tipos que esperan las pantallas.</summary>
+    private static LinearGradientBrush Liso(Color c) => new(
+        new GradientStopCollection { new GradientStop(c, 0f), new GradientStop(c, 1f) }, new Point(0, 0), new Point(0, 1));
+
+    /// <summary>Sombra difusa de una caja (entre sh-1 y sh-2 según lo pedido).</summary>
     public static Shadow SombraVidrio(double opacidad = 0.12, double radio = 36, double desplazamiento = 14) =>
-        new() { Brush = new SolidColorBrush(Ds.Tinta), Offset = new Point(0, desplazamiento), Radius = (float)radio, Opacity = (float)opacidad };
+        new() { Brush = new SolidColorBrush(Ds.Tinta), Offset = new Point(0, Math.Min(desplazamiento, 14)), Radius = (float)Math.Min(radio, 32), Opacity = (float)Math.Min(opacidad, 0.12) };
 
-    /// <summary>Halo del color de acento alrededor de un control coloreado.</summary>
+    /// <summary>Sombra difusa del mismo color alrededor de un control de color.</summary>
     public static Shadow Halo(Color tono, double opacidad = 0.45, double radio = 24, double desplazamiento = 8) =>
-        new() { Brush = new SolidColorBrush(tono), Offset = new Point(0, desplazamiento), Radius = (float)radio, Opacity = (float)opacidad };
+        new() { Brush = new SolidColorBrush(tono), Offset = new Point(0, 8), Radius = 20, Opacity = (float)Math.Min(opacidad, 0.30) };
 
-    /// <summary>Sombra breve bajo un título blanco: sostiene la legibilidad sobre el vidrio claro.</summary>
+    /// <summary>El DS no lleva sombras de texto: sombra nula.</summary>
     public static Shadow SombraTexto(double opacidad = 0.28) =>
-        new() { Brush = new SolidColorBrush(SombraVioleta), Offset = new Point(0, 2), Radius = 10, Opacity = (float)opacidad };
+        new() { Brush = new SolidColorBrush(Colors.Transparent), Offset = new Point(0, 0), Radius = 0, Opacity = 0f };
 
     /// <summary>Geometría de un icono a partir de sus datos de trazado (mismo formato que <c>ProfessorHexTile.IconGeometry</c>).</summary>
     public static Geometry? Geometria(string? datos) =>
@@ -166,21 +151,18 @@ public static class Glass
     };
 
     // ------------------------------------------------------------- componentes
-    /// <summary>Cápsula de categoría con el acento de la materia: degradado, canto luminoso y halo muy suave. Identifica, no llama a la acción.</summary>
+    /// <summary>Chip de materia o categoría: el tono suave del acento con el texto en su tono oscuro. Identifica, no llama a la acción.</summary>
     public static Border Pildora(string texto, Color acento, double tamano = 13) => new()
     {
-        BackgroundColor = Colors.Transparent,
-        Background = RellenoAcento(acento, 0.96),
-        Stroke = CantoLuminoso(0.9),
-        StrokeThickness = 1,
+        BackgroundColor = Ds.Suave(acento),
+        StrokeThickness = 0,
         StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioPildora },
-        Padding = new Thickness(14, 7),
-        Shadow = Halo(acento, 0.38, 18, 6),
+        Padding = new Thickness(14, 6),
         VerticalOptions = LayoutOptions.Center,
-        Content = new Label { Text = texto, FontSize = tamano, FontFamily = Ds.FuenteSemi, TextColor = TintaSobre(acento), LineBreakMode = LineBreakMode.WordWrap },
+        Content = new Label { Text = texto, FontSize = tamano, FontFamily = Ds.FuenteMedia, TextColor = Ds.Oscuro(acento), LineBreakMode = LineBreakMode.WordWrap },
     };
 
-    /// <summary>Bloque de icono del color de la materia: un cuadrado de vidrio coloreado con reflejo superior, canto claro, halo e icono blanco.</summary>
+    /// <summary>Bloque de icono del color de la materia: un cuadrado redondeado con el relleno 600 → 700, sombra difusa del mismo color e icono blanco.</summary>
     public static Border Bloque(Color acento, string? geometria, double lado = 64, double radio = 16)
     {
         var reflejo = new Border
@@ -201,29 +183,27 @@ public static class Glass
         {
             BackgroundColor = Colors.Transparent,
             Background = RellenoAcento(acento, 0.92),
-            Stroke = CantoLuminoso(0.9),
-            StrokeThickness = 1,
+            StrokeThickness = 0,
             StrokeShape = new RoundRectangle { CornerRadius = radio },
             WidthRequest = lado, HeightRequest = lado, Padding = 0,
-            Shadow = Halo(acento, 0.45, 20, 8),
+            Shadow = Halo(acento, 0.25, 20, 8),
             VerticalOptions = LayoutOptions.Center,
             Content = capas,
         };
     }
 
     /// <summary>
-    /// Alerta no bloqueante (CMP-005) en vidrio semántico sobre fondo claro: tinte suave del color (como las variantes
-    /// «Suave» del kit) con la tinta oscura del mismo tono, para contraste WCAG.
+    /// Aviso no bloqueante (CMP-005): el 50 de su color de estado con el texto en el 700 (≥ 5:1), radio m 16.
     /// </summary>
     public static LiquidGlassPanel Alerta(string titulo, string? detalle, Tono tono)
     {
         var (fondo, opacidad, tinta) = tono switch
         {
-            Tono.Alerta => (Ds.Alerta, 0.30, Color.FromArgb("#6B5800")),
-            Tono.Peligro => (Ds.Peligro, 0.16, Color.FromArgb("#8A1C1F")),
-            Tono.Exito => (Ds.Exito, 0.18, Color.FromArgb("#0B5A38")),
-            Tono.Info => (Ds.Info, 0.18, Color.FromArgb("#0B4F70")),
-            _ => (Blanco, 0.55, Ds.Tinta),
+            Tono.Alerta => (Ds.Naranja50, 1.0, Ds.Naranja700),
+            Tono.Peligro => (Ds.Rojo50, 1.0, Ds.Rojo700),
+            Tono.Exito => (Ds.Verde50, 1.0, Ds.Verde700),
+            Tono.Info => (Ds.Azul50, 1.0, Ds.Azul700),
+            _ => (Ds.Superficie, 1.0, Ds.Tinta),
         };
         var pila = new VerticalStackLayout { Spacing = 4 };
         pila.Add(new Label { Text = titulo, FontFamily = Ds.FuenteSemi, FontSize = 17, TextColor = tinta, LineBreakMode = LineBreakMode.WordWrap });
@@ -231,12 +211,12 @@ public static class Glass
             pila.Add(new Label { Text = detalle, FontFamily = Ds.FuenteRegular, FontSize = 15, TextColor = tinta.WithAlpha(0.9f), LineBreakMode = LineBreakMode.WordWrap });
         return new LiquidGlassPanel
         {
-            CornerRadius = 16, TintColor = fondo, TintOpacity = opacidad, BlurRadius = 8, SheenHeight = 40,
-            ContentPadding = new Thickness(18, 14), ShadowOpacity = 0.16, Content = pila,
+            CornerRadius = Ds.RadioM, TintColor = fondo, TintOpacity = opacidad, BlurRadius = 0, Sheen = false,
+            ContentPadding = new Thickness(18, 14), ShadowOpacity = 0, Content = pila,
         };
     }
 
-    /// <summary>Botón de vidrio: el Secondary del lenguaje. El Primary sigue siendo el rojo de <see cref="Ds.Boton"/> (uno por pantalla).</summary>
+    /// <summary>Botón secundario del DS (blanco con contorno de 2 px). El principal es el verde de <see cref="Ds.Boton"/> (uno por pantalla).</summary>
     public static GlassButton Boton(string texto, EventHandler? alPulsar = null, double alto = 64, double? ancho = null)
     {
         var boton = new GlassButton { Text = texto, HeightRequest = alto, MinimumHeightRequest = alto };

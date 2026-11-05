@@ -65,7 +65,7 @@ public partial class BitacoraPage
         var pinGrupo = new VerticalStackLayout
         {
             Spacing = 8, IsVisible = false, HorizontalOptions = LayoutOptions.Start,
-            Children = { new Label { Text = "PIN maestro de la escuela", FontSize = 15, FontAttributes = FontAttributes.Bold, HorizontalTextAlignment = TextAlignment.Center }, teclado, cancelarPin },
+            Children = { new Label { Text = "PIN maestro de la escuela", FontSize = 15, FontFamily = Ds.FuenteSemi, HorizontalTextAlignment = TextAlignment.Center }, teclado, cancelarPin },
         };
         async Task AutorizarAsync(string? pin)
         {

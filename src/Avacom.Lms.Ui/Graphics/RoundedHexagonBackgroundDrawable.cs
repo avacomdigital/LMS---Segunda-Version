@@ -21,7 +21,7 @@ namespace Avacom.Lms.Ui.Graphics;
 /// &lt;Grid&gt;
 ///     &lt;GraphicsView InputTransparent="True" HorizontalOptions="Fill" VerticalOptions="Fill"&gt;
 ///         &lt;GraphicsView.Drawable&gt;
-///             &lt;gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#E5E7EB" StrokeWidth="1.25"/&gt;
+///             &lt;gfx:RoundedHexagonBackgroundDrawable HexagonWidth="240" CornerRadius="12" Gap="6" StrokeColor="#E3E6EC" StrokeWidth="1.25"/&gt;
 ///         &lt;/GraphicsView.Drawable&gt;
 ///     &lt;/GraphicsView&gt;
 ///     &lt;!-- contenido existente, tal cual --&gt;
@@ -43,8 +43,8 @@ public sealed class RoundedHexagonBackgroundDrawable : IDrawable
     /// <summary>Radio con que se redondean las seis esquinas. Se recorta si no cabe en los lados.</summary>
     public float CornerRadius { get; set; } = 12f;
 
-    /// <summary>Color del contorno. Sobre blanco, #E5E7EB; sobre un fondo con tinte conviene una tinta translúcida.</summary>
-    public Color StrokeColor { get; set; } = Color.FromArgb("#E5E7EB");
+    /// <summary>Color del contorno. Sobre blanco, #E3E6EC; sobre un fondo con tinte conviene una tinta translúcida.</summary>
+    public Color StrokeColor { get; set; } = Color.FromArgb("#E3E6EC");
 
     /// <summary>Grosor del contorno (1–1,5).</summary>
     public float StrokeWidth { get; set; } = 1.25f;

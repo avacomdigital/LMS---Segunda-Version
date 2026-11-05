@@ -73,7 +73,7 @@ internal sealed class CronometroLocal
     public (string Titulo, string? Detalle) Texto() => Estado switch
     {
         EnCurso => ($"Quedan {Formato(RestanteMs)}", null),
-        Congelado => ("Tiempo detenido: tu profesor detuvo la clase", "Lo que llevas está a salvo."),
+        Congelado => ("Tiempo detenido: tu docente detuvo la clase", "Lo que llevas está a salvo."),
         ConGracia => ("Se acabó el tiempo. Todavía puedes entregar lo que llevas.", null),
         Vencido => ("Terminó el tiempo", "Lo que respondiste quedó guardado."),
         _ => (string.Empty, null),

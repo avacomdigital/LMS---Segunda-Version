@@ -63,11 +63,11 @@ public sealed class BibliotecaDeContenido(HttpClient http, Uri baseUri) : IBibli
         {
             var estado = await http.GetFromJsonAsync<EstadoBiblioteca>(new Uri(BaseUri, "api/biblioteca/estado/"), Json, ct);
             UltimoMotivo = estado?.Disponible == true ? null : estado?.Motivo;
-            return estado ?? EstadoBiblioteca.SinBackend("El backend no respondió.");
+            return estado ?? EstadoBiblioteca.SinBackend("La biblioteca de cursos no respondió.");
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            UltimoMotivo = "No hay conexión con el backend del LMS.";
+            UltimoMotivo = "No hay conexión con el aula.";
             return EstadoBiblioteca.SinBackend(UltimoMotivo);
         }
     }
@@ -102,11 +102,11 @@ public sealed class BibliotecaDeContenido(HttpClient http, Uri baseUri) : IBibli
             respuesta.EnsureSuccessStatusCode();
             var datos = await respuesta.Content.ReadFromJsonAsync<RespuestaCursos>(Json, ct);
             UltimoMotivo = datos?.Disponible == true ? null : datos?.Aviso;
-            return datos ?? RespuestaCursos.Vacia("El backend no respondió.");
+            return datos ?? RespuestaCursos.Vacia("La biblioteca de cursos no respondió.");
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            UltimoMotivo = "No hay conexión con el backend del LMS.";
+            UltimoMotivo = "No hay conexión con el aula.";
             return RespuestaCursos.Vacia(UltimoMotivo);
         }
     }
@@ -145,7 +145,7 @@ public sealed class BibliotecaDeContenido(HttpClient http, Uri baseUri) : IBibli
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            return (false, "No hay conexión con el backend del LMS.");
+            return (false, "No hay conexión con el aula.");
         }
     }
 
@@ -193,7 +193,7 @@ public sealed class BibliotecaDeContenido(HttpClient http, Uri baseUri) : IBibli
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            UltimoMotivo = "No hay conexión con el backend del LMS.";
+            UltimoMotivo = "No hay conexión con el aula.";
             return default;
         }
     }
@@ -213,7 +213,7 @@ public sealed class BibliotecaDeContenido(HttpClient http, Uri baseUri) : IBibli
         }
         catch (Exception ex) when (EsDeRed(ex))
         {
-            UltimoMotivo = "No hay conexión con el backend del LMS.";
+            UltimoMotivo = "No hay conexión con el aula.";
             return default;
         }
     }
@@ -237,7 +237,7 @@ public sealed class BibliotecaDeContenido(HttpClient http, Uri baseUri) : IBibli
                     return v.GetString()!;
         }
         catch (JsonException) { }
-        return $"El backend respondió {(int)respuesta.StatusCode}.";
+        return "La biblioteca de cursos no respondió como se esperaba.";
     }
 
     private static bool EsDeRed(Exception ex) =>

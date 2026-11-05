@@ -121,7 +121,7 @@ public sealed class ReportesApi(HttpClient http, Uri baseUri) : ClienteJson(http
         var huella = Cabecera("Huella").ToLowerInvariant();
         if (!IdSeguro.IsMatch(id) || huella.Length != 64 || !long.TryParse(Cabecera("Bytes"), out var bytes))
         {
-            AnotarMotivo("respuesta_incompleta", "El nodo entregó el archivo sin sus datos de control: no se puede guardar con seguridad.", "Vuelve a intentarlo; si se repite, avisa a soporte.");
+            AnotarMotivo("respuesta_incompleta", "El archivo llegó incompleto y no se guardó. Vuelve a intentarlo.", "Vuelve a intentarlo; si se repite, avisa a soporte.");
             return null;
         }
         string? ruta = null;
@@ -149,7 +149,7 @@ public sealed class ReportesApi(HttpClient http, Uri baseUri) : ClienteJson(http
             if (recibidos != bytes || !string.Equals(Convert.ToHexString(hash.GetHashAndReset()), huella, StringComparison.OrdinalIgnoreCase))
             {
                 File.Delete(ruta);
-                AnotarMotivo("archivo_danado", "El archivo llegó dañado desde el nodo y se descartó.", "Vuelve a generar el reporte.");
+                AnotarMotivo("archivo_danado", "El archivo llegó dañado y no se guardó. Vuelve a intentarlo.", "Vuelve a generar el reporte.");
                 return null;
             }
             progreso?.Report(1.0);

@@ -315,7 +315,7 @@ public sealed class LicenciaTextoTests
         Assert.StartsWith("«Búsqueda» no está disponible", LicenciaTexto.ParaError(Error(402, CodigosDeLicencia.NoDisponiblePorLicencia, """{"capacidad":"busqueda"}"""))!);
         Assert.StartsWith("Este módulo no está disponible", LicenciaTexto.ParaError(Error(402, CodigosDeLicencia.NoDisponiblePorLicencia))!);
         var alumno = LicenciaTexto.ParaError(Error(402, CodigosDeLicencia.NoDisponiblePorLicencia), Audiencia.Alumno)!;
-        Assert.Contains("profesor", alumno);
+        Assert.Contains("docente", alumno);
         Assert.DoesNotContain("licencia", alumno);
     }
 
@@ -330,7 +330,7 @@ public sealed class LicenciaTextoTests
         Assert.Contains("siguen entrando", usuarios);
         Assert.StartsWith("Se llegó al cupo de equipos de la licencia.", LicenciaTexto.ParaError(Error(402, CodigosDeLicencia.CupoAgotado))!);
         var tableta = LicenciaTexto.ParaError(Error(402, CodigosDeLicencia.CupoAgotado, """{"tipo":"equipos"}"""), Audiencia.Alumno)!;
-        Assert.Equal("Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu profesor.", tableta);
+        Assert.Equal("Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu docente.", tableta);
         foreach (var t in new[] { equipos, usuarios, tableta }) Limpia(t);
     }
 

@@ -44,7 +44,7 @@ internal static class TextoDeCalificaciones
     public static string Regla(string? regla) => regla switch
     {
         "mod10.porcentaje.v1" => "Porcentaje de aciertos de la evaluación",
-        "mod10.revision_docente.v1" => "Revisión del profesor sobre la evaluación",
+        "mod10.revision_docente.v1" => "Revisión del docente sobre la evaluación",
         null or "" => "—",
         _ => regla,
     };
@@ -59,7 +59,7 @@ internal static class TextoDeCalificaciones
 
     /// <summary>El nivel de desempeño con su origen: valorado por el profesor o salido de la cuenta de la escala.</summary>
     public static string Desempeno(Presentacion? p) => p?.Desempeno is { Nivel: { Length: > 0 } nivel } d
-        ? d.ValoradoPorElDocente ? $"{nivel} · valorado por el profesor" : nivel
+        ? d.ValoradoPorElDocente ? $"{nivel} · valorado por el docente" : nivel
         : "—";
 
     // ---------------------------------------------------------------------------------------- historial

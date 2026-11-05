@@ -3,18 +3,21 @@
     x:Class="Avacom.Lms.Ops.Pages.CalificacionesConfigPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    BackgroundColor="#F1F1F1"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo liso (evaluar); la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Aurora="False">
     <!-- Configuración académica (MOD-011 · FUN-124, FUN-125). SÓLO administración. Cada nivel educativo está en modo «simple» (por defecto: sin notas, sólo el estado de cada estudiante) o
          en modo «calificaciones» con una escala adoptada por la institución. Las plantillas de escala son ORIENTATIVAS: la institución debe revisarlas y adoptarlas, y la advertencia se
          muestra siempre. Antes de aplicar un cambio se ve la vista previa de cómo convierte la escala y se valida (bloqueos y advertencias). Todo con toques: no hay texto libre. -->
     <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
         <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1280">
             <VerticalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
-                <Label Text="CONFIGURACIÓN ACADÉMICA" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                <Label x:Name="TituloLabel" Text="Sistema de calificación" FontFamily="InterMedium" FontSize="30" TextColor="#18181B" LineBreakMode="WordWrap" />
-                <Label x:Name="SubtituloLabel" Text="Elige el país y el sistema con que se califica cada nivel educativo, y cómo se ve el resultado." FontFamily="InterLight" FontSize="15" TextColor="#52525B" LineBreakMode="WordWrap" />
+                <Label Text="CONFIGURACIÓN ACADÉMICA" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Sistema de calificación" FontFamily="LexendMedium" FontSize="30" TextColor="#1F2433" LineBreakMode="WordWrap" />
+                <Label x:Name="SubtituloLabel" Text="Elige el país y el sistema con que se califica cada nivel educativo, y cómo se ve el resultado." FontFamily="Lexend" FontSize="15" TextColor="#4F5566" LineBreakMode="WordWrap" />
             </VerticalStackLayout>
             <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
         </Grid>
@@ -31,4 +34,5 @@
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

@@ -49,9 +49,9 @@ internal static class LicenciaUi
     /// <summary>Los colores del banner del menú principal (fondo, tinta y filo), con la misma familia que las bandas del PIN y del aviso de entrada.</summary>
     public static (Color Fondo, Color Tinta, Color Filo) ColoresDelBanner(TonoDeAviso tono) => tono switch
     {
-        TonoDeAviso.Fuerte => (ExamenUi.FondoAmbarFuerte, ExamenUi.TintaAmbarFuerte, Color.FromArgb("#66F3C701")),
-        TonoDeAviso.Atencion => (Color.FromArgb("#FEF9E6"), Color.FromArgb("#3A2A00"), Color.FromArgb("#4DF3C701")),
-        _ => (Color.FromArgb("#E6F6FC"), Color.FromArgb("#0B4F70"), Color.FromArgb("#4D01A4E1")),
+        TonoDeAviso.Fuerte => (ExamenUi.FondoAmbarFuerte, ExamenUi.TintaAmbarFuerte, Color.FromArgb("#66C2410C")),
+        TonoDeAviso.Atencion => (Color.FromArgb("#FFEDDF"), Color.FromArgb("#9A3412"), Color.FromArgb("#FDD0AE")),
+        _ => (Color.FromArgb("#E3F5FC"), Color.FromArgb("#075985"), Color.FromArgb("#BCE5F5")),
     };
 
     // ------------------------------------------------------------------------------------------------------------------ superficies

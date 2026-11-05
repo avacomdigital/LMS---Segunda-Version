@@ -28,6 +28,8 @@ public partial class LoginPage : ContentPage
     public LoginPage()
     {
         InitializeComponent();
+        // Sin desplazamiento: con el PIN maestro o en una ventana baja, la caja se reduce para caber entera en el área segura.
+        Avacom.Lms.Ui.Controls.AjusteDeCaja.Encajar(AccesoEscena, AccesoCaja, AccesoContenido, 128, 48);
         ServerEntry.Text = Ajustes.ServidorDePrueba ?? Ajustes.Get("ops_server", Sesion.DireccionPorDefecto);
         ServerEntry.IsReadOnly = Ajustes.ServidorDePrueba is not null;
         if (Ajustes.ClavesVisiblesDePrueba) ClaveEntry.IsPassword = false;   // sólo el recorrido de UI Automation (ver Ajustes)
@@ -109,7 +111,7 @@ public partial class LoginPage : ContentPage
         {
             MostrarCredenciales(false);
             MostrarPrototipo(true);
-            if (!conservarEstado) Estado("Conexión exitosa · API disponible", Tono.Bien);
+            if (!conservarEstado) Estado("Conectado al aula", Tono.Bien);
         }
     }
 
@@ -117,11 +119,11 @@ public partial class LoginPage : ContentPage
     {
         if (_ocupado) return;
         _ocupado = true;
-        CheckButton.IsEnabled = false; Estado("Comprobando el servicio local…", Tono.Neutro);
+        CheckButton.IsEnabled = false; Estado("Comprobando la conexión…", Tono.Neutro);
         try
         {
             var healthy = await apiClient.CheckHealthAsync(ConnectionOptions.Normalize(ServerEntry.Text ?? string.Empty));
-            if (!healthy) { Estado("No fue posible conectar · revisa red, IP y puerto", Tono.Problema); MostrarPrototipo(false); return; }
+            if (!healthy) { Estado("No pudimos conectar con el aula. Revisa la dirección.", Tono.Problema); MostrarPrototipo(false); return; }
             // El nodo contesta: se guarda la dirección (Sesion.Acceso habla con ella) y se le pregunta qué ofrece.
             Sesion.GuardarServidor(ServerEntry.Text);
             _ = Sesion.RegistrarEquipoAsync();
@@ -131,7 +133,7 @@ public partial class LoginPage : ContentPage
                 // Un nodo anterior a /configuracion/ no exige sesión: modo prototipo.
                 Sesion.SesionObligatoria = false;
                 MostrarPrototipo(true);
-                Estado("Conexión exitosa · API disponible", Tono.Bien);
+                Estado("Conectado al aula", Tono.Bien);
                 return;
             }
             if (!configuracion.Instalado) { await Shell.Current.GoToAsync("primer-arranque"); return; }
@@ -401,10 +403,10 @@ public partial class LoginPage : ContentPage
     {
         var (fondo, punto, glifo) = tono switch
         {
-            Tono.Bien => ("#E6F5EE", "#019D60", "✓"),
-            Tono.Aviso => ("#FEF9E6", "#9A7B00", "!"),
-            Tono.Problema => ("#FDECEC", "#E5262B", "!"),
-            _ => ("#F1F1F1", "#52525B", "●"),
+            Tono.Bien => ("#E1F5EC", "#047857", "✓"),
+            Tono.Aviso => ("#FFEDDF", "#C2410C", "!"),
+            Tono.Problema => ("#FDE7E7", "#C81E24", "!"),
+            _ => ("#F6F7F9", "#4F5566", "●"),
         };
         StatusCard.BackgroundColor = Color.FromArgb(fondo);
         StatusDot.TextColor = Color.FromArgb(punto);

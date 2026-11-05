@@ -169,7 +169,6 @@ public sealed class ReportesEstadoPage : PaginaDeReporte
 
         var plantilla = new VerticalStackLayout { Spacing = 6 };
         plantilla.Add(new Label { Text = "Plantilla", FontFamily = Ds.FuenteMedia, FontSize = 17, TextColor = Ds.Tinta });
-        plantilla.Add(Ds.Secundario("Colombia organiza por áreas y asignaturas con los desempeños nacionales (Superior, Alto, Básico, Bajo); México por campos formativos en primaria y por disciplinas en secundaria, sin cifras en preescolar.", 14));
         var fichas = EstudioUi.Envolver();
         foreach (var codigo in c.PlantillasDeBoletin ?? [PlantillasDeBoletin.Auto, PlantillasDeBoletin.Colombia, PlantillasDeBoletin.Mexico, PlantillasDeBoletin.Generica])
         {

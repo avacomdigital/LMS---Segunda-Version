@@ -1,3 +1,4 @@
+﻿using Avacom.Lms.Ui.Controls;
 using System.Diagnostics;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Core.Services;
@@ -30,7 +31,37 @@ namespace Avacom.Lms.Ops.Pages;
 public partial class ClaseSesionPage : ContentPage
 {
     private static readonly string[] Frases = ["Miren al frente", "Dos minutos", "Guarden lo que llevan", "Levanten la mano si terminaron", "Vamos a cerrar"];
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
+    private static readonly string[] IconosDeFrase = ["ico_proyectar.png", "ico_historial.png", "ico_descarga.png", "ico_mano.png", "ico_terminar.png"];
+
+    /// <summary>Una frase del aviso como ficha: icono del DS arriba y la frase debajo, todas del mismo tamaño para que la hoja se lea ordenada.</summary>
+    private View FichaDeFrase(string frase, string icono)
+    {
+        var pila = new VerticalStackLayout
+        {
+            Spacing = 10, VerticalOptions = LayoutOptions.Center,
+            Children =
+            {
+                Ds.IconoDs(icono, 40),
+                new Label
+                {
+                    Text = frase, FontFamily = Ds.FuenteMedia, FontSize = 16, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap,
+                    HorizontalTextAlignment = TextAlignment.Center, HorizontalOptions = LayoutOptions.Center,
+                },
+            },
+        };
+        var ficha = Ds.Tarjeta(pila, Ds.RadioInterno, new Thickness(14, 16));
+        ficha.Stroke = new SolidColorBrush(Ds.Linea);
+        ficha.StrokeThickness = 2;
+        // Sin sombra: la hoja se abre y se cierra, y en Windows un borde con sombra que se oculta deja un rectángulo gris.
+        ficha.Shadow = null!;
+        ficha.WidthRequest = 168;
+        ficha.MinimumHeightRequest = 128;
+        ficha.Margin = new Thickness(6);
+        SemanticProperties.SetDescription(ficha, $"Enviar «{frase}»");
+        Ds.Tocable(ficha, () => AvisarAsync(frase));
+        return ficha;
+    }
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
 
     /// <summary>MSG-045: por debajo de este espacio libre una tableta puede no poder guardar el paquete de una actividad.</summary>
     private const int EspacioMinimoMb = 500;
@@ -74,14 +105,9 @@ public partial class ClaseSesionPage : ContentPage
         _participantesBtn.FontSize = 16;
         ParticipantesSlot.Content = Ds.Capsula(_participantesBtn);
         PintarControles();
-        foreach (var frase in Frases)
-        {
-            var b = Ds.Boton(frase, Ds.Rango.Secondary, async (_, _) => await AvisarAsync(frase), 64);
-            b.Margin = new Thickness(0, 0, 10, 10);
-            FrasesHost.Add(Ds.Capsula(b));
-        }
-        var cerrarAviso = Ds.Boton("Cerrar", Ds.Rango.Quiet, (_, _) => CerrarAviso(), 64);
-        FrasesHost.Add(cerrarAviso);
+        for (var i = 0; i < Frases.Length; i++)
+            FrasesHost.Add(FichaDeFrase(Frases[i], IconosDeFrase[i]));
+        AvisoCerrarSlot.Content = Ds.Boton("Cerrar", Ds.Rango.Quiet, (_, _) => CerrarAviso(), 52);
 
         // 007-12 · el código en grande: se abre tocando el código; el profesor puede cambiarlo o volver a la clase.
         Ds.Tocable(CodigoCard, () => { AbrirCodigoGrande(); return Task.CompletedTask; });
@@ -361,7 +387,7 @@ public partial class ClaseSesionPage : ContentPage
             AvisosDeEstado.Add(Ds.Pildora($"Aula llena · {lleno.Activos} de {lleno.Pico} · las nuevas tabletas esperan", Ds.AlertaSuave, Ds.Tinta, 13));
         if (manos > 0)
         {
-            var mano = Ds.Pildora(manos == 1 ? "✋ 1 alumno pide ayuda" : $"✋ {manos} alumnos piden ayuda", Ds.InfoSuave, Ds.Tinta, 14);
+            var mano = Ds.PildoraConIcono(manos == 1 ? "1 alumno pide ayuda" : $"{manos} alumnos piden ayuda", "ico_mano.png", Ds.InfoSuave, Ds.Tinta, 14);
             Ds.Tocable(mano, () => { AbrirParticipantes(); return Task.CompletedTask; });
             SemanticProperties.SetDescription(mano, "Ver quién pide ayuda");
             AvisosDeEstado.Add(mano);
@@ -473,7 +499,7 @@ public partial class ClaseSesionPage : ContentPage
         fila.Add(Ds.IconoCategoria(objeto.Componente, 40), 0, 0);
         var textos = new VerticalStackLayout { Spacing = 2, VerticalOptions = LayoutOptions.Center };
         textos.Add(Ds.Cuerpo(objeto.Titulo, 15));
-        textos.Add(Ds.Secundario(string.Join(" · ", new[] { objeto.ComponenteLegible, objeto.DuracionTexto, esExamen ? (ExamenDe(objeto) is null ? "Aplicar examen" : "Ver panel del examen") : objeto.FueraDeAlcance ? "lo aplica MOD-010" : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 13));
+        textos.Add(Ds.Secundario(string.Join(" · ", new[] { objeto.ComponenteLegible, objeto.DuracionTexto, esExamen ? (ExamenDe(objeto) is null ? "Aplicar examen" : "Ver panel del examen") : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 13));
         fila.Add(textos, 1, 0);
         var pila = new VerticalStackLayout { Spacing = 6 };
         pila.Add(fila);
@@ -486,10 +512,10 @@ public partial class ClaseSesionPage : ContentPage
                 // Ficha de lámina en relieve: degradado, bisel y una sombra corta (la tarjeta recorta lo que sobresale).
                 var chip = new Border
                 {
-                    Background = Ds.Degradado(activa ? Ds.Rojo : Colors.White), Stroke = Ds.Bisel(), StrokeThickness = 1,
+                    Background = Ds.Degradado(activa ? Ds.Principal : Colors.White), Stroke = Ds.Bisel(), StrokeThickness = 1,
                     WidthRequest = 46, HeightRequest = 46, Margin = new Thickness(0, 0, 8, 8),
                     StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioControl },
-                    Shadow = new Shadow { Brush = new SolidColorBrush(activa ? Ds.Rojo : Ds.Tinta), Offset = new Point(0, 4), Radius = 10, Opacity = activa ? 0.35f : 0.12f },
+                    Shadow = new Shadow { Brush = new SolidColorBrush(activa ? Ds.Principal : Ds.Tinta), Offset = new Point(0, 4), Radius = 10, Opacity = activa ? 0.35f : 0.12f },
                     Content = new Label { Text = u.Indice.ToString(), FontSize = 17, FontFamily = Ds.FuenteMedia, TextColor = activa ? Colors.White : Ds.Tinta, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center },
                 };
                 Ds.Tocable(chip, () => ProyectarAsync(objeto.ObjetoRef, u.UnidadRef));
@@ -597,13 +623,16 @@ public partial class ClaseSesionPage : ContentPage
         ControlesHost.Clear();
         // Bloqueo y aviso son la acción secundaria de siempre en clase: van sólo con ícono, redondos y juntos,
         // para no competir en tamaño con lanzar actividad y terminar clase.
-        _bloqueoBtn = Ds.BotonIcono("🔓", false, Ds.Alerta, async (_, _) => await ControlAsync("bloqueo", !(_sesion?.PantallasBloqueadas ?? false)), "Bloquear pantallas");
-        _avisoBtn = Ds.BotonIcono("⚠", false, Ds.Info, OnAlternarAviso, "Enviar un aviso");
+        _bloqueoBtn = ConIcono(Ds.BotonIcono("🔓", false, Ds.Alerta, async (_, _) => await ControlAsync("bloqueo", !(_sesion?.PantallasBloqueadas ?? false)), "Bloquear pantallas"), "mando_candado_abierto.png");
+        _avisoBtn = ConIcono(Ds.BotonIcono("⚠", false, Ds.Info, OnAlternarAviso, "Enviar un aviso"), "mando_avisos.png");
         _seguimientoBtn = Ds.Interruptor("Seguimiento", true, Ds.Info, async (_, _) => await ControlAsync("seguimiento", !(_sesion?.Seguimiento ?? true)), 46);
         _actividadBtn = Ds.Boton("Lanzar actividad", Ds.Rango.Secondary, async (_, _) => await LanzarOCerrarAsync(), 46);
         _terminarBtn = Ds.Boton("Terminar clase", Ds.Rango.Destructive, async (_, _) => await TerminarAsync(), 46);
+        // DS: el peligro va lleno sólo si es la acción principal de la pantalla; en la clase en vivo es un secundario rojo.
+        Ds.PintarRelieve(_terminarBtn, Ds.Superficie, Ds.Peligro);
+        _terminarBtn.BorderColor = Ds.Rojo100;
 
-        _pantallaBtn = Ds.BotonIcono("🖵", false, Ds.Info, OnAlternarPantalla, "Pantalla de proyección: resolución y escala");
+        _pantallaBtn = ConIcono(Ds.BotonIcono("🖵", false, Ds.Info, OnAlternarPantalla, "Pantalla de proyección: resolución y escala"), "mando_pantalla.png");
 
         var bloqueoYAviso = new HorizontalStackLayout { Spacing = 8 };
         bloqueoYAviso.Add(Ds.Capsula(_bloqueoBtn));
@@ -677,7 +706,7 @@ public partial class ClaseSesionPage : ContentPage
         if (_bloqueoBtn is not null)
         {
             Ds.PintarInterruptor(_bloqueoBtn, s.PantallasBloqueadas, Ds.Alerta);
-            _bloqueoBtn.Text = s.PantallasBloqueadas ? "🔒" : "🔓";
+            _bloqueoBtn.ImageSource = s.PantallasBloqueadas ? "mando_candado.png" : "mando_candado_abierto.png";
             SemanticProperties.SetDescription(_bloqueoBtn, s.PantallasBloqueadas ? "Pantallas bloqueadas · liberar" : "Bloquear pantallas");
         }
         if (_seguimientoBtn is not null)
@@ -887,7 +916,7 @@ public partial class ClaseSesionPage : ContentPage
     {
         if (_sesion is null) return;
         var aula = Sesion.Aula;
-        if (!await DisplayAlertAsync("¿Terminar la clase?", "Se libera la sala y se consolida el resumen. Una clase cerrada no se reabre.", "Terminar", "Seguir en clase")) return;
+        if (!await this.AlertaAsync("¿Terminar la clase?", "Se libera la sala y se consolida el resumen. Una clase cerrada no se reabre.", "Terminar", "Seguir en clase")) return;
         var cerrada = await aula.CerrarAsync(_sesion.Id, Sesion.ProfesorId, forzar: false);
         if (cerrada is null && aula.UltimoError?.Codigo == "actividades_abiertas")
         {
@@ -955,9 +984,9 @@ public partial class ClaseSesionPage : ContentPage
             Grid.SetRowSpan(avatar, 2);
             // Nombre (con la mano levantada al lado), estado y la tableta con la que entró (MOD-009); lo importante se ve de un vistazo.
             var textos = new VerticalStackLayout { VerticalOptions = LayoutOptions.Center, Spacing = 2 };
-            textos.Add(Ds.Cuerpo(p.ManoLevantada ? $"✋ {p.Nombre}" : p.Nombre, 16));
+            textos.Add(Ds.Cuerpo(p.Nombre, 16));
             textos.Add(Ds.Secundario(string.Join(" · ", new[] { p.EstadoLegible, SinSenalTexto(p, s.ServidorEn), p.AdmisionNominal ? "invitado" : null, string.IsNullOrWhiteSpace(p.Dispositivo) ? null : p.Dispositivo }.Where(x => x is not null)), 13));
-            if (p.ManoLevantada) textos.Add(EtiquetaDeFila(Ds.Pildora("Pide ayuda", Ds.InfoSuave, Ds.Tinta, 13)));
+            if (p.ManoLevantada) textos.Add(EtiquetaDeFila(Ds.PildoraConIcono("Pide ayuda", "ico_mano.png", Ds.InfoSuave, Ds.Tinta, 13)));
             if (p.Proyectado) textos.Add(EtiquetaDeFila(Ds.Pildora("Su pantalla se proyecta", Ds.VioletaSuave, Ds.Tinta, 13)));
             if (p.TabletaBloqueada) textos.Add(EtiquetaDeFila(Ds.Pildora("Tableta bloqueada · sin lanzamientos", Ds.PeligroSuave, TintaPeligro, 13)));
             fila.Add(textos, 1, 0);
@@ -976,7 +1005,7 @@ public partial class ClaseSesionPage : ContentPage
             Button accion = p.Estado == "esperando"
                 ? Ds.Boton("Admitir", Ds.Rango.Secondary, async (_, _) => await ParticipanteAsync(p.Id, "admitir"), 52)
                 : p.Admitido
-                    ? Ds.Boton("Expulsar", Ds.Rango.Quiet, async (_, _) => { if (await DisplayAlertAsync("¿Expulsar de la clase?", $"{p.Nombre} saldrá de la sesión. Sus respuestas se conservan.", "Expulsar", "Cancelar")) await ParticipanteAsync(p.Id, "expulsar"); }, 52)
+                    ? Ds.Boton("Expulsar", Ds.Rango.Quiet, async (_, _) => { if (await this.AlertaAsync("¿Expulsar de la clase?", $"{p.Nombre} saldrá de la sesión. Sus respuestas se conservan.", "Expulsar", "Cancelar")) await ParticipanteAsync(p.Id, "expulsar"); }, 52)
                     : Ds.Boton("Readmitir", Ds.Rango.Quiet, async (_, _) => await ParticipanteAsync(p.Id, "admitir"), 52);
             Agregar(accion);
             fila.Add(acciones, 1, 1);
@@ -1052,11 +1081,19 @@ public partial class ClaseSesionPage : ContentPage
     private string TextoDeError(ErrorAula? error, string? motivo)
     {
         if (Sesion.MensajeDePermiso(error, _sesion?.ProfesorRotulo) is { } permiso) return permiso;
-        if (error?.Estado == 403) return "Esta clase la lleva otra persona. Sólo su profesor o la administración puede hacerlo.";
+        if (error?.Estado == 403) return "Esta clase la lleva otra persona. Sólo su docente o la administración puede hacerlo.";
         if (error?.Frenado == true) return "Demasiados intentos seguidos. Espera un momento y vuelve a probar.";
         if (error?.AulaLlena == true) return "El aula llegó a su capacidad máxima. Las tabletas nuevas esperan hasta que alguien salga.";
         return error?.Detalle ?? motivo ?? "Sin detalle.";
     }
 
-    private Task Aviso(string titulo, string? detalle) => DisplayAlertAsync(titulo, detalle ?? "Sin detalle.", "Entendido");
+    private Task Aviso(string titulo, string? detalle) => this.AlertaAsync(titulo, detalle ?? "Sin detalle.", "Entendido");
+
+    /// <summary>Mando redondo con el icono sólido del DS en lugar del emoji (la descripción semántica sigue siendo su nombre).</summary>
+    private static Button ConIcono(Button boton, string icono)
+    {
+        boton.Text = string.Empty;
+        boton.ImageSource = icono;
+        return boton;
+    }
 }

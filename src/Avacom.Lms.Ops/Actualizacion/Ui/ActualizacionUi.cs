@@ -31,7 +31,7 @@ internal static class ActualizacionUi
         _ => Tono.Neutro,
     };
 
-    /// <summary>Un paquete ya importado (o la ficha que se está mirando) en el flujo, con la hora del nodo y la zona de este equipo.</summary>
+    /// <summary>Un paquete ya importado (o la ficha que se está mirando) en el flujo, con la hora del aula y la zona de este equipo.</summary>
     public static FlujoDeActualizacion NuevoFlujo() =>
         new(Api, Actor, Sesion.Usuario, () => Sesion.ClaseAbiertaId is not null, () => Avacom.Lms.Core.Services.RelojNodo.AhoraMs);
 

@@ -1,3 +1,4 @@
+using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Core.Nodo;
 using Avacom.Lms.Ops.Nodo;
 using Avacom.Lms.Ui.Design;
@@ -45,7 +46,7 @@ public partial class BitacoraPage
         TonoDelNodo.Bien => (Ds.ExitoSuave, TintaExito),
         TonoDelNodo.Atencion => (Ds.AlertaSuave, TintaAlerta),
         TonoDelNodo.Problema => (Ds.PeligroSuave, TintaPeligro),
-        _ => (Color.FromArgb("#EEEEF0"), Ds.TintaSuave),
+        _ => (Color.FromArgb("#E3E6EC"), Ds.TintaSuave),
     };
 
     private View TarjetaDeEstado(EstadoDelNodo e)
@@ -153,7 +154,7 @@ public partial class BitacoraPage
 
     private async Task ReprocesarAsync(ProblemaDeCola p)
     {
-        if (!await DisplayAlertAsync("Reprocesar el evento", NodoTexto.ConfirmarReproceso(p), "Reprocesar", "Cancelar")) return;
+        if (!await this.AlertaAsync("Reprocesar el evento", NodoTexto.ConfirmarReproceso(p), "Reprocesar", "Cancelar")) return;
         var mensaje = await Reproceso.ReprocesarAsync(p.Id);
         await MostrarAsync(Pestana.Equipo);
         ContenidoHost.Insert(0, AvisoDe(mensaje, Reproceso.UltimoReprocesado is { } r && r.Id == p.Id));
@@ -161,7 +162,7 @@ public partial class BitacoraPage
 
     private async Task ReproducirAsync(string consumidor)
     {
-        if (!await DisplayAlertAsync("Reproducir desde el principio", NodoTexto.ConfirmarReproduccion(consumidor), "Reproducir", "Cancelar")) return;
+        if (!await this.AlertaAsync("Reproducir desde el principio", NodoTexto.ConfirmarReproduccion(consumidor), "Reproducir", "Cancelar")) return;
         var mensaje = await Reproceso.ReproducirAsync(consumidor);
         await MostrarAsync(Pestana.Equipo);
         ContenidoHost.Insert(0, AvisoDe(mensaje, Reproceso.UltimaReproduccion is { } r && r.Consumidor == consumidor));

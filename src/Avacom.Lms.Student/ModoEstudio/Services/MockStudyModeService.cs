@@ -192,7 +192,7 @@ internal sealed class MockStudyModeService : IStudyModeService
     public Uri ResolveMedia(string lessonId, string relativeUrl) => new(new Uri("http://localhost/"), relativeUrl.TrimStart('/'));
 
     public string ExamExplanation(string lessonId) =>
-        "La evaluación de la unidad la aplica tu profesor en clase o cuando él la abra. No es parte de la práctica: aquí puedes prepararte todas las veces que quieras, sin que cuente como nota.";
+        "La evaluación de la unidad la aplica tu docente en clase o cuando él la abra. No es parte de la práctica: aquí puedes prepararte todas las veces que quieras, sin que cuente como nota.";
 
     internal StudyLessonData? Datos(string lessonId) => _almacen.Find(lessonId);
 
