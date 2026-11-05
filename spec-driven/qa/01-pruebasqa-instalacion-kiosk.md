@@ -130,12 +130,6 @@ La instalación por cable USB **no pudo completarse**: el computador AVACOM no v
 1. La interfaz ADB de la tableta Rockchip usa el controlador genérico `winusb.inf`, y el Google USB Driver 13 no se asocia a ella (H-02); no hay un controlador del fabricante de la tableta instalado en estos equipos.
 2. La versión de ADB (`platform-tools`) instalada podría no ser compatible con el backend USB de Windows para este firmware (D-1…D-3).
 3. El firmware de la tableta podría no anunciar la interfaz ADB de forma estándar (D-4).
+4. Se sugiere revisar opciones de instalación que no use USB para realizar la instalación del Kiosk
 
-Ninguna de las tres está confirmada; las pruebas D-1 a D-4 las distinguen sin modificar el sistema. Si se confirman, la instalación masiva por USB exigiría estandarizar driver, `platform-tools` y firmware en cada computador AVACOM, lo cual es costoso y poco viable para personal no técnico. **Recomendación:** adoptar una de las alternativas de la sección 7 como método de despliegue y reservar el cable USB para diagnóstico puntual.
-
-## 9. Preguntas abiertas
-
-- ¿Qué versión de `adb` está instalada en los equipos AVACOM (D-1)?
-- ¿Existe un controlador OEM (Rockchip/fabricante de la tableta) o un modo de arranque del firmware que active ADB en el USB?
-- ¿El comportamiento se repite en otros computadores AVACOM y en otras unidades del mismo modelo de tableta?
-- ¿Qué alternativa de la sección 7 se adopta como método oficial de instalación masiva?
+La instalación masiva por USB exigiría estandarizar driver, `platform-tools` y firmware en cada computador AVACOM, lo cual es costoso y poco viable para personal no técnico. 
