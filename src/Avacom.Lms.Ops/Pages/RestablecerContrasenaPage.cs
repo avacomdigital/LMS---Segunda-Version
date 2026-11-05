@@ -1,4 +1,4 @@
-using Avacom.Lms.Core.Services;
+﻿using Avacom.Lms.Core.Services;
 using Avacom.Lms.Ops.Acceso;
 using Avacom.Lms.Ops.Controls;
 using Avacom.Lms.Ui.Controls;
@@ -45,7 +45,7 @@ public sealed class RestablecerContrasenaPage : ContentPage
         _documento.Completed += (_, _) => ConfirmarDocumento();
 
         _teclado.PinCompleto += (_, pin) => { _pin = pin; _estado.Mostrar(null); Mostrar(PasoClave); };
-        _pasoPin.Add(new Label { Text = "Marca el PIN maestro de la escuela.", FontSize = 15, FontAttributes = FontAttributes.Bold, HorizontalTextAlignment = TextAlignment.Center });
+        _pasoPin.Add(new Label { Text = "Marca el PIN maestro de la escuela.", FontSize = 15, FontFamily = "LexendSemiBold", HorizontalTextAlignment = TextAlignment.Center });
         _pasoPin.Add(_teclado);
         _pasoPin.Add(MarcoDeAcceso.Discreta("Atrás", (_, _) => { _pin = null; Mostrar(PasoDocumento); }));
 
@@ -62,6 +62,8 @@ public sealed class RestablecerContrasenaPage : ContentPage
 
         _marco.Cuerpo.Add(_estado);
         foreach (var p in new[] { _pasoDocumento, _pasoPin, _pasoClave }) _marco.Cuerpo.Add(p);
+        // Se abre en el primer paso: sin esto, al llegar desde el acceso se veían los tres pasos a la vez.
+        Mostrar(PasoDocumento);
     }
 
     private int Minimo => ContrasenaNueva.Minimo(Sesion.Configuracion, "teacher", 8);
@@ -90,7 +92,7 @@ public sealed class RestablecerContrasenaPage : ContentPage
         _teclado.Habilitado = true;
         _marco.Mensaje.Text = paso switch
         {
-            PasoDocumento => "Paso 1 de 3 · Tu documento. Así sabemos de qué profesor es la contraseña.",
+            PasoDocumento => "Paso 1 de 3 · Tu documento. Así sabemos de qué docente es la contraseña.",
             PasoPin => "Paso 2 de 3 · El PIN maestro de la escuela. Si no lo tienes, pide el PIN maestro a administración.",
             _ => "Paso 3 de 3 · Tu contraseña nueva. Al cambiarla cerramos tus sesiones abiertas en otros equipos.",
         };

@@ -83,7 +83,7 @@ public partial class BitacoraPage
         {
             "verificada" => Chip("Verificada", Ds.ExitoSuave, TintaExito),
             "con_salto" => Chip($"Salto en #{t.SaltoEn}", Ds.PeligroSuave, TintaPeligro),
-            "rotada" => Chip("Rotada", Color.FromArgb("#EEEEF0"), Ds.TintaSuave),
+            "rotada" => Chip("Rotada", Color.FromArgb("#E3E6EC"), Ds.TintaSuave),
             _ => Chip("Activa", Ds.InfoSuave, Ds.Tinta),
         };
         fila.Add(chip, 1, 0);

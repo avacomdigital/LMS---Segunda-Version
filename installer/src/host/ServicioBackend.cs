@@ -34,6 +34,9 @@ internal sealed class ServicioBackend : BackgroundService
         // Un corte a mitad de una actualizacion se retoma o se deshace ANTES de levantar el backend: nunca arranca sobre un codigo a medias.
         _actualizaciones.Arrancar();
 
+        // MOD-018 (P-23): la integridad del despliegue se verifica EN SEGUNDO PLANO: deja un asiento y una señal para el backend, y NUNCA retrasa ni impide el arranque.
+        _ = Task.Run(() => Integridad.Senal.Comprobar(_registro), CancellationToken.None);
+
         var intento = 0;
         while (!cancelacion.IsCancellationRequested)
         {
@@ -64,6 +67,16 @@ internal sealed class ServicioBackend : BackgroundService
             {
                 await Task.Run(() => _actualizaciones.Atender(() => { }), CancellationToken.None).ConfigureAwait(false);
                 intento = 0;
+                continue;
+            }
+
+            // MOD-018 segunda proteccion: el backend solo arranca en un dispositivo AVACOM autorizado (identidad UEFI + sello). Sin la comprobacion no hay datos ni lecciones: la aplicacion queda inerte.
+            if (OperatingSystem.IsWindows() && !Dispositivo.PuertaDelServicio.Permite(_registro))
+            {
+                var esperaDispositivo = EsperasSegundos[Math.Min(intento, EsperasSegundos.Length - 1)];
+                intento++;
+                try { await Task.Delay(TimeSpan.FromSeconds(esperaDispositivo), cancelacion).ConfigureAwait(false); }
+                catch (OperationCanceledException) { break; }
                 continue;
             }
 
@@ -111,6 +124,7 @@ internal sealed class ServicioBackend : BackgroundService
                 if (actualizado)
                 {
                     _registro.Escribir("La actualizacion termino con el backend parado: se vuelve a levantar.");
+                    _ = Task.Run(() => Integridad.Senal.Comprobar(_registro), CancellationToken.None);     // el codigo cambio: se vuelve a verificar contra lo que el paquete firmado declaro
                     intento = 0;
                     continue;
                 }

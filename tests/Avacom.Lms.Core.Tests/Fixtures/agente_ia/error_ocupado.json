@@ -1,0 +1,5 @@
+{
+  "codigo": "busy",
+  "detail": "El asistente está atendiendo otra consulta. Intenta de nuevo en un momento.",
+  "reintentable": true
+}

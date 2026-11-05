@@ -65,6 +65,25 @@
 		<MauiImage Include="..\..\assets\avacom-logo.svg" Link="Resources\Images\avacom_logo.svg" BaseSize="209,56" />
 		<MauiImage Include="..\..\assets\avacom-symbol.svg" Link="Resources\Images\avacom_mark.svg" />
 
+		<!-- Iconos sólidos del catálogo del Aula · Design System (46, exportados a PNG 256 desde el DS, como recomienda para MAUI).
+		     Fuente única en assets\iconos, compartida por las dos apps; MAUI genera las densidades desde 64 DIU. -->
+		<MauiImage Include="..\..\assets\iconos\ico_*.png" BaseSize="64,64" />
+		<!-- Los mismos iconos a 32 DIU para la barra inferior (un botón muestra su imagen al tamaño base). -->
+		<MauiImage Include="..\..\assets\iconos\ico_menu.png" Link="Resources\Images\barra_menu.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_play.png" Link="Resources\Images\barra_play.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_estudio.png" Link="Resources\Images\barra_estudio.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_examen.png" Link="Resources\Images\barra_examen.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_libros.png" Link="Resources\Images\barra_libros.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_ayuda.png" Link="Resources\Images\barra_ayuda.png" BaseSize="32,32" />
+		<MauiImage Include="..\..\assets\iconos\ico_salir.png" Link="Resources\Images\barra_salir.png" BaseSize="32,32" />
+
+		<!-- Los iconos del DS que acompañan el texto de un botón (volver, siguiente, pedir ayuda, marcar): flechas a 36 DIU, el resto a 30. -->
+		<MauiImage Include="..\..\assets\iconos\ico_atras.png" Link="Resources\Images\boton_atras.png" BaseSize="36,36" />
+		<MauiImage Include="..\..\assets\iconos\ico_adelante.png" Link="Resources\Images\boton_adelante.png" BaseSize="36,36" />
+		<MauiImage Include="..\..\assets\iconos\ico_mano.png" Link="Resources\Images\boton_mano.png" BaseSize="30,30" />
+		<MauiImage Include="..\..\assets\iconos\ico_estrella.png" Link="Resources\Images\boton_estrella.png" BaseSize="30,30" />
+		<MauiImage Include="..\..\assets\iconos\ico_actualiza.png" Link="Resources\Images\boton_actualiza.png" BaseSize="30,30" />
+
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
@@ -83,6 +102,13 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\Avacom.Lms.Core\Avacom.Lms.Core.csproj" />
 	  <ProjectReference Include="..\Avacom.Lms.Ui\Avacom.Lms.Ui.csproj" />
+	</ItemGroup>
+
+	<!-- MOD-018 Fase 4 (P-22): la biblioteca nativa de licenciamiento viaja en el APK como lib/<abi>/libavacom_lic.so. Los binarios NO se versionan (native\avacom-lic\Build-Native.ps1 los deja
+	     en native\avacom-lic\dist\android-<abi>\): si no se compilaron, no se incluye nada y la app sigue por la referencia (la nativa nunca es obligatoria). Sin AllowUnsafeBlocks. -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<AndroidNativeLibrary Include="..\..\native\avacom-lic\dist\android-arm64-v8a\libavacom_lic.so" Abi="arm64-v8a" Condition="Exists('..\..\native\avacom-lic\dist\android-arm64-v8a\libavacom_lic.so')" />
+		<AndroidNativeLibrary Include="..\..\native\avacom-lic\dist\android-x86_64\libavacom_lic.so" Abi="x86_64" Condition="Exists('..\..\native\avacom-lic\dist\android-x86_64\libavacom_lic.so')" />
 	</ItemGroup>
 
 </Project>

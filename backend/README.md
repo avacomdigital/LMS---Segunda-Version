@@ -285,6 +285,10 @@ error, **404/403** referencia inexistente o desactivada por la escuela.
 | `AVACOM_ACTUALIZACION_CANAL` | Actualizaciones: el canal por internet (P-18), **apagado de fábrica** (vacío). En MVP sólo se declara: aplicar nunca depende de la red |
 | `AVACOM_ACTUALIZACION_VIGILANTE` · `AVACOM_ACTUALIZACION_INTERVALO_S` | Actualizaciones: `0` apaga el vigilante del proceso ASGI (lee el resultado del Host al arrancar, abre las ventanas programadas, archiva a los 14 días y anuncia paquetes nuevos) · su cadencia en segundos (30) |
 | `AVACOM_ACTUALIZACION_MAX_MB` | Actualizaciones: tope de un paquete `.avupd` en MB (512; nunca por encima del tope del dominio) |
+| `AVACOM_RESPALDO_DIR` | Respaldo (MOD-016): la carpeta de respaldos `.avbak`, `Informes\` y la clave del equipo **sólo en desarrollo y pruebas** (por defecto una temporal). En producción es siempre `%ProgramData%\AVACOM\OPS Master\Respaldos` |
+| `AVACOM_RESPALDO_UNIDADES` | Respaldo: carpetas (separadas por `;`) que hacen de **unidad extraíble** en desarrollo y pruebas. En producción las unidades son las reales (`AVACOM\Respaldos\`) |
+| `AVACOM_RESPALDO_CARPETAS` | Respaldo: carpetas de archivos de la institución que entran al respaldo, `nombre=ruta` o `nombre:reinstalable=ruta`, separadas por `;`. Vacío = sólo la base de datos. Lo reinstalable no entra salvo que se pida |
+| `AVACOM_RESPALDO_VIGILANTE` · `AVACOM_RESPALDO_INTERVALO_S` | Respaldo: `0` apaga el vigilante del proceso ASGI (calendario, verificación, retención, reanudar lo interrumpido) · su cadencia en segundos (60) |
 | `settings.AVACOM_LICENCIA_ENTORNO` | **No es una variable**: lo clasifica el backend al arrancar (`licenciamiento/dominio/entorno.py`, P-12). Es de producción si existe el marcador `.avacom-canal` que escribe el instalador, si el código vive bajo `Program Files` o si `AVACOM_LMS_ENTORNO=instalado`; sólo un repositorio con `.git` es desarrollo o pruebas (`manage.py test`). `AVACOM_LMS_ENTORNO=pruebas` en un `backend.env` no apaga la licencia |
 
 Si faltan las tres claves, el prototipo las deriva de `SECRET_KEY` con HKDF y `/health/` responde

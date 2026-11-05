@@ -1,0 +1,6 @@
+{
+  "codigo": "llm_model_missing",
+  "detail": "El asistente aún no está configurado en este equipo.",
+  "reintentable": false,
+  "sugerencia": "El asistente todavía no está configurado en este equipo. Avisa a quien administra el equipo."
+}

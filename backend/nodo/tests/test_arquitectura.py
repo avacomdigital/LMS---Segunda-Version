@@ -120,7 +120,8 @@ class ArquitecturaTests(SimpleTestCase):
 
     def test_sin_dependencias_nuevas(self):
         permitidos = {"__future__", "contextlib", "dataclasses", "hashlib", "json", "logging", "os", "random", "re", "shutil", "tempfile", "threading", "time", "typing", "uuid",
-                      "collections", "pathlib", "django", "rest_framework", "nodo", "acceso", "audit", "evaluacion"}
+                      "collections", "pathlib", "django", "rest_framework", "nodo", "acceso", "audit", "evaluacion",
+                      "respaldo"}                  # MOD-016: el adaptador `RespaldoVerificado` de la purga (BR-017) lee `respaldo.servicios.verificado_hasta()`; sólo ahí
         usados = {mod.split(".")[0] for a in fuentes("dominio", "aplicacion", "infraestructura", "interfaces") for mod in IMPORTACION.findall(a.read_text(encoding="utf-8"))
                   if not mod.startswith(".")}
         self.assertEqual(usados - permitidos, set())

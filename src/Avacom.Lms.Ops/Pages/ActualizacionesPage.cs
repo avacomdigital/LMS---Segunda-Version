@@ -50,8 +50,8 @@ public sealed class ActualizacionesPage : ContentPage
         textos.Add(new Label { Text = "Actualizaciones del aula", FontFamily = Ds.FuenteMedia, FontSize = 30, TextColor = Ds.Tinta, AutomationId = "actualizaciones-titulo" });
         textos.Add(_subtitulo);
         var acciones = new HorizontalStackLayout { Spacing = 12, VerticalOptions = LayoutOptions.Center };
-        acciones.Add(ActualizacionUi.Accion("Actualizar", Ds.Rango.Secondary, ActualizacionUi.Seguro("Actualizar", () => CargarAsync(forzar: true)), "actualizaciones-actualizar", 170).Vista);
-        acciones.Add(ActualizacionUi.Accion("‹  Menú principal", Ds.Rango.Quiet, ActualizacionUi.Seguro("Volver", AlMenuPrincipalAsync), "actualizaciones-volver", 220).Vista);
+        acciones.Add(ActualizacionUi.Accion("Actualizar", Ds.Rango.Secondary, ActualizacionUi.Seguro("Actualizar", () => CargarAsync(forzar: true)), "actualizaciones-actualizar").Vista);
+        Ds.VolverALaIzquierda(acciones, ActualizacionUi.Accion("‹  Menú principal", Ds.Rango.Secondary, ActualizacionUi.Seguro("Volver", AlMenuPrincipalAsync), "actualizaciones-volver", 220).Vista);
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 24, Padding = new Thickness(44, 24, 48, 0), VerticalOptions = LayoutOptions.Start };
         cabecera.Add(textos, 0, 0);
         cabecera.Add(acciones, 1, 0);
@@ -64,13 +64,13 @@ public sealed class ActualizacionesPage : ContentPage
         var pie = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)], Padding = new Thickness(0, 12, 0, 12) };
         pie.Add(new ContentView { Margin = new Thickness(Aire, 0), Content = _pie }, 1, 0);
 
-        var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Star), new RowDefinition(new GridLength(4, GridUnitType.Star)), new RowDefinition(GridLength.Star)] };
+        var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(new GridLength(4, GridUnitType.Star)), new RowDefinition(GridLength.Star)] };
         raiz.Add(cabecera, 0, 0);
         raiz.Add(tarjetas, 0, 1);
         raiz.Add(pie, 0, 2);
         raiz.Add(_hoja, 0, 0);
         Grid.SetRowSpan(_hoja, 3);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Contenido = raiz };   // Aula · Design System: isla de marca, fecha y hora y fondo Aurora
     }
 
     protected override async void OnAppearing()

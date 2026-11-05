@@ -15,6 +15,12 @@
         7. Ejecuta las comprobaciones del asistente en este Windows.
         8. Compila el asistente con Inno Setup.
 
+    Segunda proteccion (MOD-018, S2): si el build lleva la puerta de dispositivo (hay llave publica de sello), entre el ensayo del paquete (7b, sobre el codigo en claro: es lo que el
+    Update Manager y manage.py necesitan) y Inno Setup (8) hay un paso 7c que CIFRA el backend de dist\staging con el Python EMBEBIDO del runtime (Cifrar-Backend.py: Backend\codigo.avpkg),
+    entrega Runtime\avacom_boot.py, borra los .py, guarda la llave K en un archivo de CUSTODIA fuera del paquete y del repositorio, vuelve a sellar el paquete (integridad.json y la firma del
+    manifiesto se calculan sobre el paquete YA cifrado) y comprueba: 0 .py y 0 .pyc, codigo.avpkg presente, K en ningun archivo, la lista de integridad sin .py. Sin llave de sello no se cifra:
+    un paquete cifrado sin puerta no podria arrancar nunca (nadie liberaria K).
+
     El resultado queda en installer\latest. El contenido intermedio queda en
     dist\staging, que es la "version instalable" antes de empaquetarla.
 
@@ -69,7 +75,27 @@ param(
     # empaqueto ya no seria lo que hay en el repositorio.
     [switch] $PermitirCambiosDuranteLaCompilacion,
     # MOD-018 (ver .PARAMETER ExigirLlaveDeProduccion): sin llave publica de produccion, falla en vez de avisar.
-    [switch] $ExigirLlaveDeProduccion
+    [switch] $ExigirLlaveDeProduccion,
+    # MOD-018 (P-23): la llave de PUBLICACION con la que se firma el manifiesto del paquete (la misma de los .avupd) y la copia de su frase protegida con DPAPI (ver 07-ceremonia de llaves).
+    # Si no estan, el paquete sale SIN firma (un desarrollo) salvo con -ExigirLlaveDeProduccion, que lo rechaza.
+    [string] $LlaveDePublicacion = (Join-Path $env:USERPROFILE 'AVACOM-Llaves\claves\upd-2026-1.avkey'),
+    [string] $FraseDeLaLlave = (Join-Path $env:USERPROFILE 'AVACOM-Llaves\frase\upd-2026-1.frase.dpapi'),
+    # MOD-018 (P-20 a P-22): sin avacom_lic.dll compilada (native\avacom-lic\dist\win-x64) el paquete sale con la implementacion de referencia (es lo que hace el nodo si la DLL no carga); con este interruptor falla.
+    [switch] $ExigirBinariosNativos,
+    # MOD-018 segunda proteccion (S1): la PUERTA DE DISPOSITIVO del instalador (solo instala en un equipo con sello AVACOM valido). Se incluye SOLA cuando
+    # backend\licenciamiento\claves\sello\produccion.json trae una llave publica de sello; con este interruptor, sin llave el build FALLA en vez de avisar.
+    [switch] $ExigirPuertaDeDispositivo,
+    # Solo para ensayar la puerta: embebe la llave de DESARROLLO del sello (kid:hex). Se rechaza junto a -ExigirLlaveDeProduccion: una llave de desarrollo es publica por construccion.
+    [string] $ClavesDeSelloDePrueba = '',
+    # Solo con un build de PRUEBAS: la privada (.avkey) de esa llave de sello y la copia DPAPI de su frase. Sirven para correr, dentro del build y contra el paquete que salio, los ensayos de la puerta
+    # y de la liberacion de la llave (Ensayar-Dispositivo.ps1 y Ensayar-ClaveDelPaquete.ps1). Sin ellas el build los omite y lo dice (en produccion la privada del sello no esta en este equipo).
+    [string] $LlaveDeSelloDePrueba = '',
+    [string] $FraseDeSelloDePrueba = '',
+    # MOD-018 segunda proteccion (S2): el archivo donde se guarda la llave K del paquete cifrado. Debe quedar FUERA del repositorio, de dist\staging y de installer\latest, y no puede existir ya
+    # (una K es de UN paquete: sobrescribirla dejaria sin abrir un instalador ya entregado). Por omision: %USERPROFILE%\AVACOM-Llaves\paquete\k-<version>-<revision>-<fecha>.hex.
+    [string] $CustodiaDeLlaveDelPaquete = '',
+    # Deja el codigo del backend en claro aunque haya puerta (un ensayo del asistente, no una entrega). No se acepta con -ExigirPuertaDeDispositivo.
+    [switch] $SinCifrarElCodigo
 )
 
 $ErrorActionPreference = 'Stop'
@@ -159,6 +185,12 @@ function Huella-App {
     Huella-Carpetas -Raices @(
         (Join-Path $raiz 'src\Avacom.Lms.Ops'), (Join-Path $raiz 'src\Avacom.Lms.Core'),
         (Join-Path $raiz 'src\Avacom.Lms.Ui'), (Join-Path $raiz 'assets')) -ExcluirArchivos @('*.user', '*.log')
+}
+# MOD-018 (P-21): las fuentes de la biblioteca nativa entran a la huella que el build compara al empezar y al terminar. Los binarios y lo que generan las compilaciones no cuentan:
+# se comprueban aparte (su SHA-256 va en el manifiesto y en la lista firmada de integridad).
+function Huella-Nativo {
+    Huella-Carpetas -Raices @((Join-Path $raiz 'native\avacom-lic')) -ExcluirCarpetas @('bin', 'obj', 'dist', 'build', 'out', '.vs', '__pycache__') `
+        -ExcluirArchivos @('*.obj', '*.o', '*.dll', '*.so', '*.exe', '*.pdb', '*.ilk', '*.lib', '*.exp', '*.log', '*.pyc', '*.gcda', '*.gcno')
 }
 function Huella-Instalador {
     # El asistente, el host, el verificador y los scripts de compilacion: todo lo que decide que hay
@@ -273,7 +305,51 @@ Write-Host '  Tomando la huella del codigo que se va a empaquetar ...'
 $huellaBackendInicial = Huella-Backend (Join-Path $raiz 'backend')
 $huellaAppInicial = Huella-App
 $huellaInstaladorInicial = Huella-Instalador
-Write-Host "  backend $($huellaBackendInicial.Substring(0, 12)) · app $($huellaAppInicial.Substring(0, 12)) · asistente $($huellaInstaladorInicial.Substring(0, 12))"
+$huellaNativoInicial = Huella-Nativo
+Write-Host "  backend $($huellaBackendInicial.Substring(0, 12)) · app $($huellaAppInicial.Substring(0, 12)) · asistente $($huellaInstaladorInicial.Substring(0, 12)) · nativo $($huellaNativoInicial.Substring(0, 12))"
+
+# MOD-018 (P-23): ¿se puede firmar el manifiesto? Hace falta la llave de publicacion cifrada Y la copia DPAPI de su frase (solo la cuenta que hizo la ceremonia, en su equipo, la abre).
+$firmarElManifiesto = (Test-Path -LiteralPath $LlaveDePublicacion) -and (Test-Path -LiteralPath $FraseDeLaLlave)
+$clavesDePublicacion = ''
+if ($firmarElManifiesto) {
+    # Las llaves PUBLICAS en las que el Host confiara (vigente y siguiente), incrustadas en su ejecutable: kid:hex|kid:hex (la coma y el punto y coma separan propiedades de MSBuild).
+    $clavesDePublicacion = (@((Get-Content (Join-Path $raiz 'backend\actualizacion\claves\produccion.json') -Raw -Encoding UTF8 | ConvertFrom-Json).claves |
+        Where-Object { $_.estado -in @('vigente', 'siguiente') -and "$($_.publica)".Length -eq 64 } | ForEach-Object { "$($_.kid):$($_.publica)" }) -join '|')
+    if (-not $clavesDePublicacion) { $firmarElManifiesto = $false }
+}
+if (-not $firmarElManifiesto) {
+    if ($ExigirLlaveDeProduccion) { Fallar "No se puede firmar el manifiesto: falta la llave de publicacion ($LlaveDePublicacion), la copia de su frase ($FraseDeLaLlave) o su llave publica en backend\actualizacion\claves\produccion.json." }
+    Write-Warning 'ATENCION: el manifiesto del paquete saldra SIN firma (no hay llave de publicacion en este equipo). Sirve para pruebas; no lo entregues a un cliente asi (usa -ExigirLlaveDeProduccion).'
+} else {
+    Write-Host "  El manifiesto se firmara con la llave de publicacion ($(Split-Path $LlaveDePublicacion -Leaf))."
+}
+
+# MOD-018 segunda proteccion (S1): las llaves PUBLICAS del sello de dispositivo que el Host llevara incrustadas. Distintas de las de licencias y de publicacion (SP-07). Sin ninguna, el Host no puede
+# validar un sello y la puerta del instalador NO se incluye (avisa; -ExigirPuertaDeDispositivo lo rechaza).
+$clavesDeSello = ''
+try {
+    $clavesDeSello = (@((Get-Content (Join-Path $raiz 'backend\licenciamiento\claves\sello\produccion.json') -Raw -Encoding UTF8 | ConvertFrom-Json).claves |
+        Where-Object { $_.estado -in @('vigente', 'siguiente') -and "$($_.publica)".Length -eq 64 } | ForEach-Object { "$($_.kid):$($_.publica)" }) -join '|')
+} catch { $clavesDeSello = '' }
+# Con -ExigirPuertaDeDispositivo cuenta SOLO la lista de PRODUCCION: ni una llave de prueba ni un parametro la sustituyen (la ceremonia de sello-2026-1 es del CTO).
+if ($ExigirPuertaDeDispositivo) {
+    if (-not $clavesDeSello) { Fallar 'No hay ninguna llave publica de SELLO en backend\licenciamiento\claves\sello\produccion.json: este instalador no podria verificar ningun dispositivo AVACOM (falta la ceremonia de la llave de sello, SQ-08). -ExigirPuertaDeDispositivo no acepta una llave de prueba en su lugar.' }
+    if ($ClavesDeSelloDePrueba) { Fallar '-ClavesDeSelloDePrueba no se combina con -ExigirPuertaDeDispositivo: una llave de sello de prueba tiene una semilla/privada que no es de AVACOM.' }
+    if ($SinCifrarElCodigo) { Fallar '-SinCifrarElCodigo no se combina con -ExigirPuertaDeDispositivo: la puerta de entrega exige el codigo cifrado.' }
+}
+if ($ClavesDeSelloDePrueba) {
+    if ($ExigirLlaveDeProduccion) { Fallar 'Una llave de sello de PRUEBA no puede ir en un instalador de entrega (-ExigirLlaveDeProduccion): su semilla es publica.' }
+    if ($ClavesDeSelloDePrueba -notmatch '^[a-z0-9._-]{1,32}:[0-9a-f]{64}$') { Fallar '-ClavesDeSelloDePrueba va como kid:hex (64 hexadecimales).' }
+    Write-Warning "ATENCION: este instalador acepta sellos firmados con la llave de PRUEBA $($ClavesDeSelloDePrueba.Split(':')[0]). Es un ensayo; no lo entregues."
+    $clavesDeSello = (@($clavesDeSello, $ClavesDeSelloDePrueba) | Where-Object { $_ }) -join '|'
+}
+$puertaDeDispositivo = [bool]$clavesDeSello
+if (-not $puertaDeDispositivo) {
+    if ($ExigirPuertaDeDispositivo) { Fallar 'No hay ninguna llave publica de SELLO en backend\licenciamiento\claves\sello\produccion.json: este instalador no podria verificar ningun dispositivo AVACOM (falta la ceremonia de la llave de sello, SQ-08).' }
+    Write-Warning 'ATENCION: este instalador sale SIN la puerta de dispositivo AVACOM (no hay llave publica de sello: falta la ceremonia, SQ-08). Se instala en cualquier equipo; no lo entregues a un cliente asi (usa -ExigirPuertaDeDispositivo).'
+} else {
+    Write-Host "  La puerta de dispositivo AVACOM se incluye (llaves de sello: $((($clavesDeSello -split '\|') | ForEach-Object { $_.Split(':')[0] }) -join ', '))."
+}
 
 # ------------------------------------------------------------------ 2. Pruebas
 if ($OmitirPruebas) {
@@ -383,13 +459,18 @@ if (-not (Test-Path $simbolo)) {
 # --------------------------------------------------------- 5. Host del backend
 Paso '5/8  Publicando el host del backend y el runtime de Python'
 
-$codigo = Nativo -Ejecutable 'dotnet' -Argumentos @(
+$argumentosHost = @(
     'publish', (Join-Path $raiz 'installer\src\host\Avacom.Ops.Host.csproj')
     '-c', $Configuracion
     "-p:PublishDir=$staging\Runtime\"
     "-p:Version=$Version"
     '--nologo', '-v', 'minimal'
-) -Silencioso
+)
+# MOD-018 (P-23): con firma, el Host lleva incrustadas las llaves publicas que verifican el manifiesto; sin ella, solo compara huellas.
+if ($clavesDePublicacion) { $argumentosHost += "-p:ClavesDePublicacion=$clavesDePublicacion" }
+# El Host de ESTE paso va SIN las llaves de sello a proposito: un Host con puerta no levanta el servicio en un equipo sin sello AVACOM (ni siquiera uno de ensayo), asi que el ensayo del
+# paquete (7b) no podria correr. El Host DEFINITIVO, con las llaves incrustadas, se publica encima en el paso 7c (y el paquete se vuelve a sellar). Solo cambia la constante de las llaves.
+$codigo = Nativo -Ejecutable 'dotnet' -Argumentos $argumentosHost -Silencioso
 if ($codigo -ne 0) { Fallar 'No se pudo publicar el host del backend.' }
 Remove-Item (Join-Path $staging 'Runtime\*.pdb') -Force -ErrorAction SilentlyContinue
 
@@ -468,6 +549,22 @@ Write-Host "  El backend empaquetado es el del repositorio (huella $($huellaBack
 # y ANTES de calcular la huella que va al manifiesto: forma parte del paquete.
 $marcadorDeCanal = Join-Path $destinoBackend '.avacom-canal'
 [IO.File]::WriteAllText($marcadorDeCanal, "canal=produccion`r`nversion=$Version`r`n", (New-Object System.Text.UTF8Encoding($false)))
+
+# MOD-018 (P-21, P-22): la biblioteca nativa (avacom_lic.dll, Windows x64) viaja junto al backend (Python la carga por RUTA ABSOLUTA: Backend\native\avacom_lic.dll, ver infraestructura/nativo.py) y junto a la app (Core la
+# llama por P/Invoke). NUNCA es obligatoria: si falta o no carga, el nodo usa la implementacion de referencia (D-40). Su SHA-256 queda en el manifiesto y en la lista firmada de integridad.
+$dllNativa = Join-Path $raiz 'native\avacom-lic\dist\win-x64\avacom_lic.dll'
+$huellaDeLaDll = $null
+if (Test-Path $dllNativa) {
+    New-Item -ItemType Directory -Force (Join-Path $destinoBackend 'native') | Out-Null
+    Copy-Item $dllNativa (Join-Path $destinoBackend 'native\avacom_lic.dll') -Force
+    Copy-Item $dllNativa (Join-Path $staging 'App\avacom_lic.dll') -Force
+    $huellaDeLaDll = (Get-FileHash $dllNativa -Algorithm SHA256).Hash.ToLowerInvariant()
+    Write-Host "  Biblioteca nativa avacom_lic.dll en Backend\native y en App (SHA-256 $($huellaDeLaDll.Substring(0, 12)))."
+} elseif ($ExigirBinariosNativos) {
+    Fallar "Falta la biblioteca nativa ($dllNativa): compilala con native\avacom-lic\Build-Native.ps1."
+} else {
+    Write-Warning 'La biblioteca nativa (avacom_lic.dll) no esta compilada: el paquete saldra con la implementacion de referencia (Python y C#). Es valido; no es la defensa completa de P-20.'
+}
 $huellaBackendPaquete = Huella-Backend $destinoBackend
 
 # MOD-018 (P-03): prueba sobre el CONTENIDO del paquete. Nada de claves privadas, de la llave de desarrollo, del emisor de pruebas ni de licencias sueltas dentro del backend.
@@ -476,7 +573,10 @@ if (Test-Path (Join-Path $destinoBackend 'licenciamiento\tests')) { $sospechosos
 if (Test-Path (Join-Path $destinoBackend 'licenciamiento\claves\desarrollo.json')) { $sospechosos += 'licenciamiento\claves\desarrollo.json (la llave de desarrollo)' }
 if (Test-Path (Join-Path $destinoBackend 'actualizacion\tests')) { $sospechosos += 'actualizacion\tests (el emisor de pruebas de paquetes)' }
 if (Test-Path (Join-Path $destinoBackend 'actualizacion\claves\desarrollo.json')) { $sospechosos += 'actualizacion\claves\desarrollo.json (la llave de desarrollo de paquetes)' }
-$sospechosos += @(Get-ChildItem $destinoBackend -Recurse -File -Include '*.avlic', '*.avreq', '*.avrel', '*.pem', '*.key' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($destinoBackend.Length + 1) })
+$sospechosos += @(Get-ChildItem $destinoBackend -Recurse -File -Include '*.avlic', '*.avreq', '*.avrel', '*.pem', '*.key', '*.avkey', '*.dpapi' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($destinoBackend.Length + 1) })
+# MOD-018 (P-23): lo mismo sobre TODO el paquete (no solo el backend): ni llaves privadas de AVACOM, ni copias de su frase, ni los emisores internos de licencias y de paquetes.
+$sospechosos += @(Get-ChildItem $staging -Recurse -File -Include '*.avkey', '*.dpapi', '*.frase', '*.frase.*', 'Emitir-Licencia.bat', 'avacom-licencias.bat', 'avacom-actualizacion.bat' -ErrorAction SilentlyContinue | ForEach-Object { 'paquete\' + $_.FullName.Substring($staging.Length + 1) })
+$sospechosos += @(Get-ChildItem $staging -Recurse -Directory -Include 'avacom_licencias', 'avacom_actualizacion', 'AVACOM-Llaves' -ErrorAction SilentlyContinue | ForEach-Object { 'paquete\' + $_.FullName.Substring($staging.Length + 1) + ' (carpeta de un emisor o de llaves)' })
 foreach ($archivo in (Get-ChildItem $destinoBackend -Recurse -File -Include '*.py', '*.json', '*.txt', '*.md' -ErrorAction SilentlyContinue)) {
     if (Select-String -Path $archivo.FullName -Pattern 'BEGIN (EC |RSA |OPENSSH )?PRIVATE KEY', 'avacom-licencia-desarrollo', 'avacom-actualizacion-desarrollo' -Quiet -ErrorAction SilentlyContinue) { $sospechosos += $archivo.FullName.Substring($destinoBackend.Length + 1) }
 }
@@ -537,6 +637,9 @@ $manifiesto = [ordered]@{
     huella_backend      = $huellaBackendPaquete
     huella_app          = $huellaAppInicial
     huella_asistente    = $huellaInstaladorInicial
+    huella_nativo       = $huellaNativoInicial
+    biblioteca_nativa   = [bool]$huellaDeLaDll
+    sha256_avacom_lic_dll = $huellaDeLaDll
     empaquetado         = (Get-Date).ToString('o')
     servicio            = 'AVACOMOPSBackend'
     escucha             = '0.0.0.0:8000'
@@ -550,6 +653,8 @@ $manifiesto = [ordered]@{
     licencias_activables = ($llavesDeProduccion -gt 0)
     llaves_publicas_de_produccion = $llavesDeProduccion
     llaves_publicas_de_actualizacion = $llavesDeActualizacion
+    puerta_de_dispositivo = $puertaDeDispositivo
+    llaves_publicas_de_sello = @(($clavesDeSello -split '\|') | Where-Object { $_ } | ForEach-Object { $_.Split(':')[0] })
     carpeta_registros   = '%ProgramData%\AVACOM\OPS Master\Logs'
     fuente_de_cursos    = 'AVACOM Contenido (biblioteca); el curso de ejemplo esta apagado'
     administra_cursos   = $false
@@ -557,6 +662,31 @@ $manifiesto = [ordered]@{
 }
 $manifiesto | ConvertTo-Json -Depth 4 |
     Set-Content -Path (Join-Path $staging 'manifiesto.json') -Encoding utf8
+
+# MOD-018 (P-23): integridad del despliegue. Sellar-Paquete.py escribe integridad.json (ruta + SHA-256 de Backend, Runtime y lo propio de App), le anota su huella a manifiesto.json y, si hay
+# llave, firma los bytes de manifiesto.json (Ed25519). Es lo ULTIMO que se le hace al manifiesto (despues de cualquier cambio en su contenido). La frase de la llave se lee de su copia DPAPI, viaja SOLO por una variable
+# de entorno del proceso hijo y no se escribe ni se imprime.
+# Se llama dos veces: al armar el paquete (codigo en claro) y, si el codigo se cifra, otra vez sobre el paquete ya cifrado (paso 7c): la lista y la firma son del paquete que se entrega.
+function Sellar-ElPaquete {
+    Write-Host '  Sellando el paquete: lista de integridad y firma del manifiesto ...'
+    $pythonSello = Join-Path $raiz 'backend\.venv\Scripts\python.exe'
+    if (-not (Test-Path $pythonSello)) { $pythonSello = (Get-Command python).Source }
+    $argumentosSello = @((Join-Path $PSScriptRoot 'Sellar-Paquete.py'), '--staging', $staging)
+    if ($firmarElManifiesto) { $argumentosSello += @('--privada', $LlaveDePublicacion) }
+    try {
+        if ($firmarElManifiesto) {
+            $segura = (Get-Content -LiteralPath $FraseDeLaLlave -Raw).Trim() | ConvertTo-SecureString
+            $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura)
+            try { $env:AVACOM_FRASE_LLAVE = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+        }
+        $codigoDelSello = Nativo -Ejecutable $pythonSello -Argumentos $argumentosSello
+    } finally {
+        Remove-Item Env:\AVACOM_FRASE_LLAVE -ErrorAction SilentlyContinue
+    }
+    if ($codigoDelSello -ne 0) { Fallar 'No se pudo sellar el paquete (lista de integridad y firma del manifiesto).' }
+    if ($firmarElManifiesto -and -not (Test-Path (Join-Path $staging 'manifiesto.firma.json'))) { Fallar 'El manifiesto debia quedar firmado y no hay manifiesto.firma.json.' }
+}
+Sellar-ElPaquete
 
 @"
 AVACOM OPS Master $Version (revision $revision)
@@ -647,6 +777,121 @@ if ($OmitirEnsayo) {
     if ($LASTEXITCODE -ne 0) { Fallar 'El ensayo del paquete fallo: no se compila el instalador.' }
 }
 
+# ------------------------------------------------- 7c. Host definitivo y codigo cifrado (segunda proteccion, S1 y S2)
+if ($puertaDeDispositivo) {
+    Paso '7c  Publicando el Host DEFINITIVO, con las llaves publicas de sello incrustadas'
+    $huellaDelHostSinLlaves = (Get-FileHash (Join-Path $staging 'Runtime\Avacom.Ops.Host.exe') -Algorithm SHA256).Hash
+    $codigo = Nativo -Ejecutable 'dotnet' -Argumentos ($argumentosHost + "-p:ClavesDeSello=$clavesDeSello") -Silencioso
+    if ($codigo -ne 0) { Fallar 'No se pudo publicar el Host definitivo (con las llaves de sello).' }
+    Remove-Item (Join-Path $staging 'Runtime\*.pdb') -Force -ErrorAction SilentlyContinue
+    # El Host va comprimido en un solo archivo: no se pueden buscar las llaves como texto. Lo que se comprueba aqui es que CAMBIO (se recompilo con las llaves); que las acepta lo prueban los ensayos de la puerta.
+    if ((Get-FileHash (Join-Path $staging 'Runtime\Avacom.Ops.Host.exe') -Algorithm SHA256).Hash -eq $huellaDelHostSinLlaves) { Fallar 'El Host definitivo es identico al de ensayo: no se recompilo con las llaves de sello.' }
+    Write-Host '  El Host definitivo se recompilo con las llaves de sello incrustadas.'
+}
+$codigoCifrado = ($puertaDeDispositivo -and -not $SinCifrarElCodigo)
+$archivoK = ''
+$kidDelPaquete = ''
+$huellaDelAvpkg = ''
+if (-not $codigoCifrado) {
+    Write-Host ''
+    if ($SinCifrarElCodigo) {
+        Write-Warning 'ATENCION: el codigo del backend sale EN CLARO por -SinCifrarElCodigo. Es un ensayo del asistente; no lo entregues.'
+    } else {
+        Write-Warning 'ATENCION: el codigo del backend sale EN CLARO (todos sus .py): sin llave publica de sello no hay quien libere la llave K de un paquete cifrado, y un paquete asi no arrancaria nunca. No lo entregues a un cliente asi (usa -ExigirPuertaDeDispositivo).'
+    }
+    if ($puertaDeDispositivo) { Sellar-ElPaquete }      # el Host cambio (lleva las llaves): la lista de integridad y la firma son del paquete definitivo
+} else {
+    Paso '7c  Cifrando el codigo del backend (codigo.avpkg) y sellando el paquete ya cifrado'
+    $pythonRuntime = Join-Path $staging 'Runtime\Python\python.exe'
+    if (-not (Test-Path $pythonRuntime)) { Fallar "No esta el Python embebido ($pythonRuntime): el bytecode tiene que ser el de la version que lo va a cargar." }
+
+    # La custodia de K: fuera del paquete, del repositorio y de la salida; una K nueva por compilacion y nunca se pisa una existente.
+    if (-not $CustodiaDeLlaveDelPaquete) {
+        $CustodiaDeLlaveDelPaquete = Join-Path $env:USERPROFILE ("AVACOM-Llaves\paquete\k-$Version-$revision-" + (Get-Date).ToString('yyyyMMdd-HHmmss') + '.hex')
+    }
+    $archivoK = [IO.Path]::GetFullPath($CustodiaDeLlaveDelPaquete)
+    foreach ($prohibida in @($raiz, $staging, $salida)) {
+        if ($archivoK.StartsWith($prohibida.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            Fallar "La custodia de la llave K ($archivoK) esta dentro de ${prohibida}: K tiene que quedar FUERA del repositorio y del paquete."
+        }
+    }
+    if (Test-Path -LiteralPath $archivoK) { Fallar "Ya existe ${archivoK}: una llave K es de UN paquete y no se sobrescribe. Pasa otra -CustodiaDeLlaveDelPaquete." }
+
+    # 1. Cifrar con el Python EMBEBIDO (-B: no deja __pycache__; -I: sin entorno ni carpeta del script en el camino).
+    $codigo = Nativo -Ejecutable $pythonRuntime -Argumentos @(
+        '-B', '-I', (Join-Path $PSScriptRoot 'Cifrar-Backend.py')
+        '--backend', $destinoBackend, '--escribir-clave', $archivoK, '--eliminar-fuentes', '--exigir-cero-py'
+    ) -Directorio $raiz
+    if ($codigo -ne 0) { Fallar 'No se pudo cifrar el backend (Cifrar-Backend.py).' }
+    if (-not (Test-Path -LiteralPath $archivoK)) { Fallar 'El cifrado no dejo la llave K en la custodia.' }
+
+    # 2. El cargador (publico por diseno: no lleva ningun secreto) viaja junto al Host.
+    Copy-Item (Join-Path $raiz 'installer\src\payload\avacom_boot.py') (Join-Path $staging 'Runtime') -Force
+
+    # 3. Lo que NO puede pasar con el paquete cifrado.
+    $restos = @(Get-ChildItem $destinoBackend -Recurse -Force -File -Include '*.py', '*.pyc', '*.pyo' -ErrorAction SilentlyContinue)
+    if ($restos.Count -gt 0) { Fallar ("Quedaron $($restos.Count) archivo(s) de codigo en Backend\ tras cifrar (p. ej. $($restos[0].FullName.Substring($destinoBackend.Length + 1))).") }
+    if (Get-ChildItem $destinoBackend -Recurse -Force -Directory -Filter '__pycache__' -ErrorAction SilentlyContinue) { Fallar 'Quedo un __pycache__ dentro de Backend\ tras cifrar.' }
+    $avpkg = Join-Path $destinoBackend 'codigo.avpkg'
+    if (-not (Test-Path $avpkg)) { Fallar 'Falta Backend\codigo.avpkg: el cifrado no dejo el paquete de codigo.' }
+    if ((Get-Item $avpkg).Length -lt 1MB) { Fallar "Backend\codigo.avpkg mide $((Get-Item $avpkg).Length) bytes: no puede ser todo el backend." }
+    foreach ($necesario in @('manage.py', 'avacom_lms\settings.py')) {
+        if (Test-Path (Join-Path $destinoBackend $necesario)) { Fallar "$necesario sigue en claro dentro de Backend\: el cifrado no se llevo todo." }
+    }
+    if (-not (Test-Path (Join-Path $staging 'Runtime\avacom_boot.py'))) { Fallar 'Falta Runtime\avacom_boot.py: el paquete cifrado no podria abrirse.' }
+    $codigoDeBusqueda = Nativo -Ejecutable $pythonRuntime -Argumentos @('-B', '-I', (Join-Path $PSScriptRoot 'Buscar-Llave.py'), '--clave-archivo', $archivoK, $staging) -Directorio $raiz -Silencioso
+    if ($codigoDeBusqueda -ne 0) { Fallar 'La llave K aparece dentro de dist\staging (o no se pudo comprobar): no se compila.' }
+    Write-Host '  La llave K no aparece en ningun archivo del paquete (en bruto, hexadecimal ni base64).'
+
+    $bytesK = [byte[]]((Get-Content -LiteralPath $archivoK -Raw).Trim() -split '(?<=\G.{2})(?!$)' | ForEach-Object { [Convert]::ToByte($_, 16) })
+    if ($bytesK.Length -ne 32) { Fallar 'La llave de custodia no mide 32 bytes.' }
+    $shaK = [System.Security.Cryptography.SHA256]::Create()
+    $kidDelPaquete = ([BitConverter]::ToString($shaK.ComputeHash([Text.Encoding]::ASCII.GetBytes('avacom-kid|') + $bytesK)).Replace('-', '').ToLowerInvariant()).Substring(0, 16)
+    $huellaDelAvpkg = (Get-FileHash $avpkg -Algorithm SHA256).Hash.ToLowerInvariant()
+
+    # 4. El manifiesto lo dice (sin K: solo su identificador publico) y el paquete se vuelve a sellar: integridad.json y la firma son del paquete YA cifrado.
+    $m = Get-Content (Join-Path $staging 'manifiesto.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($par in @(
+            @('codigo_cifrado', $true), @('kid_llave_del_paquete', $kidDelPaquete), @('sha256_codigo_avpkg', $huellaDelAvpkg),
+            @('cifrado_del_codigo', 'AES-256-GCM: bytecode por modulo (llave HKDF-SHA256 por ruta), indice y datos autenticados; K la libera el TPM del equipo sellado'),
+            @('python_del_bytecode', $VersionPython))) {
+        $m | Add-Member -NotePropertyName $par[0] -NotePropertyValue $par[1] -Force
+    }
+    $m | ConvertTo-Json -Depth 8 | Set-Content -Path (Join-Path $staging 'manifiesto.json') -Encoding utf8
+    Sellar-ElPaquete
+
+    # (texto y no ConvertFrom-Json: la lista pasa de 2 MB y Windows PowerShell 5.1 se atraganta con eso)
+    $textoLista = [IO.File]::ReadAllText((Join-Path $staging 'integridad.json'), [Text.Encoding]::UTF8)
+    if ([regex]::IsMatch($textoLista, '"Backend/[^"]*\.(py|pyc|pyo)"')) { Fallar 'integridad.json lista codigo en claro de Backend\.' }
+    if (-not $textoLista.Contains('"Backend/codigo.avpkg"') -or -not $textoLista.Contains('"Runtime/avacom_boot.py"')) { Fallar 'integridad.json no lista Backend/codigo.avpkg y Runtime/avacom_boot.py.' }
+    Write-Host "  Backend\codigo.avpkg $([math]::Round((Get-Item $avpkg).Length / 1MB, 1)) MB (SHA-256 $($huellaDelAvpkg.Substring(0, 12))), llave del paquete $kidDelPaquete; 0 .py y 0 .pyc; la lista de integridad y la firma son del paquete cifrado."
+    Write-Host "  La llave K quedo en la custodia: $archivoK" -ForegroundColor Yellow
+
+    # 5. Los ensayos contra ESTE paquete (el que va a Inno Setup). Necesitan la privada de la llave de sello: solo la tiene un build de pruebas.
+    if ($OmitirEnsayo) {
+        Write-Host '  Ensayos de la puerta y de la liberacion de la llave OMITIDOS por parametro' -ForegroundColor Yellow
+    } elseif (-not ($LlaveDeSelloDePrueba -and $FraseDeSelloDePrueba)) {
+        Write-Warning 'No se ensayaron la puerta y la liberacion de la llave contra este paquete: hace falta la privada de la llave de sello (-LlaveDeSelloDePrueba y -FraseDeSelloDePrueba), que en produccion no esta en este equipo. Corre Ensayar-ClaveDelPaquete.ps1 y Ensayar-Dispositivo.ps1 donde este la estacion de aprovisionamiento.'
+    } else {
+        $segura = (Get-Content -LiteralPath $FraseDeSelloDePrueba -Raw).Trim() | ConvertTo-SecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura)
+        try {
+            $env:AVACOM_FRASE_SELLO_ENSAYO = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+            Paso '7c  Ensayo de la liberacion de la llave contra el paquete cifrado (Host del paquete, TPM y estacion reales)'
+            $global:LASTEXITCODE = 0
+            & (Join-Path $PSScriptRoot 'Ensayar-ClaveDelPaquete.ps1') -Staging $staging -ClaveDelPaquete $archivoK -LlaveDeSello $LlaveDeSelloDePrueba
+            if ($LASTEXITCODE -ne 0) { Fallar 'El ensayo de la liberacion de la llave fallo contra el paquete cifrado: no se compila el instalador.' }
+            Paso '7c  Ensayo de la puerta de dispositivo con el Host del paquete'
+            $global:LASTEXITCODE = 0
+            & (Join-Path $PSScriptRoot 'Ensayar-Dispositivo.ps1') -HostExe (Join-Path $staging 'Runtime\Avacom.Ops.Host.exe') -LlaveDeSello $LlaveDeSelloDePrueba
+            if ($LASTEXITCODE -ne 0) { Fallar 'El ensayo de la puerta de dispositivo fallo con el Host del paquete: no se compila el instalador.' }
+        } finally {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+            Remove-Item Env:\AVACOM_FRASE_SELLO_ENSAYO -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 # ------------------------------------------------------------ 8. Inno Setup
 Paso '8/8  Compilando el asistente con Inno Setup'
 
@@ -661,6 +906,7 @@ $codigo = Nativo -Ejecutable $iscc -Argumentos @(
     "/DRevision=$revision"
     "/DVersionProducto=$Version"
     "/DPoliticaDatos=$PoliticaDatos"
+    $(if ($puertaDeDispositivo) { "/DPuertaDeDispositivo=1" })
     $iss
 ) -Directorio (Split-Path $iss) -LineasSiFalla 40
 if ($codigo -ne 0) { Fallar 'Inno Setup no pudo compilar el asistente.' }
@@ -682,15 +928,23 @@ if ($instalador.Name -ne "AVACOM-OPS-Master-Setup-$Version.exe") {
     Fallar "El instalador se llama $($instalador.Name) y deberia llamarse AVACOM-OPS-Master-Setup-$Version.exe."
 }
 
+# K tampoco puede estar en el .exe. OJO: Inno Setup lo comprime, asi que esta busqueda solo atrapa un K en claro y sin comprimir; la prueba que cuenta es la de dist\staging (paso 7c).
+if ($codigoCifrado) {
+    $codigoDeBusqueda = Nativo -Ejecutable (Join-Path $staging 'Runtime\Python\python.exe') -Argumentos @('-B', '-I', (Join-Path $PSScriptRoot 'Buscar-Llave.py'), '--clave-archivo', $archivoK, $instalador.FullName) -Directorio $raiz -Silencioso
+    if ($codigoDeBusqueda -ne 0) { Remove-Item $instalador.FullName -Force; Fallar 'La llave K aparece en el instalador compilado (o no se pudo comprobar): se descarto.' }
+}
+
 # El codigo no cambio mientras se compilaba (otro proceso editando el repositorio): el
 # instalador es lo que habia en disco al empezar, y eso es lo que el paquete contiene.
 $huellaBackendFinal = Huella-Backend (Join-Path $raiz 'backend')
 $huellaAppFinal = Huella-App
 $huellaInstaladorFinal = Huella-Instalador
+$huellaNativoFinal = Huella-Nativo
 $cambiaron = @()
 if ($huellaBackendFinal -ne $huellaBackendInicial) { $cambiaron += 'el backend' }
 if ($huellaAppFinal -ne $huellaAppInicial) { $cambiaron += 'la aplicacion' }
 if ($huellaInstaladorFinal -ne $huellaInstaladorInicial) { $cambiaron += 'el asistente' }
+if ($huellaNativoFinal -ne $huellaNativoInicial) { $cambiaron += 'la biblioteca nativa' }
 if ($cambiaron.Count -gt 0) {
     if ($PermitirCambiosDuranteLaCompilacion) {
         Write-Host "  AVISO: cambio $($cambiaron -join ', ') mientras se compilaba; se acepto por parametro." -ForegroundColor Yellow
@@ -714,6 +968,8 @@ Arbol-limpio $(if ($arbolLimpio) { 'si' } else { 'no (' + @($cambiosSinConfirmar
 Huella-backend $huellaBackendPaquete
 Huella-app $huellaAppInicial
 Huella-asistente $huellaInstaladorInicial
+Puerta-de-dispositivo $(if ($puertaDeDispositivo) { 'si (llaves de sello: ' + ((($clavesDeSello -split '\|') | ForEach-Object { $_.Split(':')[0] }) -join ', ') + ')' } else { 'NO' })
+Codigo-cifrado $(if ($codigoCifrado) { "si (llave del paquete $kidDelPaquete; codigo.avpkg SHA-256 $huellaDelAvpkg)" } else { 'NO (el codigo del backend va en claro)' })
 Empaquetado $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss zzz'))
 "@ | Set-Content -Path (Join-Path $salida 'SHA256.txt') -Encoding utf8
 
@@ -779,3 +1035,8 @@ Write-Host "  $($instalador.FullName)"
 Write-Host "  $([math]::Round($instalador.Length / 1MB, 1)) MB"
 Write-Host "  Version $Version · revision $revision · $(if ($arbolLimpio) { 'arbol limpio' } else { "$(@($cambiosSinConfirmar).Count) archivos sin confirmar" })"
 Write-Host "  SHA256 $huella"
+if ($codigoCifrado) {
+    Write-Host "  Codigo cifrado: llave del paquete $kidDelPaquete; la llave K esta en la custodia $archivoK (NO viaja en el instalador)"
+} else {
+    Write-Host '  Codigo del backend EN CLARO (sin cifrar).' -ForegroundColor Yellow
+}

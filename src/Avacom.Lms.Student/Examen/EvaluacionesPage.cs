@@ -32,7 +32,7 @@ public sealed class EvaluacionesPage : ContentPage
         Shell.SetNavBarIsVisible(this, false);
         BackgroundColor = Ds.Lienzo;
 
-        var volver = Ds.Boton("‹  Menú", Ds.Rango.Quiet, async (_, _) => await Shell.Current.GoToAsync(".."), 52);
+        var volver = Ds.Boton("‹  Menú", Ds.Rango.Secondary, async (_, _) => await Shell.Current.GoToAsync(".."), 52);
         volver.FontSize = 17;
         volver.AutomationId = "evals-volver";
         var titulo = Ds.Titulo("Mis evaluaciones", 28);
@@ -60,7 +60,7 @@ public sealed class EvaluacionesPage : ContentPage
         var raiz = new Grid { RowDefinitions = [new RowDefinition(GridLength.Auto), new RowDefinition(GridLength.Star)] };
         raiz.Add(barra, 0, 0);
         raiz.Add(new ScrollView { Content = _cuerpo }, 0, 1);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = raiz };   // DS: isla de marca y modo; fondo liso al evaluar
     }
 
     protected override async void OnAppearing()
@@ -99,7 +99,7 @@ public sealed class EvaluacionesPage : ContentPage
             {
                 _quien.Text = string.Empty;
                 if (_firma != "visitante")
-                    Pintar(Mensaje("Estás como visitante", "Las evaluaciones son de quien entra con su nombre y su PIN. Si olvidaste tu PIN, pídele a tu profesor que te ayude."), "visitante");
+                    Pintar(Mensaje("Estás como visitante", "Las evaluaciones son de quien entra con su nombre y su PIN. Si olvidaste tu PIN, pídele a tu docente que te ayude."), "visitante");
                 return;
             }
             if (!Sesion.SabeQuienEvalua)
@@ -158,7 +158,7 @@ public sealed class EvaluacionesPage : ContentPage
     {
         var pila = new VerticalStackLayout { Spacing = 14 };
         if (mis.Pendientes.Count == 0 && mis.Recientes.Count == 0)
-            return Mensaje("No tienes evaluaciones por ahora", "Cuando tu profesor aplique una, aparecerá aquí.");
+            return Mensaje("No tienes evaluaciones por ahora", "Cuando tu docente aplique una, aparecerá aquí.");
         if (mis.Pendientes.Count > 0)
         {
             pila.Add(Ds.Cuerpo("Para presentar", 19, Ds.Tinta));
@@ -248,7 +248,7 @@ public sealed class EvaluacionesPage : ContentPage
         }
         if (_estudiantes.Grupos.Count == 0)
         {
-            Pintar(Mensaje("No hay evaluaciones abiertas", "Cuando tu profesor aplique una, aquí podrás elegir quién eres y presentarla."), "quien-vacio");
+            Pintar(Mensaje("No hay evaluaciones abiertas", "Cuando tu docente aplique una, aquí podrás elegir quién eres y presentarla."), "quien-vacio");
             _estudiantes = null;
             return;
         }
@@ -288,7 +288,7 @@ public sealed class EvaluacionesPage : ContentPage
         pila.Add(lista);
         if (grupo is not null && _estudiantes.Grupos.Count > 1)
         {
-            var otro = Ds.Boton("‹  Elegir otro grupo", Ds.Rango.Quiet, (_, _) => { _grupoElegido = null; _firma = null; _ = CargarAsync(); }, 52);
+            var otro = Ds.Boton("‹  Elegir otro grupo", Ds.Rango.Secondary, (_, _) => { _grupoElegido = null; _firma = null; _ = CargarAsync(); }, 52);
             pila.Add(otro);
         }
         Pintar(Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(28, 32)), firma);

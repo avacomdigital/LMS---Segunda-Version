@@ -1,0 +1,16 @@
+{
+  "clave_huella": "b15b88263bafc2c4581f5e23fa9ac38c733b42e0744c46450fc87df2df0566fd",
+  "confirmada_en": 1792691285712,
+  "detalle": {
+    "arranque": "verificado",
+    "certificados": 3,
+    "gestor_cerrado": true,
+    "motivo": "ok",
+    "nivel": "tee",
+    "raiz": "prueba",
+    "version_atestacion": 300
+  },
+  "dispositivo_id": "4ba7c0ed-3a1c-4aed-8ee2-669ea5a9f280",
+  "garantia": "hardware",
+  "motivo": "ok"
+}

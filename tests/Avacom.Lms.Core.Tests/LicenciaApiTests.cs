@@ -244,7 +244,7 @@ public sealed class LicenciaApiTests : IDisposable
         Assert.True(e.EsCupoAgotado);
         var alumno = MensajesDeAcceso.Texto(e, Audiencia.Alumno);
         Assert.Equal(LicenciaTexto.ParaError(e, Audiencia.Alumno), alumno);
-        Assert.Contains("profesor", alumno);
+        Assert.Contains("docente", alumno);
         Assert.DoesNotContain("cupo", alumno);                                                      // al alumno no se le habla de licencias
         var personal = MensajesDeAcceso.Texto(e);
         Assert.Contains("4 de 4", personal);

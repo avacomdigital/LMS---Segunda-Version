@@ -64,7 +64,18 @@ class HealthView(VistaExpediente):
             "nodo": self._estado_nodo(),
             # MOD-017 · campo ADITIVO: sólo el estado de la actualización (al día, programado o aplicando). Nunca falla: `estado_resumido` no lanza.
             "actualizacion": self._estado_actualizacion(),
+            # MOD-016 · campo ADITIVO: cuándo fue el último respaldo verificado y si ya pasaron siete días (MSG-066). Sin rutas ni personas. Nunca falla.
+            "respaldo": self._estado_respaldo(),
         })
+
+    @staticmethod
+    def _estado_respaldo() -> dict:
+        try:
+            from respaldo import servicios as respaldo
+            r = respaldo.estado_resumido()
+            return {k: r.get(k) for k in ("ultimo_verificado_en", "dias_sin_respaldo", "aviso", "en_marcha")}
+        except Exception as error:  # el health nunca falla por el respaldo (R-04)
+            return {"ultimo_verificado_en": None, "dias_sin_respaldo": None, "aviso": None, "en_marcha": None, "error": str(error)}
 
     @staticmethod
     def _estado_actualizacion() -> dict:

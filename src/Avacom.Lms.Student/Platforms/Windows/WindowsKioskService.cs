@@ -160,8 +160,14 @@ internal sealed class WindowsKioskService : IKioskService, IDisposable
         }
     }
 
-    /// <summary>El interruptor de desarrollo, leído AHORA (no se guarda en el arranque).</summary>
-    public static bool InterruptorActivo() => Environment.GetEnvironmentVariable(InterruptorDeDesarrollo) == "1";
+    /// <summary>
+    /// El interruptor de desarrollo, leído AHORA (no se guarda en el arranque). MOD-018 · Fase 5 (P-25): sólo se obedece en una compilación de depuración o con el archivo marcador
+    /// <c>AVACOM-DESARROLLO</c> junto al programa; en un instalador de entrega la variable no hace nada y el bloqueo del examen queda como lo pide la asignación.
+    /// </summary>
+    public static bool InterruptorActivo() => Avacom.Lms.Core.Desarrollo.InterruptoresDeDesarrollo.Encendido(InterruptorDeDesarrollo);
+
+    /// <summary>La variable está definida pero NO se obedece (un instalador de entrega sin marcador): se anota para que quien prueba sepa por qué no hizo efecto.</summary>
+    public static bool InterruptorIgnorado() => Avacom.Lms.Core.Desarrollo.InterruptoresDeDesarrollo.IgnoradoPorSerEntrega(InterruptorDeDesarrollo);
 
     /// <summary>El cierre se rechaza mientras dure el examen y la capa de la aplicación esté pedida —o todavía no se sepa qué se pidió— y el interruptor de desarrollo no la apague.</summary>
     private bool RechazaElCierre => examenEnCurso && !InterruptorActivo() && (!planResuelto || plan is { CapaApp: true });
@@ -220,6 +226,8 @@ internal sealed class WindowsKioskService : IKioskService, IDisposable
         }
 
         bool app = false, capturas = false, pantallas = false;
+        if (InterruptorIgnorado())
+            notas.Add($"{InterruptorDeDesarrollo}=1 está definida pero se ignora: este es un instalador de entrega (para obedecerla hace falta el archivo {Avacom.Lms.Core.Desarrollo.InterruptoresDeDesarrollo.NombreDelMarcador} junto al programa).");
         if (interruptor && (nuevo.CapaApp || nuevo.CubrirPantallasExtra))
             notas.Add($"Interruptor de desarrollo {InterruptorDeDesarrollo}=1: sin gancho de teclado, con el cierre permitido y sin cubrir otras pantallas. Es un equipo de desarrollo.");
 

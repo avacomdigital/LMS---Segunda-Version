@@ -1,0 +1,6 @@
+{
+  "codigo": "ai_unreachable",
+  "detail": "El asistente no está disponible en este momento.",
+  "reintentable": true,
+  "sugerencia": "Avisa a quien administra el equipo: el servicio «AVACOM Local AI» debe estar en marcha en este equipo."
+}

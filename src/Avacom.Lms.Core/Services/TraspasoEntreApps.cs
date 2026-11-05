@@ -135,7 +135,7 @@ public static class TraspasoEntreApps
     public static string MensajeSinTraspaso(AppDelAcceso destino, ResultadoTraspaso resultado) => resultado switch
     {
         ResultadoTraspaso.Abierta => $"Abrimos {NombreDe(destino)} con tu sesión.",
-        _ when destino == AppDelAcceso.Ops => "Tu cuenta es del profesorado. Entra en AVACOM OPS, en el equipo del profesor.",
+        _ when destino == AppDelAcceso.Ops => "Tu cuenta es del cuerpo docente. Entra en AVACOM OPS, en el equipo del docente.",
         _ => "Tu cuenta es de alumno. Entra en AVACOM Student, en la tableta del alumno.",
     };
 }

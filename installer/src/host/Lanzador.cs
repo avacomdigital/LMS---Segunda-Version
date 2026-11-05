@@ -32,6 +32,15 @@ internal static class Lanzador
             Servicio.Iniciar(registro, segundosEspera: 45);
         }
 
+        // 1b. Dispositivo AVACOM (MOD-018 segunda proteccion). El SERVICIO (SYSTEM) comprueba la identidad UEFI y el sello y no levanta el backend si no pasan; aqui solo se le dice a la persona por que
+        // no abre nada. Esto es presentacion: la barrera es la del servicio y la liberacion de la clave del paquete.
+        if (!DispositivoAutorizado(registro, out var codigoDeDiagnostico))
+        {
+            registro.Escribir($"Dispositivo no autorizado ({codigoDeDiagnostico}): no se abre la interfaz.");
+            AvisarRechazo(codigoDeDiagnostico);
+            return Dispositivo.PuertaDeDispositivo.SalidaIdentidadUefi;
+        }
+
         // 2. Validacion. Se le da tiempo al arranque en frio de Django.
         var salud = Salud.EsperarAsync(puerto, 45).GetAwaiter().GetResult();
         registro.Escribir(salud.Correcto
@@ -85,6 +94,48 @@ internal static class Lanzador
             return 9;
         }
     }
+
+    /// <summary>
+    /// ¿Este equipo es un dispositivo AVACOM autorizado? Lo dice la señal que el servicio deja en Logs (el lanzador corre sin privilegios y no puede leer el firmware). Se espera hasta 25 s a que el
+    /// servicio la escriba (acaba de arrancar con Windows); sin señal despues de eso, se deniega: sin comprobacion no hay autorizacion. Una compilacion sin llaves de sello no tiene puerta.
+    /// </summary>
+    internal static bool DispositivoAutorizado(Registro registro, out string codigo, int esperaSegundos = 25)
+    {
+        codigo = "";
+        if (!OperatingSystem.IsWindows() || Dispositivo.PuertaDeDispositivo.LlavesIncrustadas().Count == 0) return true;
+        return LeerSenalDelLanzador(registro, Dispositivo.PuertaDeDispositivo.RutaDeSenalDelLanzadorDelNodo, esperaSegundos, out codigo);
+    }
+
+    internal static bool LeerSenalDelLanzador(Registro registro, string ruta, int esperaSegundos, out string codigo)
+    {
+        codigo = "";
+        var limite = DateTime.UtcNow.AddSeconds(esperaSegundos);
+        while (true)
+        {
+            try
+            {
+                if (File.Exists(ruta))
+                {
+                    using var documento = System.Text.Json.JsonDocument.Parse(File.ReadAllText(ruta));
+                    codigo = documento.RootElement.TryGetProperty("codigo", out var c) && c.GetString() is { Length: > 0 } texto ? texto : Dispositivo.IdentidadUefi.Codigo(Dispositivo.EstadoDeIdentidad.ErrorDeLectura);
+                    return documento.RootElement.TryGetProperty("autorizado", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.True;
+                }
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or InvalidOperationException)
+            {
+                registro.Escribir("No se pudo leer la señal del dispositivo", error);
+            }
+            if (DateTime.UtcNow >= limite) break;
+            Thread.Sleep(500);
+        }
+        codigo = Dispositivo.IdentidadUefi.Codigo(Dispositivo.EstadoDeIdentidad.ErrorDeLectura);
+        return false;
+    }
+
+    /// <summary>Dialogo modal con el mensaje obligatorio y un solo boton para cerrar. Nada de trazas ni excepciones: solo el codigo corto de diagnostico.</summary>
+    private static void AvisarRechazo(string codigo) =>
+        MessageBox(IntPtr.Zero, Dispositivo.IdentidadUefi.MensajeDeRechazo + Environment.NewLine + Environment.NewLine + "Código de diagnóstico: " + codigo,
+                   "AVACOM OPS Master", MbOk | MbIconError | MbSetForeground | MbTopMost);
 
     /// <summary>
     /// Decide donde guarda WebView2 su perfil (cache, cookies, almacenamiento). Nunca
@@ -186,6 +237,7 @@ internal static class Lanzador
 
     private const uint MbOk = 0x00000000;
     private const uint MbIconInformation = 0x00000040;
+    private const uint MbIconError = 0x00000010;
     private const uint MbSetForeground = 0x00010000;
     private const uint MbTopMost = 0x00040000;
 

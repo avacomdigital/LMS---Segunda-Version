@@ -70,6 +70,22 @@ def ultima_marca() -> int | None:
     return Bitacora.objects.order_by("-secuencia").values_list("ocurrido_en", flat=True).first()
 
 
+def asientos_de_modulo(modulo: str, limite: int = 500) -> list[dict]:
+    """Los asientos más recientes de UN módulo, en orden de secuencia, sólo lectura. Los usa MOD-016 para que una restauración (que devuelve la base a un instante anterior) no borre del todo lo que
+    el propio módulo de respaldo asentó entre el respaldo y la restauración: exportaciones, pases rechazados, restauraciones abortadas."""
+    from .models import Bitacora
+    filas = Bitacora.objects.filter(modulo=modulo).order_by("-secuencia")[:max(1, int(limite))]
+    return [{"accion": f.accion, "ocurrido_en": int(f.ocurrido_en), "usuario_id": f.usuario_id, "actor_tipo": f.actor_tipo, "resultado": f.resultado, "objeto_tabla": f.objeto_tabla,
+             "objeto_id": f.objeto_id, "valor_anterior": f.valor_anterior, "valor_nuevo": f.valor_nuevo, "motivo": f.motivo} for f in reversed(list(filas))]
+
+
+def cola_de_la_bitacora() -> dict:
+    """`{secuencia, huella, total}` del último asiento de la cadena (para anclar lo que una restauración se lleva). Sólo lectura."""
+    from .models import Bitacora
+    ultimo = Bitacora.objects.order_by("-secuencia").first()
+    return {"secuencia": int(ultimo.secuencia) if ultimo else 0, "huella": ultimo.huella[:16] if ultimo else "", "total": Bitacora.objects.count()}
+
+
 def registrar_denegacion(codigo: str, permiso: str | None, metodo: str, ruta: str, objeto=None) -> None:
     """019-08 / VER-01: toda denegación (403) con la lista completa de roles activos, el permiso solicitado y la ruta."""
     ctx = contexto.actual()

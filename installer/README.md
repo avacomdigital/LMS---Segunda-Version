@@ -79,6 +79,20 @@ no se ve hasta el aula. Ahora:
 `-VersionAnterior <carpeta con Backend\ y Runtime\ de la versión anterior>` añade
 al ensayo la **actualización sobre datos reales** de esa versión.
 
+**Código cifrado y puerta de dispositivo (MOD-018, segunda protección).** Con
+llave pública de sello (`backend/licenciamiento/claves/sello/produccion.json`)
+el build añade el paso **7c**: publica el Host definitivo con esas llaves,
+**cifra** `dist\staging\Backend` con el Python embebido (`Backend\codigo.avpkg`,
+sin `.py` ni `.pyc`), entrega `Runtime\avacom_boot.py`, guarda la llave `K` en
+un archivo de **custodia fuera del repositorio y del paquete**
+(`-CustodiaDeLlaveDelPaquete`, por omisión
+`%USERPROFILE%\AVACOM-Llaves\paquete\`) y vuelve a sellar el paquete (la lista
+de integridad y la firma son del paquete ya cifrado). Sin llave de sello el
+instalador sale **sin puerta y con el código en claro** (lo avisa);
+`-ExigirPuertaDeDispositivo` hace que no compile. Diseño, decisiones B-1…B-5,
+la receta del instalador de **pruebas** y lo que no se pudo probar:
+`spec-driven/15-licenciamiento/09-segunda-proteccion.md` §6.1.
+
 ## Comprobar un equipo sin instalar nada
 
 El propio instalador sabe diagnosticar sin tocar el equipo. Con `/VOLCADO`

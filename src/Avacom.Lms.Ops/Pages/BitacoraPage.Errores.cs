@@ -59,7 +59,7 @@ public partial class BitacoraPage
         {
             "ERROR" or "CRITICAL" => Chip(l.Nivel, Ds.PeligroSuave, TintaPeligro),
             "WARNING" => Chip("WARNING", Ds.AlertaSuave, TintaAlerta),
-            _ => Chip(l.Nivel ?? "—", Color.FromArgb("#EEEEF0"), Ds.TintaSuave),
+            _ => Chip(l.Nivel ?? "—", Color.FromArgb("#E3E6EC"), Ds.TintaSuave),
         };
         fila.Add(nivel, 1, 0);
         fila.Add(Ds.Secundario(l.Canal ?? "—", 12), 2, 0);

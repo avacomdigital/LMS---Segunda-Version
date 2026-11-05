@@ -34,6 +34,33 @@ internal static class SelectorDeCarpeta
     }
 
     /// <summary>
+    /// Abre el selector de ARCHIVOS de Windows (también táctil) filtrado por <paramref name="extension"/> (p. ej. «.avlic») y devuelve la ruta elegida, o null si se cerró sin elegir o no se pudo
+    /// abrir. Sirve para llegar a un archivo en cualquier carpeta o disco (D:, USB, red), no sólo en la raíz. Se llama desde el hilo de la interfaz.
+    /// </summary>
+    public static async Task<string?> ElegirArchivoAsync(string extension)
+    {
+#if WINDOWS
+        try
+        {
+            if (Application.Current?.Windows.FirstOrDefault()?.Handler?.PlatformView is not MauiWinUIWindow ventana) return null;
+            var selector = new global::Windows.Storage.Pickers.FileOpenPicker { SuggestedStartLocation = global::Windows.Storage.Pickers.PickerLocationId.ComputerFolder };
+            selector.FileTypeFilter.Add(extension);
+            WinRT.Interop.InitializeWithWindow.Initialize(selector, ventana.WindowHandle);
+            var archivo = await selector.PickSingleFileAsync();
+            return string.IsNullOrWhiteSpace(archivo?.Path) ? null : archivo!.Path;
+        }
+        catch (Exception ex)
+        {
+            RegistroDeFallos.Escribir("ops", "SelectorDeCarpeta.ElegirArchivoAsync", ex);
+            return null;
+        }
+#else
+        await Task.CompletedTask;
+        return null;
+#endif
+    }
+
+    /// <summary>
     /// Abre el Explorador con el archivo ya señalado; si no se puede (el archivo ya no está), abre su carpeta. Devuelve si se abrió algo. Un fallo se anota y no se muestra como error:
     /// el archivo ya está guardado, que es lo que importa.
     /// </summary>

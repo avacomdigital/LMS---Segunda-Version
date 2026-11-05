@@ -1,3 +1,4 @@
+using Avacom.Lms.Core.IdentidadDeDispositivo;
 using Avacom.Lms.Core.Diagnostico;
 using Avacom.Lms.Core.Evaluacion;
 using Avacom.Lms.Core.Gradebook;
@@ -115,6 +116,28 @@ public static class Sesion
                 _baseAcceso = actual;
             }
             return _acceso;
+        }
+    }
+
+    private static IdentidadDeEquipo? _identidadEquipo;
+    private static Uri? _baseIdentidad;
+
+    /// <summary>
+    /// MOD-018 · Fase 5: quien prueba ante el nodo la clave de esta tableta (Keystore de Android, CNG de Windows). Mejor esfuerzo: sin clave o sin red no pasa nada. Se identifica al presentarse y al
+    /// abrir sesión, no en cada petición.
+    /// </summary>
+    public static IdentidadDeEquipo IdentidadEquipo
+    {
+        get
+        {
+            var actual = BaseUri;
+            if (_identidadEquipo is null || _baseIdentidad != actual)
+            {
+                _identidadEquipo = new IdentidadDeEquipo(new IdentidadApi(Http, actual), IdentidadDeEquipo.Proveedor,
+                    (evento, detalle) => RegistroLocal.Info(Canal.Dispositivo, evento, "Identidad por clave de la tableta", new { detalle }));
+                _baseIdentidad = actual;
+            }
+            return _identidadEquipo;
         }
     }
 
@@ -250,7 +273,7 @@ public static class Sesion
                 {
                     var carpeta = Path.Combine(FileSystem.AppDataDirectory, "examen");
                     Directory.CreateDirectory(carpeta);
-                    _colaExamen = new ColaExamen(Path.Combine(carpeta, "cola.avc"), new ClaveDeStudent(Path.Combine(FileSystem.AppDataDirectory, "examen-clave")));
+                    _colaExamen = new ColaExamen(Path.Combine(carpeta, "cola.avc"), new ClaveDeStudent(Path.Combine(FileSystem.AppDataDirectory, "examen-clave"), EnvoltorioDeLaPlataforma.Crear(), EnvoltorioDeLaPlataforma.Encendida));
                 }
                 return _colaExamen;
             }
@@ -383,6 +406,8 @@ public static class Sesion
         AparatoRegistrado.Cargar = () => Preferences.Default.Get<string?>("student_dispositivo_id", null);
         AparatoRegistrado.Guardar = id => { if (id is null) Preferences.Default.Remove("student_dispositivo_id"); else Preferences.Default.Set("student_dispositivo_id", id); };
         RegistroLocal.Configurar("student", VersionApp, () => AparatoRegistrado.Id);
+        // MOD-018 · Fase 5: la clave de la tableta firma el reto del nodo al abrir sesión (en segundo plano: el login no espera ni se entera de si falla).
+        ClienteJson.SesionIniciada += () => { _ = Task.Run(async () => { try { await IdentidadEquipo.ConfirmarAsync(Dispositivo); } catch { /* nunca estorba al login */ } }); };
     }
 
     /// <summary>
@@ -394,10 +419,16 @@ public static class Sesion
     {
         try
         {
+            // Primer contacto: la prueba de clave viaja DENTRO del registro (el nodo la verifica junto al cupo y, si la licencia pide un nivel mínimo, es lo que deja entrar a una tableta nueva).
+            object? identidad = AparatoRegistrado.Id is null ? await IdentidadEquipo.ParaRegistroAsync(Dispositivo, ct) : null;
             using var tope = CancellationTokenSource.CreateLinkedTokenSource(ct);
             tope.CancelAfter(TimeSpan.FromSeconds(5));
-            var equipo = await Dispositivos.LatidoAsync(Dispositivo, DeviceInfo.Current.Name, Plataforma, VersionApp, tope.Token, tipo: "TABLETA");
-            if (equipo is not null) RegistroLocal.Info(Canal.Dispositivo, "tableta.presentada", "La tableta se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado });
+            var equipo = await Dispositivos.LatidoAsync(Dispositivo, DeviceInfo.Current.Name, Plataforma, VersionApp, tope.Token, tipo: "TABLETA", identidad: identidad);
+            if (equipo is not null)
+            {
+                RegistroLocal.Info(Canal.Dispositivo, "tableta.presentada", "La tableta se presentó ante el nodo", new { dispositivo_id = equipo.Id, bloqueado = equipo.Bloqueado, garantia = equipo.Garantia });
+                _ = Task.Run(async () => { try { await IdentidadEquipo.ConfirmarAsync(Dispositivo); } catch { /* mejor esfuerzo */ } });
+            }
             return equipo is not null;
         }
         catch (Exception ex)
@@ -478,7 +509,7 @@ public static class Sesion
         ClasePersonaId = null;
     }
 
-    public static readonly string[] Paleta = ["#E5262B", "#F3C701", "#01A4E1", "#019D60", "#A81D81", "#52525B"];
+    public static readonly string[] Paleta = ["#047857", "#C2410C", "#A81D81", "#0A72A6", "#0E7490", "#5B45D1"];
 
     public const string IconoLibro =
         "M232,48 H160 A40,40 0 0 0 128,64 A40,40 0 0 0 96,48 H24 A8,8 0 0 0 16,56 V200 A8,8 0 0 0 24,208 H96 A24,24 0 0 1 120,232 A8,8 0 0 0 136,232 A24,24 0 0 1 160,208 H232 A8,8 0 0 0 240,200 V56 A8,8 0 0 0 232,48 Z M96,192 H32 V64 H96 A24,24 0 0 1 120,88 V200 A39.81,39.81 0 0 0 96,192 Z M224,192 H160 A39.81,39.81 0 0 0 136,200 V88 A24,24 0 0 1 160,64 H224 Z";

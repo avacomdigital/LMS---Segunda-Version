@@ -68,7 +68,7 @@ public sealed class RegistroDocentePage : ContentPage
         _pasoGrupos.Add(MarcoDeAcceso.Discreta("Atrás", (_, _) => Mostrar(PasoClave)));
 
         _teclado.PinCompleto += async (_, pin) => await RegistrarAsync(pin);
-        _pasoPin.Add(new Label { Text = "Marca el PIN maestro de la escuela.", FontSize = 15, FontAttributes = FontAttributes.Bold, HorizontalTextAlignment = TextAlignment.Center });
+        _pasoPin.Add(new Label { Text = "Marca el PIN maestro de la escuela.", FontSize = 15, FontFamily = "LexendSemiBold", HorizontalTextAlignment = TextAlignment.Center });
         _pasoPin.Add(_teclado);
         _pasoPin.Add(MarcoDeAcceso.Discreta("Atrás", (_, _) => Mostrar(PasoGrupos)));
 

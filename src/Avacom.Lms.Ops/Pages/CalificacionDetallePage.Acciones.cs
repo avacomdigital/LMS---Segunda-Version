@@ -20,7 +20,7 @@ public partial class CalificacionDetallePage
         pila.Add(ExamenUi.Seccion("Qué puedes hacer"));
         if (!CalificacionesUi.PuedeCalificar)
         {
-            pila.Add(Ds.Secundario("Esta pantalla es de sólo lectura con tu rol: calificar, ajustar, reabrir y publicar lo hace el profesor del grupo.", 15));
+            pila.Add(Ds.Secundario("Esta pantalla es de sólo lectura con tu rol: calificar, ajustar, reabrir y publicar lo hace el docente del grupo.", 15));
             return ExamenUi.Tarjeta(pila);
         }
         if (c.Estado == EstadosDeCalificacion.Anulada)
@@ -84,12 +84,12 @@ public partial class CalificacionDetallePage
                 var (versionActual, puntajeActual) = TextoDeCalificaciones.ValorActualDelConflicto(error);
                 var releida = await RelerAsync();
                 var actual = releida ? $" Valor actual: {GradebookTexto.Puntaje(Actual.PuntajeEfectivo)} (versión {Actual.Version})."
-                    : puntajeActual is { } p && versionActual is { } v ? $" Valor actual según el nodo: {GradebookTexto.Puntaje(p)} (versión {v})." : string.Empty;
+                    : puntajeActual is { } p && versionActual is { } v ? $" Valor actual: {GradebookTexto.Puntaje(p)}." : string.Empty;
                 _aviso.Mostrar("Otra persona cambió esta calificación", texto + actual, Tono.Ambar);
                 return;
             }
             if (GradebookTexto.SinConexion(error))
-                _aviso.Mostrar("Pendiente de confirmación", $"No se pudo llegar al nodo: «{que}» no se confirmó. Vuelve a tocarla con el mismo motivo para reintentar sin duplicar el cambio.", Tono.Ambar);
+                _aviso.Mostrar("Pendiente de confirmación", $"No se pudo conectar con el aula: «{que}» no se confirmó. Vuelve a tocarla con el mismo motivo para reintentar sin duplicar el cambio.", Tono.Ambar);
             else
                 _aviso.Mostrar($"No se pudo: {que}", texto, Tono.Ambar);
             return;
@@ -204,7 +204,7 @@ public partial class CalificacionDetallePage
             var releida = await RelerAsync();
             string vigente;
             if (releida) vigente = $"El valor actual es {GradebookTexto.Puntaje(Actual.PuntajeEfectivo)} (versión {Actual.Version}).";
-            else if (puntajeActual is { } p2 && versionActual is { } v2) vigente = $"El valor actual según el nodo es {GradebookTexto.Puntaje(p2)} (versión {v2}).";
+            else if (puntajeActual is { } p2 && versionActual is { } v2) vigente = $"El valor actual es {GradebookTexto.Puntaje(p2)}.";
             else vigente = "No se pudo volver a leer el valor actual: actualiza la pantalla.";
             return new RespuestaDeAjuste(ResultadoDeAjuste.Conflicto, $"{mensaje} {vigente} Lo que escribiste se conserva: revísalo y confirma de nuevo.");
         }

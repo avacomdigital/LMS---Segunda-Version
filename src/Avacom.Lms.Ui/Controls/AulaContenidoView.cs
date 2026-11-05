@@ -51,6 +51,10 @@ public sealed class AulaContenidoView : ContentView
     // «Layout cycle detected» ni deje la capa del video con un tamaño viejo. Ver 02-classroom-engine/responsive.md.
     private double _anchoUtil, _altoUtil;
     private readonly List<Action> _ajustes = [];
+    // Lo que ocupa la lámina SIN sus medios (cabecera, título, textos, márgenes): el medio se queda con el resto del alto, para
+    // que la lámina entera quepa sin desplazarse. Se mide la pila ya maquetada menos el alto de sus medios, que no depende del medio.
+    private readonly List<View> _medios = [];
+    private double _altoOcupado;
     private int _versionAjuste;
 
     /// <summary>Esquema con el que el HTML de un reproductor avisa a MAUI (`avacom-aula://fallo?tipo=audio&codigo=3`).</summary>
@@ -131,7 +135,7 @@ public sealed class AulaContenidoView : ContentView
         _unidadesEnPantalla = null;
         LimpiarWeb();
         var pila = new VerticalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center, Padding = 32 };
-        pila.Add(new Label { Text = "⬡", FontSize = 54, TextColor = Ds.Rojo, HorizontalTextAlignment = TextAlignment.Center });
+        pila.Add(new Label { Text = "⬡", FontSize = 54, TextColor = Ds.Contenido, HorizontalTextAlignment = TextAlignment.Center });
         pila.Add(Ds.Titulo(titulo, 22 * Escala));
         pila.Add(Ds.Secundario(detalle, 16 * Escala));
         ((Label)pila.Children[1]).HorizontalTextAlignment = TextAlignment.Center;
@@ -217,7 +221,9 @@ public sealed class AulaContenidoView : ContentView
         _indiceEnPantalla = indice;
 
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
-        cabecera.Add(Ds.Secundario($"{objeto.ComponenteLegible} · {objeto.Titulo}", 15 * Escala), 0, 0);
+        // La duración de referencia va en esta línea y no en un renglón propio al pie: es una línea menos de alto, para que la lámina quepa sin desplazarse.
+        var duracion = unidad.DuracionSeg is > 0 ? $" · ~{Math.Max(1, unidad.DuracionSeg.Value / 60)} min" : string.Empty;
+        cabecera.Add(Ds.Secundario($"{objeto.ComponenteLegible} · {objeto.Titulo}{duracion}", 15 * Escala), 0, 0);
         cabecera.Add(Ds.Pildora(objeto.Componente == "presentacion" ? $"Lámina {indice + 1} de {unidades.Count}" : $"Página {indice + 1} de {unidades.Count}", Ds.Categoria(objeto.Componente)), 1, 0);
 
         // Contrato 2: el curso trae la cátedra o explicación maquetada (html con sus estilos). Se muestra ESA página, en la sección de la
@@ -239,11 +245,20 @@ public sealed class AulaContenidoView : ContentView
             }
         }
 
-        var pila = new VerticalStackLayout { Spacing = 18 * Escala, Padding = new Thickness(28 * Escala, 24 * Escala) };
+        // Arriba y sin estirarse: la tarjeta llena el visor, pero la pila mide sólo su contenido; si se estirara, «lo que ocupa sin el medio» saldría
+        // igual al visor entero y el video se quedaría en su tamaño mínimo.
+        var pila = new VerticalStackLayout { Spacing = 18 * Escala, Padding = new Thickness(28 * Escala, 24 * Escala), VerticalOptions = LayoutOptions.Start };
         pila.Add(cabecera);
         if (!string.IsNullOrWhiteSpace(unidad.Titulo)) pila.Add(Ds.Titulo(unidad.Titulo!, 30 * Escala));
         foreach (var bloque in unidad.Bloques) pila.Add(Bloque(bloque));
-        if (unidad.DuracionSeg is > 0) pila.Add(Ds.Secundario($"Referencia: ~{Math.Max(1, unidad.DuracionSeg.Value / 60)} min", 14 * Escala));
+        if (_medios.Count > 0)
+            pila.SizeChanged += (_, _) =>
+            {
+                var ocupado = pila.Height - _medios.Sum(m => m.HeightRequest > 0 ? m.HeightRequest : 0);
+                if (pila.Height <= 0 || Math.Abs(ocupado - _altoOcupado) < 1) return;
+                _altoOcupado = ocupado;
+                AjustarMedios();
+            };
 
         _cuerpo.Content = new ScrollView { Content = Ds.Tarjeta(pila, Ds.RadioGrande, new Thickness(0)) };
         PintarMandos(unidades, indice);
@@ -307,7 +322,7 @@ public sealed class AulaContenidoView : ContentView
         Ds.Habilitar(siguiente, indice < unidades.Count - 1, 0.45);
         var puntos = new HorizontalStackLayout { Spacing = 8, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
         for (var i = 0; i < unidades.Count; i++)
-            puntos.Add(new BoxView { WidthRequest = i == indice ? 26 : 10, HeightRequest = 10, CornerRadius = 5, Color = i == indice ? Ds.Rojo : Color.FromArgb("#C7C4BE") });
+            puntos.Add(new BoxView { WidthRequest = i == indice ? 26 : 10, HeightRequest = 10, CornerRadius = 5, Color = i == indice ? Ds.Navegacion : Ds.Linea });
         _mandos.Add(capsulaAnterior, 0, 0);
         _mandos.Add(puntos, 1, 0);
         _mandos.Add(capsulaSiguiente, 2, 0);
@@ -328,7 +343,7 @@ public sealed class AulaContenidoView : ContentView
                 {
                     // La barra roja en la primera columna y el texto en la segunda (sin fijar la columna, el texto caía en la de 6 px y se leía letra por letra).
                     var cuerpo = new Grid { ColumnDefinitions = [new ColumnDefinition(6), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 16 };
-                    cuerpo.Add(new BoxView { Color = Ds.Rojo, CornerRadius = 3 }, 0, 0);
+                    cuerpo.Add(new BoxView { Color = Ds.Contenido, CornerRadius = 3 }, 0, 0);
                     cuerpo.Add(label, 1, 0);
                     return new Border
                     {
@@ -348,7 +363,7 @@ public sealed class AulaContenidoView : ContentView
                 for (var i = 0; i < items.Count; i++)
                 {
                     var fila = new Grid { ColumnDefinitions = [new ColumnDefinition(36), new ColumnDefinition(GridLength.Star)], ColumnSpacing = 8 };
-                    fila.Add(new Label { Text = b.Ordenada == true ? $"{i + 1}." : "•", FontSize = 20 * Escala, FontFamily = Ds.FuenteMedia, TextColor = Ds.Rojo }, 0, 0);
+                    fila.Add(new Label { Text = b.Ordenada == true ? $"{i + 1}." : "•", FontSize = 20 * Escala, FontFamily = Ds.FuenteMedia, TextColor = Ds.Contenido }, 0, 0);
                     fila.Add(Ds.ConTramos(b.ItemsTramos is not null && i < b.ItemsTramos.Count ? b.ItemsTramos[i] : null, items[i], 20 * Escala), 1, 0);
                     pila.Add(fila);
                 }
@@ -424,12 +439,12 @@ public sealed class AulaContenidoView : ContentView
             video{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;outline:none}
             .aviso{display:none;position:absolute;inset:0;align-items:center;justify-content:center;padding:24px;text-align:center;font-size:20px;background:#111}
             .p{display:none;position:absolute;inset:0;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
-            .q{max-width:720px;width:100%;max-height:100%;overflow:auto;background:#fff;color:#18181B;border-radius:16px;padding:20px 24px;box-sizing:border-box;font-size:20px}
+            .q{max-width:720px;width:100%;max-height:100%;overflow:auto;background:#fff;color:#1F2433;border-radius:16px;padding:20px 24px;box-sizing:border-box;font-size:20px}
             .q p{margin:0 0 14px;font-weight:600}
-            .q button{display:block;width:100%;text-align:left;margin:8px 0;padding:12px 16px;border-radius:12px;border:2px solid #C7C4BE;background:#fff;color:#18181B;font-size:19px;font-family:inherit}
-            .q button.ok{border-color:#1B8A4C;background:#E7F6EC}.q button.no{border-color:#E5262B;background:#FDECEC}
-            .q .r{min-height:24px;margin:10px 0;font-size:17px;color:#52525B}
-            .q .c{background:#E5262B;color:#fff;border:0;text-align:center;font-weight:600}.q .c:disabled{opacity:.4}</style></head>
+            .q button{display:block;width:100%;text-align:left;margin:8px 0;padding:12px 16px;border-radius:12px;border:2px solid #E3E6EC;background:#fff;color:#1F2433;font-size:19px;font-family:inherit}
+            .q button.ok{border-color:#047857;background:#E1F5EC}.q button.no{border-color:#C81E24;background:#FDE7E7}
+            .q .r{min-height:24px;margin:10px 0;font-size:17px;color:#4F5566}
+            .q .c{background:linear-gradient(135deg,#047857,#0B5E3E);color:#fff;border:0;border-radius:999px;text-align:center;font-weight:600}.q .c:disabled{opacity:.4}</style></head>
             <body><video id="v" controls {{{(b.Autoplay == true ? "autoplay" : "")}}} playsinline preload="metadata"{{{poster}}} src="{{{url}}}{{{fragmento}}}">{{{pista}}}</video>
             <div class="aviso" id="a">No se pudo reproducir este video.</div>
             <div class="p" id="p"></div>
@@ -454,14 +469,22 @@ public sealed class AulaContenidoView : ContentView
         var web = Web(html, null, uri => AvisarFallo("video", b, uri, avisos));
         pila.Add(CajaAjustada(web, b.Ancho, b.Alto));
         pila.Add(avisos);
-        if (!string.IsNullOrWhiteSpace(b.Pie)) pila.Add(Ds.Secundario(b.Pie!, 16 * Escala));
         var detalle = string.Join(" · ", new[]
         {
             b.DesdeSeg is not null ? $"desde {Mmss(b.DesdeSeg.Value)}" : null,
             b.HastaSeg is not null ? $"hasta {Mmss(b.HastaSeg.Value)}" : null,
             !string.IsNullOrWhiteSpace(b.SubtitulosUrl) ? "con subtítulos" : null,
         }.Where(x => x is not null));
-        if (detalle.Length > 0) pila.Add(Ds.Pildora(detalle, Ds.CatVideo));
+        // El pie y el detalle (tramo, subtítulos) comparten renglón, para que el video se quede con más alto.
+        var pie = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
+        if (!string.IsNullOrWhiteSpace(b.Pie)) pie.Add(Ds.Secundario(b.Pie!, 16 * Escala), 0, 0);
+        if (detalle.Length > 0)
+        {
+            var pildora = Ds.Pildora(detalle, Ds.CatVideo);
+            pildora.VerticalOptions = LayoutOptions.Center;
+            pie.Add(pildora, 1, 0);
+        }
+        if (pie.Count > 0) pila.Add(pie);
         return pila;
     }
 
@@ -493,16 +516,16 @@ public sealed class AulaContenidoView : ContentView
         return $$$"""
             <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-            html,body{margin:0;height:100%;background:#FAFAFA;font-family:'Segoe UI',Arial,sans-serif;color:#18181B;overflow:hidden}
+            html,body{margin:0;height:100%;background:#F6F7F9;font-family:'Segoe UI',Arial,sans-serif;color:#1F2433;overflow:hidden}
             .f{display:flex;align-items:center;gap:16px;height:100%;padding:0 6px;box-sizing:border-box}
-            button{width:64px;height:64px;border-radius:16px;border:0;background:#E5262B;color:#fff;font-size:26px;line-height:64px;cursor:pointer;flex:none;
+            button{width:64px;height:64px;border-radius:50%;border:0;background:linear-gradient(135deg,#047857,#0B5E3E);color:#fff;font-size:26px;line-height:64px;cursor:pointer;flex:none;
                    box-shadow:6px 8px 14px rgba(0,0,0,.14);transition:transform .09s}
             button:active{transform:scale(.96);box-shadow:2px 3px 6px rgba(0,0,0,.14)}
-            button:disabled{background:#C7C4BE;box-shadow:none;cursor:default}
-            .b{flex:1;height:12px;background:#E4E4E7;border-radius:6px;overflow:hidden;cursor:pointer}
-            .b>i{display:block;height:100%;width:0;background:#E5262B;border-radius:6px}
-            .t{font-size:17px;min-width:110px;text-align:right;color:#52525B;font-variant-numeric:tabular-nums}
-            .e{display:none;position:absolute;inset:0;background:#FDECEC;color:#8A1C1F;font-size:17px;padding:10px 16px;box-sizing:border-box;align-items:center;gap:12px}
+            button:disabled{background:#E3E6EC;box-shadow:none;cursor:default}
+            .b{flex:1;height:12px;background:#E3E6EC;border-radius:6px;overflow:hidden;cursor:pointer}
+            .b>i{display:block;height:100%;width:0;background:#0A72A6;border-radius:6px}
+            .t{font-size:17px;min-width:110px;text-align:right;color:#4F5566;font-variant-numeric:tabular-nums}
+            .e{display:none;position:absolute;inset:0;background:#FDE7E7;color:#A51C20;font-size:17px;padding:10px 16px;box-sizing:border-box;align-items:center;gap:12px}
             .e b{font-size:22px}
             </style></head><body>
             <div class="f"><button id="p" aria-label="Reproducir">▶</button><div class="b" id="b"><i id="i"></i></div><div class="t" id="t">0:00 / {{{dur}}}</div></div>
@@ -553,7 +576,7 @@ public sealed class AulaContenidoView : ContentView
         RegistroDeFallos.Escribir(NombreApp, $"{tipo} {medio} · {url}",
             new InvalidDataException($"{mensaje}{detalle}. MediaError {codigo}. El medio no pasó la comprobación de reproducción en el visor del aula."));
         if (destino.Children.Count == 0)
-            destino.Children.Add(Ds.Alerta_($"El {tipo} no se pudo reproducir", "Comprobando la causa…", Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
+            destino.Children.Add(Ds.Alerta_($"El {tipo} no se pudo reproducir", "Comprobando la causa…", Ds.PeligroSuave, Color.FromArgb("#A51C20")));
         _ = DiagnosticarAsync(tipo, medio, destinoUri, url, codigo, mensaje + detalle, destino, _cancelarMedios.Token);
     }
 
@@ -573,7 +596,7 @@ public sealed class AulaContenidoView : ContentView
         {
             destino.Children.Clear();
             destino.Children.Add(Ds.Alerta_($"El {tipo} no se pudo reproducir", $"{causa} Quedó anotado en {RegistroDeFallos.Ruta(NombreApp)} ({sondeo.Resumen}).",
-                Ds.PeligroSuave, Color.FromArgb("#8A1C1F")));
+                Ds.PeligroSuave, Color.FromArgb("#A51C20")));
         });
         MedioFallido?.Invoke(this, new FalloDeMedio(tipo, medio, urlSinPase, codigo, causa));
     }
@@ -708,7 +731,7 @@ public sealed class AulaContenidoView : ContentView
         }
         // Lo que esta pantalla puede y no puede hacer con la actividad, dicho según quién la mira (QA 2026-10-07: «no se podían seleccionar»).
         pila.Add(Ds.Secundario(NombreApp == "student"
-            ? "Puedes marcar opciones para pensarlas. Para responder de verdad, espera a que tu profesor lance la actividad: te aparecerá abajo con el botón «Responder»."
+            ? "Puedes marcar opciones para pensarlas. Para responder de verdad, espera a que tu docente lance la actividad: te aparecerá abajo con el botón «Responder»."
             : "Marca opciones en pantalla para comentarlas con la clase; nada se envía. Para que los alumnos respondan en sus tabletas, pulsa «Lanzar actividad».", 13 * Escala));
         return pila;
     }
@@ -840,7 +863,7 @@ public sealed class AulaContenidoView : ContentView
                     pieza.Margin = new Thickness(0, 0, 8, 8);
                     bandeja.Add(pieza);
                 }
-                pila.Add(new Border { StrokeThickness = 1.5, Stroke = new SolidColorBrush(Color.FromArgb("#C7C4BE")), BackgroundColor = Colors.White, Padding = new Thickness(10, 10, 2, 2), StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = bandeja });
+                pila.Add(new Border { StrokeThickness = 1.5, Stroke = new SolidColorBrush(Color.FromArgb("#E3E6EC")), BackgroundColor = Colors.White, Padding = new Thickness(10, 10, 2, 2), StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = bandeja });
                 foreach (var z in p.Zonas ?? [])
                 {
                     var cabecera = TextoOImagen(null, z.Rotulo, z.Url, z.TextoAlternativo, z.ZonaRef, 17 * Escala);
@@ -909,7 +932,7 @@ public sealed class AulaContenidoView : ContentView
         var ultima = CajaDeMedio.Vacia;
         void Ajustar()
         {
-            var caja = AjusteDeMedio.Ajustar(_anchoUtil, _altoUtil, proporcion, AjustesDePantalla.Actual);
+            var caja = AjusteDeMedio.Ajustar(_anchoUtil, Math.Max(0, _altoUtil - _altoOcupado), proporcion, AjustesDePantalla.Actual);
             if (caja.EsVacia || (Math.Abs(caja.Ancho - ultima.Ancho) < 1 && Math.Abs(caja.Alto - ultima.Alto) < 1)) return;
             ultima = caja;
             medio.WidthRequest = caja.Ancho;
@@ -917,6 +940,7 @@ public sealed class AulaContenidoView : ContentView
             aplicado?.Invoke(caja);
         }
         _ajustes.Add(Ajustar);
+        _medios.Add(medio);
         Ajustar();
         return contenedor;
     }
@@ -1008,6 +1032,8 @@ public sealed class AulaContenidoView : ContentView
         if (conservarHtml && _webHtml is not null) _webs.Add(_webHtml);
         else { _webHtml = null; _webHtmlPagina = null; _htmlContenedor = null; _htmlCabecera = null; }
         _ajustes.Clear();
+        _medios.Clear();
+        _altoOcupado = 0;
     }
 
     /// <summary>

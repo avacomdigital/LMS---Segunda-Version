@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AI Agent</title>
+  <!-- Todo local: sin CDN. Three.js 0.186.1 viene empaquetado en vendor/three (ver VERSION.txt). -->
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/three.module.js" } }
+  </script>
+  <link rel="stylesheet" href="css/ai-agent.css">
+</head>
+<body data-ready="false">
+  <main class="agent">
+    <section id="stage" class="stage" aria-label="Personaje AI Agent"></section>
+    <p id="status" class="status" role="status" data-kind="info">Preparando a AI Agent…</p>
+    <!-- Espacio para el texto del agente: mas adelante se conectara a un AI agent; por ahora se llena con AvacomAIAgent.setText(). -->
+    <section id="caption" class="caption" data-empty="true" aria-live="polite">
+      <p id="caption-text" class="caption-text"></p>
+      <p class="caption-hint">Aquí aparecerá lo que diga el agente.</p>
+    </section>
+  </main>
+  <!-- Puente con la app (.NET MAUI HybridWebView): lo sirve el propio host; en un navegador normal no existe y no pasa nada. -->
+  <script src="_framework/hybridwebview.js"></script>
+  <script type="module" src="js/ai-agent-bridge.js"></script>
+</body>
+</html>

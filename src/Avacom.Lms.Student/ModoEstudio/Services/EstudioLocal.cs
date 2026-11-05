@@ -51,7 +51,7 @@ internal sealed class EstudioLocal : IDisposable
         var datos = carpetaDeDatos ?? FileSystem.AppDataDirectory;
         var carpeta = Path.Combine(datos, "estudio");
         Directory.CreateDirectory(carpeta);
-        var clave = claveLocal ?? new ClaveDeStudent(Path.Combine(datos, "estudio-clave"));
+        var clave = claveLocal ?? new ClaveDeStudent(Path.Combine(datos, "estudio-clave"), EnvoltorioDeLaPlataforma.Crear(), EnvoltorioDeLaPlataforma.Encendida);
         var almacen = new AlmacenEstudio(Path.Combine(carpeta, "almacen"), clave);
         var cola = new ColaEstudio(Path.Combine(carpeta, "cola.avc"), clave);
         var local = new EstudioLocal(api, dispositivo, carpeta, clave, almacen, cola)

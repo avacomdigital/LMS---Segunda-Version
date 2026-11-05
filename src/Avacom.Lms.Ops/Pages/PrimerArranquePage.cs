@@ -44,7 +44,7 @@ public sealed class PrimerArranquePage : ContentPage
     private readonly Entry _apellidos = MarcoDeAcceso.Campo("Apellidos", "Apellidos del administrador");
     private readonly PinMaestroDobleView _pin = new() { TextoMarcar = "Marca el PIN maestro nuevo.", TextoConfirmar = "Márcalo otra vez para confirmar." };
     private readonly View _reintentarVista;
-    private readonly Label _hojaAdmin = new() { FontSize = 18, FontAttributes = FontAttributes.Bold, LineBreakMode = LineBreakMode.WordWrap };
+    private readonly Label _hojaAdmin = new() { FontSize = 18, FontFamily = "LexendSemiBold", LineBreakMode = LineBreakMode.WordWrap };
     private readonly Label _hojaClave = ValorDeHoja();
     private readonly Label _hojaPin = ValorDeHoja();
 
@@ -113,7 +113,7 @@ public sealed class PrimerArranquePage : ContentPage
 
     private static Label ValorDeHoja() => new()
     {
-        FontFamily = "Consolas", FontSize = 30, FontAttributes = FontAttributes.Bold, CharacterSpacing = 1.5, TextColor = Color.FromArgb("#18181B"),
+        FontFamily = "LexendSemiBold", FontSize = 30, CharacterSpacing = 1.5, TextColor = Color.FromArgb("#1F2433"),
         LineBreakMode = LineBreakMode.CharacterWrap,
     };
 
@@ -156,7 +156,7 @@ public sealed class PrimerArranquePage : ContentPage
                 break;
             case BorradorDeInstalacion.PasoAula:
                 _marco.Titulo.Text = "Primer arranque del aula";
-                _marco.Mensaje.Text = "Paso 2 de 5 · El nombre del aula, tal como lo verán los profesores.";
+                _marco.Mensaje.Text = "Paso 2 de 5 · El nombre del aula, tal como lo verán los docentes.";
                 PintarCodigo();
                 break;
             case BorradorDeInstalacion.PasoAdministrador:

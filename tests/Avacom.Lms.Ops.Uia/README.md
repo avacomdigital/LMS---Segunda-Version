@@ -12,6 +12,7 @@ Prueba de punta a punta de las pantallas de acceso de AVACOM OPS Master contra u
 | `licencia_en_vivo.py` | Las rutas del backend con la licencia en cada estado y el cupo, por HTTP, sin ventanas: ver más abajo |
 | `licencia_paquete.py` | El backend empaquetado del instalador y el emisor portátil trabajando juntos, como producción: ver más abajo |
 | `recorrido_fecha.py` | La **fecha adelantada** (Q-L13) de punta a punta, con el reloj de la licencia movible: ver más abajo |
+| `recorrido_dispositivos.py` | La pantalla **Dispositivos** con la identidad por clave (MOD-018, Fase 5): tres tabletas con garantía declarada, con clave propia y verificada por hardware, y la línea «Identidad del equipo: …» de cada una; ≈ 2 minutos: `backend\.venv\Scripts\python.exe tests\Avacom.Lms.Ops.Uia\recorrido_dispositivos.py --ops <Avacom.Lms.Ops.exe> --salida <carpeta> [--puerto 8021]` |
 | `estabilidad_ops.py` | La **estabilidad** de OPS bajo la UI Automation (Bugfix 03): la regresión del «Menú principal» activado dos veces (`doble`), ir y volver de Licencia con contadores por vuelta (`vueltas`) y la carga que reprodujo la caída de `Microsoft.UI.Xaml.dll` (`estres`): ver más abajo |
 | `ui-carga.ps1` | Los clientes de UI Automation de esa carga: uno que invoca ir y volver de Licencia y otros que sólo leen el árbol |
 

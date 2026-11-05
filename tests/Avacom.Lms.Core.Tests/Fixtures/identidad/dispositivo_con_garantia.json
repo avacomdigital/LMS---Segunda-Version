@@ -1,0 +1,31 @@
+{
+  "activo": true,
+  "asignado_a": null,
+  "asignado_a_id": null,
+  "asignado_en": null,
+  "bateria_pct": null,
+  "bloqueado": false,
+  "capacidad_control": "",
+  "capacidad_declarada_en": null,
+  "capacidad_detalle": {},
+  "clave_huella": "ad38a71d18adb6cc3c74ea9e15bdecf36a0acd3c99c2db0bc7be978a39af6e79",
+  "en_linea": true,
+  "espacio_libre_mb": null,
+  "garantia": "software",
+  "garantia_detalle": {
+    "motivo": "sin_cadena"
+  },
+  "garantia_en": 1792691285712,
+  "id": "9d065d19-7d53-4661-9199-d056418e4736",
+  "identificador": "student-tableta-aabbccdd",
+  "identificador_hw": "student-tableta-aabbccdd",
+  "nombre": "student-tableta-aabbccdd",
+  "organizacion_id": "c4631cc0-f47f-492a-a3b2-c8029c77e342",
+  "perfil": "compartido",
+  "plataforma": "",
+  "registrado_en": 1792691225725,
+  "sesion_abierta": null,
+  "tipo": "TABLETA",
+  "ultimo_latido_en": 1792691225725,
+  "version_app": ""
+}

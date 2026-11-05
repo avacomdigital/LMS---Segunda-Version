@@ -3,17 +3,20 @@
     x:Class="Avacom.Lms.Ops.Pages.CalificacionEstudiantePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    BackgroundColor="#F1F1F1"
+    xmlns:ui="clr-namespace:Avacom.Lms.Ui.Controls;assembly=Avacom.Lms.Ui"
+    BackgroundColor="#EAF0F6"
     Shell.NavBarIsVisible="False"
     SizeChanged="OnPageSizeChanged">
+    <!-- Estructura del Aula · Design System: isla de marca, fecha y hora y fondo liso (evaluar); la raíz de la pantalla va debajo, sin cambios. -->
+    <ui:MarcoDs Aurora="False">
     <!-- El boletín de un estudiante (MOD-011), vista del PROFESOR: todo lo que lleva en un grupo —notas, resultados e insights— en una sola página, por curso y con las evaluaciones por páginas, para
          que un grupo con cientos de evaluaciones al año no sea una tabla ilegible. Cabecera de boletín de colegio, resumen, insights, notas por curso y la clave del sistema de calificación.
          Neumorfismo como el resto de OPS. El promedio es simple e informativo: no es un boletín oficial. -->
     <Grid x:Name="Raiz" RowDefinitions="Auto,Auto,*" Padding="44,24,48,16" RowSpacing="12">
         <Grid x:Name="Cabecera" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="24" HorizontalOptions="Center" WidthRequest="1200">
             <VerticalStackLayout Grid.Column="0" Spacing="4" VerticalOptions="Center">
-                <Label Text="CALIFICACIONES" FontFamily="InterRegular" FontSize="12" TextColor="#52525B" CharacterSpacing="2.5" />
-                <Label x:Name="TituloLabel" Text="Boletín de calificaciones" FontFamily="InterMedium" FontSize="24" TextColor="#18181B" LineBreakMode="TailTruncation" MaxLines="1" />
+                <Label Text="CALIFICACIONES" FontFamily="Lexend" FontSize="12" TextColor="#4F5566" CharacterSpacing="2.5" />
+                <Label x:Name="TituloLabel" Text="Boletín de calificaciones" FontFamily="LexendMedium" FontSize="24" TextColor="#1F2433" LineBreakMode="TailTruncation" MaxLines="1" />
             </VerticalStackLayout>
             <HorizontalStackLayout x:Name="AccionesHost" Grid.Column="1" Spacing="12" VerticalOptions="Center" />
         </Grid>
@@ -31,4 +34,5 @@
             </VerticalStackLayout>
         </ScrollView>
     </Grid>
+    </ui:MarcoDs>
 </ContentPage>

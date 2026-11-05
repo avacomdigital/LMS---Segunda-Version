@@ -39,7 +39,7 @@ public sealed class ExamenAntesalaPage : ContentPage
         var volver = ExamenAyudas.BotonVolver("‹  Mis evaluaciones", () => Shell.Current.GoToAsync(".."));
         Grid.SetColumnSpan(volver, 3);
         raiz.Add(volver);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = raiz };   // DS: isla de marca y modo; fondo liso al evaluar
     }
 
     protected override async void OnAppearing()
@@ -170,7 +170,7 @@ public sealed class ExamenAntesalaPage : ContentPage
 
         if (a.Dispositivo is { } d && !d.Alcanza)
             _contenido.Add(ExamenAyudas.Caja("Tu tableta no cumple lo que pide este examen",
-                "Puedes tocar «Comenzar» de todos modos: tu profesor decidirá cómo continúas. No pierdes nada.", Ds.AlertaSuave, "antesala-no-alcanza"));
+                "Puedes tocar «Comenzar» de todos modos: tu docente decidirá cómo continúas. No pierdes nada.", Ds.AlertaSuave, "antesala-no-alcanza"));
 
         var estado = new Label { FontSize = 16, TextColor = Ds.TintaMedia, HorizontalTextAlignment = TextAlignment.Center, AutomationId = "antesala-estado" };
         var comenzar = Ds.Boton(a.MiIntento is { Estado: EstadosIntento.EnCurso or EstadosIntento.Pausado or EstadosIntento.Restaurando or EstadosIntento.EnCursoFueraDePlazo } ? "Continuar" : "Comenzar",
@@ -183,7 +183,7 @@ public sealed class ExamenAntesalaPage : ContentPage
         {
             estado.Text = a.Motivo switch
             {
-                "rechazada" => "Tu profesor no admitió esta tableta para el examen. Pídele que te indique cómo continuar.",
+                "rechazada" => "Tu docente no admitió esta tableta para el examen. Pídele que te indique cómo continuar.",
                 "no_abierta" => a.Asignacion.Estado == "programada" ? "Este examen todavía no abre." : "Este examen ya cerró.",
                 "ya_entregado" => "Ya presentaste este examen.",
                 "intentos_agotados" => "Ya usaste todos los intentos de este examen.",
@@ -192,7 +192,7 @@ public sealed class ExamenAntesalaPage : ContentPage
         }
         else if (a.Motivo == "espera_admision" || a.Admision is { Estado: "en_espera" })
         {
-            estado.Text = "Esperando que tu profesor decida sobre esta tableta. No cierres esta pantalla: el examen empieza solo.";
+            estado.Text = "Esperando que tu docente decida sobre esta tableta. No cierres esta pantalla: el examen empieza solo.";
         }
         var capsula = Ds.Capsula(comenzar);
         capsula.IsVisible = puede && a.Motivo != "espera_admision";
@@ -241,7 +241,7 @@ public sealed class ExamenAntesalaPage : ContentPage
     private void PintarEspera(string? texto)
     {
         foreach (var v in _contenido.Children.OfType<Label>().Where(l => l.AutomationId == "antesala-estado"))
-            v.Text = (string.IsNullOrWhiteSpace(texto) ? "Esperando que tu profesor decida sobre esta tableta." : texto) + " No cierres esta pantalla: el examen empieza solo.";
+            v.Text = (string.IsNullOrWhiteSpace(texto) ? "Esperando que tu docente decida sobre esta tableta." : texto) + " No cierres esta pantalla: el examen empieza solo.";
     }
 
     private void PintarProblema(SalidaDeApertura salida)

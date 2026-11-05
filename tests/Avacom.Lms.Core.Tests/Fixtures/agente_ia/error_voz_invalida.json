@@ -1,0 +1,5 @@
+{
+  "codigo": "ai_invalid_response",
+  "detail": "El asistente dio una respuesta que no se pudo entender. Intenta de nuevo.",
+  "reintentable": true
+}

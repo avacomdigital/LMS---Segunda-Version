@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     "licenciamiento",
     "nodo",
     "actualizacion",
+    "respaldo",
+    "agente_ia",
 ]
 
 MIDDLEWARE = [
@@ -255,6 +257,27 @@ AVACOM_LMS_AUDITORIA_ESTRICTA = os.environ.get("AVACOM_LMS_AUDITORIA_ESTRICTA", 
 AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_RENGLONES", "200"))
 AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO = int(os.environ.get("AVACOM_LMS_LOGS_CLIENTES_MAX_POR_MINUTO", "1000"))
 
+# ----------------------------------------------------------- AI Agent (agente_ia)
+# App `agente_ia` (`/api/agente-ia/`, sin tablas): el asistente de IA de OPS Master. Es el ÚNICO cliente de AVACOM Local AI (Qwen por Ollama + la voz Piper), que corre en este mismo equipo.
+# AVACOM_IA_HABILITADA=0 lo apaga (la pantalla lo dice; nada se rompe). AVACOM_IA_URL fija la dirección del servicio; si no está, se lee el puerto del `.env` del propio servicio
+# (%ProgramData%\AVACOM\LocalAI\config\.env) y, si tampoco, http://127.0.0.1:12000. Los tiempos son los del contrato: el modelo puede tardar ≈150 s en una CPU lenta (por eso 160 s) y la voz hasta
+# 60 s por trozo (75 s). Detalle: spec-driven/19-ai-agent/01-integracion-ia-local.md.
+AVACOM_IA_HABILITADA = os.environ.get("AVACOM_IA_HABILITADA", "1") != "0"
+AVACOM_IA_URL = os.environ.get("AVACOM_IA_URL", "").strip()
+# En pruebas NO se lee el equipo real: sin archivo.
+AVACOM_IA_ENV_ARCHIVO = (os.environ["AVACOM_IA_ENV_ARCHIVO"] if "AVACOM_IA_ENV_ARCHIVO" in os.environ else
+                         "" if AVACOM_LMS_ENTORNO == "pruebas" else
+                         str(Path(os.environ.get("ProgramData") or os.environ.get("PROGRAMDATA") or "C:/ProgramData") / "AVACOM" / "LocalAI" / "config" / ".env"))
+AVACOM_IA_TIEMPO_LLM_S = float(os.environ.get("AVACOM_IA_TIEMPO_LLM_S", "160"))
+AVACOM_IA_TIEMPO_VOZ_S = float(os.environ.get("AVACOM_IA_TIEMPO_VOZ_S", "75"))
+AVACOM_IA_TIEMPO_VOZ_TOTAL_S = float(os.environ.get("AVACOM_IA_TIEMPO_VOZ_TOTAL_S", "120"))
+AVACOM_IA_TIEMPO_SALUD_S = float(os.environ.get("AVACOM_IA_TIEMPO_SALUD_S", "5"))
+AVACOM_IA_TROZO_MAX = int(os.environ.get("AVACOM_IA_TROZO_MAX", "450"))
+AVACOM_IA_PREGUNTA_MAX = int(os.environ.get("AVACOM_IA_PREGUNTA_MAX", "2000"))
+AVACOM_IA_VOZ_TEXTO_MAX = int(os.environ.get("AVACOM_IA_VOZ_TEXTO_MAX", "3000"))
+AVACOM_IA_MAX_TOKENS = int(os.environ.get("AVACOM_IA_MAX_TOKENS", "256"))
+AVACOM_IA_VOZ_TURNO_S = float(os.environ.get("AVACOM_IA_VOZ_TURNO_S", "45"))
+
 # ------------------------------------------------ Node Platform y Cola de Salida (MOD-015)
 # App `nodo` (`/api/nodo/`, tablas m15_*): la cola única con secuencia global (`m15_evento`), el registro de consumidores con sus marcas, la cola de problemas, el corte de cada
 # módulo y el estado del nodo. NUNCA detiene una clase (R-01).
@@ -296,6 +319,19 @@ AVACOM_ACTUALIZACION_VIGILANTE = os.environ.get("AVACOM_ACTUALIZACION_VIGILANTE"
 AVACOM_ACTUALIZACION_INTERVALO_S = float(os.environ.get("AVACOM_ACTUALIZACION_INTERVALO_S", "30"))
 # Tope del paquete en MB (nunca por encima de los 512 del dominio).
 AVACOM_ACTUALIZACION_MAX_MB = int(os.environ.get("AVACOM_ACTUALIZACION_MAX_MB", "512"))
+
+# ---------------------------------------------------------- Respaldo y recuperación (MOD-016 · Backup & Recovery)
+# App `respaldo` (`/api/respaldo/`, tablas m16_*). Respalda la base de datos del aula (copia consistente por la API de respaldo de SQLite) y las carpetas de archivos de la institución
+# en un `.avbak` CIFRADO, lo verifica y lo restaura. Respaldar y restaurar son SÓLO del personal de AVACOM (backup.* + pase de soporte firmado; ver spec-driven/18-backup-recovery).
+# AVACOM_RESPALDO_DIR: la carpeta de respaldos SÓLO en desarrollo y pruebas (por defecto una temporal); en producción es siempre %ProgramData%\AVACOM\OPS Master\Respaldos.
+# AVACOM_RESPALDO_UNIDADES: carpetas (separadas por `;`) que hacen de unidad extraíble en desarrollo y pruebas; en producción las unidades son las reales.
+# AVACOM_RESPALDO_CARPETAS: carpetas de archivos de la institución que entran al respaldo, `nombre=ruta` o `nombre:reinstalable=ruta`, separadas por `;`. Vacío = sólo la base de datos.
+AVACOM_RESPALDO_DIR = os.environ.get("AVACOM_RESPALDO_DIR", "")
+AVACOM_RESPALDO_UNIDADES = os.environ.get("AVACOM_RESPALDO_UNIDADES", "")
+AVACOM_RESPALDO_CARPETAS = os.environ.get("AVACOM_RESPALDO_CARPETAS", "")
+# El vigilante del proceso ASGI (respaldos automáticos según el calendario, verificación, retención, reanudar lo interrumpido) y su cadencia en segundos.
+AVACOM_RESPALDO_VIGILANTE = os.environ.get("AVACOM_RESPALDO_VIGILANTE", "1") == "1"
+AVACOM_RESPALDO_INTERVALO_S = float(os.environ.get("AVACOM_RESPALDO_INTERVALO_S", "60"))
 
 # ---------------------------------------------------------- Modo Estudio (MOD-008)
 # App `modo_estudio` (`/api/modo-estudio/`, tablas m08_*). Lee la lección en vivo por los casos de uso del aula, así que usa la misma

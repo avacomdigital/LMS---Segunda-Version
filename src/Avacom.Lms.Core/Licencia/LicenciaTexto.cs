@@ -441,7 +441,7 @@ public static class LicenciaTexto
         if (error is null || !error.PorLicencia) return null;
         if (error.EsModuloNoDisponible)
         {
-            if (audiencia == Audiencia.Alumno) return "Esto no está disponible ahora en el aula. Pídele ayuda a tu profesor.";
+            if (audiencia == Audiencia.Alumno) return "Esto no está disponible ahora en el aula. Pídele ayuda a tu docente.";
             var modulo = error.Texto("modulo") is { Length: > 0 } m ? m : error.Texto("capacidad") is { Length: > 0 } c ? Capacidad(c) : null;
             var cual = modulo is null ? "Este módulo no está disponible" : $"«{modulo}» no está disponible";
             return $"{cual} con la licencia de este equipo. Tu permiso se conserva: vuelve a funcionar cuando se renueve la licencia. " +
@@ -450,8 +450,8 @@ public static class LicenciaTexto
         var usuarios = error.Texto("tipo") == "usuarios";
         if (audiencia == Audiencia.Alumno)
             return usuarios
-                ? "Ahora no se pueden crear usuarios nuevos en esta aula. Pídele ayuda a tu profesor; si ya tienes usuario, búscate en la lista."
-                : "Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu profesor.";
+                ? "Ahora no se pueden crear usuarios nuevos en esta aula. Pídele ayuda a tu docente; si ya tienes usuario, búscate en la lista."
+                : "Esta tableta todavía no puede entrar al aula. Pídele ayuda a tu docente.";
         var cifras = error.Numero("en_uso") is { } u && error.Numero("limite") is { } l ? $" ({u} de {l})" : string.Empty;
         return usuarios
             ? $"Se llegó al cupo de usuarios de la licencia{cifras}. Quienes ya tienen usuario siguen entrando; para crear más hay que ampliar la licencia con AVACOM. Lo gestiona la administración del colegio en «Licencia»."
@@ -475,10 +475,13 @@ public static class LicenciaTexto
     public const string Paso2Titulo = "2 · AVACOM firma tu licencia";
     public const string Paso2Texto = "Envía la solicitud a AVACOM. AVACOM te devuelve un archivo de licencia (.avlic) hecho sólo para este equipo. Esto se hace fuera de este programa.";
     public const string Paso3Titulo = "3 · Elige el archivo de licencia";
-    public const string Paso3Texto = "Conecta la memoria con el archivo .avlic y tócalo en la lista. El equipo del aula comprueba que sea de AVACOM y de este equipo antes de instalarlo.";
+    public const string Paso3Texto = "Conecta la memoria con el archivo .avlic y tócalo en la lista; si no aparece, búscalo tú en el Explorador. El equipo del aula comprueba que sea de AVACOM y de este equipo antes de instalarlo.";
     public const string Buscando = "Buscando archivos de licencia en las memorias y carpetas de este equipo…";
     public const string SinArchivos = "No encontramos ningún archivo de licencia (.avlic) en las memorias conectadas ni en Documentos, Escritorio o Descargas.";
-    public const string SinArchivosAccion = "Copia el archivo en la carpeta principal de una memoria USB, conéctala y toca «Buscar de nuevo».";
+    public const string SinArchivosAccion = "Copia el archivo en la carpeta principal de una memoria USB, conéctala y toca «Buscar de nuevo», o toca «Buscar en el Explorador» para elegirlo en cualquier carpeta o disco.";
+    public const string BuscarEnElExplorador = "Buscar en el Explorador…";
+    public const string ArchivoDelExploradorNoVale = "El archivo que elegiste no es una licencia de AVACOM (.avlic) que se pueda leer: no tiene la marca de licencia, es demasiado grande o ya no se puede abrir.";
+    public const string ArchivoDelExploradorNoValeAccion = "Elige el archivo .avlic que te devolvió AVACOM, sin cambiarle el nombre ni la extensión.";
     public const string Instalando = "Instalando la licencia. Las clases no se interrumpen.";
     public const string ArchivoYaNoEsta = "El archivo ya no está en ese lugar (¿se retiró la memoria?).";
     public const string ArchivoYaNoEstaAccion = "Vuelve a conectar la memoria y toca «Buscar de nuevo».";

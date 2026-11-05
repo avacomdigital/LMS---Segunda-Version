@@ -186,11 +186,13 @@ public partial class ClaseHoyPage : ContentPage
             var cursos = asignatura.Cursos.Where(c => Coincide(c, asignatura, palabras)).ToList();
             if (cursos.Count == 0) continue;
             coincidencias += cursos.Count;
+            // Tesela blanca del panal del DS (como el menú principal) con el icono sólido de la materia.
+            var icono = Glass.IconoMateria(asignatura.Nombre);
             var tile = new ProfessorHexTile
             {
-                Text = asignatura.Nombre, AccentColor = color, IconGeometry = Sesion.IconoLibro, Glass = true, Margin = new Thickness(8, 6),
+                Text = asignatura.Nombre, AccentColor = color, IconGeometry = Sesion.IconoLibro, IconSource = icono, Margin = new Thickness(8, 6),
             };
-            var seccion = SeccionAsignatura(asignatura, cursos, color);
+            var seccion = SeccionAsignatura(asignatura, cursos, color, icono);
             tile.Tapped += async (_, _) => await Contenido.ScrollToAsync(seccion, ScrollToPosition.Start, true);
             HexHost.Children.Add(tile);
             ListaHost.Add(seccion);
@@ -218,7 +220,7 @@ public partial class ClaseHoyPage : ContentPage
 
     // --------------------------------------------------------------- secciones
 
-    private View SeccionAsignatura(AsignaturaAula asignatura, IReadOnlyList<FichaCurso> cursos, Color color)
+    private View SeccionAsignatura(AsignaturaAula asignatura, IReadOnlyList<FichaCurso> cursos, Color color, string icono)
     {
         var pila = new VerticalStackLayout { Spacing = 12 };
         var cabecera = new Grid { ColumnDefinitions = [new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Auto)], ColumnSpacing = 12 };
@@ -227,16 +229,18 @@ public partial class ClaseHoyPage : ContentPage
         conteo.VerticalOptions = LayoutOptions.Center;
         cabecera.Add(conteo, 2, 0);
         pila.Add(cabecera);
-        foreach (var curso in cursos) pila.Add(TarjetaCurso(curso, color));
+        foreach (var curso in cursos) pila.Add(TarjetaCurso(curso, color, icono));
         return pila;
     }
 
-    private View TarjetaCurso(FichaCurso curso, Color color)
+    private View TarjetaCurso(FichaCurso curso, Color color, string icono)
     {
         // Toda la tarjeta es tocable y el botón «Ver lecciones ›» hace lo mismo (lo resuelve CourseGlassCard).
         var tarjeta = new CourseGlassCard
         {
-            Titulo = curso.Titulo, Subtitulo = curso.Subtitulo, Detalle = curso.Detalle, AccentColor = color, IconGeometry = Sesion.IconoLibro,
+            Titulo = curso.Titulo, Subtitulo = curso.Subtitulo, Detalle = curso.Detalle, AccentColor = color, IconGeometry = Sesion.IconoLibro, IconSource = icono,
+            // La misma portada que ya muestra la pantalla del curso (ClaseCursoPage), si el catálogo la trae.
+            Portada = string.IsNullOrWhiteSpace(curso.PortadaUrl) ? null : new UriImageSource { Uri = Sesion.Aula.Absoluta(curso.PortadaUrl!), CachingEnabled = false },
         };
         if (curso.NoDisponible is { } motivo)
         {
@@ -244,7 +248,7 @@ public partial class ClaseHoyPage : ContentPage
             // al tocarlo, explica qué hacer en vez de abrir una clase que fallaría.
             tarjeta.Opacity = 0.55;
             tarjeta.AccentColor = Ds.Alerta;
-            tarjeta.Abrir += async (_, _) => await DisplayAlertAsync("Curso no disponible",
+            tarjeta.Abrir += async (_, _) => await this.AlertaAsync("Curso no disponible",
                 motivo.Sugerencia ?? motivo.Detalle ?? "El paquete instalado no pasa la verificación de AVACOM Contenido.", "Entendido");
             return tarjeta;
         }
@@ -355,7 +359,7 @@ public partial class ClaseHoyPage : ContentPage
 
     /// <summary>La configuración del nodo está representada en el prototipo, como los módulos del tablero: un toque para cerrar.</summary>
     private async void OnConfiguracion(object? sender, EventArgs e) =>
-        await DisplayAlertAsync("Configuración", "La configuración del nodo del aula está representada en este prototipo y lista para conectar su flujo.", "Entendido");
+        await this.AlertaAsync("Configuración", "Los ajustes del aula estarán disponibles muy pronto.", "Entendido");
 
     /// <summary>Cierra la sesión de usuario (si el nodo exige una) y vuelve al acceso; la clase abierta sigue guardada.</summary>
     private async void OnCerrarSesion(object? sender, EventArgs e)
@@ -364,13 +368,13 @@ public partial class ClaseHoyPage : ContentPage
         await Shell.Current.GoToAsync("//login");
     }
 
-    /// <summary>Menú fijo de 216 px en pantallas grandes, 196 en anchos intermedios y raíl de iconos si no cabe; nunca una barra horizontal.</summary>
+    /// <summary>La navegación es la barra inferior del DS: sin columna lateral; en ventanas estrechas sólo quedan los iconos.</summary>
     private void OnPageSizeChanged(object? sender, EventArgs e)
     {
         if (Width <= 0) return;
-        var compacto = Width < 1100;
-        Marco.ColumnDefinitions[0].Width = new GridLength(compacto ? 84 : Width < 1400 ? 196 : 216);
+        var compacto = Width < 900;
+        Marco.ColumnDefinitions[0].Width = new GridLength(0);
         Navegacion.Compact = compacto;
-        MenuPanel.Padding = compacto ? new Thickness(6, 16) : new Thickness(12, 16);
+        MenuPanel.Padding = new Thickness(8, 4);
     }
 }

@@ -1,3 +1,5 @@
+using Avacom.Lms.Core.IdentidadDeDispositivo;
+using Avacom.Lms.Ui.Controls;
 using Avacom.Lms.Core.Models;
 using Avacom.Lms.Ui.Design;
 using Microsoft.Maui.Controls.Shapes;
@@ -15,7 +17,7 @@ namespace Avacom.Lms.Ops.Pages;
 /// </summary>
 public partial class DispositivosPage : ContentPage
 {
-    private static readonly Color TintaPeligro = Color.FromArgb("#8A1C1F");
+    private static readonly Color TintaPeligro = Color.FromArgb("#A51C20");
 
     private IDispatcherTimer? _temporizador;
     private bool _cargando;
@@ -38,7 +40,7 @@ public partial class DispositivosPage : ContentPage
         foreach (var b in new[] { actualizar, _todosBtn, volver }) b.FontSize = 16;
         AccionesHost.Add(Ds.Capsula(actualizar));
         AccionesHost.Add(Ds.Capsula(_todosBtn));
-        AccionesHost.Add(volver);
+        Ds.VolverALaIzquierda(AccionesHost, volver);
     }
 
     protected override async void OnAppearing()
@@ -73,7 +75,7 @@ public partial class DispositivosPage : ContentPage
             if (lista is null)
             {
                 var error = api.UltimoError;
-                ListaHost.Add(Ds.Alerta_(error?.Codigo == "no_instalado" ? "El nodo aún no está instalado" : "No se pudo leer el inventario",
+                ListaHost.Add(Ds.Alerta_(error?.Codigo == "no_instalado" ? "El aula todavía no está configurada" : "No se pudo leer el inventario",
                     string.Join(" ", new[] { error?.Detalle, error?.Sugerencia }.Where(x => !string.IsNullOrWhiteSpace(x))), Ds.PeligroSuave, TintaPeligro));
                 return;
             }
@@ -88,7 +90,6 @@ public partial class DispositivosPage : ContentPage
                     $"{enLinea} en línea",
                     asignadas > 0 ? $"{asignadas} asignada{(asignadas == 1 ? "" : "s")} a un alumno" : null,
                     bloqueadas > 0 ? $"{bloqueadas} bloqueada{(bloqueadas == 1 ? "" : "s")}" : null,
-                    "Bloquear una tableta la deja fuera de las clases y de los lanzamientos; no borra nada.",
                 }.Where(x => x is not null));
             if (lista.Count == 0)
             {
@@ -121,7 +122,19 @@ public partial class DispositivosPage : ContentPage
             var perfil = d.Asignado
                 ? $"Asignada a {(string.IsNullOrWhiteSpace(d.AsignadoA?.Rotulo) ? "un alumno" : d.AsignadoA!.Rotulo)} · su dueño puede llevarse las lecciones"
                 : "Compartida del aula · las lecciones se estudian con el aula conectada";
-            textos.Add(new Label { Text = perfil, FontFamily = Ds.FuenteMedia, FontSize = 14, TextColor = d.Asignado ? Color.FromArgb("#017A48") : Ds.TintaMedia });
+            textos.Add(new Label { Text = perfil, FontFamily = Ds.FuenteMedia, FontSize = 14, TextColor = d.Asignado ? Color.FromArgb("#0B5E3E") : Ds.TintaMedia });
+        }
+
+        if (d.Activo)
+        {
+            // MOD-018 · Fase 5: qué pudo comprobar el nodo de la identidad de este equipo (declarada · con clave propia · verificada por hardware). Informativo: no decide si entra a clase.
+            var garantia = new Label
+            {
+                Text = $"Identidad: {d.GarantiaLegible.ToLowerInvariant()}", FontFamily = Ds.FuenteMedia, FontSize = 13, AutomationId = $"dispositivo-garantia-{d.Id}",
+                TextColor = ReglasDeIdentidad.Nivel(d.Garantia) switch { 2 => Color.FromArgb("#017A48"), 1 => Color.FromArgb("#02739E"), _ => Ds.TintaSuave },
+            };
+            SemanticProperties.SetDescription(garantia, $"Identidad del equipo: {d.GarantiaLegible}. {ReglasDeIdentidad.Explicacion(d.Garantia, d.GarantiaMotivo)}");
+            textos.Add(garantia);
         }
         if (!string.Equals(d.NombreVisible, d.IdentificadorHw, StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(d.IdentificadorHw))
             textos.Add(Ds.Secundario($"huella {d.IdentificadorHw}", 12));
@@ -132,11 +145,11 @@ public partial class DispositivosPage : ContentPage
         // MOD-010 · BR-075: lo que la tableta DECLARA poder garantizar en un examen (abierto, supervisado o controlado). Decide si alcanza el nivel de un examen.
         var estadoYCapacidad = new HorizontalStackLayout { Spacing = 8, VerticalOptions = LayoutOptions.Center };
         estadoYCapacidad.Add(estado);
-        if (d.Activo)
+        if (d.Activo && d.CapacidadDeclarada)
         {
-            var capacidad = Ds.Pildora(d.CapacidadDeclarada ? $"Capacidad: {d.CapacidadLegible.ToLowerInvariant()}" : "Capacidad no declarada",
-                d.CapacidadDeclarada ? Ds.InfoSuave : Color.FromArgb("#F0F0F2"), d.CapacidadDeclarada ? Color.FromArgb("#02739E") : Ds.TintaSuave, 13);
-            SemanticProperties.SetDescription(capacidad, d.CapacidadDeclarada ? $"Capacidad de control para exámenes: {d.CapacidadLegible}" : "Esta tableta no declaró su capacidad de control para exámenes");
+            // Sólo si la tableta lo declaró: sin dato no se muestra nada (antes, «Capacidad no declarada»).
+            var capacidad = Ds.Pildora($"Exámenes: {d.CapacidadLegible.ToLowerInvariant()}", Ds.InfoSuave, Color.FromArgb("#075985"), 13);
+            SemanticProperties.SetDescription(capacidad, $"Control para exámenes: {d.CapacidadLegible}");
             estadoYCapacidad.Add(capacidad);
         }
         fila.Add(estadoYCapacidad, 2, 0);
@@ -154,8 +167,10 @@ public partial class DispositivosPage : ContentPage
             capsulaDueno.VerticalOptions = LayoutOptions.Center;
             botones.Add(capsulaDueno);
 
-            var bloqueo = Ds.Boton(d.Bloqueado ? "Desbloquear" : "Bloquear", d.Bloqueado ? Ds.Rango.Secondary : Ds.Rango.Quiet, async (_, _) => await BloqueoAsync(d), 56, 190);
+            // Secundario como «Asignar a un alumno», con el candado del DS (abierto para desbloquear): un terciario de ancho fijo se veía como un bloque vacío.
+            var bloqueo = Ds.Boton(d.Bloqueado ? "Desbloquear" : "Bloquear", Ds.Rango.Secondary, async (_, _) => await BloqueoAsync(d), 56, 190);
             bloqueo.FontSize = 16;
+            Ds.PonerIcono(bloqueo, d.Bloqueado ? "mando_candado_abierto.png" : "mando_candado.png");
             var capsula = Ds.Capsula(bloqueo);
             capsula.VerticalOptions = LayoutOptions.Center;
             botones.Add(capsula);
@@ -197,18 +212,17 @@ public partial class DispositivosPage : ContentPage
     {
         var pila = new VerticalStackLayout { Spacing = 12 };
         pila.Add(Ds.Titulo($"¿De quién es «{d.NombreVisible}»?", 20));
-        pila.Add(Ds.Secundario("En cualquier tableta se puede estudiar con el aula conectada (cada alumno elige su nombre); sólo en una tableta asignada su dueño puede llevarse las lecciones para estudiar sin conexión. Elige el grupo y toca al alumno.", 14));
         if (_grupos is null)
         {
             pila.Add(_gruposError is null ? Ds.Secundario("Buscando tus grupos…", 15) : Ds.Alerta_("No se pudieron leer tus grupos", _gruposError, Ds.PeligroSuave, TintaPeligro));
         }
         else if (!_grupos.Instalado)
         {
-            pila.Add(Ds.Alerta_("El nodo aún no tiene organización instalada", "Sin organización no hay alumnos a quienes asignar la tableta.", Ds.AlertaSuave, Color.FromArgb("#806600")));
+            pila.Add(Ds.Alerta_("El aula todavía no está configurada", "Sin organización no hay alumnos a quienes asignar la tableta.", Ds.AlertaSuave, Color.FromArgb("#9A3412")));
         }
         else if (_grupos.Grupos.Count == 0)
         {
-            pila.Add(Ds.Alerta_("No tienes grupos a tu cargo", "Los grupos los define la administración.", Ds.AlertaSuave, Color.FromArgb("#806600")));
+            pila.Add(Ds.Alerta_("No tienes grupos a tu cargo", "Los grupos los define la administración.", Ds.AlertaSuave, Color.FromArgb("#9A3412")));
         }
         else
         {
@@ -237,19 +251,19 @@ public partial class DispositivosPage : ContentPage
                 pila.Add(alumnos);
             }
         }
-        return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(24, 18), Color.FromArgb("#FBFBFC"));
+        return Ds.Tarjeta(pila, Ds.RadioTarjeta, new Thickness(24, 18), Color.FromArgb("#F6F7F9"));
     }
 
     private async Task AsignarAsync(DispositivoAula d, AlumnoDeGrupo alumno)
     {
         var nombre = alumno.Rotulo ?? alumno.Id;
-        var seguro = await DisplayAlertAsync("¿Asignar esta tableta?", $"«{d.NombreVisible}» será de {nombre}. Sólo {nombre} podrá llevarse las lecciones en ella para estudiar sin conexión.", "Asignar", "Mejor no");
+        var seguro = await this.AlertaAsync("¿Asignar esta tableta?", $"«{d.NombreVisible}» será de {nombre}. Sólo {nombre} podrá llevarse las lecciones en ella para estudiar sin conexión.", "Asignar", "Mejor no");
         if (!seguro) return;
         var api = Sesion.Dispositivos;
         var resultado = await api.AsignarAsync(d.Id, alumno.Id, Sesion.ProfesorId);
         if (resultado is null)
         {
-            await DisplayAlertAsync("No se pudo asignar", EstudioTexto.Error(api.UltimoError, api.UltimoMotivo), "Entendido");
+            await this.AlertaAsync("No se pudo asignar", EstudioTexto.Error(api.UltimoError, api.UltimoMotivo), "Entendido");
             return;
         }
         _asignandoId = null;
@@ -259,13 +273,13 @@ public partial class DispositivosPage : ContentPage
     private async Task LiberarAsync(DispositivoAula d)
     {
         var dueno = string.IsNullOrWhiteSpace(d.AsignadoA?.Rotulo) ? "su alumno" : d.AsignadoA!.Rotulo;
-        var seguro = await DisplayAlertAsync("¿Devolver esta tableta al aula?",
+        var seguro = await this.AlertaAsync("¿Devolver esta tableta al aula?",
             $"«{d.NombreVisible}» dejará de ser de {dueno} y volverá al fondo compartido: ahí ya no se descargan lecciones para estudiar sin conexión.", "Devolver", "Mejor no");
         if (!seguro) return;
         var api = Sesion.Dispositivos;
         var resultado = await api.LiberarAsync(d.Id, Sesion.ProfesorId);
         if (resultado is null)
-            await DisplayAlertAsync("No se pudo devolver", EstudioTexto.Error(api.UltimoError, api.UltimoMotivo), "Entendido");
+            await this.AlertaAsync("No se pudo devolver", EstudioTexto.Error(api.UltimoError, api.UltimoMotivo), "Entendido");
         await CargarAsync();
     }
 
@@ -276,7 +290,7 @@ public partial class DispositivosPage : ContentPage
             ? await api.DesbloquearAsync(d.Id, Sesion.ProfesorId)
             : await api.BloquearAsync(d.Id, Sesion.ProfesorId, "desde Dispositivos del aula");
         if (resultado is null)
-            await DisplayAlertAsync(d.Bloqueado ? "No se pudo desbloquear" : "No se pudo bloquear", api.UltimoMotivo ?? "Sin detalle.", "Entendido");
+            await this.AlertaAsync(d.Bloqueado ? "No se pudo desbloquear" : "No se pudo bloquear", api.UltimoMotivo ?? "Sin detalle.", "Entendido");
         await CargarAsync();
     }
 }

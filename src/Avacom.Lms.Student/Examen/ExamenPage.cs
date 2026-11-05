@@ -42,7 +42,7 @@ public sealed class ExamenPage : ContentPage
         var raiz = new Grid();       // sin relleno: la tarjeta de estado se ancla a los tercios de la ventana completa (el margen lo pone ExamenView)
         raiz.Add(_vista);
         raiz.Add(zona);
-        Content = raiz;
+        Content = new Avacom.Lms.Ui.Controls.MarcoDs { Tableta = true, Modo = "Evaluar", Aurora = false, Contenido = raiz };   // DS: isla de marca y modo; fondo liso al evaluar
 
         _vista.EntregaTerminada += () => MainThread.BeginInvokeOnMainThread(async () => await IrAEntregaAsync());
         _vista.SalidaPedida += () => MainThread.BeginInvokeOnMainThread(async () => await SalirAsync());
@@ -156,7 +156,7 @@ public sealed class ExamenPage : ContentPage
                     Avisos.Mostrar(espera is { } e ? $"Demasiados intentos. Espera {Math.Ceiling(e.TotalMinutes)} min." : "Demasiados intentos. Espera un momento.");
                     break;
                 default:
-                    Avisos.Mostrar("Esta tableta no tiene PIN de salida. Pide a tu profesor que cierre tu examen desde su pantalla.");
+                    Avisos.Mostrar("Esta tableta no tiene PIN de salida. Pide a tu docente que cierre tu examen desde su pantalla.");
                     break;
             }
         }

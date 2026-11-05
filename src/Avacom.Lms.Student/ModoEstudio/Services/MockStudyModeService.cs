@@ -192,7 +192,7 @@ internal sealed class MockStudyModeService : IStudyModeService
     public Uri ResolveMedia(string lessonId, string relativeUrl) => new(new Uri("http://localhost/"), relativeUrl.TrimStart('/'));
 
     public string ExamExplanation(string lessonId) =>
-        "La evaluación de la unidad la aplica tu profesor en clase o cuando él la abra. No es parte de la práctica: aquí puedes prepararte todas las veces que quieras, sin que cuente como nota.";
+        "La evaluación de la unidad la aplica tu docente en clase o cuando él la abra. No es parte de la práctica: aquí puedes prepararte todas las veces que quieras, sin que cuente como nota.";
 
     internal StudyLessonData? Datos(string lessonId) => _almacen.Find(lessonId);
 
@@ -435,7 +435,7 @@ internal sealed class MockDownloadService : IDownloadService
 /// <summary>El aula «siempre está» en la demostración, salvo que se arranque sin conexión para verla (<c>AVACOM_ESTUDIO_DEMO_OFFLINE=1</c>).</summary>
 internal sealed class MockConnectivityService : IConnectivityService
 {
-    private bool _enLinea = Environment.GetEnvironmentVariable("AVACOM_ESTUDIO_DEMO_OFFLINE") != "1";
+    private bool _enLinea = !Avacom.Lms.Core.Desarrollo.InterruptoresDeDesarrollo.Encendido("AVACOM_ESTUDIO_DEMO_OFFLINE");
 
     public bool IsOnline => _enLinea;
     public event Action<bool>? Changed;

@@ -34,12 +34,12 @@ public class FilterPicker : ContentView
         Content = new Border
         {
             BackgroundColor = Colors.White,
-            Stroke = Ds.Bisel(),
-            StrokeThickness = 1.5,
-            StrokeShape = new RoundRectangle { CornerRadius = 14 },
+            Stroke = new SolidColorBrush(Ds.Linea),   // campo del DS: contorno completo de 2 px, radio m 16
+            StrokeThickness = 2,
+            StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioM },
             Padding = new Thickness(10, 0),
             HeightRequest = 48,
-            Shadow = new Shadow { Brush = new SolidColorBrush(Ds.Tinta), Offset = new Point(0, 4), Radius = 12, Opacity = 0.10f },
+            Shadow = new Shadow { Brush = new SolidColorBrush(Colors.Transparent), Offset = new Point(0, 0), Radius = 0, Opacity = 0f },
             Content = lista,
         };
         WidthRequest = 200;

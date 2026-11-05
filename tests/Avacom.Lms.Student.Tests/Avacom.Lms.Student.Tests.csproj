@@ -40,6 +40,7 @@
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\StudyPracticeSession.cs" Link="Student\Services\StudyPracticeSession.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\EstudioLocal.cs" Link="Student\Services\EstudioLocal.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\ClaveDeStudent.cs" Link="Student\Services\ClaveDeStudent.cs" />
+    <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\EnvoltorioDeLaPlataforma.cs" Link="Student\Services\EnvoltorioDeLaPlataforma.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\DownloadService.cs" Link="Student\Services\DownloadService.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\ConnectivityService.cs" Link="Student\Services\ConnectivityService.cs" />
     <Compile Include="..\..\src\Avacom.Lms.Student\ModoEstudio\Services\IStudyModeService.cs" Link="Student\Services\IStudyModeService.cs" />

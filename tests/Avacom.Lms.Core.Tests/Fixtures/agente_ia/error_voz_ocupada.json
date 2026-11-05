@@ -1,0 +1,5 @@
+{
+  "codigo": "tts_busy",
+  "detail": "La voz del asistente está ocupada. Intenta de nuevo en un momento.",
+  "reintentable": true
+}

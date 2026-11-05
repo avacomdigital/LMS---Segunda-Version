@@ -14,8 +14,8 @@ namespace Avacom.Lms.Ops.Reportes.Ui;
 internal static class ReportesUi
 {
     public const double AnchoMaximo = 1280;
-    public static readonly Color FondoDeFila = Color.FromArgb("#FAFAFB");
-    public static readonly Color FondoDeEncabezado = Color.FromArgb("#EFEFF2");
+    public static readonly Color FondoDeFila = Color.FromArgb("#F6F7F9");
+    public static readonly Color FondoDeEncabezado = Color.FromArgb("#E3E6EC");
 
     // ------------------------------------------------------------------------------------------------------------------ quién actúa
     public static string Actor => Sesion.ProfesorId;
@@ -170,7 +170,7 @@ internal static class ReportesUi
         if (!string.IsNullOrWhiteSpace(nota)) pila.Add(Ds.Secundario(nota!, 13));
         var caja = new Border
         {
-            BackgroundColor = Color.FromArgb("#F7F7F8"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(18, 14),
+            BackgroundColor = Color.FromArgb("#F6F7F9"), Stroke = new SolidColorBrush(Ds.Filo), StrokeThickness = 1, Padding = new Thickness(18, 14),
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno }, Content = pila, MinimumWidthRequest = ancho, Margin = new Thickness(0, 0, 12, 12),
         };
         SemanticProperties.SetDescription(caja, $"{rotulo}: {valor}{(string.IsNullOrWhiteSpace(nota) ? string.Empty : ". " + nota)}");
@@ -215,7 +215,7 @@ internal static class ReportesUi
     };
 
     /// <summary>El ámbar del kit con tinta legible (el amarillo de marca no se lee como texto).</summary>
-    public static readonly Color ColorDeAdvertencia = Color.FromArgb("#B58A00");
+    public static readonly Color ColorDeAdvertencia = Color.FromArgb("#6B4E00");
 
     // ------------------------------------------------------------------------------------------------------------------ la cabecera de corte (BR-083)
 

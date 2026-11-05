@@ -25,6 +25,10 @@ urlpatterns = [
     path("api/nodo/", include("nodo.interfaces.urls")),
     # MOD-017: paquetes de actualización (.avupd) encontrados e importados, su verificación, la ventana, la orden de aplicar o revertir al Host y el historial del nodo.
     path("api/actualizacion/", include("actualizacion.interfaces.urls")),
+    # MOD-016: respaldos cifrados (.avbak), su calendario, verificación, exportación y restauración. Sólo el personal de AVACOM opera; la administración lee estado y constancias.
+    path("api/respaldo/", include("respaldo.interfaces.urls")),
+    # AI Agent: la pregunta al modelo local (Qwen), la voz de la respuesta (Piper) y el estado del servicio de IA. Un fallo de la IA se contesta con un código (503/504/429/502), nunca rompe el aula.
+    path("api/agente-ia/", include("agente_ia.interfaces.urls")),
     # MOD-019: bitácora (sólo lectura, audit.read/audit.export) y logs de diagnóstico (diagnostics.read; entrega de OPS/Student).
     path("api/auditoria/", include("audit.interfaces.urls")),
     path("api/logs/", include("audit.interfaces.urls_logs")),

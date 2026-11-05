@@ -65,7 +65,7 @@ internal sealed class HojaDeLicencia : ContentView
         IsVisible = false;
         ZIndex = 50;
         // El velo es hermano de la tarjeta: un toque dentro de la tarjeta nunca llega a él. Tocar fuera NO cierra la hoja (nada de esto se cancela de un roce).
-        var velo = new Border { BackgroundColor = Color.FromArgb("#73141417"), StrokeThickness = 0 };
+        var velo = new Border { BackgroundColor = Color.FromArgb("#731F2433"), StrokeThickness = 0 };
         _eyebrow = EstudioUi.Eyebrow(string.Empty);
         _titulo = new Label { FontFamily = Ds.FuenteMedia, FontSize = 24, TextColor = Ds.Tinta, LineBreakMode = LineBreakMode.WordWrap, AutomationId = "licencia-hoja-titulo" };
         _subtitulo = new Label { FontFamily = Ds.FuenteLigera, FontSize = 15, TextColor = Ds.TintaSuave, LineBreakMode = LineBreakMode.WordWrap };
@@ -417,8 +417,9 @@ internal sealed class HojaDeLicencia : ContentView
             case PasoDeActivacion.EsperandoLicencia:
                 _cuerpo.Add(LicenciaUi.Seccion(LicenciaTexto.Paso2Titulo, LicenciaTexto.Paso2Texto));
                 if (f.RutaDeLaSolicitud is { } ruta) _cuerpo.Add(LicenciaUi.Dato("Solicitud", ruta, 110));
-                Boton("‹  Paso 1", Ds.Rango.Quiet, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
+                Boton("‹  Paso 1", Ds.Rango.Secondary, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
                 BotonCerrar();
+                Boton(LicenciaTexto.BuscarEnElExplorador, Ds.Rango.Secondary, BuscarEnElExploradorAsync, "licencia-explorador");
                 Boton("Ya tengo el archivo de licencia", Ds.Rango.Primary, BuscarLicenciasAsync, "licencia-ya-tengo");
                 break;
             case PasoDeActivacion.Buscando:
@@ -466,6 +467,7 @@ internal sealed class HojaDeLicencia : ContentView
         _cuerpo.Add(LicenciaUi.Seccion(LicenciaTexto.Paso3Titulo, LicenciaTexto.Paso3Texto));
         var herramientas = ExamenUi.Fila();
         herramientas.Add(LicenciaUi.Accion("Buscar de nuevo", Ds.Rango.Secondary, LicenciaUi.Seguro("Hoja.BuscarLicencias", BuscarLicenciasAsync), "licencia-buscar").Vista);
+        herramientas.Add(LicenciaUi.Accion(LicenciaTexto.BuscarEnElExplorador, Ds.Rango.Secondary, LicenciaUi.Seguro("Hoja.Explorador", BuscarEnElExploradorAsync), "licencia-explorador").Vista);
         _cuerpo.Add(herramientas);
         var busqueda = f.Busqueda;
         if (busqueda is null || busqueda.Vacia)
@@ -474,6 +476,7 @@ internal sealed class HojaDeLicencia : ContentView
         }
         else
         {
+            if (f.Aviso is { } rechazo) Aviso(rechazo, Tono.Ambar, "licencia-aviso");
             for (var i = 0; i < busqueda.Candidatos.Count; i++)
             {
                 var c = busqueda.Candidatos[i];
@@ -490,7 +493,7 @@ internal sealed class HojaDeLicencia : ContentView
             }
             if (busqueda.Recortada) _cuerpo.Add(Ds.Secundario($"Se muestran los {BuscadorDeLicencias.Tope} archivos más recientes.", 13));
         }
-        Boton("‹  Paso 1", Ds.Rango.Quiet, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
+        Boton("‹  Paso 1", Ds.Rango.Secondary, () => { f.VolverAlPaso1(); Pintar(); return Task.CompletedTask; }, "licencia-paso1");
         BotonCerrar();
     }
 
@@ -531,6 +534,17 @@ internal sealed class HojaDeLicencia : ContentView
         Pintar();                                                     // «Buscando…»
         await buscar;
         if (version == _version) Pintar();
+    }
+
+    /// <summary>Abre el selector de archivos de Windows para llegar a un .avlic que la búsqueda no ve (otra carpeta o disco) y lo lleva a la confirmación única.</summary>
+    private async Task BuscarEnElExploradorAsync()
+    {
+        if (_activacion is not { } f) return;
+        var version = _version;
+        var ruta = await Avacom.Lms.Ops.Reportes.Ui.SelectorDeCarpeta.ElegirArchivoAsync(".avlic");
+        if (version != _version || ruta is null) return;
+        if (!f.ElegirDelExplorador(ruta)) LicenciaUi.Anotar("licencia.archivo_del_explorador_no_vale", "El archivo elegido en el Explorador no es una licencia legible.", new { nombre = System.IO.Path.GetFileName(ruta) });
+        Pintar();
     }
 
     private async Task InstalarAsync()

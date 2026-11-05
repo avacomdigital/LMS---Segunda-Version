@@ -118,7 +118,7 @@ internal sealed class Reposo(IDispatcher? despachador, TimeSpan espera, Action a
 /// <summary>Piezas visuales que comparten los editores.</summary>
 internal static class VistasActividad
 {
-    public static readonly Color Reposo = Color.FromArgb("#D4D4D8");
+    public static readonly Color Reposo = Color.FromArgb("#E3E6EC");
     public static readonly Brush BrochaTinta = new SolidColorBrush(Ds.Tinta);
     public static readonly Brush BrochaReposo = new SolidColorBrush(Reposo);
 
@@ -903,7 +903,7 @@ internal sealed class EditorNoSoportado : EditorPregunta
         {
             BackgroundColor = Ds.Lienzo, StrokeThickness = 0, Padding = new Thickness(18, 16), AutomationId = "act-no-soportada",
             StrokeShape = new RoundRectangle { CornerRadius = Ds.RadioInterno },
-            Content = Ds.Cuerpo("Esta pregunta se responde con tu profesor.", 19 * cx.Escala),
+            Content = Ds.Cuerpo("Esta pregunta se responde con tu docente.", 19 * cx.Escala),
         };
     }
 

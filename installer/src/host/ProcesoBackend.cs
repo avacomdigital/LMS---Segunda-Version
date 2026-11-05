@@ -17,8 +17,35 @@ internal sealed class ProcesoBackend : IDisposable
 
     public bool EstaVivo => _proceso is { HasExited: false };
 
+    /// <summary>
+    /// ¿Estos argumentos arrancan codigo DEL BACKEND (manage.py o el servidor) en un paquete cifrado? Entonces Python no recibe el script: recibe <c>avacom_boot.py manage|script ...</c> y la llave K
+    /// por su entrada estandar (<see cref="EntregarClave"/>). Lanza <see cref="Dispositivo.LiberacionFallida"/> si el TPM del equipo no entrega la llave.
+    /// </summary>
+    private static List<string> ParaPaqueteCifrado(List<string> argumentos)
+    {
+        if (!Dispositivo.LiberacionDeClave.HayPaqueteCifrado || argumentos.Count == 0) return argumentos;
+        var manage = argumentos[0] == Rutas.ManagePy;
+        var codigo = argumentos[0] == "-c" && argumentos.Count >= 2;                  // «python -c <codigo>»: puede importar modulos del backend (la configuracion efectiva)
+        if (!manage && !codigo && argumentos[0] != Rutas.GuionServidor) return argumentos;
+        _ = Dispositivo.LiberacionDeClave.Obtener();                                  // falla aqui, ANTES de lanzar nada
+        if (manage) return [Rutas.GuionDeArranqueCifrado, "manage", .. argumentos.Skip(1)];
+        return codigo ? [Rutas.GuionDeArranqueCifrado, "code", .. argumentos.Skip(1)] : [Rutas.GuionDeArranqueCifrado, "script", .. argumentos];
+    }
+
+    /// <summary>Despues de <c>Process.Start</c>: si el proceso es un arranque cifrado, le entrega la llave en la primera linea de su entrada. Un manage.py (corto) cierra la entrada; el servidor la deja abierta (es como se le pide parar).</summary>
+    public static void EntregarClave(Process proceso)
+    {
+        var a = proceso.StartInfo.ArgumentList;
+        if (a.Count < 2 || a[0] != Rutas.GuionDeArranqueCifrado) return;
+        var k = Dispositivo.LiberacionDeClave.Obtener();
+        proceso.StandardInput.WriteLine("AVACOM-CLAVE " + Convert.ToHexString(k).ToLowerInvariant());
+        proceso.StandardInput.Flush();
+        if (a[1] is "manage" or "code") proceso.StandardInput.Close();
+    }
+
     public static ProcessStartInfo Preparar(string ejecutable, IEnumerable<string> argumentos)
     {
+        var lista = ParaPaqueteCifrado(argumentos.ToList());
         var inicio = new ProcessStartInfo
         {
             FileName = ejecutable,
@@ -32,7 +59,8 @@ internal sealed class ProcesoBackend : IDisposable
             StandardOutputEncoding = new System.Text.UTF8Encoding(false),
             StandardErrorEncoding = new System.Text.UTF8Encoding(false),
         };
-        foreach (var argumento in argumentos) inicio.ArgumentList.Add(argumento);
+        foreach (var argumento in lista) inicio.ArgumentList.Add(argumento);
+        inicio.RedirectStandardInput = lista.Count > 0 && lista[0] == Rutas.GuionDeArranqueCifrado;       // la llave viaja por aqui, nunca por el entorno ni la linea de comandos
 
         // El backend se configura SOLO con backend.env. Todo AVACOM_* que traiga el entorno de
         // Windows (del usuario o del equipo: una base de pruebas, el curso de ejemplo, una nota
@@ -68,7 +96,13 @@ internal sealed class ProcesoBackend : IDisposable
             return false;
         }
 
-        var inicio = Preparar(Rutas.PythonExe, [Rutas.GuionServidor]);
+        ProcessStartInfo inicio;
+        try { inicio = Preparar(Rutas.PythonExe, [Rutas.GuionServidor]); }
+        catch (Dispositivo.LiberacionFallida fallo)
+        {
+            _registro.Escribir($"No se pudo liberar la llave del codigo del nodo ({fallo.Motivo}): el backend no arranca. Se necesita el sello y la clave del paquete de AVACOM para ESTE equipo (carpeta Config, sello).");
+            return false;
+        }
         // La entrada estandar queda abierta a proposito: cerrarla es como se le
         // pide al backend que pare limpiamente (ver avacom_ops_backend.py).
         inicio.RedirectStandardInput = true;
@@ -79,6 +113,7 @@ internal sealed class ProcesoBackend : IDisposable
         try
         {
             _proceso.Start();
+            EntregarClave(_proceso);
             _proceso.BeginOutputReadLine();
             _proceso.BeginErrorReadLine();
             _registro.Escribir($"Backend iniciado (pid {_proceso.Id}).");

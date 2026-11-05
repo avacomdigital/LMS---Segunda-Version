@@ -249,7 +249,7 @@ internal sealed class TarjetaDeReactivo : ContentView
                 return;
             case Fase.PendienteDeConfirmacion:
                 // Sin conexión: NO se muestra como confirmado. La misma solicitud se reenvía al reintentar.
-                _pie.Add(ExamenUi.Aviso("Pendiente de confirmación", _textoDeFase ?? "No se pudo llegar al nodo: nada se guardó todavía. Reintentar no duplica la revisión.", Tono.Ambar));
+                _pie.Add(ExamenUi.Aviso("Pendiente de confirmación", _textoDeFase ?? "No se pudo conectar con el aula: nada se guardó todavía. Reintentar no duplica la revisión.", Tono.Ambar));
                 var reintentar = ExamenUi.Accion("Reintentar", Ds.Rango.Primary, GuardarAsync, null, $"revision-{_fila.PreguntaRef}-guardar", 56, margen: false);
                 reintentar.Vista.HorizontalOptions = LayoutOptions.Start;
                 _pie.Add(reintentar.Vista);

@@ -115,7 +115,7 @@ public sealed class TecladoDecimalView : ContentView
             Text = texto, AutomationId = automationId, WidthRequest = _teclaAncho, HeightRequest = _teclaAlto,
             CornerRadius = (int)Math.Min(18, tamano / 3), BorderWidth = 1, BorderColor = Ds.Filo,
             FontSize = secundaria ? 17 : Math.Clamp(tamano * 0.42, 20, 32), FontFamily = Ds.FuenteMedia, TextColor = Ds.Tinta,
-            BackgroundColor = secundaria ? Color.FromArgb("#FFF1F1F1") : Colors.White, Padding = new Thickness(0),
+            BackgroundColor = secundaria ? Color.FromArgb("#FFF5F6F8") : Colors.White, Padding = new Thickness(0),
         };
         SemanticProperties.SetDescription(boton, descripcion);
         // Un toque, una marca: sólo se escucha Clicked y se descarta el segundo de la MISMA tecla dentro de 180 ms (el doble evento de WinUI).

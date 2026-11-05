@@ -1,0 +1,8 @@
+# Una tableta por linea. Borra el # de las lineas que quieras usar.
+# En cada tableta: Opciones de desarrollador > Depuracion inalambrica (activada).
+#
+# Tableta que ya se vinculo antes (solo IP:puerto de la pantalla principal de Depuracion inalambrica):
+# 192.168.1.50:41234
+#
+# Tableta nueva: IP:puerto principal ; IP:puerto de "Vincular con codigo" ; codigo de 6 digitos
+# 192.168.1.51:40111;192.168.1.51:37215;123456

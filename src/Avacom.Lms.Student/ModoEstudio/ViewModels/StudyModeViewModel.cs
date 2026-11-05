@@ -115,7 +115,7 @@ public sealed class StudyModeViewModel : ObservableObject, IStudyLessonActions, 
     // ================================================================================== lo que se pinta
     public string Title => IsChoosingStudent ? "¿Quién eres?" : "Modo estudio";
     public string Subtitle => IsChoosingStudent
-        ? "Elige tu nombre para ver las lecciones que te asignó tu profesor."
+        ? "Elige tu nombre para ver las lecciones que te asignó tu docente."
         : IsVisitorView
         ? "Estás como visitante: aquí no hay lecciones asignadas a tu nombre."
         : "Continúa tus lecciones asignadas incluso cuando estés sin conexión.";

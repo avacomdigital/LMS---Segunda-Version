@@ -82,9 +82,9 @@ public static class NodoTexto
     /// <summary>Una frase sobre el estado, para debajo del chip.</summary>
     public static string ExplicacionDeEstado(string? estado) => estado switch
     {
-        EstadosDelNodo.Operativo => "El nodo atiende con normalidad: la clase, las evaluaciones y el estudio funcionan.",
+        EstadosDelNodo.Operativo => "El aula funciona con normalidad: la clase, las evaluaciones y el estudio están disponibles.",
         EstadosDelNodo.Restringido => "La clase, las evaluaciones y el estudio siguen. Lo que puede esperar (altas, importaciones, exportaciones, reprocesos) espera hasta que la condición se despeje.",
-        EstadosDelNodo.EnRecuperacion => "El nodo se está poniendo al día tras un corte. La clase puede seguir; los reportes y las calificaciones derivadas se actualizan en segundo plano.",
+        EstadosDelNodo.EnRecuperacion => "El aula se está poniendo al día tras un corte. La clase puede seguir; los reportes y las calificaciones derivadas se actualizan en segundo plano.",
         EstadosDelNodo.Arrancando => "El nodo está arrancando sus servicios.",
         EstadosDelNodo.Detenido => "El nodo está detenido.",
         _ => "No se pudo leer el estado del nodo.",
