@@ -25,7 +25,7 @@ namespace Avacom.Lms.Student.Examen;
 /// → <c>AddUserRestriction(DisallowCreateWindows)</c> → <c>StartLockTask</c> → ocultar la interfaz del sistema.</item>
 /// <item><b>Todo en el hilo de interfaz, con el error devuelto al llamador</b> (<see cref="RunOnUiThreadAsync{T}"/>, un puente con <see cref="TaskCompletionSource{TResult}"/>): sin él, una
 /// excepción dentro de <c>RunOnUiThread</c> —por ejemplo, una tableta que no es Device Owner— subiría por el hilo de interfaz y cerraría la app en pleno examen.</item>
-/// <item><b>Informar el estado real:</b> <see cref="IsTrueDeviceLockAvailable"/> es <c>IsDeviceOwnerApp</c> (una consulta al sistema, no un archivo), y la capa del sistema sólo se
+/// <item><b>Informar el estado real:</b> <see cref="IsTrueDeviceLockAvailable"/> es <c>IsDeviceOwnerApp</c> o, con propietario ajeno, <c>IsLockTaskPermitted</c> (consultas al sistema, no un archivo), y la capa del sistema sólo se
 /// informa lograda si, tras <c>StartLockTask</c>, el sistema dice que la tarea quedó bloqueada (<c>Locked</c>, no el simple fijado de pantalla).</item>
 /// <item>Sin Device Owner la capa de la aplicación funciona igual y el resultado es <b>parcial</b> (o fallido si sólo se pedía la del sistema), nunca una excepción.</item>
 /// </list>
@@ -64,18 +64,25 @@ internal sealed class AndroidKioskService : IKioskService
 
     // =================================================================================================== lo que se declara
 
-    /// <summary>¿Es esta app el Device Owner de la tableta? Una consulta real a <c>DevicePolicyManager</c>; nunca lanza.</summary>
-    public bool IsTrueDeviceLockAvailable
+    /// <summary>¿Puede esta app fijar la tableta con Lock Task? Dos casos reales, consultados a <c>DevicePolicyManager</c> y nunca supuestos: es el Device Owner (instalación local por ADB) o
+    /// el propietario es otro (Android Device Policy con AMAPI) y la política la admitió en la lista de Lock Task (<c>IsLockTaskPermitted</c>). Nunca lanza.</summary>
+    public bool IsTrueDeviceLockAvailable => ModoDelSistema() != ModoDeLockTask.Ninguno;
+
+    /// <summary>Qué tiene la tableta: propietario propio, kiosco por política (propietario ajeno) o ninguno. Una consulta al sistema; nunca lanza.</summary>
+    private enum ModoDeLockTask { Ninguno, Propietario, Politica }
+
+    private static ModoDeLockTask ModoDelSistema()
     {
-        get
+        try
         {
-            try
-            {
-                var contexto = Platform.CurrentActivity ?? (Context)Android.App.Application.Context;
-                return Politicas(contexto)?.IsDeviceOwnerApp(contexto.PackageName) == true;
-            }
-            catch (Exception) { return false; }
+            var contexto = Platform.CurrentActivity ?? (Context)Android.App.Application.Context;
+            var politicas = Politicas(contexto);
+            var paquete = contexto.PackageName;
+            if (politicas is null || paquete is null) return ModoDeLockTask.Ninguno;
+            if (politicas.IsDeviceOwnerApp(paquete)) return ModoDeLockTask.Propietario;
+            return politicas.IsLockTaskPermitted(paquete) ? ModoDeLockTask.Politica : ModoDeLockTask.Ninguno;
         }
+        catch (Exception) { return ModoDeLockTask.Ninguno; }
     }
 
     public string Capacidad
@@ -255,26 +262,33 @@ internal sealed class AndroidKioskService : IKioskService
         return new ResultadoUi { App = app, Capturas = capturas, Pantallas = pantallas, LockTaskIntentado = intentado, Notas = notas };
     }
 
-    /// <summary>Los seis pasos de §3.3 en su orden exacto. Falso, con la razón en <paramref name="notas"/>, si no se pudo; nunca lanza.</summary>
+    /// <summary>
+    /// Los pasos de §3.3 en su orden exacto cuando la app es Device Owner; con propietario ajeno (kiosco por política, AMAPI) sólo <c>StartLockTask</c>: ni <c>SetLockTaskPackages</c>
+    /// ni <c>SetLockTaskFeatures</c> ni <c>AddUserRestriction</c> (exigen ser propietario y la política ya decide qué queda habilitado). Falso, con la razón en <paramref name="notas"/>; nunca lanza.
+    /// </summary>
     private bool IntentarLockTask(AndroidActivity actividad, List<string> notas)
     {
         var paquete = actividad.PackageName ?? throw new InvalidOperationException("La Activity no conoce su paquete.");
         var politicas = Politicas(actividad);
-        if (politicas is null || !politicas.IsDeviceOwnerApp(paquete))
+        var modo = ModoDelSistema();
+        if (politicas is null || modo == ModoDeLockTask.Ninguno)
         {
-            notas.Add("La app no es Device Owner de esta tableta: la capa del sistema (Lock Task) no se puede aplicar.");
+            notas.Add("La app no es Device Owner ni está admitida por la política para Lock Task: la capa del sistema (Lock Task) no se puede aplicar.");
             return false;
         }
-        var administrador = new ComponentName(paquete, ExamDeviceAdminReceiver.NombreCompleto);
         try
         {
-            politicas.SetLockTaskPackages(administrador, [paquete]);                                   // 1. autorizar
-            if (!politicas.IsLockTaskPermitted(paquete))                                              // 2. comprobar
-                throw new InvalidOperationException("El paquete no quedó autorizado para Lock Task.");
-            if ((int)Build.VERSION.SdkInt >= 28)                                                       // 3. quitar TODO (Inicio, Recientes, notificaciones, apagado…)
-                politicas.SetLockTaskFeatures(administrador, LockTaskFeatures.None);
-            politicas.AddUserRestriction(administrador, UserManager.DisallowCreateWindows);          // 4. sin ventanas flotantes
-            restriccionPuesta = true;
+            if (modo == ModoDeLockTask.Propietario)
+            {
+                var administrador = new ComponentName(paquete, ExamDeviceAdminReceiver.NombreCompleto);
+                politicas.SetLockTaskPackages(administrador, [paquete]);                               // 1. autorizar
+                if (!politicas.IsLockTaskPermitted(paquete))                                          // 2. comprobar
+                    throw new InvalidOperationException("El paquete no quedó autorizado para Lock Task.");
+                if ((int)Build.VERSION.SdkInt >= 28)                                                   // 3. quitar TODO (Inicio, Recientes, notificaciones, apagado…)
+                    politicas.SetLockTaskFeatures(administrador, LockTaskFeatures.None);
+                politicas.AddUserRestriction(administrador, UserManager.DisallowCreateWindows);      // 4. sin ventanas flotantes
+                restriccionPuesta = true;
+            }
             actividad.StartLockTask();                                                                 // 5. fijar
             lockTaskPuesto = true;
             OcultarBarras(actividad);                                                                  // 6. inmersivo
